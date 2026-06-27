@@ -992,10 +992,10 @@
   /* Administrador de clientes */
   .adm-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .adm-tbl{width:100%;border-collapse:collapse;font:700 12.5px var(--font);}
-  .adm-tbl th{text-align:right;font:800 9.5px var(--font);letter-spacing:.5px;text-transform:uppercase;color:var(--mut);padding:0 .75rem .65rem;border-bottom:1px solid var(--line);white-space:nowrap;}
+  .adm-tbl th{text-align:right;font:800 9.5px var(--font);letter-spacing:.4px;text-transform:uppercase;color:var(--mut);padding:0 .6rem .65rem;border-bottom:1px solid var(--line);white-space:nowrap;}
   .adm-tbl th:first-child{text-align:left;}
   .adm-tbl th.cc{text-align:center;}
-  .adm-tbl td{text-align:right;padding:.75rem;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--ink);}
+  .adm-tbl td{text-align:right;padding:.7rem .6rem;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--ink);}
   .adm-tbl td:first-child{text-align:left;}
   .adm-row.on{background:rgba(30,95,209,.05);}
   .adm-cli{display:flex;align-items:center;gap:11px;}
@@ -1007,6 +1007,15 @@
   .adm-here{font:800 10.5px var(--font);color:var(--accent);text-transform:uppercase;letter-spacing:.4px;}
   .adm-tot td{border-top:2px solid var(--line2);border-bottom:none;font-weight:800;color:var(--navy);padding-top:.85rem;}
   .adm-tot td:first-child{text-transform:uppercase;font-size:10px;letter-spacing:.5px;color:var(--mut);}
+  .adm-b{text-align:center !important;font-weight:800;}
+  .risk-chip{display:inline-block;font:800 9px var(--font);padding:.14rem .48rem;border-radius:999px;letter-spacing:.2px;vertical-align:middle;text-transform:uppercase;}
+  .risk-chip.cons{background:#E6F6EF;color:#0A6B47;}
+  .risk-chip.mod{background:#EEF1FB;color:#2C4FB3;}
+  .risk-chip.agr{background:#FDECEC;color:#A52121;}
+  .risk-chip.none{background:var(--surface);color:var(--mut);}
+  [data-theme="dark"] .risk-chip.cons{background:#10311F;color:#7AD6A8;}
+  [data-theme="dark"] .risk-chip.mod{background:#1A2240;color:#A0B4F0;}
+  [data-theme="dark"] .risk-chip.agr{background:#3A1A1A;color:#F0A0A0;}
 </style>
 </head>
 <body>
@@ -3762,30 +3771,32 @@ function attachProyectos(){
 /* ===== ADMINISTRADOR DE CLIENTES (panel de gestión) ===== */
 function viewClientes(){
   syncProj();
-  const stats=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
-  const T=stats.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.realized+=x.s.realized;a.n+=x.s.n;a.nd+=x.s.ndistinct;return a;},{aportado:0,retirado:0,value:0,gain:0,realized:0,n:0,nd:0});
-  const Tpct=T.aportado>0?T.gain/T.aportado*100:0;
+  const stats=CLIENTS.map(c=>({c,s:clientStats(c.id),pr:clientProfile(c.id)}));
+  const T=stats.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.realized+=x.s.realized;a.n+=x.s.n;a.nd+=x.s.ndistinct;a.betaNum+=x.s.beta*x.s.value;a.betaW+=(x.s.beta>0?x.s.value:0);return a;},{aportado:0,retirado:0,value:0,gain:0,realized:0,n:0,nd:0,betaNum:0,betaW:0});
+  const Tpct=T.aportado>0?T.gain/T.aportado*100:0,Tbeta=T.betaW>0?T.betaNum/T.betaW:0;
   const head=card("Administrador de clientes",`Resumen de la gestión de cada cliente que administras, incluida tu propia cartera · ${CLIENTS.length} cliente${CLIENTS.length!==1?"s":""} · ${T.n} proyecto${T.n!==1?"s":""} de inversión`,
-    `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+    `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(145px,1fr))">
       ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado en cartera",indigo,ink)}
       ${tile("Capital retirado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
       ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
       ${tile("Ganancia / pérdida",(T.gain>=0?"+":"−")+fmtCLP(Math.abs(T.gain)),"valor + retirado − aportado",indigo,T.gain>=0?green:red)}
-      ${tile("Rentabilidad %",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}</div>`);
-  const rows=stats.map(({c,s})=>{const act=c.id===activeClient;
+      ${tile("Rentabilidad %",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}
+      ${tile("β consolidado",Tbeta>0?Tbeta.toFixed(2):"—",Tbeta>0?betaTag(Tbeta):"sin posiciones",indigo,accentT)}</div>`);
+  const rows=stats.map(({c,s,pr})=>{const act=c.id===activeClient;
     return `<tr class="adm-row ${act?"on":""}">
-      <td class="adm-cli"><span class="cli-dot" style="background:${c.color}"></span><div><div class="adm-name">${(""+c.name).replace(/</g,"&lt;")}${act?' <span class="badge pos">ACTIVO</span>':''}</div><div class="adm-sub">${s.n} proyecto${s.n!==1?"s":""}${(s.n-s.withData)>0?` · ${s.n-s.withData} sin seguimiento`:""}</div></div></td>
+      <td class="adm-cli"><span class="cli-dot" style="background:${c.color}"></span><div><div class="adm-name">${(""+c.name).replace(/</g,"&lt;")}${act?' <span class="badge pos">ACTIVO</span>':''}</div><div class="adm-sub">${s.n} proyecto${s.n!==1?"s":""}${(s.n-s.withData)>0?` · ${s.n-s.withData} sin seguimiento`:""} · ${riskChip(pr)}</div></div></td>
       <td>${fmtCLP(s.aportado)}</td>
       <td>${s.retirado>0?fmtCLP(s.retirado):"—"}</td>
       <td>${fmtCLP(s.value)}</td>
       <td style="color:${s.gain>=0?green:red};font-weight:800">${(s.gain>=0?"+":"−")+fmtCLP(Math.abs(s.gain))}</td>
       <td style="color:${s.pct>=0?green:red};font-weight:800">${(s.pct>=0?"+":"")+s.pct.toFixed(2)}%</td>
       <td class="adm-c">${s.ndistinct}</td>
+      <td class="adm-b" style="color:${accentT}">${s.beta>0?s.beta.toFixed(2):"—"}</td>
       <td class="adm-act">${act?'<span class="adm-here">estás aquí</span>':`<button class="btn" data-cliswitch="${c.id}">Entrar →</button>`}<button class="prj-del" data-clirename2="${c.id}" title="Renombrar">✎</button><button class="prj-del" data-clidel="${c.id}" title="Eliminar cliente">🗑</button></td>
     </tr>`;}).join("");
-  const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${T.gain>=0?green:red}">${(T.gain>=0?"+":"−")+fmtCLP(Math.abs(T.gain))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%</td><td class="adm-c">—</td><td></td></tr>`;
-  const tbl=card("Carteras por cliente","Capital aportado y retirado, valor actual, ganancia/pérdida ($ y %) y número de acciones distintas en cartera. Entra a un cliente para gestionar sus proyectos.",
-    `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Ganancia $</th><th>Rentab. %</th><th class="cc">Acciones</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
+  const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${T.gain>=0?green:red}">${(T.gain>=0?"+":"−")+fmtCLP(Math.abs(T.gain))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%</td><td class="adm-c">—</td><td class="adm-b" style="color:${accentT}">${Tbeta>0?Tbeta.toFixed(2):"—"}</td><td></td></tr>`;
+  const tbl=card("Carteras por cliente","Capital aportado y retirado, valor actual, ganancia/pérdida ($ y %), acciones distintas, perfil de riesgo y β de la cartera. Entra a un cliente para gestionar sus proyectos.",
+    `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Ganancia $</th><th>Rentab. %</th><th class="cc">Acciones</th><th class="cc">β cartera</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
      <div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-pri" id="cliAddBtn">+ Nuevo cliente</button><button class="btn" data-go-proj>Ver proyectos de ${(""+activeClientObj().name).replace(/</g,"&lt;")} →</button></div>`);
   return head+tbl;
 }
@@ -3828,23 +3839,36 @@ function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.for
 /* Resumen de gestión por cliente: aportado/retirado brutos, valor, ganancia y acciones distintas */
 function clientStats(id){
   const ps=clientProjects(id)||[];
-  let aportado=0,retirado=0,value=0,realized=0,withData=0;const tickers={};
+  let aportado=0,retirado=0,value=0,realized=0,withData=0,betaNum=0,betaW=0;const tickers={};
   ps.forEach(p=>{try{withProject(p,function(){
-    const w=p.weeks||[];const L=w.length?ledger():null,IM=w.length?invMetrics():null;
+    const w=p.weeks||[];const L=w.length?ledger():null,IM=w.length?invMetrics():null;let pv=0;
     if(L&&IM&&L.tx&&L.tx.length){
       L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;});
-      value+=IM.last.val;
+      pv=IM.last.val;
       realized+=(L.realized||[]).reduce((a,r)=>a+r.gain,0);
       Object.keys(L.sh).forEach(t=>{if((L.sh[t]||0)>1e-6)tickers[t]=1;});
       withData++;
     }else{
-      aportado+=p.amount||0;value+=p.amount||0;
+      aportado+=p.amount||0;pv=p.amount||0;
       (p.holdings||[]).forEach(hd=>{tickers[hd.t]=1;});
     }
+    value+=pv;
+    const hb=p.holdings||[],hbTot=hb.reduce((a,hd)=>a+(hd.monto||0),0);
+    const bp=(p.bp!=null&&p.bp>0)?p.bp:(hbTot>0?hb.reduce((a,hd)=>a+(hd.b||0)*(hd.monto||0),0)/hbTot:0);
+    if(pv>0&&bp>0){betaNum+=bp*pv;betaW+=pv;}
   });}catch(e){}});
   const gain=value+retirado-aportado,pct=aportado>0?gain/aportado*100:0;
-  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,pct,ndistinct:Object.keys(tickers).length};
+  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
 }
+/* perfil de riesgo por cliente (namespaced) + chip visual */
+function clientProfile(id){if(id===activeClient)return invProfile;try{const v=localStorage.getItem("inv_profile_v1__"+id);return v?JSON.parse(v):null;}catch(e){return null;}}
+function riskChip(prof){
+  if(!prof||!prof.label)return '<span class="risk-chip none">sin evaluar</span>';
+  const cls=prof.cls||(prof.profile==="conservador"?"cons":prof.profile==="riesgoso"?"agr":"mod");
+  const lvl=prof.level?(" · N"+prof.level):"";
+  return `<span class="risk-chip ${cls}">${(""+prof.label).replace(/</g,"&lt;")}${lvl}</span>`;
+}
+function betaTag(b){return b<0.8?"defensivo":b<1?"moderado":b<1.2?"de mercado":"agresivo";}
 /* topbar switcher */
 function clientMenuClose(){const m=document.getElementById("clientMenu");if(m)m.classList.remove("open");}
 function renderClientBar(){
