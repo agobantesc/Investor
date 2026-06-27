@@ -84,7 +84,18 @@ Detalles:
 - Cuestionario de **8 preguntas** (horizonte, tolerancia, capacidad, experiencia…) → perfil **Conservador / Moderado / Agresivo** con guía de estrategia (factores a enfatizar, composición y β objetivo).
 - El perfil **personaliza al Copiloto IA** (sus recomendaciones se alinean a tu tolerancia) y queda como perfil por defecto del Asistente de simulación.
 
-### 6. Módulo **Pro · Roadmap** — precios en tiempo real
+### 6. **Mercados · indicadores en vivo** (módulo Mercados) — datos financieros reales, sin backend
+Panel tipo "noticias financieras" que trae **datos de mercado en tiempo casi-real directo desde tu navegador**, sin servidor ni API key:
+
+- **Fuente:** [`mindicador.cl`](https://mindicador.cl) (Banco Central de Chile + INE), pública, gratuita y con **CORS habilitado** — por eso funciona desde un HTML estático sin proxy.
+- **Indicadores:** **Dólar** y **Euro** (CLP), **Cobre** (US$/lb), **UF**, **UTM**, **IPC** (var. mensual), **tasa de desempleo**, **Imacec**, **TPM** y **Bitcoin**. Para divisas, cobre y UF se dibuja una **mini-tendencia (sparkline)** y la **variación %** del último dato.
+- **Robusto:** se consultan al abrir el módulo y con **Actualizar**; los últimos valores quedan en `localStorage` para verlos **sin conexión**, con manejo claro de errores (offline / `file://` / timeout) y reintento.
+- **Indicadores manuales:** lo que la fuente no entrega — **petróleo (WTI/Brent)**, S&P 500, etc. — se agrega a mano y persiste.
+- **Conecta con la IA:** el Copiloto puede leer todo esto con la herramienta `get_market_indicators` para **contextualizar sus recomendaciones** con el dólar, el cobre o la TPM del momento.
+
+> ⚠️ A diferencia de los **precios de acciones** en vivo (que sí requieren API key + proxy por CORS y cobertura del mercado chileno), los **indicadores macro** sí tienen una fuente pública con CORS, así que esta parte ya quedó **funcionando sin backend**. Los valores son referenciales (cierres oficiales, pueden tener rezago) y no constituyen asesoría financiera.
+
+### 7. Módulo **Pro · Roadmap** — precios en tiempo real
 Responde, dentro de la app, qué tan difícil es conectar precios de mercado en vivo (ver más abajo), con comparación de proveedores, arquitectura por fases, costos y consideraciones legales. (La integración del **agente IA** ya está hecha — ver punto 3.)
 
 ---
