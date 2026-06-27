@@ -710,6 +710,65 @@
   .eval-meta svg{color:var(--accent);opacity:.85;flex-shrink:0;}
   .eval-meta b{color:var(--navy);font-weight:800;}
   .eval-meta .dot{color:var(--faint);}
+
+  /* ════════════════════════ OVERHAUL PRO v3 ════════════════════════ */
+  /* ---- Sidebar: más aire, jerarquía y acabado premium ---- */
+  aside{width:252px;background:linear-gradient(174deg,#081A37 0%,#0E2A55 54%,#0A2046 100%);
+    box-shadow:inset -1px 0 0 rgba(255,255,255,.05),5px 0 26px rgba(5,14,33,.30);}
+  .brand{padding:1.45rem 1.25rem 1.25rem;gap:13px;border-bottom:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);}
+  .brand-mark{width:44px;height:44px;border-radius:14px;
+    background:linear-gradient(150deg,rgba(59,130,246,.30),rgba(34,211,238,.10));
+    border:1px solid rgba(127,176,242,.34);
+    box-shadow:0 7px 20px rgba(5,16,40,.55),inset 0 1px 0 rgba(255,255,255,.12);}
+  .beye{font-size:8px;letter-spacing:2.3px;color:#76CFEC;opacity:.95;margin-bottom:6px;font-weight:800;}
+  .bt{font-size:25px;letter-spacing:-.6px;font-weight:850;line-height:1.08;
+    background:linear-gradient(176deg,#FFFFFF 0%,#CADFF7 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;}
+  .wm-dot{margin-bottom:5px;box-shadow:0 0 0 3px rgba(34,211,238,.22),0 0 11px rgba(34,211,238,.55);}
+
+  .snav{padding:1.2rem .72rem .85rem;}
+  .sgroup{font-size:8px;letter-spacing:2.5px;color:#5D77A1;padding:.35rem .72rem .6rem;margin-top:.2rem;}
+  .modbtn{padding:.74rem .72rem;font-size:13px;font-weight:650;color:#C0D3EB;border-radius:12px;gap:12px;margin-bottom:5px;
+    border:1px solid transparent;background:transparent;}
+  .modbtn:hover{background:rgba(255,255,255,.06);color:#fff;transform:none;}
+  .modbtn .mi{width:33px;height:33px;border-radius:10px;background:rgba(255,255,255,.06);color:#8FB9F5;
+    border:1px solid rgba(255,255,255,.05);box-shadow:none;}
+  .modbtn.on{color:#fff;background:linear-gradient(135deg,rgba(56,132,255,.32),rgba(34,211,238,.11));
+    border-color:rgba(125,172,247,.42);box-shadow:0 11px 26px rgba(4,14,34,.55),inset 0 0 0 1px rgba(255,255,255,.05);}
+  .modbtn.on .mi{background:linear-gradient(135deg,#3D8BFF,#22D3EE);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(34,150,238,.55);}
+  .modbtn.on::before{left:-7px;height:23px;}
+
+  .subtabs{margin:3px 0 15px 17px;padding-left:13px;border-left:1px solid rgba(255,255,255,.10);}
+  .tab{padding:.52rem .7rem;font-size:12px;color:#94A9C7;border-radius:8px;border-left:none;margin-bottom:1px;}
+  .tab:hover{background:rgba(255,255,255,.055);color:#fff;}
+  .tab .num{width:18px;height:18px;border-radius:6px;background:rgba(255,255,255,.07);color:#9FB8D8;font-size:9.5px;
+    display:inline-flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
+  .tab.on{background:rgba(61,139,255,.17);color:#fff;font-weight:700;border-left:none;}
+  .tab.on .num{background:linear-gradient(135deg,#3D8BFF,#22D3EE);color:#fff;}
+
+  .sfoot{padding:1rem 1.2rem;font-size:9.5px;color:#647CA4;line-height:1.95;background:rgba(0,0,0,.16);
+    border-top:1px solid rgba(255,255,255,.07);}
+  .sfoot b{color:#A3B9D8;font-weight:700;}
+
+  /* ---- Topbar + título que resalta ---- */
+  .topbar{height:66px;gap:16px;padding:0 1.5rem;box-shadow:0 1px 0 var(--line),0 8px 22px rgba(15,38,80,.05);}
+  .tbar{width:4px;height:40px;border-radius:4px;background:linear-gradient(180deg,var(--accent),var(--accent2));
+    box-shadow:0 0 15px rgba(34,211,238,.45);}
+  .crumb{font-size:8.5px;letter-spacing:1.8px;color:var(--indigo);margin-bottom:5px;opacity:.95;font-weight:800;}
+  .ptitle{font-size:20px;font-weight:850;letter-spacing:-.5px;color:var(--navy);}
+
+  /* ---- Barra de contexto de Análisis + Nuevo análisis ---- */
+  .eval-meta{padding:.62rem .6rem .62rem .95rem;gap:10px;}
+  .em-spacer{flex:1;}
+  .em-tag{font-size:9px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:.2rem .55rem;border-radius:var(--r-pill);
+    color:var(--muted);background:var(--card);border:1px solid var(--line2);white-space:nowrap;}
+  .em-tag.imp{color:var(--accent);border-color:var(--accent);background:rgba(30,95,209,.06);}
+  .em-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;
+    background:linear-gradient(180deg,var(--a-400),var(--accent));color:#fff;font:800 11.5px var(--font);
+    padding:.42rem .75rem;border-radius:9px;cursor:pointer;box-shadow:0 3px 11px rgba(30,95,209,.30);transition:.14s var(--ease-out);white-space:nowrap;}
+  .em-btn:hover{transform:translateY(-1px);box-shadow:0 6px 15px rgba(30,95,209,.40);filter:saturate(1.05);}
+  .em-btn:active{transform:translateY(0);}
+  .em-btn svg{width:13px;height:13px;}
 </style>
 </head>
 <body>
@@ -898,7 +957,7 @@ const ICO={
 };
 function renderChrome(){
   let nav=`<div class="sgroup">Módulos</div>`;
-  ["eval","sim","inv","pro"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
+  ["eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
   document.getElementById("snav").innerHTML=nav;
@@ -1978,7 +2037,10 @@ function attachInv(){
 // ===== RENDER =====// ===== RENDER =====// ===== RENDER =====
 function evalMeta(){
   const per=DATA.perYear===252?"días":DATA.perYear===52?"semanas":"meses";
-  return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana de análisis: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span></div>';
+  const isImp=(typeof DATASET!=="undefined"&&DATASET==="import");
+  const tag=isImp?'<span class="em-tag imp">Set importado</span>':'<span class="em-tag">Set demo · IPSA</span>';
+  const act=(page!=="importar")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo análisis</button>':'';
+  return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span>'+tag+'<span class="em-spacer"></span>'+act+'</div>';
 }
 function render(){
   renderChrome();
@@ -2005,6 +2067,7 @@ function render(){
   if(modulo==="eval"&&page==="importar") attachImport();
   if(modulo==="perfil") attachPerfil();
   if(modulo==="mercados") attachMercados();
+  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="importar";render();};}
   attachScatterAll();
 }
 
@@ -2757,14 +2820,16 @@ function cfgRender(){
   const ds=DATASET==="import"&&IMP?`Importado (${IMP.assets.length} acciones)`:"Demo · IPSA";
   m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes generales de INVERSOR 2.0</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Perfil de inversionista</div><div class="cfg-row"><div class="cfg-k">${prof}<div class="cfg-sub">Personaliza el copiloto y el asistente</div></div><button class="btn btn-pri" id="cfgProf">${invProfile?"Ver / reevaluar":"Hacer evaluación"}</button></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Apariencia</div><div class="cfg-row"><div class="cfg-k">Tema</div><div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div></div></div>
+    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Apariencia</div><div class="cfg-row"><div class="cfg-k">Tema</div><div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Escala de interfaz<div class="cfg-sub">Tamaño general, como el zoom del navegador</div></div><div class="cfg-seg">${[80,90,100,110].map(s=>'<button class="'+(Math.round(uiScale*100)===s?"on":"")+'" data-scale="'+s+'">'+s+'%</button>').join("")}</div></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Copiloto IA</div><div class="cfg-row"><div class="cfg-k">Clave de Anthropic ${keyOk}</div><button class="btn" id="cfgKey">${cpKey?"Gestionar":"Configurar"}</button></div><div class="cfg-row"><div class="cfg-k">Modelo</div><select id="cfgModel" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Datos</div><div class="cfg-row"><div class="cfg-k">Set de análisis activo<div class="cfg-sub">${ds}</div></div>${IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Importa en Análisis → Importar</span>'}</div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Respaldo de tu seguimiento<div class="cfg-sub">Exporta/restaura todo como archivo JSON</div></div><div style="display:flex;gap:7px"><button class="btn" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">INVERSOR 2.0 · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
+    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Pro · Roadmap<div class="cfg-sub">Precios en vivo, arquitectura y próximos pasos</div></div><button class="btn" id="cfgPro">Ver roadmap →</button></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">INVERSOR 2.0 · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
     <input type="file" id="cfgRstFile" accept="application/json,.json" style="display:none">`;
   m.querySelector("#cfgX").onclick=cfgClose;
   m.querySelector("#cfgProf").onclick=()=>{profEdit=false;cfgGo("perfil","perfil");};
   m.querySelectorAll("[data-theme-set]").forEach(b=>b.onclick=()=>{const d=document.documentElement;if(b.dataset.themeSet==="dark")d.setAttribute("data-theme","dark");else d.removeAttribute("data-theme");try{localStorage.setItem("inv_theme",b.dataset.themeSet);}catch(e){}refreshPalette();updateThemeBtn();render();cfgRender();});
+  m.querySelectorAll("[data-scale]").forEach(b=>b.onclick=()=>{applyScale((+b.dataset.scale)/100);cfgRender();});
+  const _cfp=m.querySelector("#cfgPro");if(_cfp)_cfp.onclick=()=>cfgGo("pro","realtime");
   m.querySelector("#cfgKey").onclick=()=>{cfgClose();cpOpenPanel();};
   m.querySelector("#cfgModel").onchange=e=>{cpModel=e.target.value;lsSet("inv_cp_model",cpModel);const s=document.getElementById("cpModelSel");if(s)s.value=cpModel;};
   m.querySelectorAll("[data-ds]").forEach(b=>b.onclick=()=>{applyDataset(b.dataset.ds);cfgRender();});
@@ -2841,8 +2906,8 @@ function oilTile(d){
 }
 
 /* ---- fetch genérico con timeout ---- */
-async function mktGet(url,kind){
-  const ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),13000);
+async function mktGet(url,kind,ms){
+  const ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),ms||13000);
   try{const r=await fetch(url,{signal:ctrl.signal,cache:"no-store"});clearTimeout(to);if(!r.ok)throw new Error("HTTP "+r.status);return kind==="json"?await r.json():await r.text();}
   finally{clearTimeout(to);}
 }
@@ -2870,9 +2935,12 @@ function oilParseStooq(txt){
 }
 async function oilOne(d){
   const f=x=>""+x.getFullYear()+("0"+(x.getMonth()+1)).slice(-2)+("0"+x.getDate()).slice(-2);
-  const base="https://stooq.com/q/d/l/?s="+d.k+"&i=d&d1="+f(new Date(Date.now()-80*864e5))+"&d2="+f(new Date());
-  const urls=[base,"https://api.allorigins.win/raw?url="+encodeURIComponent(base)];
-  for(const u of urls){try{const txt=await mktGet(u,"text");const p=oilParseStooq(txt);if(p)return p;}catch(e){}}
+  const stq="https://stooq.com/q/d/l/?s="+d.k+"&i=d&d1="+f(new Date(Date.now()-80*864e5))+"&d2="+f(new Date());
+  const prox=u=>["https://corsproxy.io/?url="+encodeURIComponent(u),"https://api.allorigins.win/raw?url="+encodeURIComponent(u),"https://thingproxy.freeboard.io/fetch/"+u];
+  for(const u of [stq,...prox(stq)]){try{const t=await mktGet(u,"text",8000);const p=oilParseStooq(t);if(p)return p;}catch(e){}}
+  const ys=d.k==="cl.f"?"CL=F":d.k==="cb.f"?"BZ=F":null;
+  if(ys){const yu="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(ys)+"?interval=1d&range=2mo";
+    for(const u of prox(yu)){try{const t=await mktGet(u,"text",8000);const j=JSON.parse(t);const r=j.chart&&j.chart.result&&j.chart.result[0];const cl=r&&r.indicators&&r.indicators.quote[0].close;const cs=(cl||[]).filter(v=>v!=null&&isFinite(v));const ts=r&&r.timestamp;if(cs.length>=2)return {closes:cs,lastDate:ts?new Date(ts[ts.length-1]*1000).toISOString().slice(0,10):null};}catch(e){}}}
   return null;
 }
 async function oilFetch(){
@@ -2922,6 +2990,9 @@ function attachMercados(){
   const rt=document.getElementById("mindRetry");if(rt)rt.onclick=mindFetch;
   if(!mindAuto){mindAuto=true;if((!MIND||!OIL)&&!mindBusy)mindFetch();}
 }
+let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
+function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
+applyScale(uiScale);
 render();
 </script>
 </body>

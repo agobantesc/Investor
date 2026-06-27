@@ -12,9 +12,11 @@ Abre `index.html` en cualquier navegador moderno (doble clic o arrástralo). No 
 
 **Dónde se guardan tus datos:** todo (proyectos de inversión y su seguimiento, escenarios, perfil, acciones importadas, clave del copiloto, tema) se guarda en el **`localStorage` de ese navegador** — local, privado, sin nube. Implicaciones: persiste entre sesiones en el mismo equipo/navegador; **no se sincroniza** entre dispositivos; y se pierde si borras los datos del sitio o usas modo incógnito. Para no depender de un solo navegador, usa **Inversión → Respaldar datos** (exporta un JSON) y **Restaurar** para moverlo o resguardarlo. Sí, puedes empezar a llevar tu seguimiento real desde ya.
 
-- **Barra superior:** el menú lateral queda solo para el flujo de trabajo (Análisis · Simulación · Inversión · Pro). **Mercados** y **Perfil** viven como botones en la **barra superior**, accesibles desde cualquier módulo.
+- **Menú lateral enfocado:** el sidebar queda solo para el flujo de trabajo (**Análisis · Simulación · Inversión**). **Mercados** y **Perfil** son botones de la **barra superior**; el **Pro · Roadmap** se abre desde **Configuración (⚙)**.
+- **Nuevo análisis:** en cualquier pestaña de Análisis, la barra de contexto muestra la ventana de datos y el set activo (demo/importado) con un botón **+ Nuevo análisis** que lleva directo a Importar.
+- **Escala de interfaz:** en **Configuración** puedes fijar la escala (80 % por defecto, 80/90/100/110 %) — equivale al zoom del navegador y se recuerda, sin tener que ajustarlo a mano.
 - **Tema claro / oscuro:** botón ◐ en la barra superior (se recuerda entre sesiones).
-- **Configuración (⚙):** botón junto al de tema. Abre un panel central con tu **perfil**, **apariencia** (tema), **copiloto IA** (estado de la clave y modelo), **datos** (set de análisis activo demo/importado y respaldo/restauración) y **plataforma** (reinicio total). Centraliza los ajustes sin salir del módulo en que estés.
+- **Configuración (⚙):** botón junto al de tema (perfil, apariencia + escala, copiloto, datos, roadmap y reinicio). Abre un panel central con tu **perfil**, **apariencia** (tema), **copiloto IA** (estado de la clave y modelo), **datos** (set de análisis activo demo/importado y respaldo/restauración) y **plataforma** (reinicio total). Centraliza los ajustes sin salir del módulo en que estés.
 - `inversor-v1-original.html` se conserva como referencia de la versión anterior.
 
 ---
@@ -88,7 +90,7 @@ Detalles:
 ### 6. **Mercados · indicadores en vivo** (botón superior) — datos financieros reales, sin backend
 Panel tipo "noticias financieras" que trae **datos de mercado en tiempo casi-real directo desde tu navegador**, sin servidor ni API key:
 
-- **Fuentes:** [`mindicador.cl`](https://mindicador.cl) (Banco Central de Chile + INE) para tipo de cambio, cobre y macro; **[Stooq](https://stooq.com)** para el **petróleo** (WTI y Brent). Ambas keyless; mindicador con CORS, y para el petróleo se intenta acceso directo y, si el navegador lo bloquea, un **proxy CORS público** de respaldo.
+- **Fuentes:** [`mindicador.cl`](https://mindicador.cl) (Banco Central de Chile + INE) para tipo de cambio, cobre y macro; **[Stooq](https://stooq.com)** para el **petróleo** (WTI y Brent), con **Yahoo Finance** como respaldo. Todas keyless; mindicador con CORS, y para el petróleo se intenta acceso directo y varios **proxies CORS públicos** (corsproxy.io, allorigins, thingproxy) si el navegador bloquea la petición.
 - **Indicadores:** **Dólar** y **Euro** (CLP), **Cobre** (US$/lb), **Petróleo WTI** y **Brent** (US$, con variación %), **UF**, **UTM**, **IPC** (var. mensual), **tasa de desempleo**, **Imacec**, **TPM** y **Bitcoin**. Para divisas, cobre, UF y petróleo se dibuja una **mini-tendencia (sparkline)** y la **variación %** del último dato.
 - **Robusto:** se consultan al abrir el módulo y con **Actualizar**; los últimos valores quedan en `localStorage` para verlos **sin conexión**, con manejo claro de errores (offline / `file://` / timeout) y reintento. Cada fuente degrada de forma independiente (si falla el petróleo, el resto igual se muestra).
 - **Conecta con la IA:** el Copiloto puede leer todo esto con la herramienta `get_market_indicators` para **contextualizar sus recomendaciones** con el dólar, el cobre, el petróleo o la TPM del momento.
