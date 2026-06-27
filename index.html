@@ -660,7 +660,7 @@ function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div 
 const MODS={
   eval:{label:"Análisis",tabs:[{id:"comparativa",label:"Comparativa",n:"1"},{id:"detalle",label:"Detalle por acción",n:"2"},{id:"capm",label:"CAPM / SML",n:"3"},{id:"multifactor",label:"Multifactor",n:"4"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
-  inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Ingresar datos",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"}]},
+  inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Ingresar datos",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"}]},
   pro:{label:"Pro · Roadmap",tabs:[{id:"realtime",label:"Datos en tiempo real",n:"1"},{id:"copilot",label:"Copiloto IA",n:"2"}]},
 };
 const ICO={
@@ -1536,6 +1536,9 @@ function injPreview(){
   return `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Peso obj.</th><th class="r">Comprar</th><th class="r">Acciones aprox.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function viewOperar(){
+  syncProj();
+  if(!PROJECTS.length) return viewInv();
+  if(!PF){activeId=PROJECTS[0].id;syncProj();}
   const fr=FREQ[PF.freq||"diario"];
   if(injState.pid!==activeId)injState={pid:activeId,amount:0,weights:{},extra:[]};
   PF.holdings.forEach(hd=>{if(injState.weights[hd.t]==null)injState.weights[hd.t]=+(hd.w*100).toFixed(1);});
@@ -1751,7 +1754,7 @@ function render(){
   refreshPalette();
   window.__sgN=0;
   let h="";
-  if(modulo==="inv") h=viewInv();
+  if(modulo==="inv") h=(page==="operar"?viewOperar():viewInv());
   else if(modulo==="pro") h=viewPro();
   else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
   else if(page==="comparativa") h=viewComparativa();
