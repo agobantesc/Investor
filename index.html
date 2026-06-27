@@ -154,11 +154,11 @@
   .lgdot{width:9px;height:9px;border-radius:3px;}
 
   /* stat tiles */
-  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;}
-  .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.95rem 1.05rem .95rem 1.15rem;position:relative;overflow:hidden;box-shadow:var(--sh);}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.92rem .9rem .92rem 1rem;position:relative;overflow:hidden;box-shadow:var(--sh);}
   .tile .edge{position:absolute;left:0;top:0;bottom:0;width:3px;}
   .tile .l{font-size:9.5px;letter-spacing:.5px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:7px;line-height:1.3;}
-  .tile .v{font-size:1.4rem;font-weight:800;line-height:1.08;letter-spacing:-.4px;}
+  .tile .v{font-size:1.12rem;font-weight:800;line-height:1.12;letter-spacing:-.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .tile .s{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.35;}
 
   /* table */
@@ -1623,7 +1623,7 @@ function viewSim(){
 function simResults(){
   const M=simMetrics();
   if(!M.ws.length)return `<div class="card"><div class="bd"><div class="note">Selecciona al menos una acción para construir el portafolio.</div></div></div>`;
-  const tiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">`+
+  const tiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(158px,1fr))">`+
     tile("β portafolio",M.bp.toFixed(2),M.bp<0.8?"defensivo":M.bp<1?"moderado":"agresivo",indigo,indigo)+
     tile("E(R) CAPM anual",p0(M.erCapm),"retorno exigido",indigo,indigo)+
     tile("E(R) CAPM mensual",p0(M.erM,2),"compuesto",indigo,ink)+
@@ -2065,7 +2065,7 @@ function viewInvActive(){
         <div style="font-size:11.5px;color:var(--muted);margin-top:5px"><b>${PF.name}</b> · invertido hace <b>${elapsed}</b> desde ${WEEKS[0].date} · ${nd} registro${nd>1?"s":""} · seguimiento ${fr.cap}</div></div>
       <div style="text-align:right;min-width:150px"><div class="genl" style="margin:0">Cambio último ${fr.u}</div>${dayBox}</div>
     </div>
-    <div class="tiles" style="margin-top:16px;grid-template-columns:repeat(auto-fit,minmax(145px,1fr))">
+    <div class="tiles" style="margin-top:16px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))">
       ${tile("Ganancia / pérdida total",(gain>=0?"+":"−")+fmtCLP(Math.abs(gain)),"sobre "+fmtCLP(IM.aport)+" invertidos",indigo,col(gain))}
       ${tile("Retorno acumulado",pc(L.ret*100),"desde la compra",indigo,col(L.ret*100))}
       ${tile("Rentabilidad IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}
@@ -3905,7 +3905,7 @@ function viewClientes(){
   const T=stats.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.realized+=x.s.realized;a.n+=x.s.n;a.nd+=x.s.ndistinct;a.betaNum+=x.s.beta*x.s.value;a.betaW+=(x.s.beta>0?x.s.value:0);return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,realized:0,n:0,nd:0,betaNum:0,betaW:0});
   const Tpct=T.aportado>0?T.gainNet/T.aportado*100:0,Tbeta=T.betaW>0?T.betaNum/T.betaW:0;
   const head=card("Administrador de clientes",`Resumen de la gestión de cada cliente que administras, incluida tu propia cartera · ${CLIENTS.length} cliente${CLIENTS.length!==1?"s":""} · ${T.n} proyecto${T.n!==1?"s":""} de inversión`,
-    `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+    `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(158px,1fr))">
       ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado en cartera",indigo,ink)}
       ${tile("Capital retirado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
       ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
