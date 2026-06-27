@@ -3313,15 +3313,14 @@ function cfgRender(){
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Apariencia</div><div class="cfg-row"><div class="cfg-k">Tema</div><div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Escala de interfaz<div class="cfg-sub">Tamaño general, como el zoom del navegador</div></div><div class="cfg-seg">${[80,90,100,110].map(s=>'<button class="'+(Math.round(uiScale*100)===s?"on":"")+'" data-scale="'+s+'">'+s+'%</button>').join("")}</div></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Copiloto IA</div><div class="cfg-row"><div class="cfg-k">Clave de Anthropic ${keyOk}</div><button class="btn" id="cfgKey">${cpKey?"Gestionar":"Configurar"}</button></div><div class="cfg-row"><div class="cfg-k">Modelo</div><select id="cfgModel" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Operador y costos</div>
-      <div class="cfg-row"><div class="cfg-k">Operador (corredora)<div class="cfg-sub">Comisiones e impuestos que la Contabilidad descuenta · se aplica a todos tus clientes</div></div><select id="cfgBkOp" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${Object.keys(BROKER_PRESETS).map(k=>`<option value="${k}" ${BROKER.op===k?"selected":""}>${BROKER_PRESETS[k].name}</option>`).join("")}</select></div>
+      <div class="cfg-row"><div class="cfg-k">Operador (corredora)<div class="cfg-sub">Comisiones que la Contabilidad y el Administrador de clientes descuentan · se aplica a todos tus clientes</div></div><select id="cfgBkOp" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${Object.keys(BROKER_PRESETS).map(k=>`<option value="${k}" ${BROKER.op===k?"selected":""}>${BROKER_PRESETS[k].name}</option>`).join("")}</select></div>
       <div class="cfg-fldrow">
         <label class="cfg-fld">Comisión por operación (%)<input type="number" step="0.01" min="0" id="cfgBkPct" value="${BROKER.pct}"></label>
         <label class="cfg-fld">Comisión mínima (CLP)<input type="number" min="0" id="cfgBkMin" value="${BROKER.min}"></label>
         <label class="cfg-fld">Comisión máxima (CLP · 0 = sin tope)<input type="number" min="0" id="cfgBkMax" value="${BROKER.max}"></label>
-        <label class="cfg-fld">Impuesto ganancia capital (%)<input type="number" step="0.1" min="0" id="cfgBkTax" value="${BROKER.tax||0}"></label>
       </div>
       <div class="cfg-row" style="margin-top:6px"><div class="cfg-k"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkIva" ${BROKER.iva?"checked":""}> Agregar IVA (19%) a la comisión</label><div class="cfg-sub" id="cfgBkSum">${brokerSummary()}</div></div></div>
-      <div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). El impuesto en 0% asume acciones con presencia bursátil exentas (art. 107).</div></div>
+      <div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). Se descuentan en la Contabilidad y en el Administrador de clientes.</div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Datos</div><div class="cfg-row"><div class="cfg-k">Set de análisis activo<div class="cfg-sub">${ds}</div></div>${IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Importa en Análisis → Importar</span>'}</div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Respaldo de tu seguimiento<div class="cfg-sub">Exporta/restaura todo como archivo JSON</div></div><div style="display:flex;gap:7px"><button class="btn" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Fuente de petróleo (URL JSON)<div class="cfg-sub">Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.</div></div><input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="flex:1 1 230px;min-width:200px;padding:.45rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 11.5px var(--font);color:var(--ink)"></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Acceso</div><div class="cfg-row"><div class="cfg-k">${(AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña"}<div class="cfg-sub">Pantalla de inicio de sesión local en este navegador</div></div><div style="display:flex;gap:7px;flex-wrap:wrap">${(AUTH&&AUTH.enabled)?('<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'):'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>'}</div></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Pro · Roadmap<div class="cfg-sub">Precios en vivo, arquitectura y próximos pasos</div></div><button class="btn" id="cfgPro">Ver roadmap →</button></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">INVERSOR 2.0 · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
@@ -3335,9 +3334,9 @@ function cfgRender(){
   const _ac=m.querySelector("#cfgAuthChg");if(_ac)_ac.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
   const _ao=m.querySelector("#cfgAuthOff");if(_ao)_ao.onclick=()=>{if(confirm("¿Quitar la protección por contraseña?")){AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{sessionStorage.removeItem("inv_sess_v1");}catch(e){}cfgRender();}};
   const _an=m.querySelector("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
-  const _bkOp=m.querySelector("#cfgBkOp");if(_bkOp)_bkOp.onchange=()=>{const v=_bkOp.value;if(v==="custom"){BROKER.op="custom";}else{const tax=BROKER.tax;Object.assign(BROKER,BROKER_PRESETS[v]);BROKER.tax=tax;}saveBroker();cfgRender();};
-  const bkSet=()=>{BROKER.op="custom";BROKER.pct=+(m.querySelector("#cfgBkPct")||{}).value||0;BROKER.min=+(m.querySelector("#cfgBkMin")||{}).value||0;BROKER.max=+(m.querySelector("#cfgBkMax")||{}).value||0;BROKER.tax=+(m.querySelector("#cfgBkTax")||{}).value||0;BROKER.iva=!!(m.querySelector("#cfgBkIva")||{}).checked;saveBroker();const su=m.querySelector("#cfgBkSum");if(su)su.textContent=brokerSummary();const op=m.querySelector("#cfgBkOp");if(op)op.value="custom";};
-  ["cfgBkPct","cfgBkMin","cfgBkMax","cfgBkTax"].forEach(id=>{const e=m.querySelector("#"+id);if(e)e.oninput=bkSet;});
+  const _bkOp=m.querySelector("#cfgBkOp");if(_bkOp)_bkOp.onchange=()=>{const v=_bkOp.value;if(v==="custom"){BROKER.op="custom";}else{Object.assign(BROKER,BROKER_PRESETS[v]);}saveBroker();cfgRender();};
+  const bkSet=()=>{BROKER.op="custom";BROKER.pct=+(m.querySelector("#cfgBkPct")||{}).value||0;BROKER.min=+(m.querySelector("#cfgBkMin")||{}).value||0;BROKER.max=+(m.querySelector("#cfgBkMax")||{}).value||0;BROKER.iva=!!(m.querySelector("#cfgBkIva")||{}).checked;saveBroker();const su=m.querySelector("#cfgBkSum");if(su)su.textContent=brokerSummary();const op=m.querySelector("#cfgBkOp");if(op)op.value="custom";};
+  ["cfgBkPct","cfgBkMin","cfgBkMax"].forEach(id=>{const e=m.querySelector("#"+id);if(e)e.oninput=bkSet;});
   const _bkIva=m.querySelector("#cfgBkIva");if(_bkIva)_bkIva.onchange=bkSet;
   m.querySelector("#cfgKey").onclick=()=>{cfgClose();cpOpenPanel();};
   m.querySelector("#cfgModel").onchange=e=>{cpModel=e.target.value;lsSet("inv_cp_model",cpModel);const s=document.getElementById("cpModelSel");if(s)s.value=cpModel;};
@@ -3560,11 +3559,11 @@ const BROKER_PRESETS={
   trii:{op:"trii",name:"Trii",pct:0.15,iva:true,min:1672,max:0},
   custom:{op:"custom",name:"Otro / personalizado",pct:0.5,iva:true,min:0,max:0}
 };
-let BROKER=(function(){try{const v=JSON.parse(localStorage.getItem("inv_broker_v1"));if(v&&typeof v==="object")return v;}catch(e){} return Object.assign({tax:0},BROKER_PRESETS.btg);})();
+let BROKER=(function(){try{const v=JSON.parse(localStorage.getItem("inv_broker_v1"));if(v&&typeof v==="object"){delete v.tax;return v;}}catch(e){} return Object.assign({},BROKER_PRESETS.btg);})();
 function saveBroker(){try{localStorage.setItem("inv_broker_v1",JSON.stringify(BROKER));}catch(e){}}
 function brokerName(){return (BROKER&&(BROKER_PRESETS[BROKER.op]||{}).name)||(BROKER&&BROKER.name)||"Personalizado";}
 function brokerFee(monto){if(!BROKER)return 0;monto=Math.abs(+monto||0);if(!monto)return 0;let f=monto*(+BROKER.pct||0)/100;const mn=+BROKER.min||0,mx=+BROKER.max||0;if(mn>0&&f<mn)f=mn;if(mx>0&&f>mx)f=mx;if(BROKER.iva)f*=1.19;return Math.round(f);}
-function brokerSummary(){if(!BROKER)return "sin operador";const p=[brokerName(),(+BROKER.pct||0)+"%"+(BROKER.iva?"+IVA":"")];if(+BROKER.min>0)p.push("mín "+fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1))));if(+BROKER.max>0)p.push("tope "+fmtCLP(Math.round((+BROKER.max)*(BROKER.iva?1.19:1))));if(+BROKER.tax>0)p.push("imp. "+(+BROKER.tax)+"%");return p.join(" · ");}
+function brokerSummary(){if(!BROKER)return "sin operador";const p=[brokerName(),(+BROKER.pct||0)+"%"+(BROKER.iva?"+IVA":"")];if(+BROKER.min>0)p.push("mín "+fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1))));if(+BROKER.max>0)p.push("tope "+fmtCLP(Math.round((+BROKER.max)*(BROKER.iva?1.19:1))));return p.join(" · ");}
 function ledger(){
   if(!PF||!WEEKS.length)return null;
   const base=WEEKS[0],sh={},avg={},tx=[],realized=[];
@@ -3589,11 +3588,8 @@ function contabAgg(){
   const totUnreal=rows.reduce((a,o)=>a+o.unreal,0);
   let feesBuy=0,feesSell=0;L.tx.forEach(x=>{const f=brokerFee(x.monto);x.fee=f;if(x.side==="sell")feesSell+=f;else feesBuy+=f;});
   const fees=feesBuy+feesSell;
-  const taxRate=(BROKER&&+BROKER.tax)||0;
-  const netReal=totReal-feesSell;                 /* ganancia realizada neta de comisión de venta */
-  const tax=taxRate/100*Math.max(0,netReal);      /* impuesto estimado sobre ganancia realizada positiva */
-  const netGain=(totReal+totUnreal)-fees-tax;     /* ganancia real: bruta − comisiones − impuesto */
-  return {L,IM,rows,totBuy,totSell,totReal,totUnreal,V:IM.last.val,lastW,feesBuy,feesSell,fees,taxRate,tax,netReal,netGain};
+  const netGain=(totReal+totUnreal)-fees;         /* ganancia real: bruta − comisiones */
+  return {L,IM,rows,totBuy,totSell,totReal,totUnreal,V:IM.last.val,lastW,feesBuy,feesSell,fees,netGain};
 }
 function contabAggFor(p){return withProject(p,function(){return contabAgg();});}
 function viewContab(){
@@ -3604,22 +3600,20 @@ function viewContab(){
   const head=card("Contabilidad consolidada","Todos tus proyectos de inversión: compras, ventas, fechas y montos · rentabilidad realizada y no realizada para tu contador",
     `<button class="btn btn-pri" id="contabreport">🧾 Informe consolidado para el contador</button>`);
   if(!withOps.length)return head+notecard("Tus proyectos aún no tienen operaciones registradas. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>, o compras/ventas en <b>Operar</b>.");
-  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0,tax:0};
-  withOps.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.tax+=A.tax||0;});
+  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0};
+  withOps.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;});
   const totGain=T.real+T.unreal,netInv=T.buy-T.sell,totPct=netInv>0?totGain/netInv*100:0;
-  const taxRate=(BROKER&&+BROKER.tax)||0,netGain=totGain-T.fees-T.tax,netPct=T.buy>0?netGain/T.buy*100:0;
+  const netGain=totGain-T.fees,netPct=T.buy>0?netGain/T.buy*100:0;
   const sgM=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
-  const netCard=card("Resultado real (neto de costos)","Tu ganancia después de descontar comisiones del operador e impuestos · "+brokerSummary(),
+  const netCard=card("Resultado real (neto de comisiones)","Tu ganancia después de descontar las comisiones del operador · "+brokerSummary(),
     `<div class="net-strip">
       <div class="net-it"><span>Ganancia bruta</span><b style="color:${totGain>=0?green:red}">${sgM(totGain)}</b></div>
       <div class="net-op">−</div>
       <div class="net-it"><span>Comisiones pagadas</span><b style="color:${red}">${T.fees>0?fmtCLP(T.fees):"$0"}</b></div>
-      <div class="net-op">−</div>
-      <div class="net-it"><span>Impuesto est. (${taxRate>0?taxRate+"%":"exento"})</span><b style="color:${red}">${T.tax>0?fmtCLP(T.tax):"$0"}</b></div>
       <div class="net-op">=</div>
       <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)} · ${(netPct>=0?"+":"")+netPct.toFixed(2)}%</b></div>
     </div>
-    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (Configuración → <b>Operador y costos</b>). El impuesto se estima sobre la <b>ganancia realizada</b> ${taxRate>0?("a la tasa de "+taxRate+"%"):"(0% por defecto — las acciones con presencia bursátil pueden estar exentas, art. 107 LIR)"}; la ganancia <b>no realizada no tributa</b> hasta vender.</div>`);
+    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (Configuración → <b>Operador y costos</b>).</div>`);
   const tiles=`<div class="tiles">
     ${tile("Invertido (compras)",fmtCLP(T.buy),"capital total en compras",indigo,ink)}
     ${tile("Recuperado (ventas)",T.sell?fmtCLP(T.sell):"—","efectivo por ventas",indigo,ink)}
@@ -3645,8 +3639,8 @@ function genContabReport(){
   const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
   const clp=n=>"$"+Math.round(n||0).toLocaleString("es-CL");
   const sgn=n=>(n>=0?"+":"")+clp(n);
-  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0,tax:0};per.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.tax+=A.tax||0;});
-  const totGain=T.real+T.unreal,taxRate=(BROKER&&+BROKER.tax)||0,netGain=totGain-T.fees-T.tax;
+  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0};per.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;});
+  const totGain=T.real+T.unreal,netGain=totGain-T.fees;
   const projTable=per.map(({p,A})=>{const s=projSummary(p);return `<tr><td>${(""+p.name).replace(/</g,"&lt;")}</td><td>${p.date||"—"}</td><td class="r">${clp(s.invested)}</td><td class="r">${clp(s.value)}</td><td class="r" style="color:${s.gain>=0?'#0E8C5E':'#C0392B'}">${sgn(s.gain)}</td><td class="r">${(s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"}</td></tr>`;}).join("");
   let perProjBlocks="";per.forEach(({p,A})=>{
     const sumRows=A.rows.map(o=>`<tr><td>${o.t}</td><td class="r">${o.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(o.avg)}</td><td class="r">${clp(o.cur)}</td><td class="r">${clp(o.buyMonto)}</td><td class="r">${o.sellMonto?clp(o.sellMonto):"—"}</td><td class="r">${clp(o.val)}</td><td class="r" style="color:${o.unreal>=0?'#0E8C5E':'#C0392B'}">${sgn(o.unreal)}</td><td class="r" style="color:${o.realized>=0?'#0E8C5E':'#C0392B'}">${o.realized?sgn(o.realized):"—"}</td></tr>`).join("");
@@ -3678,13 +3672,12 @@ function genContabReport(){
   </div>
   <div class="kpis">
     <div class="kpi"><div class="l">Comisiones pagadas (${brokerName()})</div><div class="v" style="color:#C0392B">${T.fees?("−"+clp(T.fees)):"$0"}</div></div>
-    <div class="kpi"><div class="l">Impuesto estimado${taxRate>0?(" ("+taxRate+"%)"):" (exento)"}</div><div class="v" style="color:#C0392B">${T.tax?("−"+clp(T.tax)):"$0"}</div></div>
-    <div class="kpi" style="border-color:#1E5FD1;background:#F2F7FF"><div class="l">Ganancia real (neta)</div><div class="v" style="color:${netGain>=0?'#0E8C5E':'#C0392B'}">${sgn(netGain)}</div></div>
+    <div class="kpi" style="border-color:#1E5FD1;background:#F2F7FF"><div class="l">Ganancia real (neta de comisiones)</div><div class="v" style="color:${netGain>=0?'#0E8C5E':'#C0392B'}">${sgn(netGain)}</div></div>
   </div>
   <h2>Resumen por proyecto</h2>
   <table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th></tr></thead><tbody>${projTable}</tbody></table>
   ${perProjBlocks}
-  <div class="foot">Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación. El <b>impuesto</b> se estima sobre la ganancia realizada ${taxRate>0?("a "+taxRate+"%"):"(0%: presencia bursátil exenta, art. 107 LIR)"} y es referencial: el tratamiento tributario del mayor valor en Chile puede diferir (corrección monetaria, régimen y fechas de adquisición). Documento de respaldo generado por INVERSOR 2.0.</div>
+  <div class="foot">Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación. El tratamiento tributario del mayor valor en Chile puede diferir (corrección monetaria, régimen y fechas de adquisición); consúltalo con tu contador. Documento de respaldo generado por INVERSOR 2.0.</div>
   <script>setTimeout(function(){window.print();},350);<\/script></body></html>`;
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
 }
@@ -3833,15 +3826,16 @@ function attachProyectos(){
 function viewClientes(){
   syncProj();
   const stats=CLIENTS.map(c=>({c,s:clientStats(c.id),pr:clientProfile(c.id)}));
-  const T=stats.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.realized+=x.s.realized;a.n+=x.s.n;a.nd+=x.s.ndistinct;a.betaNum+=x.s.beta*x.s.value;a.betaW+=(x.s.beta>0?x.s.value:0);return a;},{aportado:0,retirado:0,value:0,gain:0,realized:0,n:0,nd:0,betaNum:0,betaW:0});
-  const Tpct=T.aportado>0?T.gain/T.aportado*100:0,Tbeta=T.betaW>0?T.betaNum/T.betaW:0;
+  const T=stats.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.realized+=x.s.realized;a.n+=x.s.n;a.nd+=x.s.ndistinct;a.betaNum+=x.s.beta*x.s.value;a.betaW+=(x.s.beta>0?x.s.value:0);return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,realized:0,n:0,nd:0,betaNum:0,betaW:0});
+  const Tpct=T.aportado>0?T.gainNet/T.aportado*100:0,Tbeta=T.betaW>0?T.betaNum/T.betaW:0;
   const head=card("Administrador de clientes",`Resumen de la gestión de cada cliente que administras, incluida tu propia cartera · ${CLIENTS.length} cliente${CLIENTS.length!==1?"s":""} · ${T.n} proyecto${T.n!==1?"s":""} de inversión`,
-    `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(145px,1fr))">
+    `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
       ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado en cartera",indigo,ink)}
       ${tile("Capital retirado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
       ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
-      ${tile("Ganancia / pérdida",(T.gain>=0?"+":"−")+fmtCLP(Math.abs(T.gain)),"valor + retirado − aportado",indigo,T.gain>=0?green:red)}
-      ${tile("Rentabilidad %",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}
+      ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}
+      ${tile("Ganancia neta",(T.gainNet>=0?"+":"−")+fmtCLP(Math.abs(T.gainNet)),"después de comisiones",indigo,T.gainNet>=0?green:red)}
+      ${tile("Rentabilidad neta %",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}
       ${tile("β consolidado",Tbeta>0?Tbeta.toFixed(2):"—",Tbeta>0?betaTag(Tbeta):"sin posiciones",indigo,accentT)}</div>`);
   const rows=stats.map(({c,s,pr})=>{const act=c.id===activeClient;
     return `<tr class="adm-row ${act?"on":""}">
@@ -3849,15 +3843,16 @@ function viewClientes(){
       <td>${fmtCLP(s.aportado)}</td>
       <td>${s.retirado>0?fmtCLP(s.retirado):"—"}</td>
       <td>${fmtCLP(s.value)}</td>
-      <td style="color:${s.gain>=0?green:red};font-weight:800">${(s.gain>=0?"+":"−")+fmtCLP(Math.abs(s.gain))}</td>
+      <td style="color:${red}">${s.fees>0?fmtCLP(s.fees):"—"}</td>
+      <td style="color:${s.gainNet>=0?green:red};font-weight:800">${(s.gainNet>=0?"+":"−")+fmtCLP(Math.abs(s.gainNet))}</td>
       <td style="color:${s.pct>=0?green:red};font-weight:800">${(s.pct>=0?"+":"")+s.pct.toFixed(2)}%</td>
       <td class="adm-c">${s.ndistinct}</td>
       <td class="adm-b" style="color:${accentT}">${s.beta>0?s.beta.toFixed(2):"—"}</td>
       <td class="adm-act">${act?'<span class="adm-here">estás aquí</span>':`<button class="btn" data-cliswitch="${c.id}">Entrar →</button>`}<button class="prj-del" data-clirename2="${c.id}" title="Renombrar">✎</button><button class="prj-del" data-clidel="${c.id}" title="Eliminar cliente">🗑</button></td>
     </tr>`;}).join("");
-  const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${T.gain>=0?green:red}">${(T.gain>=0?"+":"−")+fmtCLP(Math.abs(T.gain))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%</td><td class="adm-c">—</td><td class="adm-b" style="color:${accentT}">${Tbeta>0?Tbeta.toFixed(2):"—"}</td><td></td></tr>`;
-  const tbl=card("Carteras por cliente","Capital aportado y retirado, valor actual, ganancia/pérdida ($ y %), acciones distintas, perfil de riesgo y β de la cartera. Entra a un cliente para gestionar sus proyectos.",
-    `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Ganancia $</th><th>Rentab. %</th><th class="cc">Acciones</th><th class="cc">β cartera</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
+  const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${red}">${T.fees>0?fmtCLP(T.fees):"—"}</td><td style="color:${T.gainNet>=0?green:red}">${(T.gainNet>=0?"+":"−")+fmtCLP(Math.abs(T.gainNet))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%</td><td class="adm-c">—</td><td class="adm-b" style="color:${accentT}">${Tbeta>0?Tbeta.toFixed(2):"—"}</td><td></td></tr>`;
+  const tbl=card("Carteras por cliente","Capital aportado y retirado, valor actual, comisiones pagadas, ganancia neta de comisiones ($ y %), acciones distintas, perfil de riesgo y β de la cartera. Entra a un cliente para gestionar sus proyectos.",
+    `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Comisiones</th><th>Ganancia neta $</th><th>Rentab. %</th><th class="cc">Acciones</th><th class="cc">β cartera</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
      <div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-pri" id="cliAddBtn">+ Nuevo cliente</button><button class="btn" data-go-proj>Ver proyectos de ${(""+activeClientObj().name).replace(/</g,"&lt;")} →</button></div>`);
   return head+tbl;
 }
@@ -3900,11 +3895,11 @@ function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.for
 /* Resumen de gestión por cliente: aportado/retirado brutos, valor, ganancia y acciones distintas */
 function clientStats(id){
   const ps=clientProjects(id)||[];
-  let aportado=0,retirado=0,value=0,realized=0,withData=0,betaNum=0,betaW=0;const tickers={};
+  let aportado=0,retirado=0,value=0,realized=0,fees=0,withData=0,betaNum=0,betaW=0;const tickers={};
   ps.forEach(p=>{try{withProject(p,function(){
     const w=p.weeks||[];const L=w.length?ledger():null,IM=w.length?invMetrics():null;let pv=0;
     if(L&&IM&&L.tx&&L.tx.length){
-      L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;});
+      L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;fees+=brokerFee(x.monto);});
       pv=IM.last.val;
       realized+=(L.realized||[]).reduce((a,r)=>a+r.gain,0);
       Object.keys(L.sh).forEach(t=>{if((L.sh[t]||0)>1e-6)tickers[t]=1;});
@@ -3918,8 +3913,8 @@ function clientStats(id){
     const bp=(p.bp!=null&&p.bp>0)?p.bp:(hbTot>0?hb.reduce((a,hd)=>a+(hd.b||0)*(hd.monto||0),0)/hbTot:0);
     if(pv>0&&bp>0){betaNum+=bp*pv;betaW+=pv;}
   });}catch(e){}});
-  const gain=value+retirado-aportado,pct=aportado>0?gain/aportado*100:0;
-  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
+  const gain=value+retirado-aportado,gainNet=gain-fees,pct=aportado>0?gainNet/aportado*100:0;
+  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
 }
 /* perfil de riesgo por cliente (namespaced) + chip visual */
 function clientProfile(id){if(id===activeClient)return invProfile;try{const v=localStorage.getItem("inv_profile_v1__"+id);return v?JSON.parse(v):null;}catch(e){return null;}}
