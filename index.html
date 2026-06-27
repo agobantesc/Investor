@@ -563,6 +563,48 @@
   .cp-setbtn:hover{transform:translateY(-1px);}
   @media(max-width:520px){.cp-panel{width:100vw;} .cp-fab span.lbl{display:none;}}
 
+
+  /* ════════════════ PERFIL DE INVERSIONISTA ════════════════ */
+  .qcard{margin-bottom:14px;}
+  .qhd{display:flex;gap:11px;align-items:flex-start;margin-bottom:11px;}
+  .qnum{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:var(--brand-grad);color:#06231F;font:800 12px var(--font);display:flex;align-items:center;justify-content:center;}
+  .qtxt{font:700 13.5px var(--font);color:var(--navy);line-height:1.35;}
+  .qopts{display:grid;gap:7px;}
+  .qopt{display:flex;align-items:center;gap:10px;padding:.6rem .8rem;border:1px solid var(--line2);border-radius:10px;background:var(--card2);
+    cursor:pointer;font:600 12.5px var(--font);color:var(--ink);transition:.13s var(--ease);text-align:left;}
+  .qopt:hover{border-color:var(--a-200);background:var(--a-50);}
+  .qopt.on{border-color:transparent;background:linear-gradient(180deg,var(--a-400),var(--accent));color:#fff;box-shadow:0 2px 9px rgba(30,95,209,.26);}
+  .qopt .qb{flex:0 0 auto;width:16px;height:16px;border-radius:50%;border:2px solid var(--line2);}
+  .qopt.on .qb{border-color:#fff;background:radial-gradient(circle,#fff 38%,transparent 42%);}
+  .prof-hero{position:relative;overflow:hidden;border-radius:var(--r-lg);padding:1.6rem 1.7rem;color:#fff;box-shadow:var(--sh-lg);}
+  .prof-hero.cons{background:linear-gradient(125deg,#0A4A3A,#0B8457);}
+  .prof-hero.mod{background:linear-gradient(125deg,#0A1E3D,#1E5FD1);}
+  .prof-hero.agr{background:linear-gradient(125deg,#5B1A1E,#CE2F3B);}
+  .prof-hero::after{content:"";position:absolute;right:-50px;top:-50px;width:230px;height:230px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 65%);}
+  .prof-hero .pl{font-size:9px;letter-spacing:1.6px;text-transform:uppercase;font-weight:800;opacity:.8;}
+  .prof-hero h1{font:800 28px var(--font);letter-spacing:-.5px;margin:6px 0 8px;position:relative;}
+  .prof-hero p{font-size:13px;opacity:.94;line-height:1.6;max-width:640px;position:relative;}
+  .prof-bar{height:9px;border-radius:6px;background:rgba(255,255,255,.22);margin-top:14px;overflow:hidden;position:relative;}
+  .prof-bar i{display:block;height:100%;background:#fff;border-radius:6px;}
+  .prof-scale{display:flex;justify-content:space-between;font-size:10px;font-weight:700;opacity:.85;margin-top:5px;}
+
+  /* ════════════════ IMPORTAR ACCIONES ════════════════ */
+  .imp-drop{border:1.5px dashed var(--line2);border-radius:var(--r);padding:1.7rem;text-align:center;background:var(--surface);transition:.15s;cursor:pointer;}
+  .imp-drop:hover,.imp-drop.drag{border-color:var(--accent);background:var(--a-50);}
+  .imp-drop .di{width:48px;height:48px;border-radius:14px;background:var(--brand-grad);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:0 6px 18px rgba(30,95,209,.3);}
+  .imp-drop b{color:var(--navy);font-size:14px;} .imp-drop span{color:var(--muted);font-size:12px;}
+  .imp-steps{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .imp-step{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:var(--faint);padding:.35rem .7rem;border-radius:var(--r-pill);background:var(--card2);border:1px solid var(--line);}
+  .imp-step.on{color:#fff;background:var(--accent);border-color:transparent;}
+  .imp-step.done{color:var(--green);border-color:var(--green-line);background:var(--greenbg);}
+  .imp-table-prev{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:var(--r-sm);}
+  .imp-table-prev table{font-size:11.5px;} .imp-table-prev th{font-size:9px;}
+  .imp-cfgrow{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;}
+  .imp-cfgrow .genl{margin-bottom:7px;}
+  .imp-tmpl{font-family:var(--mono);font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:.7rem .9rem;overflow-x:auto;white-space:pre;color:var(--ink);line-height:1.6;}
+  .imp-banner{display:flex;align-items:center;gap:11px;padding:.7rem 1rem;border-radius:var(--r-sm);background:var(--data-bg);border:1px solid var(--data);color:var(--data);font-size:12px;font-weight:700;}
+  .imp-banner .btn{margin-left:auto;}
+
 </style>
 </head>
 <body>
@@ -587,8 +629,8 @@ const DATA = {"window": "jun-2024 a may-2026", "n": 23, "labels": ["jul-24", "ag
 ;
 
 // ===== PARÁMETROS =====
-const RF=DATA.rf, PRIMA=DATA.prima, ERM=DATA.erm;
-const STOCKS=DATA.stocks, MKT=DATA.market, CORR=DATA.corr, TICK=DATA.tickers;
+let RF=DATA.rf, PRIMA=DATA.prima, ERM=DATA.erm;
+let STOCKS=DATA.stocks, MKT=DATA.market, CORR=DATA.corr, TICK=DATA.tickers;
 let modulo="eval", page="comparativa", sel=STOCKS[0].t;
 let invStkSel=null;
 
@@ -734,8 +776,9 @@ function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div 
 
 // ===== NAV =====
 const MODS={
-  eval:{label:"Análisis",tabs:[{id:"comparativa",label:"Comparativa",n:"1"},{id:"detalle",label:"Detalle por acción",n:"2"},{id:"capm",label:"CAPM / SML",n:"3"},{id:"multifactor",label:"Multifactor",n:"4"}]},
+  eval:{label:"Análisis",tabs:[{id:"comparativa",label:"Comparativa",n:"1"},{id:"detalle",label:"Detalle por acción",n:"2"},{id:"capm",label:"CAPM / SML",n:"3"},{id:"multifactor",label:"Multifactor",n:"4"},{id:"importar",label:"Importar acciones",n:"5"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
+  perfil:{label:"Perfil",tabs:[{id:"perfil",label:"Perfil de inversionista",n:"1"}]},
   inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Ingresar datos",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"}]},
   pro:{label:"Pro · Roadmap",tabs:[{id:"realtime",label:"Datos en tiempo real",n:"1"},{id:"copilot",label:"Copiloto IA",n:"2"}]},
 };
@@ -743,11 +786,12 @@ const ICO={
  eval:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>',
  sim:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>',
  inv:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7"/><path d="M3 12h18"/></svg>',
- pro:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13H11l-1 9 8.5-12H12l1-8z"/></svg>'
+ pro:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13H11l-1 9 8.5-12H12l1-8z"/></svg>',
+ perfil:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
 };
 function renderChrome(){
   let nav=`<div class="sgroup">Módulos</div>`;
-  ["eval","sim","inv","pro"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
+  ["eval","sim","perfil","inv","pro"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
   document.getElementById("snav").innerHTML=nav;
@@ -811,7 +855,7 @@ function attachLineHover(){
 
 
 const MES=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-function prevMonth(lb){const p=lb.split("-");let mi=MES.indexOf(p[0]),y=+p[1];mi--;if(mi<0){mi=11;y--;}return MES[mi]+"-"+(y<10?"0":"")+y;}
+function prevMonth(lb){const p=(""+lb).split("-");let mi=MES.indexOf(p[0]);if(mi<0)return ""+lb;let y=+p[1];mi--;if(mi<0){mi=11;y--;}return MES[mi]+"-"+(y<10?"0":"")+y;}
 function svgPrice(o){
   const W=780,H=o.h||215,m={l:62,r:18,t:18,b:48},n=o.prices.length,step=(W-m.l-m.r)/(n-1);
   const mn=Math.min(...o.prices),mx=Math.max(...o.prices),pad=(mx-mn)*0.12||mx*0.1||1;const bd={min:Math.max(0,mn-pad),max:mx+pad};
@@ -887,7 +931,7 @@ function viewDetalle(){
     ${tile("Sharpe",a.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),s.c,a.sharpe>=0?green:red)}
     ${tile("E(R) CAPM",p0(a.er),"retorno exigido",s.c,indigo)}
     ${tile("α Jensen",pc(a.jensen),"real − exigido",s.c,col(a.jensen))}</div>`;
-  const xb=niceBounds(MKT.rets,0.1),yb=niceBounds(s.rets,0.1),am=a.alphaR/12;
+  const xb=niceBounds(MKT.rets,0.1),yb=niceBounds(s.rets,0.1),am=a.alphaR/(DATA.perYear||12);
   const pts=s.rets.map((y,k)=>({x:MKT.rets[k],y:y,c:s.c+"d0",r:5}));
   const line=[{x1:xb.min,y1:am+s.b*xb.min,x2:xb.max,y2:am+s.b*xb.max,c:s.c}];
   const scl=card("Recta Característica (SCL)",`Retorno mensual de ${s.t} (Y) vs IPSA (X) · pendiente = β ${s.b.toFixed(2)}`,svgScatter({pts,lines:line,xmin:xb.min,xmax:xb.max,ymin:yb.min,ymax:yb.max,xlab:"IPSA (% mensual)",ylab:s.t+" (% mensual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:300}));
@@ -1832,17 +1876,21 @@ function render(){
   let h="";
   if(modulo==="inv") h=(page==="operar"?viewOperar():viewInv());
   else if(modulo==="pro") h=viewPro();
+  else if(modulo==="perfil") h=viewPerfil();
   else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
   else if(page==="comparativa") h=viewComparativa();
   else if(page==="detalle") h=viewDetalle();
   else if(page==="capm") h=viewCAPM();
   else if(page==="multifactor") h=viewMultifactor();
+  else if(page==="importar") h=viewImport();
   document.getElementById("main").innerHTML=`<div class="wrap">${h}</div>`;
   const _mn=document.getElementById("main");if(_mn)_mn.scrollTop=0;
   if(modulo==="eval"&&page==="detalle"){ document.querySelectorAll(".selb").forEach(b=>b.onclick=()=>{sel=b.dataset.sel;render();}); attachLineHover(); attachPriceHover(); }
   if(modulo==="sim"){ if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
   if(modulo==="inv") attachInv();
   if(modulo==="eval"&&page==="multifactor") attachMultifactor();
+  if(modulo==="eval"&&page==="importar") attachImport();
+  if(modulo==="perfil") attachPerfil();
   attachScatterAll();
 }
 
@@ -1931,7 +1979,7 @@ function computeFactors(list){
   });
   return {z,er,comp,attrib,raws};
 }
-const MF=computeFactors(STOCKS);
+let MF=computeFactors(STOCKS);
 
 function compositeOf(t,prof){
   if(prof==="equal")return MF.comp[t];
@@ -2205,7 +2253,9 @@ const COPILOT_TOOLS=[
   {name:"get_correlations",description:"Pares de acciones mejor (más diversificadores) y peor (más correlacionados) según la matriz de correlación de retornos mensuales.",input_schema:{type:"object",properties:{}}},
   {name:"get_scenarios",description:"Escenarios de simulación guardados por el usuario, con su composición y métricas.",input_schema:{type:"object",properties:{}}},
   {name:"get_constructor",description:"La cartera que el usuario tiene en este momento en el Constructor (Simulación), con sus métricas y exposición factorial.",input_schema:{type:"object",properties:{}}},
-  {name:"evaluate_portfolio",description:"Evalúa una cartera hipotética. Entrega pesos por ticker (en %, suman ~100). Devuelve β, E(R) CAPM, E(R) multifactor, σ, Sharpe, correlación media y exposición factorial. Úsalo para proponer/comparar carteras.",input_schema:{type:"object",properties:{weights:{type:"object",description:"Mapa ticker->peso %, ej. {\"BCI\":40,\"ENELCHILE\":30,\"COLBUN\":30}",additionalProperties:{type:"number"}},amount:{type:"number",description:"Monto a invertir en CLP (opcional)"}},required:["weights"]}}
+  {name:"evaluate_portfolio",description:"Evalúa una cartera hipotética. Entrega pesos por ticker (en %, suman ~100). Devuelve β, E(R) CAPM, E(R) multifactor, σ, Sharpe, correlación media y exposición factorial. Úsalo para proponer/comparar carteras.",input_schema:{type:"object",properties:{weights:{type:"object",description:"Mapa ticker->peso %, ej. {\"BCI\":40,\"ENELCHILE\":30,\"COLBUN\":30}",additionalProperties:{type:"number"}},amount:{type:"number",description:"Monto a invertir en CLP (opcional)"}},required:["weights"]}},
+  {name:"get_investor_profile",description:"Perfil de inversionista del usuario (conservador/moderado/riesgoso) para personalizar recomendaciones.",input_schema:{type:"object",properties:{}}},
+  {name:"get_imported_analysis",description:"Si el usuario importó un set de acciones propio, devuelve sus métricas CAPM, benchmark y correlaciones. Vacío si usa el set demo.",input_schema:{type:"object",properties:{}}}
 ];
 
 function cpRunTool(name,input){
@@ -2264,6 +2314,8 @@ function cpRunTool(name,input){
         composicion:e.PM.ws.map(x=>({t:x.s.t,peso:+(x.w*100).toFixed(1),montoCLP:amount?Math.round(amount*x.w):undefined}))};
       return JSON.stringify(res);
     }
+    if(name==="get_investor_profile"){return invProfile?JSON.stringify({perfil:invProfile.profile,etiqueta:invProfile.label,puntaje:invProfile.score+"/40",guia:invProfile.guideShort}):"El usuario aún no completó su perfil de inversionista (módulo Perfil). Puedes sugerirle hacerlo.";}
+    if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     return "Herramienta desconocida.";
   }catch(err){return "Error ejecutando "+name+": "+err.message;}
 }
@@ -2350,7 +2402,7 @@ async function cpSend(text){
   try{
     let guard=0;
     while(guard++<8){
-      const body={model:cpModel,max_tokens:2048,system:CP_SYSTEM,tools:COPILOT_TOOLS,messages:cpApiMessages()};
+      const body={model:cpModel,max_tokens:2048,system:cpSystemPrompt(),tools:COPILOT_TOOLS,messages:cpApiMessages()};
       const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
         "content-type":"application/json","x-api-key":cpKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
       if(!res.ok){
@@ -2389,6 +2441,233 @@ function cpOpenPanel(){cpEnsureDOM();cpOpen=true;document.getElementById("cpPane
 function cpClosePanel(){cpOpen=false;const p=document.getElementById("cpPanel");if(p)p.classList.remove("open");const f=document.getElementById("cpFab");if(f)f.classList.remove("hide");}
 function cpToggle(){cpOpen?cpClosePanel():cpOpenPanel();}
 cpEnsureDOM();
+
+/* ===================================================================== */
+/* ===== PERFIL DE INVERSIONISTA + IMPORTAR ACCIONES =================== */
+/* ===================================================================== */
+
+/* ---------------- PERFIL ---------------- */
+const PROF_Q=[
+  {q:"¿Cuándo planeas necesitar este dinero?",o:[["En menos de 1 año",1],["1 a 3 años",2],["3 a 5 años",3],["5 a 10 años",4],["Más de 10 años",5]]},
+  {q:"¿Cuál es tu objetivo principal?",o:[["Preservar el capital",1],["Ingresos estables",2],["Crecimiento moderado",3],["Crecimiento alto",4],["Maximizar el retorno a toda costa",5]]},
+  {q:"Si tu cartera cae 20% en un mes, ¿qué haces?",o:[["Vendo todo",1],["Vendo una parte",2],["No hago nada / espero",3],["Aporto un poco más",4],["Aporto agresivamente (oportunidad)",5]]},
+  {q:"¿Cuánta experiencia tienes invirtiendo?",o:[["Ninguna",1],["Poca: depósitos / fondos mutuos",2],["Media: algunas acciones",3],["Alta: acciones y derivados",4],["Profesional / sector financiero",5]]},
+  {q:"¿Qué % de tus ingresos puedes invertir sin afectar tus gastos?",o:[["Menos de 5%",1],["5% a 10%",2],["10% a 20%",3],["20% a 35%",4],["Más de 35%",5]]},
+  {q:"Tu fondo de emergencia cubre…",o:[["No tengo fondo",1],["Menos de 3 meses",2],["3 a 6 meses",3],["6 a 12 meses",4],["Más de 12 meses",5]]},
+  {q:"¿Qué prefieres?",o:[["Estabilidad, aunque rente poco",1],["Algo de variación",2],["Equilibrio riesgo-retorno",3],["Acepto vaivenes por más retorno",4],["Máximo retorno y máxima volatilidad",5]]},
+  {q:"Tu conocimiento de β, volatilidad y diversificación es…",o:[["Nulo",1],["Básico",2],["Intermedio",3],["Avanzado",4],["Experto",5]]}
+];
+let profAns=lsGet("inv_profile_ans_v1")||{}, invProfile=lsGet("inv_profile_v1")||null, profEdit=false;
+function profCompute(){
+  let score=0;for(let i=0;i<PROF_Q.length;i++)score+=(+profAns[i]||0);
+  const profile=score<=18?"conservador":score<=29?"moderado":"riesgoso";
+  const D={conservador:{label:"Conservador",cls:"cons",desc:"Priorizas no perder. Buscas estabilidad, baja volatilidad e ingresos por dividendo; el crecimiento es secundario.",
+      factores:"Low-Volatility, Quality y Dividend Yield",mix:"4–6 acciones defensivas, máx ~30% por acción",beta:"β bajo (≈0,6–0,9)",
+      guideShort:"Prioriza preservar capital: baja volatilidad, calidad y dividendos; cartera diversificada (4–6 acciones), poca concentración y β bajo."},
+    moderado:{label:"Moderado",cls:"mod",desc:"Buscas el mejor equilibrio entre riesgo y retorno. Toleras caídas temporales a cambio de crecimiento sostenido.",
+      factores:"Quality y Value (núcleo), con Momentum y Low-Vol balanceados",mix:"3–5 acciones, máx ~40% por acción",beta:"β cercano al mercado (≈0,9–1,1)",
+      guideShort:"Equilibra riesgo y retorno (estilo Sharpe): núcleo de calidad y valor, β cercano al mercado, 3–5 acciones."},
+    riesgoso:{label:"Riesgoso / Agresivo",cls:"agr",desc:"Buscas maximizar el crecimiento y toleras alta volatilidad. Aceptas concentración y caídas fuertes por mayor retorno potencial.",
+      factores:"Momentum, Size (small-cap) y Growth",mix:"2–4 acciones, hasta ~50% por acción",beta:"β alto (>1,1)",
+      guideShort:"Maximiza crecimiento y tolera volatilidad: momentum, small-cap y growth, cartera más concentrada (2–4 acciones), β alto."}};
+  const d=D[profile];
+  return {profile,score,label:d.label,cls:d.cls,desc:d.desc,factores:d.factores,mix:d.mix,betaGuide:d.beta,guideShort:d.guideShort,date:new Date().toLocaleDateString("es-CL")};
+}
+function viewPerfil(){
+  const done=invProfile&&!profEdit;
+  if(done){
+    const p=invProfile,pct=Math.round((p.score-8)/32*100);
+    const hero=`<div class="prof-hero ${p.cls}"><div class="pl">Tu perfil de inversionista</div><h1>${p.label}</h1><p>${p.desc}</p>
+      <div class="prof-bar"><i style="width:${pct}%"></i></div><div class="prof-scale"><span>Conservador</span><span>Moderado</span><span>Agresivo</span></div>
+      <div style="position:relative;margin-top:12px;font-size:11px;opacity:.85">Puntaje ${p.score}/40 · evaluado el ${p.date}</div></div>`;
+    const guide=card("Qué significa para tu estrategia","Cómo se ajustan el análisis multifactor y el asistente a tu perfil",`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+      ${tile("Factores a enfatizar",p.factores.split(",")[0],p.factores,indigo,indigo)}
+      ${tile("Composición sugerida",p.mix.split(",")[0],p.mix,indigo,ink)}
+      ${tile("β objetivo de cartera",p.betaGuide,"sensibilidad al mercado",indigo,accentT)}
+      </div><div class="note" style="margin-top:13px">Tu perfil ahora <b>personaliza tu Copiloto IA</b> (sus recomendaciones se alinean a tu tolerancia) y queda como <b>perfil por defecto del Asistente de simulación</b> (Simulación → Asistente).</div>`,
+      `<button class="btn" id="profEdit">↺ Volver a evaluar</button>`);
+    const cta=notecard(`¿Quieres que el copiloto arme una cartera para tu perfil <b>${p.label.toLowerCase()}</b>? <button class="btn btn-pri" data-opencopilot style="margin-left:6px;padding:.32rem .7rem">✨ Abrir copiloto IA</button>`);
+    return hero+guide+cta;
+  }
+  const intro=card("Evaluación de perfil de inversionista","8 preguntas · define tu tolerancia al riesgo para personalizar el análisis y el copiloto IA",
+    `<div class="note" style="margin:0">Responde con sinceridad. Al terminar obtendrás tu perfil (Conservador, Moderado o Agresivo), una guía de estrategia y un copiloto IA ajustado a ti.</div>`);
+  const qs=PROF_Q.map((Q,i)=>`<div class="card qcard"><div class="bd"><div class="qhd"><div class="qnum">${i+1}</div><div class="qtxt">${Q.q}</div></div>
+    <div class="qopts">${Q.o.map((o)=>`<button class="qopt ${profAns[i]==o[1]?"on":""}" data-q="${i}" data-pts="${o[1]}"><span class="qb"></span>${o[0]}</button>`).join("")}</div></div></div>`).join("");
+  const answered=Object.keys(profAns).filter(k=>profAns[k]).length;
+  const submit=`<div style="display:flex;gap:11px;align-items:center;flex-wrap:wrap"><button class="btn btn-pri" id="profCalc" ${answered<8?'disabled style="opacity:.5;cursor:not-allowed"':""}>Calcular mi perfil</button><span class="note" style="margin:0">${answered}/8 respondidas</span></div>`;
+  return intro+qs+submit;
+}
+function attachPerfil(){
+  document.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{const m=document.getElementById("main"),s=m?m.scrollTop:0;profAns[b.dataset.q]=+b.dataset.pts;lsSet("inv_profile_ans_v1",profAns);render();const m2=document.getElementById("main");if(m2)m2.scrollTop=s;});
+  const c=document.getElementById("profCalc");if(c)c.onclick=()=>{if(Object.keys(profAns).filter(k=>profAns[k]).length<8)return;invProfile=profCompute();lsSet("inv_profile_v1",invProfile);simState.profile=invProfile.profile;profEdit=false;render();};
+  const e=document.getElementById("profEdit");if(e)e.onclick=()=>{profEdit=true;render();};
+}
+
+/* ---------------- DATASET ACTIVO (demo IPSA <-> importado) ---------------- */
+const DEMO={stocks:DATA.stocks,market:DATA.market,corr:DATA.corr,tickers:DATA.tickers,labels:DATA.labels,window:DATA.window,n:DATA.n,rf:DATA.rf,prima:DATA.prima,erm:DATA.erm,perYear:12};
+let DATASET="demo";
+function setActive(s){
+  DATA.stocks=s.stocks;DATA.market=s.market;DATA.corr=s.corr;DATA.tickers=s.tickers;DATA.labels=s.labels;DATA.window=s.window;DATA.n=s.n;DATA.rf=s.rf;DATA.prima=s.prima;DATA.perYear=s.perYear;
+  STOCKS=s.stocks;MKT=s.market;CORR=s.corr;TICK=s.tickers;RF=s.rf;PRIMA=s.prima;MF=computeFactors(STOCKS);
+  sel=STOCKS[0].t;mfSel=STOCKS[0].t;simState.sel={};invStkSel=null;
+}
+function applyDataset(which){
+  if(which==="import"&&IMP){const A=IMP.assets;setActive({stocks:A,market:{ret:IMP.bench.ret,sig:IMP.bench.sig,tot:IMP.bench.tot,rets:IMP.bench.rets,sharpe:IMP.bench.sharpe},corr:IMP.corr,tickers:A.map(a=>a.t),labels:IMP.labels,window:IMP.window+" · benchmark "+IMP.bench.name,n:IMP.n,rf:IMP.rf,prima:IMP.prima,perYear:IMP.perYear});DATASET="import";lsSet("inv_dataset_active","import");}
+  else{setActive(DEMO);DATASET="demo";lsSet("inv_dataset_active","demo");}
+  render();
+}
+
+/* ---------------- IMPORTAR ACCIONES ---------------- */
+const IMP_PAL=["#1E5FD1","#0E8C5E","#DB2777","#A8700C","#7C3AED","#0EA5E9","#D9730D","#0E8F86","#CE2F3B","#65A30D","#6D54D8","#0891B2","#9333EA","#E11D48","#15803D","#CA8A04"];
+const IMP_PY={diario:252,semanal:52,mensual:12};
+let impParsed=null, IMP=lsGet("inv_import_v1")||null, impFreq="mensual", impRf=RF, impBench=null, impMsg="";
+
+function impParseNum(s,delim){s=(s==null?"":""+s).trim().replace(/^"|"$/g,"").replace(/\s/g,"").replace(/\$/g,"").replace(/%/g,"");if(s==="")return NaN;if(delim===";"){s=s.replace(/\./g,"").replace(",",".");}else{s=s.replace(/,/g,"");}return parseFloat(s);}
+function impParseCSV(text){
+  const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim().length);
+  if(lines.length<3)throw new Error("el archivo tiene muy pocas filas.");
+  const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",";
+  const header=lines[0].split(delim).map(s=>s.trim().replace(/^"|"$/g,""));
+  const cols=header.slice(1).filter(h=>h);const dates=[],series={};cols.forEach(c=>series[c]=[]);
+  for(let i=1;i<lines.length;i++){const cells=lines[i].split(delim);dates.push((cells[0]||"").trim().replace(/^"|"$/g,""));cols.forEach((c,j)=>series[c].push(impParseNum(cells[j+1],delim)));}
+  return {dates,series,cols};
+}
+async function impInflate(bytes){const ds=new DecompressionStream("deflate-raw");const rs=new Blob([bytes]).stream().pipeThrough(ds);const ab=await new Response(rs).arrayBuffer();return new Uint8Array(ab);}
+function impU16(b,o){return b[o]|(b[o+1]<<8);}
+function impU32(b,o){return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;}
+async function impUnzip(u8){
+  let eocd=-1;for(let i=u8.length-22;i>=0;i--){if(u8[i]===0x50&&u8[i+1]===0x4b&&u8[i+2]===0x05&&u8[i+3]===0x06){eocd=i;break;}}
+  if(eocd<0)throw new Error("no es un .xlsx válido.");
+  const cnt=impU16(u8,eocd+10),cdOff=impU32(u8,eocd+16);const files={};let p=cdOff;
+  for(let n=0;n<cnt;n++){if(impU32(u8,p)!==0x02014b50)break;const method=impU16(u8,p+10),csize=impU32(u8,p+20),nameLen=impU16(u8,p+28),extraLen=impU16(u8,p+30),commLen=impU16(u8,p+32),lho=impU32(u8,p+42);
+    const name=new TextDecoder().decode(u8.slice(p+46,p+46+nameLen));
+    const lNameLen=impU16(u8,lho+26),lExtra=impU16(u8,lho+28),dataStart=lho+30+lNameLen+lExtra;
+    const comp=u8.slice(dataStart,dataStart+csize);files[name]=(method===0)?comp:await impInflate(comp);
+    p+=46+nameLen+extraLen+commLen;}
+  return files;
+}
+function impXmlText(s){return s.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'");}
+async function impReadXlsx(file){
+  const u8=new Uint8Array(await file.arrayBuffer());const files=await impUnzip(u8);const dec=new TextDecoder();
+  const shared=[];if(files["xl/sharedStrings.xml"]){const x=dec.decode(files["xl/sharedStrings.xml"]);(x.match(/<si>[\s\S]*?<\/si>/g)||[]).forEach(si=>shared.push(impXmlText(si)));}
+  let sheetName=Object.keys(files).find(n=>/^xl\/worksheets\/sheet1\.xml$/.test(n))||Object.keys(files).find(n=>/^xl\/worksheets\/.*\.xml$/.test(n));
+  if(!sheetName)throw new Error("no se encontró la hoja.");
+  const sx=dec.decode(files[sheetName]);const rowsXml=sx.match(/<row[\s\S]*?<\/row>/g)||[];const grid=[];let maxc=0;
+  rowsXml.forEach(rx=>{const cells={};(rx.match(/<c[\s\S]*?(?:\/>|<\/c>)/g)||[]).forEach(cx=>{
+      const ref=(cx.match(/r="([A-Z]+)\d+"/)||[])[1]||"";let col=0;for(let k=0;k<ref.length;k++)col=col*26+(ref.charCodeAt(k)-64);col-=1;if(col<0)col=0;
+      const t=(cx.match(/t="([^"]+)"/)||[])[1];let val;
+      if(t==="s"){const v=(cx.match(/<v>([\s\S]*?)<\/v>/)||[])[1];val=shared[+v]!=null?shared[+v]:"";}
+      else if(t==="inlineStr"||t==="str"){val=impXmlText((cx.match(/<t[^>]*>([\s\S]*?)<\/t>/)||cx.match(/<v>([\s\S]*?)<\/v>/)||["",""])[1]);}
+      else{const v=(cx.match(/<v>([\s\S]*?)<\/v>/)||[])[1];val=v!=null?+v:"";}
+      cells[col]=val;if(col>maxc)maxc=col;});
+    const arr=[];for(let i=0;i<=maxc;i++)arr.push(cells[i]!=null?cells[i]:"");grid.push(arr);});
+  if(grid.length<3)throw new Error("la hoja tiene muy pocas filas.");
+  const header=grid[0].map(x=>(""+x).trim());const cols=header.slice(1).filter(h=>h);const dates=[],series={};cols.forEach(c=>series[c]=[]);
+  for(let i=1;i<grid.length;i++){const row=grid[i];let d=row[0];if(typeof d==="number"&&d>20000&&d<80000)d=new Date(Date.UTC(1899,11,30)+d*864e5).toISOString().slice(0,10);
+    dates.push(""+d);cols.forEach((c,j)=>{const v=row[j+1];series[c].push(typeof v==="number"?v:impParseNum(v,","));});}
+  return {dates,series,cols};
+}
+function impDetectBench(cols){return cols.find(c=>/ipsa|bench|índice|indice|index|spx|s&p|merc|nasdaq|dow/i.test(c))||cols[0];}
+async function impOnFile(file){
+  impMsg="";try{
+    let parsed;if(/\.xlsx$/i.test(file.name))parsed=await impReadXlsx(file);else parsed=impParseCSV(await file.text());
+    if(!parsed.cols.length)throw new Error("no se detectaron columnas de acciones.");
+    impParsed=parsed;impBench=impDetectBench(parsed.cols);
+  }catch(e){impMsg="No se pudo leer el archivo: "+e.message+" Prueba guardándolo como CSV (Archivo → Guardar como → CSV).";impParsed=null;}
+  render();
+}
+function impStats(prices,perYear){
+  const rets=[];for(let i=1;i<prices.length;i++)rets.push(prices[i]/prices[i-1]-1);
+  const m=rets.length,mean=m?rets.reduce((a,b)=>a+b,0)/m:0;const v=m>1?rets.reduce((a,b)=>a+(b-mean)**2,0)/(m-1):0,sd=Math.sqrt(v);
+  const total=prices[prices.length-1]/prices[0]-1,years=m/perYear,retAnn=years>0?Math.pow(1+total,1/years)-1:0;
+  return {rets,mean,sd,total,retAnn,sigAnn:sd*Math.sqrt(perYear)};
+}
+function impBetaCorr(ra,rm){const n=Math.min(ra.length,rm.length);if(!n)return {beta:0,corr:0,r2:0};let ma=0,mm=0;for(let i=0;i<n;i++){ma+=ra[i];mm+=rm[i];}ma/=n;mm/=n;let cov=0,vm=0,va=0;for(let i=0;i<n;i++){cov+=(ra[i]-ma)*(rm[i]-mm);vm+=(rm[i]-mm)**2;va+=(ra[i]-ma)**2;}const beta=vm>0?cov/vm:0,corr=(vm>0&&va>0)?cov/Math.sqrt(vm*va):0;return {beta,corr,r2:corr*corr};}
+function impCalc(){
+  if(!impParsed||!impBench)return;
+  const perYear=IMP_PY[impFreq],S=impParsed.series,bcol=impBench;
+  const keep=[];impParsed.dates.forEach((d,i)=>{if(isFinite(S[bcol][i]))keep.push(i);});
+  if(keep.length<4){impMsg="El benchmark seleccionado no tiene suficientes datos numéricos.";render();return;}
+  const dates=keep.map(i=>impParsed.dates[i]),benchPrices=keep.map(i=>S[bcol][i]);
+  const bs=impStats(benchPrices,perYear),benchRet=bs.retAnn*100,prima=benchRet-impRf;
+  const dropped=[],assets=[];let ci=0;
+  impParsed.cols.filter(c=>c!==bcol).forEach(c=>{
+    const arr=keep.map(i=>S[c][i]);if(arr.some(v=>!isFinite(v)||v<=0)||arr.length<4){dropped.push(c);return;}
+    const st=impStats(arr,perYear),bc=impBetaCorr(st.rets,bs.rets);
+    const retAnn=st.retAnn*100,er=impRf+bc.beta*prima,jensen=retAnn-er,alphaR=(st.mean-bc.beta*bs.mean)*perYear*100,sharpe=st.sigAnn>0?(retAnn-impRf)/(st.sigAnn*100):0;
+    assets.push({t:c,n:c,s:"importada",c:IMP_PAL[ci++%IMP_PAL.length],b:bc.beta,rets:st.rets.map(r=>r*100),prices:arr,
+      a24:{ret:retAnn,sig:st.sigAnn*100,r2:bc.r2,corr:bc.corr,jensen,alphaR,sharpe,er,tot:st.total*100}});
+  });
+  if(!assets.length){impMsg="No quedaron acciones con datos completos. Revisa que no haya celdas vacías o precios cero.";render();return;}
+  const N=assets.length,corr=[];for(let i=0;i<N;i++){corr[i]=[];for(let j=0;j<N;j++)corr[i][j]=i===j?1:impBetaCorr(assets[i].rets.map(x=>x/100),assets[j].rets.map(x=>x/100)).corr;}
+  IMP={freq:impFreq,rf:impRf,prima,perYear,window:dates[0]+" a "+dates[dates.length-1],n:dates.length-1,labels:dates.slice(1),
+    bench:{name:bcol,prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-impRf)/(bs.sigAnn*100):0},assets,corr,dropped};
+  lsSet("inv_import_v1",IMP);impParsed=null;impMsg=dropped.length?("Se omitieron por datos incompletos: "+dropped.join(", ")):"";
+  applyDataset("import");
+}
+function impDownloadTemplate(){
+  const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B;ENELCHILE\n2025-01-31;6500;52000;5800;38000;55\n2025-02-28;6610;53400;6010;36500;57\n2025-03-31;6720;55100;5950;40200;58\n2025-04-30;6680;54200;6230;39100;60\n2025-05-31;6810;56800;6480;42500;62\n2025-06-30;6905;57500;6390;41000;61\n2025-07-31;6990;59100;6550;44000;63\n";
+  const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+}
+function viewImport(){
+  const tmpl=card("Importar acciones para analizar","Carga muchas acciones candidatas (CSV o Excel), córreles el análisis completo — CAPM, riesgo-retorno, SML, correlaciones — y decide antes de armar tu portafolio",
+    `<div class="note" style="margin:0 0 12px">Una fila por fecha y una columna por acción, más una columna de índice/benchmark (ej. IPSA). Elige la <b>periodicidad</b> (diario, semanal o mensual). Las acciones importadas pasan a usarse en <b>toda la plataforma</b>: Comparativa, Detalle, CAPM/SML, Multifactor y el Constructor.</div>
+     <div class="genl">Formato esperado</div><div class="imp-tmpl">Fecha;IPSA;BCI;FALABELLA;SQM-B
+2025-01-31;6500;52000;5800;38000
+2025-02-28;6610;53400;6010;36500
+…</div>
+     <div style="margin-top:11px;display:flex;gap:9px;flex-wrap:wrap;align-items:center"><button class="btn" id="imptmpl">⬇ Descargar plantilla CSV</button><span class="note" style="margin:0">En Excel: <b>Archivo → Guardar como → CSV</b> si el .xlsx no carga.</span></div>`);
+  const up=card("1 · Cargar archivo",impMsg&&!impParsed&&!IMP?`<span style="color:var(--red)">${impMsg}</span>`:"Selecciona tu CSV o Excel y la periodicidad de los datos",
+    `<div class="imp-cfgrow"><div><div class="genl">Periodicidad de los datos</div><div class="pbtns">${[["diario","Diario"],["semanal","Semanal"],["mensual","Mensual"]].map(([k,l])=>`<button class="pbtn ${impFreq===k?"on":""}" data-impfreq="${k}">${l}</button>`).join("")}</div></div>
+       <div><div class="genl">Tasa libre de riesgo (% anual)</div><input type="number" step="0.1" id="imprf" value="${impRf}" style="width:110px;text-align:right"></div></div>
+     <div class="imp-drop" id="impdrop"><div class="di"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 5v12"/></svg></div>
+       <b>Arrastra o haz clic para subir</b><br><span>CSV o XLSX</span></div><input type="file" id="impfile" accept=".csv,.xlsx" style="display:none">`);
+  let cfg="";
+  if(impParsed){
+    const head=["Fecha",...impParsed.cols];
+    const prev=impParsed.dates.slice(0,7).map((d,i)=>`<tr><td>${d}</td>${impParsed.cols.map(c=>`<td class="tnum">${isFinite(impParsed.series[c][i])?impParsed.series[c][i]:"—"}</td>`).join("")}</tr>`).join("");
+    cfg=card("2 · Configurar y calcular",`Detectadas <b>${impParsed.cols.length}</b> columnas y <b>${impParsed.dates.length}</b> filas · elige cuál es el índice/benchmark`,
+      `<div class="imp-cfgrow"><div><div class="genl">Columna benchmark (índice)</div><select id="impbench" style="padding:.5rem .6rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font-family:var(--font);font-size:12.5px">${impParsed.cols.map(c=>`<option ${c===impBench?"selected":""}>${c}</option>`).join("")}</select></div>
+        <button class="btn btn-pri" id="impcalc">Calcular y analizar →</button></div>
+       <div class="imp-table-prev"><table><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${prev}</tbody></table></div>
+       <div class="note" style="margin-top:9px">Vista previa (primeras filas). Las demás columnas se tratan como acciones.</div>`);
+  }
+  let res="";
+  if(IMP){
+    const active=DATASET==="import";
+    const banner=card("Acciones importadas",`${IMP.assets.length} acciones · ${IMP.freq} · benchmark ${IMP.bench.name} · ${IMP.window}`,
+      `<div class="note" style="margin:0 0 11px">${active?`<b style="color:var(--green)">✓ Activas en toda la plataforma.</b> Ve a <b>Análisis</b> (Comparativa, Detalle, CAPM, Multifactor) y a <b>Simulación → Constructor</b> para analizarlas y armar tu cartera.`:`Cargadas pero no activas. Actívalas para usarlas en todo el análisis.`}${IMP.dropped&&IMP.dropped.length?`<br><span style="color:var(--amber)">Omitidas por datos incompletos: ${IMP.dropped.join(", ")}.</span>`:""}<br><span style="color:var(--faint)">Nota: el modelo <b>multifactor</b> con fundamentales (Value/Quality/Size/Yield) aplica al set demo; con tus precios se cubren Momentum y Low-Vol. Otros factores quedan neutrales.</span></div>
+       <div style="display:flex;gap:8px;flex-wrap:wrap">
+         ${active?`<button class="btn btn-pri" data-goto="eval:comparativa">→ Comparativa</button><button class="btn" data-goto="eval:capm">→ CAPM / SML</button><button class="btn" data-goto="sim:constructor">→ Constructor</button><button class="btn" id="impdemo">Volver al set demo (IPSA)</button>`:`<button class="btn btn-pri" id="impactivate">Activar estas acciones</button>`}
+         <button class="btn" id="impclear">Borrar importadas</button>
+       </div>`,active?`<span class="badge pos">ACTIVO</span>`:"");
+    res=`<div style="margin-top:2px">${banner}</div>`;
+  }
+  return tmpl+up+cfg+res;
+}
+function attachImport(){
+  document.querySelectorAll("[data-impfreq]").forEach(b=>b.onclick=()=>{impFreq=b.dataset.impfreq;render();});
+  const rf=document.getElementById("imprf");if(rf)rf.onchange=e=>{impRf=parseFloat(e.target.value)||0;};
+  const tm=document.getElementById("imptmpl");if(tm)tm.onclick=impDownloadTemplate;
+  const drop=document.getElementById("impdrop"),fi=document.getElementById("impfile");
+  if(drop&&fi){drop.onclick=()=>fi.click();drop.ondragover=e=>{e.preventDefault();drop.classList.add("drag");};drop.ondragleave=()=>drop.classList.remove("drag");
+    drop.ondrop=e=>{e.preventDefault();drop.classList.remove("drag");if(e.dataTransfer.files[0])impOnFile(e.dataTransfer.files[0]);};
+    fi.onchange=e=>{if(e.target.files[0])impOnFile(e.target.files[0]);};}
+  const bs=document.getElementById("impbench");if(bs)bs.onchange=e=>{impBench=e.target.value;};
+  const cc=document.getElementById("impcalc");if(cc)cc.onclick=impCalc;
+  const ac=document.getElementById("impactivate");if(ac)ac.onclick=()=>applyDataset("import");
+  const dm=document.getElementById("impdemo");if(dm)dm.onclick=()=>applyDataset("demo");
+  const cl=document.getElementById("impclear");if(cl)cl.onclick=()=>{if(confirm("¿Borrar las acciones importadas y volver al set demo IPSA?")){IMP=null;lsSet("inv_import_v1",null);impMsg="";applyDataset("demo");}};
+  document.querySelectorAll("[data-goto]").forEach(b=>b.onclick=()=>{const[m,p]=b.dataset.goto.split(":");modulo=m;page=p;render();});
+}
+
+/* ---------------- COPILOTO: perfil + dataset ---------------- */
+function cpProfileNote(){if(!invProfile)return "";return "\n\nPERFIL DEL USUARIO (úsalo para personalizar TODO): es un inversionista **"+invProfile.profile.toUpperCase()+"** ("+invProfile.label+", puntaje "+invProfile.score+"/40). "+invProfile.guideShort+" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";}
+function cpSystemPrompt(){return CP_SYSTEM+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"");}
+
+/* init: restaurar dataset activo y perfil */
+if(invProfile)simState.profile=invProfile.profile;
+if(IMP&&lsGet("inv_dataset_active")==="import"){try{const A=IMP.assets;setActive({stocks:A,market:{ret:IMP.bench.ret,sig:IMP.bench.sig,tot:IMP.bench.tot,rets:IMP.bench.rets,sharpe:IMP.bench.sharpe},corr:IMP.corr,tickers:A.map(a=>a.t),labels:IMP.labels,window:IMP.window+" · benchmark "+IMP.bench.name,n:IMP.n,rf:IMP.rf,prima:IMP.prima,perYear:IMP.perYear});DATASET="import";}catch(e){}}
 render();
 </script>
 </body>

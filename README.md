@@ -8,7 +8,9 @@ Plataforma de análisis de inversiones para el mercado chileno (IPSA), en un **�
 
 ## Cómo usar
 
-Abre `index.html` en cualquier navegador moderno (doble clic o arrástralo). No requiere instalación, servidor ni conexión. Tus proyectos de inversión y escenarios se guardan en el navegador.
+Abre `index.html` en cualquier navegador moderno (doble clic o arrástralo). No requiere instalación, servidor ni conexión.
+
+**Dónde se guardan tus datos:** todo (proyectos de inversión y su seguimiento, escenarios, perfil, acciones importadas, clave del copiloto, tema) se guarda en el **`localStorage` de ese navegador** — local, privado, sin nube. Implicaciones: persiste entre sesiones en el mismo equipo/navegador; **no se sincroniza** entre dispositivos; y se pierde si borras los datos del sitio o usas modo incógnito. Para no depender de un solo navegador, usa **Inversión → Respaldar datos** (exporta un JSON) y **Restaurar** para moverlo o resguardarlo. Sí, puedes empezar a llevar tu seguimiento real desde ya.
 
 - **Tema claro / oscuro:** botón ◐ en la barra superior (se recuerda entre sesiones).
 - `inversor-v1-original.html` se conserva como referencia de la versión anterior.
@@ -64,7 +66,19 @@ Un agente de IA (API de Claude) **funcional**, disponible desde el botón flotan
 
 > **Seguridad:** una clave en el navegador es accesible a los scripts de la página. Úsala en tu equipo personal, ponle límite de gasto en la consola de Anthropic y no publiques el archivo con la clave incrustada.
 
-### 4. Módulo **Pro · Roadmap** — precios en tiempo real
+### 4. **Importar acciones** (Análisis → tab 5) — analiza tu propio universo
+Para **analizar muchas acciones candidatas y decidir antes de armar el portafolio**:
+- Sube un **CSV o Excel (.xlsx)** con una fila por fecha y una columna por acción, más una columna de índice/benchmark (ej. IPSA). Hay **plantilla descargable**.
+- Elige la **periodicidad** (diario / semanal / mensual); las métricas se anualizan en consecuencia (√252 / √52 / √12).
+- Calcula **β, retorno, volatilidad, Sharpe, α de Jensen, R²** (contra el benchmark) y la **matriz de correlación**.
+- Las acciones importadas pasan a usarse en **toda la plataforma**: Comparativa, Detalle, CAPM/SML, Multifactor y el Constructor. Un clic vuelve al set demo IPSA.
+- Parser de Excel propio (sin librerías externas, vía `DecompressionStream`); si un `.xlsx` no carga, guárdalo como CSV.
+
+### 5. **Perfil de inversionista** (módulo Perfil) — personaliza la IA
+- Cuestionario de **8 preguntas** (horizonte, tolerancia, capacidad, experiencia…) → perfil **Conservador / Moderado / Agresivo** con guía de estrategia (factores a enfatizar, composición y β objetivo).
+- El perfil **personaliza al Copiloto IA** (sus recomendaciones se alinean a tu tolerancia) y queda como perfil por defecto del Asistente de simulación.
+
+### 6. Módulo **Pro · Roadmap** — precios en tiempo real
 Responde, dentro de la app, qué tan difícil es conectar precios de mercado en vivo (ver más abajo), con comparación de proveedores, arquitectura por fases, costos y consideraciones legales. (La integración del **agente IA** ya está hecha — ver punto 3.)
 
 ---
