@@ -1402,19 +1402,53 @@ const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets
 let activeClient=localStorage.getItem("inv_active_client")||"c_me";
 function ck(k){return CLIENT_KEYS[k]?(k+"__"+activeClient):k;}
 function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
-function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));}catch(e){}}
+let _saveWarned=false;
+function saveWarn(){if(_saveWarned)return;_saveWarned=true;try{window.alert("⚠ No se pudo guardar en este navegador. El almacenamiento está lleno o el navegador está en modo privado / con cookies bloqueadas. Tus cambios podrían perderse al recargar.\n\nExporta un respaldo desde Configuración → Datos → Respaldar.");}catch(e){}}
+function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));return true;}catch(e){saveWarn();return false;}}
 (function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
 let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}];}})();
 const CLIENT_PAL=["#1E5FD1","#0E8C5E","#DB2777","#7C3AED","#D9730D","#0891B2","#CA8A04","#CE2F3B"];
-function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}catch(e){}}
+function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));return true;}catch(e){saveWarn();return false;}}
 function activeClientObj(){return CLIENTS.find(x=>x.id===activeClient)||CLIENTS[0];}
 let PROJECTS=lsGet("pf_projects_v1")||[],activeId=lsGet("pf_active_v1")||null,editIdx=null;
 (function(){const oldPF=lsGet("pf_portfolio_v1");if(!PROJECTS.length&&oldPF){const ow=lsGet("pf_weeks_v1")||[];PROJECTS.push(Object.assign({id:Date.now(),name:"Proyecto 1"},oldPF,{weeks:ow}));activeId=PROJECTS[0].id;lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);}})();
 const RECOVERED_PROJECT={"id":1749700000000,"name":"Inversión inicial","date":"01-06-2026","amount":2500000,"bp":1.04,"erCapm":11.72,"sig":13.4,"sharpe":0.9,"corrAvg":0.4,"freq":"diario","origSim":{"sel":{"FALABELLA":16.666666666666668,"SANTANDER":16.666666666666668,"BCI":16.666666666666668,"PARAUCO":16.666666666666668,"LATAM":16.666666666666668,"SQM-B":16.666666666666668},"amount":2500000},"holdings":[{"t":"FALABELLA","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SANTANDER","w":0.16666666666666666,"monto":416666.6666666667},{"t":"BCI","w":0.16666666666666666,"monto":416666.6666666667},{"t":"PARAUCO","w":0.16666666666666666,"monto":416666.6666666667},{"t":"LATAM","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SQM-B","w":0.16666666666666666,"monto":416666.6666666667}],"weeks":[{"date":"2026-06-01","prices":{"FALABELLA":5760,"SANTANDER":70.47,"BCI":59722,"PARAUCO":3787.6,"LATAM":23.07,"SQM-B":74600},"ipsa":8000,"qty":{"FALABELLA":71,"SANTANDER":5882,"BCI":6,"PARAUCO":109,"LATAM":17930,"SQM-B":5}},{"date":"2026-06-01","prices":{"FALABELLA":5725.5538,"SANTANDER":69.9827,"BCI":59209.8167,"PARAUCO":3752.7733,"LATAM":22.8483,"SQM-B":73635.2423},"ipsa":7996},{"date":"2026-06-02","prices":{"FALABELLA":5640.3141,"SANTANDER":68.8764,"BCI":58176.829,"PARAUCO":3685.0052,"LATAM":22.4263,"SQM-B":72032.1862},"ipsa":7878.4},{"date":"2026-06-03","prices":{"FALABELLA":5608.7831,"SANTANDER":68.4278,"BCI":57702.1603,"PARAUCO":3652.6679,"LATAM":22.2203,"SQM-B":71129.5678},"ipsa":7796},{"date":"2026-06-04","prices":{"FALABELLA":5579.3743,"SANTANDER":68.0063,"BCI":57252.1325,"PARAUCO":3621.9332,"LATAM":22.0241,"SQM-B":70263.2587},"ipsa":7753.6},{"date":"2026-06-05","prices":{"FALABELLA":5595.8647,"SANTANDER":68.1449,"BCI":57274.6115,"PARAUCO":3621.1138,"LATAM":22.01,"SQM-B":69980.0492},"ipsa":7730.4},{"date":"2026-06-08","prices":{"FALABELLA":5545.3901,"SANTANDER":67.4689,"BCI":56613.7331,"PARAUCO":3577.1212,"LATAM":21.7335,"SQM-B":68866.2254},"ipsa":7645.6},{"date":"2026-06-09","prices":{"FALABELLA":5781.1202,"SANTANDER":70.2735,"BCI":58871.1283,"PARAUCO":3717.4631,"LATAM":22.5768,"SQM-B":71294.5181},"ipsa":7904},{"date":"2026-06-10","prices":{"FALABELLA":5769.8091,"SANTANDER":70.0732,"BCI":58608.1946,"PARAUCO":3698.5856,"LATAM":22.4529,"SQM-B":70660.7566},"ipsa":7866.4},{"date":"2026-06-11","prices":{"FALABELLA":5970,"SANTANDER":72.44,"BCI":60490,"PARAUCO":3815,"LATAM":23.15,"SQM-B":72605},"ipsa":8082.4}]};
 (function(){try{if(!lsGet("pf_recovered_v1")&&(!PROJECTS||!PROJECTS.length)){const rp=JSON.parse(JSON.stringify(RECOVERED_PROJECT));rp.holdings=rp.holdings.map(hd=>{const s=stk(hd.t);return s?{t:hd.t,n:s.n,s:s.s,c:s.c,b:s.b,w:hd.w,monto:hd.monto}:hd;});PROJECTS=[rp];activeId=rp.id;lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);lsSet("pf_recovered_v1",1);}}catch(e){}})();
 (function(){try{var FLAG="pf_realclose_20260618";if(lsGet(FLAG))return;var WK=[{"date":"2026-06-01","prices":{"FALABELLA":5760,"SANTANDER":70.47,"BCI":59722,"PARAUCO":3787.6,"LATAM":23.07,"SQM-B":74600},"ipsa":10626.41,"qty":{"FALABELLA":71,"SANTANDER":5882,"BCI":6,"PARAUCO":109,"LATAM":17930,"SQM-B":5}},{"date":"2026-06-02","prices":{"FALABELLA":5565,"SANTANDER":69.01,"BCI":57050,"PARAUCO":3765,"LATAM":22.6,"SQM-B":71930},"ipsa":10469.18},{"date":"2026-06-03","prices":{"FALABELLA":5450,"SANTANDER":68.1,"BCI":58399,"PARAUCO":3729.9,"LATAM":22.29,"SQM-B":71000},"ipsa":10359.94},{"date":"2026-06-04","prices":{"FALABELLA":5574,"SANTANDER":68.11,"BCI":56508,"PARAUCO":3649.9,"LATAM":22.26,"SQM-B":69655},"ipsa":10304.04},{"date":"2026-06-05","prices":{"FALABELLA":5511,"SANTANDER":68.7,"BCI":56508,"PARAUCO":3699.9,"LATAM":22.12,"SQM-B":69340},"ipsa":10273.09},{"date":"2026-06-08","prices":{"FALABELLA":5580,"SANTANDER":68.5,"BCI":55610,"PARAUCO":3634.1,"LATAM":21.81,"SQM-B":66850},"ipsa":10160.61},{"date":"2026-06-09","prices":{"FALABELLA":5740,"SANTANDER":72.1,"BCI":59100,"PARAUCO":3729.9,"LATAM":22.61,"SQM-B":69065},"ipsa":10501.02},{"date":"2026-06-10","prices":{"FALABELLA":5854,"SANTANDER":71.7,"BCI":59007,"PARAUCO":3779.9,"LATAM":21.7,"SQM-B":68000},"ipsa":10453.45},{"date":"2026-06-11","prices":{"FALABELLA":5970,"SANTANDER":72.44,"BCI":60490,"PARAUCO":3815,"LATAM":23.15,"SQM-B":72605},"ipsa":10740.7},{"date":"2026-06-12","prices":{"FALABELLA":5950,"SANTANDER":73.6,"BCI":61299,"PARAUCO":3775.2,"LATAM":23.94,"SQM-B":75500},"ipsa":10921.15},{"date":"2026-06-15","prices":{"FALABELLA":5970,"SANTANDER":73.99,"BCI":59800,"PARAUCO":3703.4,"LATAM":24.6,"SQM-B":74150},"ipsa":10878.98},{"date":"2026-06-16","prices":{"FALABELLA":6094,"SANTANDER":74,"BCI":60060,"PARAUCO":3840,"LATAM":24.49,"SQM-B":73899},"ipsa":10903.59},{"date":"2026-06-17","prices":{"FALABELLA":6052,"SANTANDER":72.71,"BCI":58600,"PARAUCO":3800,"LATAM":24.28,"SQM-B":74050},"ipsa":10805.99},{"date":"2026-06-18","prices":{"FALABELLA":6099,"SANTANDER":73.7,"BCI":59000,"PARAUCO":3816.5,"LATAM":25.12,"SQM-B":71950},"ipsa":10836.99}];var ps=PROJECTS||[];var tgt=ps.find(function(p){return p&&p.name==="Inversión inicial";})||ps[0];if(tgt){tgt.weeks=WK;tgt.freq=tgt.freq||"diario";lsSet("pf_projects_v1",PROJECTS);if(activeId==null){activeId=tgt.id;lsSet("pf_active_v1",activeId);}}lsSet(FLAG,1);}catch(e){}})();
-function exportBackup(){const data={_app:"portfolio-dashboard",_v:1,_date:new Date().toISOString(),data:{pf_projects_v1:lsGet("pf_projects_v1")||[],pf_active_v1:lsGet("pf_active_v1")||null,pf_scenarios_v1:lsGet("pf_scenarios_v1")||[]}};const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="respaldo_portafolio_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
-function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{const j=JSON.parse(ev.target.result);const d=j.data||j;if(!d.pf_projects_v1){alert("El archivo no parece un respaldo válido.");return;}if(!window.confirm("Restaurar reemplazará los proyectos actuales por los del respaldo. ¿Continuar?"))return;lsSet("pf_projects_v1",d.pf_projects_v1);if(d.pf_active_v1!=null)lsSet("pf_active_v1",d.pf_active_v1);if(d.pf_scenarios_v1)lsSet("pf_scenarios_v1",d.pf_scenarios_v1);PROJECTS=d.pf_projects_v1;activeId=(d.pf_active_v1!=null)?d.pf_active_v1:((PROJECTS[0]||{}).id||null);editIdx=null;syncProj();alert("Respaldo restaurado: "+PROJECTS.length+" proyecto(s).");render();}catch(err){alert("No se pudo leer el respaldo: "+err.message);}};rd.readAsText(file);}
+function exportBackup(){try{
+  const clients={};(CLIENTS||[]).forEach(c=>{const o={};Object.keys(CLIENT_KEYS).forEach(k=>{const raw=localStorage.getItem(k+"__"+c.id);o[k]=raw!=null?JSON.parse(raw):null;});clients[c.id]=o;});
+  const data={_app:"portfolio-dashboard",_v:2,_date:new Date().toISOString(),
+    clients_registry:JSON.parse(localStorage.getItem("inv_clients_v1")||"null"),
+    active_client:localStorage.getItem("inv_active_client"),
+    broker:JSON.parse(localStorage.getItem("inv_broker_v1")||"null"),
+    ui_scale:localStorage.getItem("inv_ui_scale"),
+    clients};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="respaldo_inversor_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}}
+function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{
+  const j=JSON.parse(ev.target.result);
+  if(j&&j._v>=2&&j.clients){
+    const n=Object.keys(j.clients).length;
+    if(!window.confirm("Restaurar reemplazará TODOS tus clientes y sus datos (carteras, perfiles, importaciones, operador) por los del respaldo: "+n+" cliente(s). ¿Continuar?"))return;
+    try{if(j.clients_registry)localStorage.setItem("inv_clients_v1",JSON.stringify(j.clients_registry));
+      if(j.active_client)localStorage.setItem("inv_active_client",j.active_client);
+      if(j.broker)localStorage.setItem("inv_broker_v1",JSON.stringify(j.broker));else localStorage.removeItem("inv_broker_v1");
+      if(j.ui_scale!=null)localStorage.setItem("inv_ui_scale",j.ui_scale);
+      Object.keys(j.clients).forEach(id=>{const o=j.clients[id]||{};Object.keys(CLIENT_KEYS).forEach(k=>{const v=o[k];if(v==null)localStorage.removeItem(k+"__"+id);else localStorage.setItem(k+"__"+id,JSON.stringify(v));});});
+    }catch(e){saveWarn();return;}
+    CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1"))||CLIENTS;}catch(e){return CLIENTS;}})();
+    activeClient=localStorage.getItem("inv_active_client")||((CLIENTS[0]||{}).id)||"c_me";
+    try{BROKER=JSON.parse(localStorage.getItem("inv_broker_v1"))||BROKER;}catch(e){}
+    if(typeof clientLoad==="function")clientLoad();else syncProj();
+    window.alert("Respaldo restaurado: "+n+" cliente(s).");render();return;
+  }
+  const d=j.data||j;if(!d.pf_projects_v1||!Array.isArray(d.pf_projects_v1)){alert("El archivo no parece un respaldo válido.");return;}
+  if(!window.confirm("Restaurar reemplazará los proyectos del cliente actual por los del respaldo. ¿Continuar?"))return;
+  PROJECTS=d.pf_projects_v1;
+  activeId=(PROJECTS.find(p=>p&&p.id===d.pf_active_v1)?d.pf_active_v1:((PROJECTS[0]||{}).id||null));
+  lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);if(d.pf_scenarios_v1)lsSet("pf_scenarios_v1",d.pf_scenarios_v1);
+  editIdx=null;syncProj();alert("Respaldo restaurado: "+PROJECTS.length+" proyecto(s).");render();
+}catch(err){alert("No se pudo leer el respaldo: "+err.message);}};rd.readAsText(file);}
 let PF=null,WEEKS=[];
 function curProj(){return PROJECTS.find(p=>p.id===activeId)||null;}
 function syncProj(){PF=curProj();WEEKS=PF?PF.weeks:[];}
@@ -1659,7 +1693,7 @@ function updSum(){const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState
 
 let simAlts=[];
 function efficientStocks(){return STOCKS.filter(s=>s.a24.jensen>=0);}
-function zscores(a){const m=a.reduce((x,y)=>x+y,0)/a.length;const sd=Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length)||1;return a.map(x=>(x-m)/sd);}
+function zscores(a){if(!a||!a.length)return [];const m=a.reduce((x,y)=>x+y,0)/a.length;const sd=Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length)||1;return a.map(x=>(x-m)/sd);}
 let asLens="combinado";
 function lensUniverse(lens){if(lens==="capm")return STOCKS.filter(s=>s.a24.jensen>=0);if(lens==="multifactor")return STOCKS.filter(s=>(MF.comp[s.t]||0)>0);return STOCKS.filter(s=>s.a24.jensen>=0||(MF.comp[s.t]||0)>0);}
 function mfProfileScore(t,profile){const z=(typeof MF!=="undefined"&&MF.z)?MF.z[t]:null;if(!z)return 0;const w=PROFILE_W[profile]||PROFILE_W.moderado;return MFSTYLE.reduce((a,k)=>a+(w[k]||0)*(z[k]||0),0);}
@@ -3152,9 +3186,10 @@ function attachPerfil(){
 const DEMO={stocks:DATA.stocks,market:DATA.market,corr:DATA.corr,tickers:DATA.tickers,labels:DATA.labels,window:DATA.window,n:DATA.n,rf:DATA.rf,prima:DATA.prima,erm:DATA.erm,perYear:12};
 let DATASET="demo";
 function setActive(s){
+  if(!s||!Array.isArray(s.stocks)||!s.stocks.length){console.warn("setActive: dataset vacío, se ignora");return false;}
   DATA.stocks=s.stocks;DATA.market=s.market;DATA.corr=s.corr;DATA.tickers=s.tickers;DATA.labels=s.labels;DATA.window=s.window;DATA.n=s.n;DATA.rf=s.rf;DATA.prima=s.prima;DATA.perYear=s.perYear;
   STOCKS=s.stocks;MKT=s.market;CORR=s.corr;TICK=s.tickers;RF=s.rf;PRIMA=s.prima;MF=computeFactors(STOCKS);
-  sel=STOCKS[0].t;mfSel=STOCKS[0].t;simState.sel={};invStkSel=null;
+  sel=STOCKS[0].t;mfSel=STOCKS[0].t;simState.sel={};invStkSel=null;return true;
 }
 function impToActive(){const A=IMP.assets;return {stocks:A,market:{ret:IMP.bench.ret,sig:IMP.bench.sig,tot:IMP.bench.tot,rets:IMP.bench.rets,sharpe:IMP.bench.sharpe},corr:IMP.corr,tickers:A.map(a=>a.t),labels:IMP.labels,window:IMP.window+" · benchmark "+IMP.bench.name,n:IMP.n,rf:IMP.rf,prima:IMP.prima,perYear:IMP.perYear};}
 function applyDataset(which){
@@ -3560,7 +3595,7 @@ const BROKER_PRESETS={
   custom:{op:"custom",name:"Otro / personalizado",pct:0.5,iva:true,min:0,max:0}
 };
 let BROKER=(function(){try{const v=JSON.parse(localStorage.getItem("inv_broker_v1"));if(v&&typeof v==="object"){delete v.tax;return v;}}catch(e){} return Object.assign({},BROKER_PRESETS.btg);})();
-function saveBroker(){try{localStorage.setItem("inv_broker_v1",JSON.stringify(BROKER));}catch(e){}}
+function saveBroker(){try{localStorage.setItem("inv_broker_v1",JSON.stringify(BROKER));return true;}catch(e){saveWarn();return false;}}
 function brokerName(){return (BROKER&&(BROKER_PRESETS[BROKER.op]||{}).name)||(BROKER&&BROKER.name)||"Personalizado";}
 function brokerFee(monto){if(!BROKER)return 0;monto=Math.abs(+monto||0);if(!monto)return 0;let f=monto*(+BROKER.pct||0)/100;const mn=+BROKER.min||0,mx=+BROKER.max||0;if(mn>0&&f<mn)f=mn;if(mx>0&&f>mx)f=mx;if(BROKER.iva)f*=1.19;return Math.round(f);}
 function brokerSummary(){if(!BROKER)return "sin operador";const p=[brokerName(),(+BROKER.pct||0)+"%"+(BROKER.iva?"+IVA":"")];if(+BROKER.min>0)p.push("mín "+fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1))));if(+BROKER.max>0)p.push("tope "+fmtCLP(Math.round((+BROKER.max)*(BROKER.iva?1.19:1))));return p.join(" · ");}
