@@ -918,6 +918,31 @@
   .prj-star:hover{color:#E0AC1F;}
   .prj-chip .prj-go{border:none;background:transparent;cursor:pointer;color:inherit;font:inherit;font-weight:700;padding:0 2px;}
   .prj-chip .prj-go:hover{text-decoration:underline;}
+
+  /* ════════════ Modo asesor: clientes ════════════ */
+  .cli-wrap{position:relative;}
+  .cli-btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 .7rem;border-radius:10px;border:1px solid var(--line2);background:var(--card);cursor:pointer;font:700 12.5px var(--font);color:var(--ink);box-shadow:var(--sh-xs);transition:.15s var(--ease);}
+  .cli-btn:hover{border-color:var(--accent);}
+  .cli-btn .cli-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+  .cli-lbl{font-size:8.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);}
+  .cli-name{font-weight:800;color:var(--navy);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cli-btn svg{color:var(--muted);}
+  .cli-menu{position:absolute;top:42px;left:0;min-width:230px;background:var(--card);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;display:none;z-index:340;}
+  .cli-menu.open{display:block;animation:cfgFade .14s ease;}
+  .cli-item{display:flex;align-items:center;gap:9px;width:100%;padding:.5rem .55rem;border:none;background:transparent;border-radius:8px;cursor:pointer;font:600 12.5px var(--font);color:var(--ink);text-align:left;}
+  .cli-item:hover{background:var(--card2);}
+  .cli-item.on{background:rgba(30,95,209,.07);}
+  .cli-item .cli-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .cli-item.act{color:var(--accent);font-weight:800;justify-content:center;}
+  .cli-chk{color:var(--green);font-weight:900;}
+  .cli-sep{height:1px;background:var(--line);margin:5px 2px;}
+  .cli-list{display:flex;flex-direction:column;gap:9px;}
+  .cli-card{display:flex;align-items:center;gap:12px;padding:.7rem .85rem;border:1px solid var(--line);border-radius:11px;background:var(--card2);}
+  .cli-card.on{border-color:var(--accent);background:rgba(30,95,209,.05);box-shadow:0 0 0 1px var(--accent) inset;}
+  .cli-card .cli-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+  .cli-rename{border:1px solid transparent;background:transparent;font:800 14px var(--font);color:var(--navy);padding:.2rem .35rem;border-radius:7px;max-width:280px;}
+  .cli-rename:hover{border-color:var(--line);} .cli-rename:focus{outline:none;border-color:var(--accent);background:var(--card);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  .cli-meta{font-size:10.5px;color:var(--faint);font-weight:600;margin-top:2px;padding-left:.35rem;}
 </style>
 </head>
 <body>
@@ -929,7 +954,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav" id="navPerfil" data-mod="perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="cli-wrap"><button class="cli-btn" id="clientBtn"><span class="cli-dot"></span><span class="cli-lbl">Cliente</span><span class="cli-name" id="clientName"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="cli-menu" id="clientMenu"></div></div><div class="tnav"><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav" id="navPerfil" data-mod="perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="footer"><span>INVERSOR 2.0 · SIMULACIÓN EDUCATIVA · ANÁLISIS CUANTITATIVO MULTIFACTOR · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
@@ -1116,6 +1141,7 @@ function renderChrome(){
   document.querySelectorAll(".modbtn").forEach(b=>b.onclick=()=>{modulo=b.dataset.mod;page=MODS[modulo].tabs[0].id;render();});
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{modulo=b.dataset.tmod;page=b.dataset.page;render();});
   document.querySelectorAll(".topnav").forEach(b=>{b.onclick=()=>{modulo=b.dataset.mod;page=MODS[modulo].tabs[0].id;render();};b.classList.toggle("on",b.dataset.mod===modulo);});
+  if(typeof renderClientBar==="function")renderClientBar();
   const M=MODS[modulo];
   document.getElementById("crumb").textContent=M.label;
   document.getElementById("ptitle").textContent=(M.tabs.find(t=>t.id===page)||M.tabs[0]).label;
@@ -1286,8 +1312,16 @@ let simState={amount:0,sel:{},profile:"moderado",nstocks:3,proj:"semanal",horizo
 const HZN={semanal:[12,26,52],mensual:[12,24,36],anual:[1,2,3,4]};
 const HZNUNIT={semanal:"sem",mensual:"meses",anual:"años"};
 const HZNDEF={semanal:52,mensual:36,anual:3};
-function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
-function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1};
+let activeClient=localStorage.getItem("inv_active_client")||"c_me";
+function ck(k){return CLIENT_KEYS[k]?(k+"__"+activeClient):k;}
+function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));}catch(e){}}
+(function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
+let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}];}})();
+const CLIENT_PAL=["#1E5FD1","#0E8C5E","#DB2777","#7C3AED","#D9730D","#0891B2","#CA8A04","#CE2F3B"];
+function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}catch(e){}}
+function activeClientObj(){return CLIENTS.find(x=>x.id===activeClient)||CLIENTS[0];}
 let PROJECTS=lsGet("pf_projects_v1")||[],activeId=lsGet("pf_active_v1")||null,editIdx=null;
 (function(){const oldPF=lsGet("pf_portfolio_v1");if(!PROJECTS.length&&oldPF){const ow=lsGet("pf_weeks_v1")||[];PROJECTS.push(Object.assign({id:Date.now(),name:"Proyecto 1"},oldPF,{weeks:ow}));activeId=PROJECTS[0].id;lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);}})();
 const RECOVERED_PROJECT={"id":1749700000000,"name":"Inversión inicial","date":"01-06-2026","amount":2500000,"bp":1.04,"erCapm":11.72,"sig":13.4,"sharpe":0.9,"corrAvg":0.4,"freq":"diario","origSim":{"sel":{"FALABELLA":16.666666666666668,"SANTANDER":16.666666666666668,"BCI":16.666666666666668,"PARAUCO":16.666666666666668,"LATAM":16.666666666666668,"SQM-B":16.666666666666668},"amount":2500000},"holdings":[{"t":"FALABELLA","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SANTANDER","w":0.16666666666666666,"monto":416666.6666666667},{"t":"BCI","w":0.16666666666666666,"monto":416666.6666666667},{"t":"PARAUCO","w":0.16666666666666666,"monto":416666.6666666667},{"t":"LATAM","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SQM-B","w":0.16666666666666666,"monto":416666.6666666667}],"weeks":[{"date":"2026-06-01","prices":{"FALABELLA":5760,"SANTANDER":70.47,"BCI":59722,"PARAUCO":3787.6,"LATAM":23.07,"SQM-B":74600},"ipsa":8000,"qty":{"FALABELLA":71,"SANTANDER":5882,"BCI":6,"PARAUCO":109,"LATAM":17930,"SQM-B":5}},{"date":"2026-06-01","prices":{"FALABELLA":5725.5538,"SANTANDER":69.9827,"BCI":59209.8167,"PARAUCO":3752.7733,"LATAM":22.8483,"SQM-B":73635.2423},"ipsa":7996},{"date":"2026-06-02","prices":{"FALABELLA":5640.3141,"SANTANDER":68.8764,"BCI":58176.829,"PARAUCO":3685.0052,"LATAM":22.4263,"SQM-B":72032.1862},"ipsa":7878.4},{"date":"2026-06-03","prices":{"FALABELLA":5608.7831,"SANTANDER":68.4278,"BCI":57702.1603,"PARAUCO":3652.6679,"LATAM":22.2203,"SQM-B":71129.5678},"ipsa":7796},{"date":"2026-06-04","prices":{"FALABELLA":5579.3743,"SANTANDER":68.0063,"BCI":57252.1325,"PARAUCO":3621.9332,"LATAM":22.0241,"SQM-B":70263.2587},"ipsa":7753.6},{"date":"2026-06-05","prices":{"FALABELLA":5595.8647,"SANTANDER":68.1449,"BCI":57274.6115,"PARAUCO":3621.1138,"LATAM":22.01,"SQM-B":69980.0492},"ipsa":7730.4},{"date":"2026-06-08","prices":{"FALABELLA":5545.3901,"SANTANDER":67.4689,"BCI":56613.7331,"PARAUCO":3577.1212,"LATAM":21.7335,"SQM-B":68866.2254},"ipsa":7645.6},{"date":"2026-06-09","prices":{"FALABELLA":5781.1202,"SANTANDER":70.2735,"BCI":58871.1283,"PARAUCO":3717.4631,"LATAM":22.5768,"SQM-B":71294.5181},"ipsa":7904},{"date":"2026-06-10","prices":{"FALABELLA":5769.8091,"SANTANDER":70.0732,"BCI":58608.1946,"PARAUCO":3698.5856,"LATAM":22.4529,"SQM-B":70660.7566},"ipsa":7866.4},{"date":"2026-06-11","prices":{"FALABELLA":5970,"SANTANDER":72.44,"BCI":60490,"PARAUCO":3815,"LATAM":23.15,"SQM-B":72605},"ipsa":8082.4}]};
@@ -2741,7 +2775,7 @@ function cpRenderHead(){
     <select class="cp-sel" id="cpModelSel">${opts}</select>
     <button class="cp-x" id="cpClose" title="Cerrar">✕</button>`;
 }
-function cpWelcome(){const n=(typeof AUTH!=="undefined"&&AUTH&&AUTH.enabled&&AUTH.user)?(" "+AUTH.user):"";return "Hola"+n+", ¿qué quieres que revisemos hoy? El **desempeño de tus proyectos**, **estudiar una acción o un nuevo análisis**, u **optimizar tu cartera**. Tú me dices y partimos.";}
+function cpWelcome(){const n=(typeof AUTH!=="undefined"&&AUTH&&AUTH.enabled&&AUTH.user)?(" "+AUTH.user):"";const cl=(typeof CLIENTS!=="undefined"&&CLIENTS.length>1)?(" Estás en la cartera de **"+activeClientObj().name+"**."):"";return "Hola"+n+","+cl+" ¿qué quieres que revisemos hoy? El **desempeño de los proyectos**, **estudiar una acción o un nuevo análisis**, u **optimizar la cartera**. Tú me dices y partimos.";}
 function cpRenderBody(){
   const body=document.getElementById("cpbody");if(!body)return;
   if(!cpKey){
@@ -3096,7 +3130,8 @@ function cfgRender(){
 /* ---------------- COPILOTO: perfil + dataset ---------------- */
 function cpProfileNote(){if(!invProfile)return "";return "\n\nPERFIL DEL USUARIO (úsalo para personalizar TODO): es un inversionista **"+invProfile.profile.toUpperCase()+"** ("+invProfile.label+", puntaje "+invProfile.score+"/40). "+invProfile.guideShort+" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";}
 const CP_MF_NOTE="\n\nSIEMPRE integra el modelo MULTIFACTOR además del CAPM: para analizar o recomendar acciones, considera los 6 factores de estilo (Momentum, Low-Volatility, Value, Quality, Size, Dividend Yield), el Composite y el E(R) multifactor — no solo β/CAPM. Llama a get_multifactor para la foto completa y alinea con el perfil del usuario.\n\nESTILO DE RESPUESTA: ajusta el largo a lo que se pide. Por defecto, para preguntas simples, transaccionales, de seguimiento o de un solo dato, responde BREVE (1–3 frases o pocos puntos) y ofrece profundizar. Da respuestas LARGAS y detalladas SOLO cuando el usuario pida un ANÁLISIS de fondo: estudiar o proyectar una inversión, evaluar o comparar alternativas, explicar conceptos o entregar recomendaciones razonadas. En esos casos desarrolla con estructura clara (secciones, listas, cifras tomadas de las herramientas) tanto como haga falta, sin relleno. Ante la duda, prefiere lo conciso y pregunta si quiere que profundices.";
-function cpSystemPrompt(){return CP_SYSTEM+CP_MF_NOTE+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"");}
+function cpClientNote(){return (typeof activeClientObj==="function"&&CLIENTS&&CLIENTS.length)?("\n\nCLIENTE ACTIVO: administras la cartera de **"+activeClientObj().name+"**. Todos los datos (proyectos, perfil, seguimiento, contabilidad) corresponden a este cliente."):"";}
+function cpSystemPrompt(){return CP_SYSTEM+cpClientNote()+CP_MF_NOTE+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"");}
 
 /* init */
 if(invProfile)simState.profile=invProfile.profile;
@@ -3467,6 +3502,8 @@ function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));
 
 function viewProyectos(){
   syncProj();
+  const cliCards=CLIENTS.map(c=>{const t=clientTotals(c.id),act=c.id===activeClient;return `<div class="cli-card ${act?"on":""}"><span class="cli-dot" style="background:${c.color}"></span><div style="flex:1;min-width:0"><input class="cli-rename" data-clirename="${c.id}" value="${(""+c.name).replace(/"/g,"&quot;")}"><div class="cli-meta">${t.n} proyecto${t.n!==1?"s":""} · invertido ${fmtCLP(t.inv)} · valor ${fmtCLP(t.val)} · <b style="color:${t.gain>=0?green:red}">${(t.gain>=0?"+":"")+fmtCLP(t.gain)} (${(t.pct>=0?"+":"")+t.pct.toFixed(1)}%)</b></div></div>${act?'<span class="badge pos">ACTIVO</span>':`<button class="btn" data-cliswitch="${c.id}">Entrar</button>`}<button class="prj-del" data-clidel="${c.id}" title="Eliminar cliente">🗑</button></div>`;}).join("");
+  const cliCard=card("Clientes","Administra las inversiones de distintas personas · cada cliente tiene sus propios proyectos, análisis, simulaciones y perfil",`<div class="cli-list">${cliCards}</div><div style="margin-top:12px"><button class="btn btn-pri" id="cliAddBtn">+ Nuevo cliente</button></div>`);
   const all=PROJECTS.map(p=>({p,s:projSummary(p)}));
   const totInv=all.reduce((a,x)=>a+x.s.invested,0),totVal=all.reduce((a,x)=>a+x.s.value,0),totGain=totVal-totInv,totPct=totInv>0?totGain/totInv*100:0;
   const head=card("Proyectos de inversión","Gestiona tus proyectos y lo que cada uno tiene vinculado: análisis y simulaciones · rentabilidad consolidada",
@@ -3508,7 +3545,7 @@ function viewProyectos(){
   // Simulaciones
   const scRows=(SCEN||[]).length?(SCEN.map(sc=>`<div class="prj-srow"><span class="prj-dot sim"></span><div style="flex:1;min-width:0"><b>${(""+sc.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${sc.comp.length} acciones · β ${sc.m.bp.toFixed(2)} · Sharpe ${sc.m.sharpe.toFixed(2)} · ${fmtCLP(sc.amount||0)}</span></div><button class="btn" data-scload="${sc.id}">Cargar</button><button class="prj-del" data-scdel="${sc.id}" title="Eliminar simulación">🗑</button></div>`).join("")):'<div class="note" style="margin:0">Sin simulaciones guardadas. Guarda escenarios en Simulación → Constructor.</div>';
   const scCard=card("Simulaciones (escenarios)","Carteras simuladas y guardadas · cárgalas al Constructor o elimínalas",`<div class="prj-srlist">${scRows}</div>`);
-  return head+projCard+anCard+scCard;
+  return cliCard+head+projCard+anCard+scCard;
 }
 function attachProyectos(){
   document.querySelectorAll("[data-prename]").forEach(inp=>inp.onchange=()=>{const p=PROJECTS.find(x=>String(x.id)===inp.dataset.prename);if(p){p.name=(inp.value||"").trim()||p.name;saveProjects();}});
@@ -3524,11 +3561,58 @@ function attachProyectos(){
   document.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{const id=b.dataset.adel;const a=analysisList().find(x=>x.id===id);if(a&&confirm('¿Eliminar el análisis "'+a.name+'"?'))impsetDelete(id);});
   document.querySelectorAll("[data-scload]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scload);if(sc){scenEditId=null;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;modulo="sim";page="constructor";render();}});
   document.querySelectorAll("[data-scdel]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scdel);if(sc&&confirm('¿Eliminar la simulación "'+sc.name+'"?')){SCEN=SCEN.filter(x=>String(x.id)!==b.dataset.scdel);lsSet("pf_scenarios_v1",SCEN);render();}});
+  document.querySelectorAll("[data-clirename]").forEach(inp=>inp.onchange=()=>clientRename(inp.dataset.clirename,inp.value));
+  document.querySelectorAll("[data-cliswitch]").forEach(b=>b.onclick=()=>clientSwitch(b.dataset.cliswitch));
+  document.querySelectorAll("[data-clidel]").forEach(b=>b.onclick=()=>clientDelete(b.dataset.clidel));
+  const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>{const n=window.prompt("Nombre del nuevo cliente:");if(n!==null&&n.trim())clientAdd(n.trim());};
+}
+
+/* ===== MODO ASESOR: gestión de clientes ===== */
+function clientLoad(){
+  PROJECTS=lsGet("pf_projects_v1")||[];activeId=lsGet("pf_active_v1")||null;
+  SCEN=lsGet("pf_scenarios_v1")||[];
+  IMPSETS=lsGet("inv_impsets_v1")||[];impActiveId=lsGet("inv_imp_active_id")||null;
+  IMP=lsGet("inv_import_v1")||null;
+  invProfile=lsGet("inv_profile_v1")||null;profAns=lsGet("inv_profile_ans_v1")||{};profEdit=false;
+  try{ if(IMP&&lsGet("inv_dataset_active")==="import"){setActive(impToActive());DATASET="import";} else {setActive(DEMO);DATASET="demo";} }
+  catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
+  syncProj();
+  simState.sel={};if(invProfile)simState.profile=invProfile.profile;
+  editIdx=null;scenEditId=null;impFiles=[];impMsg="";mindAuto=mindAuto;
+  opState={pid:null,side:"buy",tkr:null,qty:"",price:"",date:""};injState={pid:null,rows:[]};
+}
+function clientSwitch(id){if(!id||id===activeClient)return;activeClient=id;try{localStorage.setItem("inv_active_client",id);}catch(e){}clientLoad();modulo="proyectos";page="hub";render();}
+function clientAdd(name){const id="c_"+Date.now();CLIENTS.push({id,name:(name||("Cliente "+(CLIENTS.length+1))).trim(),color:CLIENT_PAL[CLIENTS.length%CLIENT_PAL.length]});saveClients();clientSwitch(id);}
+function clientRename(id,name){const c=CLIENTS.find(x=>x.id===id);if(c){c.name=(name||"").trim()||c.name;saveClients();render();}}
+function clientDelete(id){
+  if(CLIENTS.length<=1){window.alert("Debe quedar al menos un cliente.");return;}
+  const c=CLIENTS.find(x=>x.id===id);if(!c)return;
+  if(!window.confirm('¿Eliminar al cliente "'+c.name+'" y TODOS sus datos (proyectos, análisis, simulaciones, perfil)? No se puede deshacer.'))return;
+  Object.keys(CLIENT_KEYS).forEach(k=>{try{localStorage.removeItem(k+"__"+id);}catch(e){}});
+  CLIENTS=CLIENTS.filter(x=>x.id!==id);saveClients();
+  if(activeClient===id){activeClient=CLIENTS[0].id;try{localStorage.setItem("inv_active_client",activeClient);}catch(e){}clientLoad();}
+  render();
+}
+function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=localStorage.getItem("pf_projects_v1__"+id);return v?JSON.parse(v):[];}catch(e){return [];}}
+function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.forEach(p=>{try{const s=projSummary(p);inv+=s.invested;val+=s.value;}catch(e){}});return {inv,val,gain:val-inv,pct:inv>0?(val-inv)/inv*100:0,n:ps.length};}
+/* topbar switcher */
+function clientMenuClose(){const m=document.getElementById("clientMenu");if(m)m.classList.remove("open");}
+function renderClientBar(){
+  const co=activeClientObj();
+  const cn=document.getElementById("clientName");if(cn)cn.textContent=co.name;
+  const cdot=document.querySelector("#clientBtn .cli-dot");if(cdot)cdot.style.background=co.color||"#1E5FD1";
+  const cm=document.getElementById("clientMenu");
+  if(cm){cm.innerHTML=CLIENTS.map(c=>`<button class="cli-item ${c.id===activeClient?"on":""}" data-cliid="${c.id}"><span class="cli-dot" style="background:${c.color||"#1E5FD1"}"></span><span style="flex:1;text-align:left">${(""+c.name).replace(/</g,"&lt;")}</span>${c.id===activeClient?'<span class="cli-chk">✓</span>':""}</button>`).join("")+`<div class="cli-sep"></div><button class="cli-item act" data-cliadd>+ Nuevo cliente</button><button class="cli-item act" data-cligo>⚙ Gestionar clientes</button>`;
+    cm.querySelectorAll("[data-cliid]").forEach(b=>b.onclick=()=>{clientMenuClose();clientSwitch(b.dataset.cliid);});
+    const ca=cm.querySelector("[data-cliadd]");if(ca)ca.onclick=()=>{clientMenuClose();const n=window.prompt("Nombre del nuevo cliente (ej. tu polola):");if(n!==null&&n.trim())clientAdd(n.trim());};
+    const cg=cm.querySelector("[data-cligo]");if(cg)cg.onclick=()=>{clientMenuClose();modulo="proyectos";page="hub";render();};}
+  const cb=document.getElementById("clientBtn");if(cb&&!cb._b){cb._b=1;cb.onclick=e=>{e.stopPropagation();const m=document.getElementById("clientMenu");if(m)m.classList.toggle("open");};}
 }
 
 let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
 function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
 applyScale(uiScale);
+try{document.addEventListener("click",clientMenuClose);}catch(e){}
 render();
 authInit();
 </script>
