@@ -3564,6 +3564,10 @@ function saveBroker(){try{localStorage.setItem("inv_broker_v1",JSON.stringify(BR
 function brokerName(){return (BROKER&&(BROKER_PRESETS[BROKER.op]||{}).name)||(BROKER&&BROKER.name)||"Personalizado";}
 function brokerFee(monto){if(!BROKER)return 0;monto=Math.abs(+monto||0);if(!monto)return 0;let f=monto*(+BROKER.pct||0)/100;const mn=+BROKER.min||0,mx=+BROKER.max||0;if(mn>0&&f<mn)f=mn;if(mx>0&&f>mx)f=mx;if(BROKER.iva)f*=1.19;return Math.round(f);}
 function brokerSummary(){if(!BROKER)return "sin operador";const p=[brokerName(),(+BROKER.pct||0)+"%"+(BROKER.iva?"+IVA":"")];if(+BROKER.min>0)p.push("mín "+fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1))));if(+BROKER.max>0)p.push("tope "+fmtCLP(Math.round((+BROKER.max)*(BROKER.iva?1.19:1))));return p.join(" · ");}
+/* desglosa la comisión en neta + IVA */
+function feeParts(monto){const total=brokerFee(monto);if(!BROKER||!BROKER.iva||!total)return {base:total,iva:0,total};const base=Math.round(total/1.19);return {base,iva:total-base,total};}
+/* ventas realizadas (para la declaración de renta): cada venta con su resultado neto de comisión */
+function realizedSales(perList){const sales=[];perList.forEach(function(x){const p=x.p,A=x.A;if(!A||!A.L)return;(A.L.realized||[]).forEach(function(r){const proceeds=r.shares*r.price,fp=feeParts(proceeds);sales.push({proj:p.name,date:r.date,t:r.t,shares:r.shares,price:r.price,proceeds:proceeds,cost:r.cost,grossGain:r.gain,fee:fp.total,feeIva:fp.iva,net:r.gain-fp.total});});});sales.sort(function(a,b){return a.date<b.date?-1:(a.date>b.date?1:0);});return sales;}
 function ledger(){
   if(!PF||!WEEKS.length)return null;
   const base=WEEKS[0],sh={},avg={},tx=[],realized=[];
@@ -3586,10 +3590,10 @@ function contabAgg(){
   const totSell=L.tx.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0);
   const totReal=L.realized.reduce((a,r)=>a+r.gain,0);
   const totUnreal=rows.reduce((a,o)=>a+o.unreal,0);
-  let feesBuy=0,feesSell=0;L.tx.forEach(x=>{const f=brokerFee(x.monto);x.fee=f;if(x.side==="sell")feesSell+=f;else feesBuy+=f;});
+  let feesBuy=0,feesSell=0,feesIva=0;L.tx.forEach(x=>{const fp=feeParts(x.monto);x.fee=fp.total;x.feeBase=fp.base;x.feeIva=fp.iva;feesIva+=fp.iva;if(x.side==="sell")feesSell+=fp.total;else feesBuy+=fp.total;});
   const fees=feesBuy+feesSell;
-  const netGain=(totReal+totUnreal)-fees;         /* ganancia real: bruta − comisiones */
-  return {L,IM,rows,totBuy,totSell,totReal,totUnreal,V:IM.last.val,lastW,feesBuy,feesSell,fees,netGain};
+  const netGain=(totReal+totUnreal)-fees;         /* ganancia real: bruta − comisiones (IVA incluido) */
+  return {L,IM,rows,totBuy,totSell,totReal,totUnreal,V:IM.last.val,lastW,feesBuy,feesSell,fees,feesIva,netGain};
 }
 function contabAggFor(p){return withProject(p,function(){return contabAgg();});}
 function viewContab(){
@@ -3600,20 +3604,31 @@ function viewContab(){
   const head=card("Contabilidad consolidada","Todos tus proyectos de inversión: compras, ventas, fechas y montos · rentabilidad realizada y no realizada para tu contador",
     `<button class="btn btn-pri" id="contabreport">🧾 Informe consolidado para el contador</button>`);
   if(!withOps.length)return head+notecard("Tus proyectos aún no tienen operaciones registradas. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>, o compras/ventas en <b>Operar</b>.");
-  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0};
-  withOps.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;});
+  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0,feesIva:0};
+  withOps.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;});
   const totGain=T.real+T.unreal,netInv=T.buy-T.sell,totPct=netInv>0?totGain/netInv*100:0;
   const netGain=totGain-T.fees,netPct=T.buy>0?netGain/T.buy*100:0;
   const sgM=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
-  const netCard=card("Resultado real (neto de comisiones)","Tu ganancia después de descontar las comisiones del operador · "+brokerSummary(),
+  const netCard=card("Resultado real (neto de comisiones e IVA)","Tu ganancia después de descontar las comisiones del operador (IVA incluido) · "+brokerSummary(),
     `<div class="net-strip">
       <div class="net-it"><span>Ganancia bruta</span><b style="color:${totGain>=0?green:red}">${sgM(totGain)}</b></div>
       <div class="net-op">−</div>
-      <div class="net-it"><span>Comisiones pagadas</span><b style="color:${red}">${T.fees>0?fmtCLP(T.fees):"$0"}</b></div>
+      <div class="net-it"><span>Comisiones (IVA incl.)</span><b style="color:${red}">${T.fees>0?fmtCLP(T.fees):"$0"}</b></div>
       <div class="net-op">=</div>
       <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)} · ${(netPct>=0?"+":"")+netPct.toFixed(2)}%</b></div>
     </div>
-    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (Configuración → <b>Operador y costos</b>).</div>`);
+    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary()})${T.feesIva>0?`, de las cuales <b>${fmtCLP(T.feesIva)}</b> corresponden a <b>IVA</b>`:""}. La <b>ganancia realizada</b> (ventas) es la que importa para tu declaración de renta; la <b>no realizada</b> no se declara hasta vender.</div>`);
+  // Resultado realizado por venta — lo más importante para la declaración de renta
+  const sales=realizedSales(withOps);
+  let realizedCard="";
+  if(sales.length){
+    const tNet=sales.reduce((a,s)=>a+s.net,0),tGross=sales.reduce((a,s)=>a+s.grossGain,0),tFee=sales.reduce((a,s)=>a+s.fee,0);
+    const srows=sales.slice().reverse().map(s=>`<tr><td>${s.date}</td><td style="color:var(--faint)">${(""+s.proj).replace(/</g,"&lt;")}</td><td><b>${s.t}</b></td><td class="r">${s.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(s.price)}</td><td class="r">${fmtCLP(s.proceeds)}</td><td class="r">${fmtCLP(s.cost)}</td><td class="r" style="color:var(--mut)">${s.fee?fmtCLP(s.fee):"—"}</td><td class="r" style="color:${s.net>=0?green:red};font-weight:800">${(s.net>=0?"+":"−")+fmtCLP(Math.abs(s.net))}</td></tr>`).join("");
+    realizedCard=card("Resultado realizado por venta (para tu declaración de renta)",`Cada venta con su fecha, precio, monto, costo promedio y resultado <b>neto de comisión e IVA</b> · ${sales.length} venta${sales.length!==1?"s":""}`,
+      `<div class="tw"><table><thead><tr><th>Fecha</th><th>Proyecto</th><th>Acción</th><th class="r">Acciones</th><th class="r">Precio venta</th><th class="r">Monto venta</th><th class="r">Costo prom.</th><th class="r">Comisión</th><th class="r">Resultado neto</th></tr></thead><tbody>${srows}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--line2);font-weight:800"><td colspan="5">Total realizado (mayor valor neto)</td><td class="r">${fmtCLP(sales.reduce((a,s)=>a+s.proceeds,0))}</td><td class="r">${fmtCLP(sales.reduce((a,s)=>a+s.cost,0))}</td><td class="r" style="color:var(--mut)">${fmtCLP(tFee)}</td><td class="r" style="color:${tNet>=0?green:red}">${(tNet>=0?"+":"−")+fmtCLP(Math.abs(tNet))}</td></tr></tfoot></table></div>
+      <div class="note" style="margin-top:11px">El <b>resultado neto</b> = monto de venta − costo promedio de adquisición − comisión de venta (IVA incl.). Suma realizada del período: <b style="color:${tNet>=0?green:red}">${(tNet>=0?"+":"−")+fmtCLP(Math.abs(tNet))}</b> (bruto ${(tGross>=0?"+":"−")+fmtCLP(Math.abs(tGross))} − comisiones de venta ${fmtCLP(tGross-tNet)}).</div>`);
+  }
   const tiles=`<div class="tiles">
     ${tile("Invertido (compras)",fmtCLP(T.buy),"capital total en compras",indigo,ink)}
     ${tile("Recuperado (ventas)",T.sell?fmtCLP(T.sell):"—","efectivo por ventas",indigo,ink)}
@@ -3627,11 +3642,11 @@ function viewContab(){
     `<div class="tw"><table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th><th class="r">Ops.</th></tr></thead><tbody>${projRows}</tbody></table></div>`);
   const allTx=[];withOps.forEach(({p,A})=>A.L.tx.forEach(x=>allTx.push(Object.assign({proj:p.name},x))));
   allTx.sort((a,b)=>a.date<b.date?1:(a.date>b.date?-1:0));
-  const txRows=allTx.map(x=>{const st=STOCKS.find(s=>s.t===x.t)||{t:x.t,c:muted};return `<tr><td style="color:var(--faint)">${(""+x.proj).replace(/</g,"&lt;")}</td><td>${x.date}</td><td><b style="color:${st.c}">${x.t}</b></td><td><span class="badge ${x.side==="sell"?"neg":"pos"}">${x.tipo}</span></td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(x.price)}</td><td class="r">${fmtCLP(x.monto)}</td><td class="r" style="color:var(--mut)">${x.fee?fmtCLP(x.fee):"—"}</td><td class="r" style="color:${x.gain!=null?(x.gain>=0?green:red):muted};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?((x.gain>=0?"+":"")+fmtCLP(x.gain)):"—"}</td></tr>`;}).join("");
-  const txCard=card("Libro de operaciones consolidado",`${allTx.length} operaciones en ${withOps.length} proyecto${withOps.length!==1?"s":""} · más recientes arriba`,
-    `<div class="tw"><table><thead><tr><th>Proyecto</th><th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table></div>`);
-  const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto. Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen y fechas de adquisición). Entrega el informe consolidado a tu contador como respaldo ordenado.");
-  return head+netCard+tiles+projCard+txCard+disc;
+  const txRows=allTx.map(x=>{const st=STOCKS.find(s=>s.t===x.t)||{t:x.t,c:muted};const efectivo=x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0));return `<tr><td style="color:var(--faint)">${(""+x.proj).replace(/</g,"&lt;")}</td><td>${x.date}</td><td><b style="color:${st.c}">${x.t}</b></td><td><span class="badge ${x.side==="sell"?"neg":"pos"}">${x.tipo}</span></td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(x.price)}</td><td class="r">${fmtCLP(x.monto)}</td><td class="r" style="color:var(--mut)">${x.fee?fmtCLP(x.fee):"—"}</td><td class="r" style="color:var(--faint)">${x.feeIva?fmtCLP(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(efectivo)}</td><td class="r" style="color:${x.gain!=null?(x.gain>=0?green:red):muted};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?((x.gain>=0?"+":"")+fmtCLP(x.gain)):"—"}</td></tr>`;}).join("");
+  const txCard=card("Libro de operaciones consolidado",`${allTx.length} operaciones en ${withOps.length} proyecto${withOps.length!==1?"s":""} · fecha, precio, monto, comisión e IVA de cada compra/venta · más recientes arriba`,
+    `<div class="tw"><table><thead><tr><th>Proyecto</th><th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">IVA</th><th class="r">Efectivo</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table></div>`);
+  const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto. El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen y fechas de adquisición). Entrega el <b>informe consolidado</b> a tu contador como respaldo ordenado.");
+  return head+netCard+tiles+realizedCard+projCard+txCard+disc;
 }
 function genContabReport(){
   const per=PROJECTS.map(p=>({p,A:contabAggFor(p)})).filter(x=>x.A);
@@ -3640,16 +3655,37 @@ function genContabReport(){
   const clp=n=>"$"+Math.round(n||0).toLocaleString("es-CL");
   const sgn=n=>(n>=0?"+":"")+clp(n);
   const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0};per.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;});
-  const totGain=T.real+T.unreal,netGain=totGain-T.fees;
+  const totGain=T.real+T.unreal,netGain=totGain-T.fees;T.feesIva=0;per.forEach(({A})=>{T.feesIva+=A.feesIva||0;});
   const projTable=per.map(({p,A})=>{const s=projSummary(p);return `<tr><td>${(""+p.name).replace(/</g,"&lt;")}</td><td>${p.date||"—"}</td><td class="r">${clp(s.invested)}</td><td class="r">${clp(s.value)}</td><td class="r" style="color:${s.gain>=0?'#0E8C5E':'#C0392B'}">${sgn(s.gain)}</td><td class="r">${(s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"}</td></tr>`;}).join("");
+  /* Resultado realizado por venta, agrupado por año, para la declaración de renta */
+  const sales=realizedSales(per);
+  let realizedSection="";
+  if(sales.length){
+    const byYear={};sales.forEach(s=>{const y=(""+s.date).slice(0,4);(byYear[y]=byYear[y]||[]).push(s);});
+    let blocks="",grand=0;
+    Object.keys(byYear).sort().forEach(yr=>{
+      const ss=byYear[yr];let sub=0,subFee=0,subProc=0,subCost=0;
+      const rws=ss.map(s=>{sub+=s.net;subFee+=s.fee;subProc+=s.proceeds;subCost+=s.cost;return `<tr><td>${s.date}</td><td>${(""+s.proj).replace(/</g,"&lt;")}</td><td>${s.t}</td><td class="r">${s.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(s.price)}</td><td class="r">${clp(s.proceeds)}</td><td class="r">${clp(s.cost)}</td><td class="r">${s.fee?clp(s.fee):"—"}</td><td class="r" style="color:${s.net>=0?'#0E8C5E':'#C0392B'};font-weight:700">${sgn(s.net)}</td></tr>`;}).join("");
+      grand+=sub;
+      blocks+=`<h3 style="font-size:12px;color:#0E2A55;margin:16px 0 4px">Año ${yr} <span style="font-weight:400;color:#5A6B82">· ${ss.length} venta(s)</span></h3>
+        <table><thead><tr><th>Fecha</th><th>Proyecto</th><th>Acción</th><th class="r">Acciones</th><th class="r">Precio venta</th><th class="r">Monto venta</th><th class="r">Costo prom.</th><th class="r">Comisión</th><th class="r">Resultado neto</th></tr></thead><tbody>${rws}</tbody>
+        <tfoot><tr style="font-weight:800;background:#F6F9FD"><td colspan="5">Subtotal ${yr}</td><td class="r">${clp(subProc)}</td><td class="r">${clp(subCost)}</td><td class="r">${clp(subFee)}</td><td class="r" style="color:${sub>=0?'#0E8C5E':'#C0392B'}">${sgn(sub)}</td></tr></tfoot></table>`;
+    });
+    realizedSection=`<h2>Resultado realizado por venta — para la declaración de renta</h2>
+      <div class="sub" style="margin:6px 0 4px">Cada venta con fecha, precio, monto, costo promedio de adquisición y resultado <b>neto de comisión e IVA</b>. El resultado neto = monto de venta − costo promedio − comisión de venta.</div>
+      ${blocks}
+      <div class="kpis" style="margin-top:12px"><div class="kpi" style="border-color:#1E5FD1;background:#F2F7FF"><div class="l">Mayor valor neto realizado (todas las ventas)</div><div class="v" style="color:${grand>=0?'#0E8C5E':'#C0392B'}">${sgn(grand)}</div></div></div>`;
+  }else{
+    realizedSection=`<h2>Resultado realizado por venta</h2><div class="sub">No hay ventas registradas en el período: no hay mayor valor realizado que declarar. La ganancia/pérdida es por ahora <b>no realizada</b> (posiciones abiertas).</div>`;
+  }
   let perProjBlocks="";per.forEach(({p,A})=>{
     const sumRows=A.rows.map(o=>`<tr><td>${o.t}</td><td class="r">${o.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(o.avg)}</td><td class="r">${clp(o.cur)}</td><td class="r">${clp(o.buyMonto)}</td><td class="r">${o.sellMonto?clp(o.sellMonto):"—"}</td><td class="r">${clp(o.val)}</td><td class="r" style="color:${o.unreal>=0?'#0E8C5E':'#C0392B'}">${sgn(o.unreal)}</td><td class="r" style="color:${o.realized>=0?'#0E8C5E':'#C0392B'}">${o.realized?sgn(o.realized):"—"}</td></tr>`).join("");
-    const txRows=A.L.tx.map(x=>`<tr><td>${x.date}</td><td>${x.t}</td><td>${x.tipo}</td><td>${x.side==="sell"?"Venta":"Compra"}</td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(x.price)}</td><td class="r">${clp(x.monto)}</td><td class="r">${x.fee?clp(x.fee):"—"}</td><td class="r">${x.gain!=null?sgn(x.gain):"—"}</td></tr>`).join("");
+    const txRows=A.L.tx.map(x=>{const efectivo=x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0));return `<tr><td>${x.date}</td><td>${x.t}</td><td>${x.tipo}</td><td>${x.side==="sell"?"Venta":"Compra"}</td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(x.price)}</td><td class="r">${clp(x.monto)}</td><td class="r">${x.fee?clp(x.fee):"—"}</td><td class="r">${x.feeIva?clp(x.feeIva):"—"}</td><td class="r">${clp(efectivo)}</td><td class="r">${x.gain!=null?sgn(x.gain):"—"}</td></tr>`;}).join("");
     perProjBlocks+=`<h2>Proyecto: ${(""+p.name).replace(/</g,"&lt;")} <span style="font-weight:400;color:#5A6B82;font-size:11px">(${A.L.tx[0]?A.L.tx[0].date:""} a ${A.lastW.date})</span></h2>
       <h3 style="font-size:11px;color:#5A6B82;margin:14px 0 4px">Resumen por acción</h3>
       <table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Costo prom.</th><th class="r">Precio actual</th><th class="r">Comprado</th><th class="r">Vendido</th><th class="r">Valor actual</th><th class="r">G. no real.</th><th class="r">G. realizada</th></tr></thead><tbody>${sumRows}</tbody></table>
       <h3 style="font-size:11px;color:#5A6B82;margin:14px 0 4px">Operaciones</h3>
-      <table><thead><tr><th>Fecha</th><th>Acción</th><th>Concepto</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table>`;
+      <table><thead><tr><th>Fecha</th><th>Acción</th><th>Concepto</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">IVA</th><th class="r">Efectivo</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table>`;
   });
   const html=`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe contable consolidado</title>
   <style>*{box-sizing:border-box}body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#16263F;margin:34px;font-size:12px}
@@ -3672,12 +3708,14 @@ function genContabReport(){
   </div>
   <div class="kpis">
     <div class="kpi"><div class="l">Comisiones pagadas (${brokerName()})</div><div class="v" style="color:#C0392B">${T.fees?("−"+clp(T.fees)):"$0"}</div></div>
-    <div class="kpi" style="border-color:#1E5FD1;background:#F2F7FF"><div class="l">Ganancia real (neta de comisiones)</div><div class="v" style="color:${netGain>=0?'#0E8C5E':'#C0392B'}">${sgn(netGain)}</div></div>
+    <div class="kpi"><div class="l">IVA en comisiones</div><div class="v" style="color:#C0392B">${T.feesIva?("−"+clp(T.feesIva)):"$0"}</div></div>
+    <div class="kpi" style="border-color:#1E5FD1;background:#F2F7FF"><div class="l">Ganancia real (neta de comisiones e IVA)</div><div class="v" style="color:${netGain>=0?'#0E8C5E':'#C0392B'}">${sgn(netGain)}</div></div>
   </div>
+  ${realizedSection}
   <h2>Resumen por proyecto</h2>
   <table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th></tr></thead><tbody>${projTable}</tbody></table>
   ${perProjBlocks}
-  <div class="foot">Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación. El tratamiento tributario del mayor valor en Chile puede diferir (corrección monetaria, régimen y fechas de adquisición); consúltalo con tu contador. Documento de respaldo generado por INVERSOR 2.0.</div>
+  <div class="foot">Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> (IVA incluido) se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación; el <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). El <b>resultado realizado por venta</b> es la base relevante para el mayor valor del ejercicio; su tratamiento tributario en Chile puede diferir (corrección monetaria, régimen, fechas de adquisición y eventual exención por presencia bursátil — art. 107 LIR). Consúltalo con tu contador. Documento de respaldo generado por INVERSOR 2.0.</div>
   <script>setTimeout(function(){window.print();},350);<\/script></body></html>`;
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
 }
