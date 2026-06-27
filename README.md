@@ -54,8 +54,18 @@ Esto permite **contrastar E(R) CAPM vs E(R) multifactor** acción por acción, c
 - **Slopegraph de ranking**: cómo cambia el atractivo de cada acción al pasar de 1 factor (α de Jensen) a 6 factores.
 - **Exposición factorial de tu portafolio** (radar + E(R) multifactor) leyendo la cartera del Constructor.
 
-### 3. Módulo **Pro · Roadmap** — precios en tiempo real y copiloto de IA
-Responde, dentro de la app, las dos preguntas estratégicas con un plan honesto y accionable (ver más abajo). Incluye vistas previas funcionales (mock de panel de cotizaciones y de copiloto de portafolio), comparación de proveedores, arquitectura por fases, costos y consideraciones legales.
+### 3. **Copiloto IA** — agente real integrado (BYOK)
+Un agente de IA (API de Claude) **funcional**, disponible desde el botón flotante ✨ en cualquier módulo, que conversa con **tus datos reales**:
+
+- **Bring-Your-Own-Key (BYOK):** pegas tu propia clave de Anthropic; se guarda **solo en tu navegador** (`localStorage`) y las llamadas van **directo** desde tu equipo a la API (`anthropic-dangerous-direct-browser-access`), sin servidores intermedios.
+- **Tool use (function calling):** el agente lee tu portafolio activo y su seguimiento, las métricas CAPM + multifactor de las 14 acciones, la matriz de correlación, tus escenarios y la cartera del Constructor; y puede **evaluar carteras hipotéticas** (`evaluate_portfolio`) para proponer y comparar rebalanceos con cifras reales.
+- **Selector de modelo:** Claude **Opus 4.8** (por defecto), Sonnet 4.6 o Haiku 4.5.
+- **Seguro y educativo:** el agente analiza y propone; tú ejecutas los cambios en Constructor / Operar. No es asesoría financiera regulada y los disclaimers están a la vista. Costo aprox. 1–3 ¢ por consulta a tu cuenta de Anthropic.
+
+> **Seguridad:** una clave en el navegador es accesible a los scripts de la página. Úsala en tu equipo personal, ponle límite de gasto en la consola de Anthropic y no publiques el archivo con la clave incrustada.
+
+### 4. Módulo **Pro · Roadmap** — precios en tiempo real
+Responde, dentro de la app, qué tan difícil es conectar precios de mercado en vivo (ver más abajo), con comparación de proveedores, arquitectura por fases, costos y consideraciones legales. (La integración del **agente IA** ya está hecha — ver punto 3.)
 
 ---
 
@@ -80,12 +90,12 @@ Toda la funcionalidad anterior se mantiene intacta:
 - **El mercado chileno está mucho peor cubierto** que EE.UU. La mejor opción self-service para el IPSA es **EODHD (datos EOD / cierre)**; real-time chileno barato prácticamente no existe. Reserva el **real-time para EE.UU.** (Twelve Data, Polygon).
 - **MVP (EOD, botón "Actualizar"): ~1,5–2 días.**
 
-### B) Agente de IA copiloto — dificultad **Media-baja**
-- Técnicamente más fácil que los precios: la **API de Claude** es limpia y el patrón de **tool use** para leer el JSON del portafolio es directo. La clave de Anthropic vive en el **mismo** backend serverless.
-- Modelo base recomendado **Claude Sonnet 4.6** (escalar a **Opus 4.8** para análisis profundo); costo ~1–3 ¢ por turno con *prompt caching*.
-- **MVP útil (copiloto que lee tu portafolio): ~2–3 días.**
+### B) Agente de IA copiloto — ✅ **ya implementado (BYOK)**
+- Se resolvió **sin backend** con el patrón **Bring-Your-Own-Key**: el navegador llama directo a la API de Claude con el header `anthropic-dangerous-direct-browser-access` y tu propia clave (en `localStorage`). Loop agéntico con **tool use** sobre los datos reales de la app.
+- Modelo por defecto **Claude Opus 4.8** (seleccionable: Sonnet 4.6 / Haiku 4.5); costo ~1–3 ¢ por turno a tu cuenta.
+- Para multiusuario o producción pública conviene mover la clave a una **función serverless** (mismo patrón que los precios) y añadir rate-limiting; el BYOK actual es ideal para uso personal.
 
-**Sinergia:** el copiloto se beneficia de los precios (puede leerlos vía una herramienta `get_quote`). Disclaimers obligatorios: datos con retraso etiquetados, y la herramienta es informativa, **no asesoría financiera regulada** (en Chile, regulada por la CMF).
+**Sinergia futura:** cuando se conecten precios en vivo, el copiloto podrá leerlos vía una herramienta `get_quote`. Disclaimers obligatorios: la herramienta es informativa, **no asesoría financiera regulada** (en Chile, regulada por la CMF).
 
 ---
 
