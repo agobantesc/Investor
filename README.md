@@ -77,6 +77,8 @@ Para **analizar muchas acciones candidatas y decidir antes de armar el portafoli
 - **Un archivo combinado** (CSV/Excel `.xlsx`): una fila por fecha, una columna por acción + una de índice. Hay **plantilla descargable**.
 
 Detalles:
+- **Análisis guardados (proyectos):** cada carga que calculas se guarda como un **análisis con nombre** (editable). Mantienes varios en paralelo, los **activas** con un clic (pasan a alimentar toda la plataforma) y los **eliminas** cuando ya no los necesitas. El análisis que tenías hecho se migra automáticamente como el primer proyecto.
+- **Tasa libre de riesgo automática:** se toma la **TPM vigente del Banco Central** (vía mindicador.cl), sin escribirla a mano. Puedes sobrescribirla manualmente y volver a "Auto · TPM" cuando quieras. *(La TPM es la tasa de política monetaria — un proxy de corto plazo del retorno sin riesgo; para CAPM también se usa el bono soberano a 10 años, que en el set demo se asume en ~5,5 %.)*
 - Elige la **periodicidad** que descargaste (diario / semanal / mensual); las métricas se anualizan en consecuencia (√252 / √52 / √12).
 - **Benchmark:** sube también el **índice** (ej. IPSA) como un archivo más; si no, se usa un **índice promedio equiponderado** de tus acciones como proxy.
 - Alinea las series por **fechas en común**, omite las que tengan huecos y calcula **β, retorno, volatilidad, Sharpe, α de Jensen, R²** (contra el benchmark) y la **matriz de correlación**.
@@ -86,6 +88,7 @@ Detalles:
 ### 5. **Perfil de inversionista** (módulo Perfil) — personaliza la IA
 - Cuestionario de **8 preguntas** (horizonte, tolerancia, capacidad, experiencia…) → perfil **Conservador / Moderado / Agresivo** con guía de estrategia (factores a enfatizar, composición y β objetivo).
 - El perfil **personaliza al Copiloto IA** (sus recomendaciones se alinean a tu tolerancia) y queda como perfil por defecto del Asistente de simulación.
+- El **Asistente de simulación** ahora puntúa las acciones combinando **CAPM** (retorno, Sharpe, α de Jensen, σ, β) **y el modelo multifactor** (los 6 factores ponderados según tu perfil), no solo CAPM.
 
 ### 6. **Mercados · indicadores en vivo** (botón superior) — datos financieros reales, sin backend
 Panel tipo "noticias financieras" que trae **datos de mercado en tiempo casi-real directo desde tu navegador**, sin servidor ni API key:
