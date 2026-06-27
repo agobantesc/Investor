@@ -12,6 +12,7 @@ Abre `index.html` en cualquier navegador moderno (doble clic o arrástralo). No 
 
 **Dónde se guardan tus datos:** todo (proyectos de inversión y su seguimiento, escenarios, perfil, acciones importadas, clave del copiloto, tema) se guarda en el **`localStorage` de ese navegador** — local, privado, sin nube. Implicaciones: persiste entre sesiones en el mismo equipo/navegador; **no se sincroniza** entre dispositivos; y se pierde si borras los datos del sitio o usas modo incógnito. Para no depender de un solo navegador, usa **Inversión → Respaldar datos** (exporta un JSON) y **Restaurar** para moverlo o resguardarlo. Sí, puedes empezar a llevar tu seguimiento real desde ya.
 
+- **Barra superior:** el menú lateral queda solo para el flujo de trabajo (Análisis · Simulación · Inversión · Pro). **Mercados** y **Perfil** viven como botones en la **barra superior**, accesibles desde cualquier módulo.
 - **Tema claro / oscuro:** botón ◐ en la barra superior (se recuerda entre sesiones).
 - **Configuración (⚙):** botón junto al de tema. Abre un panel central con tu **perfil**, **apariencia** (tema), **copiloto IA** (estado de la clave y modelo), **datos** (set de análisis activo demo/importado y respaldo/restauración) y **plataforma** (reinicio total). Centraliza los ajustes sin salir del módulo en que estés.
 - `inversor-v1-original.html` se conserva como referencia de la versión anterior.
@@ -84,16 +85,15 @@ Detalles:
 - Cuestionario de **8 preguntas** (horizonte, tolerancia, capacidad, experiencia…) → perfil **Conservador / Moderado / Agresivo** con guía de estrategia (factores a enfatizar, composición y β objetivo).
 - El perfil **personaliza al Copiloto IA** (sus recomendaciones se alinean a tu tolerancia) y queda como perfil por defecto del Asistente de simulación.
 
-### 6. **Mercados · indicadores en vivo** (módulo Mercados) — datos financieros reales, sin backend
+### 6. **Mercados · indicadores en vivo** (botón superior) — datos financieros reales, sin backend
 Panel tipo "noticias financieras" que trae **datos de mercado en tiempo casi-real directo desde tu navegador**, sin servidor ni API key:
 
-- **Fuente:** [`mindicador.cl`](https://mindicador.cl) (Banco Central de Chile + INE), pública, gratuita y con **CORS habilitado** — por eso funciona desde un HTML estático sin proxy.
-- **Indicadores:** **Dólar** y **Euro** (CLP), **Cobre** (US$/lb), **UF**, **UTM**, **IPC** (var. mensual), **tasa de desempleo**, **Imacec**, **TPM** y **Bitcoin**. Para divisas, cobre y UF se dibuja una **mini-tendencia (sparkline)** y la **variación %** del último dato.
-- **Robusto:** se consultan al abrir el módulo y con **Actualizar**; los últimos valores quedan en `localStorage` para verlos **sin conexión**, con manejo claro de errores (offline / `file://` / timeout) y reintento.
-- **Indicadores manuales:** lo que la fuente no entrega — **petróleo (WTI/Brent)**, S&P 500, etc. — se agrega a mano y persiste.
-- **Conecta con la IA:** el Copiloto puede leer todo esto con la herramienta `get_market_indicators` para **contextualizar sus recomendaciones** con el dólar, el cobre o la TPM del momento.
+- **Fuentes:** [`mindicador.cl`](https://mindicador.cl) (Banco Central de Chile + INE) para tipo de cambio, cobre y macro; **[Stooq](https://stooq.com)** para el **petróleo** (WTI y Brent). Ambas keyless; mindicador con CORS, y para el petróleo se intenta acceso directo y, si el navegador lo bloquea, un **proxy CORS público** de respaldo.
+- **Indicadores:** **Dólar** y **Euro** (CLP), **Cobre** (US$/lb), **Petróleo WTI** y **Brent** (US$, con variación %), **UF**, **UTM**, **IPC** (var. mensual), **tasa de desempleo**, **Imacec**, **TPM** y **Bitcoin**. Para divisas, cobre, UF y petróleo se dibuja una **mini-tendencia (sparkline)** y la **variación %** del último dato.
+- **Robusto:** se consultan al abrir el módulo y con **Actualizar**; los últimos valores quedan en `localStorage` para verlos **sin conexión**, con manejo claro de errores (offline / `file://` / timeout) y reintento. Cada fuente degrada de forma independiente (si falla el petróleo, el resto igual se muestra).
+- **Conecta con la IA:** el Copiloto puede leer todo esto con la herramienta `get_market_indicators` para **contextualizar sus recomendaciones** con el dólar, el cobre, el petróleo o la TPM del momento.
 
-> ⚠️ A diferencia de los **precios de acciones** en vivo (que sí requieren API key + proxy por CORS y cobertura del mercado chileno), los **indicadores macro** sí tienen una fuente pública con CORS, así que esta parte ya quedó **funcionando sin backend**. Los valores son referenciales (cierres oficiales, pueden tener rezago) y no constituyen asesoría financiera.
+> ⚠️ A diferencia de los **precios de acciones** en vivo (que sí requieren API key + proxy y mejor cobertura del mercado chileno), los **indicadores macro y el petróleo** tienen fuentes públicas accesibles desde el navegador, así que esta parte ya quedó **funcionando sin backend**. Los valores son referenciales (cierres oficiales, pueden tener rezago) y no constituyen asesoría financiera.
 
 ### 7. Módulo **Pro · Roadmap** — precios en tiempo real
 Responde, dentro de la app, qué tan difícil es conectar precios de mercado en vivo (ver más abajo), con comparación de proveedores, arquitectura por fases, costos y consideraciones legales. (La integración del **agente IA** ya está hecha — ver punto 3.)

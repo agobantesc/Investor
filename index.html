@@ -692,6 +692,17 @@
   .mkt-manform{display:flex;gap:9px;flex-wrap:wrap;align-items:center;}
   .mkt-manform input{border:1px solid var(--line2);border-radius:9px;padding:.5rem .6rem;font:600 12.5px var(--font);color:var(--ink);background:var(--card);}
   .mkt-manform input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.16);}
+
+  /* ════════════════ NAV SUPERIOR (Mercados / Perfil) ════════════════ */
+  .tnav{display:flex;gap:8px;}
+  .topnav{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 .85rem;border-radius:10px;
+    border:1px solid var(--line2);background:var(--card);color:var(--muted);font:700 12.5px var(--font);
+    cursor:pointer;transition:.15s var(--ease);box-shadow:var(--sh-xs);white-space:nowrap;}
+  .topnav svg{opacity:.78;}
+  .topnav:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 13px rgba(30,95,209,.16);}
+  .topnav.on{color:#fff;background:linear-gradient(180deg,var(--a-400),var(--accent));border-color:transparent;box-shadow:0 3px 11px rgba(30,95,209,.32);}
+  .topnav.on svg{opacity:1;}
+  @media(max-width:1080px){.topnav{padding:0 .6rem;}}
 </style>
 </head>
 <body>
@@ -702,7 +713,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="hstats" id="hstats"></div><div class="hsep"></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="hstats" id="hstats"></div><div class="hsep"></div><div class="tnav"><button class="topnav" id="navMercados" data-mod="mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav" id="navPerfil" data-mod="perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="footer"><span>INVERSOR 2.0 · SIMULACIÓN EDUCATIVA · ANÁLISIS CUANTITATIVO MULTIFACTOR · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
@@ -880,12 +891,13 @@ const ICO={
 };
 function renderChrome(){
   let nav=`<div class="sgroup">Módulos</div>`;
-  ["eval","mercados","sim","perfil","inv","pro"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
+  ["eval","sim","inv","pro"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
   document.getElementById("snav").innerHTML=nav;
   document.querySelectorAll(".modbtn").forEach(b=>b.onclick=()=>{modulo=b.dataset.mod;page=MODS[modulo].tabs[0].id;render();});
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{modulo=b.dataset.tmod;page=b.dataset.page;render();});
+  document.querySelectorAll(".topnav").forEach(b=>{b.onclick=()=>{modulo=b.dataset.mod;page=MODS[modulo].tabs[0].id;render();};b.classList.toggle("on",b.dataset.mod===modulo);});
   const M=MODS[modulo];
   document.getElementById("crumb").textContent=M.label;
   document.getElementById("ptitle").textContent=(M.tabs.find(t=>t.id===page)||M.tabs[0]).label;
@@ -2409,11 +2421,11 @@ function cpRunTool(name,input){
     if(name==="get_investor_profile"){return invProfile?JSON.stringify({perfil:invProfile.profile,etiqueta:invProfile.label,puntaje:invProfile.score+"/40",guia:invProfile.guideShort}):"El usuario aún no completó su perfil de inversionista (módulo Perfil). Puedes sugerirle hacerlo.";}
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     if(name==="get_market_indicators"){
-      const hasM=(typeof MIND!=="undefined"&&MIND),hasMan=(typeof MIND_MANUAL!=="undefined"&&MIND_MANUAL&&MIND_MANUAL.length);
-      if(!hasM&&!hasMan)return "El usuario aún no cargó indicadores de mercado (módulo Mercados). Sugiérele abrir Mercados y pulsar Actualizar para traer dólar, euro, cobre, IPC, desempleo, etc.";
-      const out={fuente:"mindicador.cl (Banco Central de Chile / INE)",actualizado:(typeof mindTs!=="undefined"?mindTs:null)};
+      const hasM=(typeof MIND!=="undefined"&&MIND),hasOil=(typeof OIL!=="undefined"&&OIL);
+      if(!hasM&&!hasOil)return "El usuario aún no cargó indicadores de mercado (módulo Mercados, botón superior). Sugiérele abrirlo y pulsar Actualizar para traer dólar, euro, cobre, petróleo, IPC, desempleo, etc.";
+      const out={fuentes:["mindicador.cl (Banco Central de Chile / INE)","Stooq (petróleo)"],actualizado:(typeof mindTs!=="undefined"?mindTs:null)};
       if(hasM){out.indicadores={};MIND_DEF.forEach(d=>{if(MIND[d.k])out.indicadores[d.label]={valor:MIND[d.k].valor,unidad:MIND[d.k].unidad,fecha:MIND[d.k].fecha};});}
-      if(hasMan)out.manuales=MIND_MANUAL.map(m=>({nombre:m.label,valor:m.value,unidad:m.unit,fecha:m.ts}));
+      if(hasOil){out.petroleo={};OIL_DEF.forEach(d=>{if(OIL[d.k])out.petroleo[d.label]={valor:OIL[d.k].valor,unidad:d.unit,variacion_pct:OIL[d.k].chg!=null?+OIL[d.k].chg.toFixed(2):null,fecha:OIL[d.k].fecha};});}
       return JSON.stringify(out);
     }
     return "Herramienta desconocida.";
@@ -2759,7 +2771,7 @@ if(invProfile)simState.profile=invProfile.profile;
 if(IMP&&lsGet("inv_dataset_active")==="import"){try{setActive(impToActive());DATASET="import";}catch(e){}}
 cfgEnsureDOM();
 
-/* ===== MERCADOS · INDICADORES EN VIVO (mindicador.cl, sin backend ni API key) ===== */
+/* ===== MERCADOS · INDICADORES EN VIVO (mindicador.cl + Stooq, sin backend ni API key) ===== */
 const MIND_URL="https://mindicador.cl/api";
 const MIND_DEF=[
   {k:"dolar",        label:"Dólar observado",         grp:"Divisas",                unit:"$",   dec:2, spark:1},
@@ -2774,8 +2786,13 @@ const MIND_DEF=[
   {k:"bitcoin",      label:"Bitcoin",                 grp:"Cripto",                 unit:"US$", dec:0, spark:0}
 ];
 const MIND_GRPS=["Divisas","Materias primas","Unidades reajustables","Macro · Chile","Cripto"];
+/* Petróleo (y otras commodities internacionales): fuente Stooq (CSV diario, sin API key). Símbolos: cl.f=WTI, cb.f=Brent. */
+const OIL_DEF=[
+  {k:"cl.f", label:"Petróleo WTI",   unit:"US$", dec:2},
+  {k:"cb.f", label:"Petróleo Brent", unit:"US$", dec:2}
+];
 let MIND=lsGet("inv_mind_v1")||null, MINDH=lsGet("inv_mindh_v1")||{}, mindTs=lsGet("inv_mind_ts_v1")||null, mindBusy=false, mindErr="", mindAuto=false;
-let MIND_MANUAL=lsGet("inv_mind_manual_v1")||[];
+let OIL=lsGet("inv_oil_v1")||null, OILH=lsGet("inv_oilh_v1")||{}, oilErr="";
 
 function mindFmt(v,dec,unit){
   if(v==null||!isFinite(v))return "—";
@@ -2785,51 +2802,88 @@ function mindFmt(v,dec,unit){
 function mindChange(k){const s=MINDH[k];if(!s||s.length<2)return null;const a=s[s.length-2],b=s[s.length-1];if(!a)return null;return (b/a-1)*100;}
 function mindDate(f){if(!f)return "";const d=(""+f).slice(0,10).split("-");return d.length===3?(d[2]+"-"+d[1]+"-"+d[0]):f;}
 function mindAgo(){if(!mindTs)return "";const ms=Date.now()-new Date(mindTs).getTime();const m=Math.round(ms/60000);if(m<1)return "recién";if(m<60)return "hace "+m+" min";const h=Math.round(m/60);if(h<24)return "hace "+h+" h";return "hace "+Math.round(h/24)+" d";}
-function mindSpark(k){
-  const s=MINDH[k];if(!s||s.length<2)return "";
-  const w=104,h=26,n=s.length,mn=Math.min(...s),mx=Math.max(...s),rg=(mx-mn)||1;
-  const pts=s.map((v,i)=>[(i/(n-1))*w,h-2-((v-mn)/rg)*(h-4)]);
-  const up=s[n-1]>=s[0],col=up?"var(--green)":"var(--red)";
+function mindSparkSVG(series){
+  if(!series||series.length<2)return "";
+  const w=104,h=26,n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;
+  const pts=series.map((v,i)=>[(i/(n-1))*w,h-2-((v-mn)/rg)*(h-4)]);
+  const up=series[n-1]>=series[0],col=up?"var(--green)":"var(--red)";
   const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");
-  const area=d+` L${w},${h} L0,${h} Z`;
-  const gid="sp"+k;
-  return `<svg class="mkt-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".22"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  const gid="sp"+Math.abs((series[0]*1000|0)+series.length);
+  return `<svg class="mkt-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".22"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+function mktChgHtml(chg){return (chg==null||!isFinite(chg))?"":`<span class="mkt-chg ${chg>=0?"up":"dn"}">${chg>=0?"▲":"▼"} ${Math.abs(chg).toLocaleString("es-CL",{maximumFractionDigits:2})}%</span>`;}
+function mktTileHTML(label,valHtml,chg,sparkSeries,sub){
+  return `<div class="mkt-tile"><div class="mkt-top"><span class="mkt-name">${label}</span></div>
+    <div class="mkt-val">${valHtml}${mktChgHtml(chg)}</div>
+    ${sparkSeries?mindSparkSVG(sparkSeries):""}
+    <div class="mkt-date">${sub}</div></div>`;
 }
 function mindTile(d){
   const o=MIND&&MIND[d.k];const chg=d.spark?mindChange(d.k):null;
-  const chgHtml=(chg==null)?"":`<span class="mkt-chg ${chg>=0?"up":"dn"}">${chg>=0?"▲":"▼"} ${Math.abs(chg).toLocaleString("es-CL",{maximumFractionDigits:2})}%</span>`;
-  return `<div class="mkt-tile">
-    <div class="mkt-top"><span class="mkt-name">${d.label}</span></div>
-    <div class="mkt-val">${o?mindFmt(o.valor,d.dec,d.unit):'<span class="mkt-na">—</span>'}${chgHtml}</div>
-    ${d.spark?mindSpark(d.k):""}
-    <div class="mkt-date">${o?("al "+mindDate(o.fecha)+(o.unidad?" · "+o.unidad:"")):(mindBusy?"cargando…":"sin datos")}</div>
-  </div>`;
+  return mktTileHTML(d.label, o?mindFmt(o.valor,d.dec,d.unit):'<span class="mkt-na">—</span>', chg, d.spark?MINDH[d.k]:null,
+    o?("al "+mindDate(o.fecha)+(o.unidad?" · "+o.unidad:"")):(mindBusy?"cargando…":"sin datos"));
 }
-async function mindFetch(){
-  if(mindBusy)return;mindBusy=true;mindErr="";render();
+function oilTile(d){
+  const o=OIL&&OIL[d.k];
+  return mktTileHTML(d.label, o?mindFmt(o.valor,d.dec,d.unit):'<span class="mkt-na">—</span>', o?o.chg:null, OILH[d.k]||null,
+    o?("al "+mindDate(o.fecha)+" · Stooq"):(mindBusy?"cargando…":(oilErr||"no disponible")));
+}
+
+/* ---- fetch genérico con timeout ---- */
+async function mktGet(url,kind){
+  const ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),13000);
+  try{const r=await fetch(url,{signal:ctrl.signal,cache:"no-store"});clearTimeout(to);if(!r.ok)throw new Error("HTTP "+r.status);return kind==="json"?await r.json():await r.text();}
+  finally{clearTimeout(to);}
+}
+async function mindCore(){
   try{
-    const ctrl=new AbortController(),to=setTimeout(()=>ctrl.abort(),12000);
-    const r=await fetch(MIND_URL,{signal:ctrl.signal,cache:"no-store"});clearTimeout(to);
-    if(!r.ok)throw new Error("HTTP "+r.status);
-    const j=await r.json();const m={};
+    const j=await mktGet(MIND_URL,"json");const m={};
     MIND_DEF.forEach(d=>{const o=j[d.k];if(o&&isFinite(o.valor))m[d.k]={valor:o.valor,fecha:o.fecha,unidad:o.unidad_medida};});
     if(!Object.keys(m).length)throw new Error("respuesta sin indicadores");
     MIND=m;mindTs=new Date().toISOString();lsSet("inv_mind_v1",MIND);lsSet("inv_mind_ts_v1",mindTs);
     await Promise.allSettled(MIND_DEF.filter(d=>d.spark).map(async d=>{try{
-      const c2=new AbortController(),t2=setTimeout(()=>c2.abort(),12000);
-      const rr=await fetch(MIND_URL+"/"+d.k,{signal:c2.signal,cache:"no-store"});clearTimeout(t2);
-      if(!rr.ok)return;const jj=await rr.json();
+      const jj=await mktGet(MIND_URL+"/"+d.k,"json");
       const serie=(jj.serie||[]).slice(0,30).reverse().map(x=>+x.valor).filter(isFinite);
       if(serie.length>=2)MINDH[d.k]=serie;
     }catch(e){}}));
-    lsSet("inv_mindh_v1",MINDH);
+    lsSet("inv_mindh_v1",MINDH);mindErr="";
   }catch(e){mindErr=(e.name==="AbortError")?"La conexión tardó demasiado (timeout). Reintenta.":("No se pudo conectar a mindicador.cl ("+e.message+").");}
+}
+function oilParseStooq(txt){
+  const lines=(txt||"").trim().split(/\r?\n/);if(lines.length<2)return null;
+  const head=lines[0].toLowerCase().split(",");const ci=head.indexOf("close"),di=head.indexOf("date");
+  if(ci<0)return null;
+  const rows=lines.slice(1).map(l=>l.split(",")).filter(c=>c.length>ci&&isFinite(+c[ci])&&+c[ci]>0);
+  if(rows.length<2)return null;
+  return {closes:rows.map(c=>+c[ci]), lastDate:di>=0?rows[rows.length-1][di]:null};
+}
+async function oilOne(d){
+  const f=x=>""+x.getFullYear()+("0"+(x.getMonth()+1)).slice(-2)+("0"+x.getDate()).slice(-2);
+  const base="https://stooq.com/q/d/l/?s="+d.k+"&i=d&d1="+f(new Date(Date.now()-80*864e5))+"&d2="+f(new Date());
+  const urls=[base,"https://api.allorigins.win/raw?url="+encodeURIComponent(base)];
+  for(const u of urls){try{const txt=await mktGet(u,"text");const p=oilParseStooq(txt);if(p)return p;}catch(e){}}
+  return null;
+}
+async function oilFetch(){
+  let ok=0;
+  await Promise.allSettled(OIL_DEF.map(async d=>{
+    const p=await oilOne(d);if(!p)return;
+    const cs=p.closes,last=cs[cs.length-1],prev=cs[cs.length-2];
+    OIL=OIL||{};OIL[d.k]={valor:last,fecha:p.lastDate,chg:prev?(last/prev-1)*100:null};
+    OILH[d.k]=cs.slice(-30);ok++;
+  }));
+  if(ok){lsSet("inv_oil_v1",OIL);lsSet("inv_oilh_v1",OILH);oilErr="";}
+  else if(!OIL)oilErr="fuente no disponible";
+}
+async function mindFetch(){
+  if(mindBusy)return;mindBusy=true;render();
+  await Promise.allSettled([mindCore(),oilFetch()]);
   mindBusy=false;render();
 }
 function viewMercados(){
   const head=card("Mercados · indicadores en vivo",
-    "Tipo de cambio, materias primas y macro de Chile, en tiempo casi-real — directo desde tu navegador, sin servidores ni clave",
-    `<div class="note" style="margin:0 0 12px">Fuente: <b>mindicador.cl</b> (Banco Central de Chile e INE). Se consultan al abrir este módulo y con <b>Actualizar</b>; los últimos valores quedan guardados para verlos sin conexión. Para <b>petróleo, Brent, S&amp;P 500</b> u otros que no provee la fuente, agrégalos abajo como indicador manual.</div>
+    "Tipo de cambio, materias primas, petróleo y macro de Chile, en tiempo casi-real — directo desde tu navegador, sin servidores ni clave",
+    `<div class="note" style="margin:0 0 12px">Fuentes: <b>mindicador.cl</b> (Banco Central de Chile e INE) para tipo de cambio, cobre y macro; <b>Stooq</b> para el <b>petróleo</b> (WTI y Brent). Se consultan al abrir el módulo y con <b>Actualizar</b>; los últimos valores quedan guardados para verlos sin conexión.</div>
      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
        <button class="btn btn-pri" id="mindReload" ${mindBusy?'disabled style="opacity:.6"':""}>${mindBusy?"Actualizando…":"↻ Actualizar"}</button>
        ${mindTs?`<span class="note" style="margin:0">Actualizado ${mindAgo()} · ${mindDate(mindTs)}</span>`:`<span class="note" style="margin:0">Aún sin consultar</span>`}
@@ -2840,31 +2894,23 @@ function viewMercados(){
       `<div class="note" style="margin:0 0 11px">Causas típicas: estás <b>sin conexión</b>, o el navegador bloqueó la petición. Si abriste el archivo con <code>file://</code>, algunos navegadores restringen las llamadas de red; sírvelo por <code>http</code> (o usa Chrome/Firefox) y vuelve a intentar. La fuente <b>mindicador.cl</b> permite el acceso directo (CORS), así que normalmente basta con reintentar.</div>
        <button class="btn btn-pri" id="mindRetry">↻ Reintentar</button>`);
   }else if(!MIND&&mindBusy){
-    body=card("Cargando indicadores…","Consultando mindicador.cl",`<div class="note" style="margin:0">Un momento…</div>`);
+    body=card("Cargando indicadores…","Consultando las fuentes",`<div class="note" style="margin:0">Un momento…</div>`);
   }else if(MIND){
     let grid="";
     MIND_GRPS.forEach(g=>{const items=MIND_DEF.filter(d=>d.grp===g);if(!items.length)return;
-      grid+=`<div class="mkt-gl"><span class="cd"></span>${g}</div><div class="mkt-grid">${items.map(mindTile).join("")}</div>`;});
-    body=`<div class="card"><div class="bd">${grid}${mindErr?`<div class="note" style="margin-top:12px;color:var(--amber)">${mindErr} (mostrando últimos valores guardados)</div>`:""}</div></div>`;
+      let cells=items.map(mindTile).join("");
+      if(g==="Materias primas")cells+=OIL_DEF.map(oilTile).join("");
+      grid+=`<div class="mkt-gl"><span class="cd"></span>${g}</div><div class="mkt-grid">${cells}</div>`;});
+    body=`<div class="card"><div class="bd">${grid}${mindErr?`<div class="note" style="margin-top:12px;color:var(--amber)">${mindErr} (mostrando últimos valores guardados)</div>`:""}${(oilErr&&!OIL)?`<div class="note" style="margin-top:10px;color:var(--faint)">Petróleo: la fuente (Stooq) no respondió esta vez; reintenta con Actualizar.</div>`:""}</div></div>`;
   }
-  const manRows=MIND_MANUAL.length?MIND_MANUAL.map((m,i)=>`<div class="imp-frow"><span class="fdot" style="background:var(--data)"></span><span class="mkt-name" style="min-width:120px">${(""+m.label).replace(/</g,"&lt;")}</span><span class="meta">${(""+m.unit).replace(/</g,"&lt;")} ${(+m.value).toLocaleString("es-CL")}</span><span class="src">${m.ts||""}</span><button class="rm" data-manrm="${i}" title="Quitar">✕</button></div>`).join(""):`<div class="note" style="margin:0">Sin indicadores manuales. Agrega petróleo (WTI/Brent), S&amp;P 500, o cualquier dato que sigas aparte.</div>`;
-  const manual=card("Otros indicadores (manuales)","Para lo que mindicador.cl no entrega — petróleo, Brent, índices internacionales…",
-    `<div class="imp-files" style="margin-bottom:12px">${manRows}</div>
-     <div class="mkt-manform"><input id="manLbl" placeholder="Nombre (ej. Petróleo WTI)" style="flex:2 1 160px"><input id="manVal" type="number" step="any" placeholder="Valor" style="flex:1 1 90px;text-align:right"><input id="manUnit" placeholder="Unidad (US$)" style="flex:1 1 80px"><button class="btn btn-pri" id="manAdd">+ Agregar</button></div>`);
-  const note=notecard(`Estos valores son <b>referenciales</b> y pueden tener rezago respecto al mercado; mindicador.cl publica cierres oficiales. El <b>Copiloto IA</b> puede leer estos indicadores (herramienta <code>get_market_indicators</code>) para contextualizar sus recomendaciones con el entorno actual. No es asesoría financiera.`);
-  return head+body+manual+note;
+  const note=notecard(`Valores <b>referenciales</b> con posible rezago respecto al mercado (cierres oficiales). El <b>Copiloto IA</b> puede leer estos indicadores (herramienta <code>get_market_indicators</code>) para contextualizar sus recomendaciones con el dólar, el cobre, el petróleo o la TPM del momento. No es asesoría financiera.`);
+  return head+body+note;
 }
 function attachMercados(){
   const rl=document.getElementById("mindReload");if(rl)rl.onclick=mindFetch;
   const rt=document.getElementById("mindRetry");if(rt)rt.onclick=mindFetch;
-  const add=document.getElementById("manAdd");
-  if(add)add.onclick=()=>{const l=(document.getElementById("manLbl").value||"").trim(),v=parseFloat(document.getElementById("manVal").value),u=(document.getElementById("manUnit").value||"").trim()||"";
-    if(!l||!isFinite(v)){alert("Indica al menos un nombre y un valor numérico.");return;}
-    MIND_MANUAL.push({label:l,value:v,unit:u,ts:new Date().toLocaleDateString("es-CL")});lsSet("inv_mind_manual_v1",MIND_MANUAL);render();};
-  document.querySelectorAll("[data-manrm]").forEach(b=>b.onclick=()=>{MIND_MANUAL.splice(+b.dataset.manrm,1);lsSet("inv_mind_manual_v1",MIND_MANUAL);render();});
-  if(!mindAuto){mindAuto=true;if(!MIND&&!mindBusy)mindFetch();}
+  if(!mindAuto){mindAuto=true;if((!MIND||!OIL)&&!mindBusy)mindFetch();}
 }
-
 render();
 </script>
 </body>
