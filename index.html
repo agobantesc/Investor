@@ -989,6 +989,24 @@
   .cli-rename{border:1px solid transparent;background:transparent;font:800 14px var(--font);color:var(--navy);padding:.2rem .35rem;border-radius:7px;max-width:280px;}
   .cli-rename:hover{border-color:var(--line);} .cli-rename:focus{outline:none;border-color:var(--accent);background:var(--card);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
   .cli-meta{font-size:10.5px;color:var(--faint);font-weight:600;margin-top:2px;padding-left:.35rem;}
+  /* Administrador de clientes */
+  .adm-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .adm-tbl{width:100%;border-collapse:collapse;font:700 12.5px var(--font);}
+  .adm-tbl th{text-align:right;font:800 9.5px var(--font);letter-spacing:.5px;text-transform:uppercase;color:var(--mut);padding:0 .75rem .65rem;border-bottom:1px solid var(--line);white-space:nowrap;}
+  .adm-tbl th:first-child{text-align:left;}
+  .adm-tbl th.cc{text-align:center;}
+  .adm-tbl td{text-align:right;padding:.75rem;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--ink);}
+  .adm-tbl td:first-child{text-align:left;}
+  .adm-row.on{background:rgba(30,95,209,.05);}
+  .adm-cli{display:flex;align-items:center;gap:11px;}
+  .adm-cli .cli-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0;}
+  .adm-name{font:800 13.5px var(--font);color:var(--navy);display:flex;align-items:center;gap:8px;}
+  .adm-sub{font-size:10.5px;color:var(--mut);font-weight:600;margin-top:2px;}
+  .adm-c{text-align:center !important;font-weight:800;color:var(--navy);}
+  .adm-act{display:flex;gap:7px;align-items:center;justify-content:flex-end;}
+  .adm-here{font:800 10.5px var(--font);color:var(--accent);text-transform:uppercase;letter-spacing:.4px;}
+  .adm-tot td{border-top:2px solid var(--line2);border-bottom:none;font-weight:800;color:var(--navy);padding-top:.85rem;}
+  .adm-tot td:first-child{text-transform:uppercase;font-size:10px;letter-spacing:.5px;color:var(--mut);}
 </style>
 </head>
 <body>
@@ -1164,6 +1182,7 @@ const MODS={
   eval:{label:"Análisis",tabs:[{id:"comparativa",label:"Comparativa",n:"1"},{id:"detalle",label:"Detalle por acción",n:"2"},{id:"capm",label:"CAPM / SML",n:"3"},{id:"multifactor",label:"Multifactor",n:"4"},{id:"importar",label:"Importar acciones",n:"5"}]},
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
+  clientes:{label:"Clientes",tabs:[{id:"admin",label:"Administrador de clientes",n:"1"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
   perfil:{label:"Perfil",tabs:[{id:"perfil",label:"Perfil de inversionista",n:"1"}]},
   inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Ingresar datos",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"},{id:"contabilidad",label:"Contabilidad",n:"5"}]},
@@ -2330,6 +2349,7 @@ function render(){
   else if(modulo==="pro") h=viewPro();
   else if(modulo==="mercados") h=viewMercados();
   else if(modulo==="proyectos") h=viewProyectos();
+  else if(modulo==="clientes") h=viewClientes();
   else if(modulo==="perfil") h=viewPerfil();
   else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
   else if(page==="comparativa") h=viewComparativa();
@@ -2348,6 +2368,7 @@ function render(){
   if(modulo==="perfil") attachPerfil();
   if(modulo==="mercados") attachMercados();
   if(modulo==="proyectos") attachProyectos();
+  if(modulo==="clientes") attachClientes();
   if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="importar";render();};}
   attachScatterAll();
 }
@@ -3674,8 +3695,7 @@ function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));
 
 function viewProyectos(){
   syncProj();
-  const cliCards=CLIENTS.map(c=>{const t=clientTotals(c.id),act=c.id===activeClient;return `<div class="cli-card ${act?"on":""}"><span class="cli-dot" style="background:${c.color}"></span><div style="flex:1;min-width:0"><input class="cli-rename" data-clirename="${c.id}" value="${(""+c.name).replace(/"/g,"&quot;")}"><div class="cli-meta">${t.n} proyecto${t.n!==1?"s":""} · invertido ${fmtCLP(t.inv)} · valor ${fmtCLP(t.val)} · <b style="color:${t.gain>=0?green:red}">${(t.gain>=0?"+":"")+fmtCLP(t.gain)} (${(t.pct>=0?"+":"")+t.pct.toFixed(1)}%)</b></div></div>${act?'<span class="badge pos">ACTIVO</span>':`<button class="btn" data-cliswitch="${c.id}">Entrar</button>`}<button class="prj-del" data-clidel="${c.id}" title="Eliminar cliente">🗑</button></div>`;}).join("");
-  const cliCard=card("Clientes","Administra las inversiones de distintas personas · cada cliente tiene sus propios proyectos, análisis, simulaciones y perfil",`<div class="cli-list">${cliCards}</div><div style="margin-top:12px"><button class="btn btn-pri" id="cliAddBtn">+ Nuevo cliente</button></div>`);
+  const cliBanner=`<div class="card"><div class="bd" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="min-width:0"><div style="font:800 14px var(--font);color:var(--navy)"><span class="cli-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${activeClientObj().color};vertical-align:middle;margin-right:7px"></span>Gestionando la cartera de ${(""+activeClientObj().name).replace(/</g,"&lt;")}</div><div class="note" style="margin:5px 0 0">${CLIENTS.length>1?("Administras "+CLIENTS.length+" clientes."):"Puedes administrar las inversiones de otras personas como clientes independientes."} Los proyectos de abajo son de este cliente.</div></div><button class="btn btn-pri" data-go-clientes>Administrador de clientes →</button></div></div>`;
   const all=PROJECTS.map(p=>({p,s:projSummary(p)}));
   const totInv=all.reduce((a,x)=>a+x.s.invested,0),totVal=all.reduce((a,x)=>a+x.s.value,0),totGain=totVal-totInv,totPct=totInv>0?totGain/totInv*100:0;
   const head=card("Proyectos de inversión","Gestiona tus proyectos y lo que cada uno tiene vinculado: análisis y simulaciones · rentabilidad consolidada",
@@ -3717,7 +3737,7 @@ function viewProyectos(){
   // Simulaciones
   const scRows=(SCEN||[]).length?(SCEN.map(sc=>`<div class="prj-srow"><span class="prj-dot sim"></span><div style="flex:1;min-width:0"><b>${(""+sc.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${sc.comp.length} acciones · β ${sc.m.bp.toFixed(2)} · Sharpe ${sc.m.sharpe.toFixed(2)} · ${fmtCLP(sc.amount||0)}</span></div><button class="btn" data-scload="${sc.id}">Cargar</button><button class="prj-del" data-scdel="${sc.id}" title="Eliminar simulación">🗑</button></div>`).join("")):'<div class="note" style="margin:0">Sin simulaciones guardadas. Guarda escenarios en Simulación → Constructor.</div>';
   const scCard=card("Simulaciones (escenarios)","Carteras simuladas y guardadas · cárgalas al Constructor o elimínalas",`<div class="prj-srlist">${scRows}</div>`);
-  return cliCard+head+projCard+anCard+scCard;
+  return cliBanner+head+projCard+anCard+scCard;
 }
 function attachProyectos(){
   document.querySelectorAll("[data-prename]").forEach(inp=>inp.onchange=()=>{const p=PROJECTS.find(x=>String(x.id)===inp.dataset.prename);if(p){p.name=(inp.value||"").trim()||p.name;saveProjects();}});
@@ -3737,6 +3757,44 @@ function attachProyectos(){
   document.querySelectorAll("[data-cliswitch]").forEach(b=>b.onclick=()=>clientSwitch(b.dataset.cliswitch));
   document.querySelectorAll("[data-clidel]").forEach(b=>b.onclick=()=>clientDelete(b.dataset.clidel));
   const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>{const n=window.prompt("Nombre del nuevo cliente:");if(n!==null&&n.trim())clientAdd(n.trim());};
+  const _gc=document.querySelector("[data-go-clientes]");if(_gc)_gc.onclick=()=>{modulo="clientes";render();};
+}
+/* ===== ADMINISTRADOR DE CLIENTES (panel de gestión) ===== */
+function viewClientes(){
+  syncProj();
+  const stats=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
+  const T=stats.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.realized+=x.s.realized;a.n+=x.s.n;a.nd+=x.s.ndistinct;return a;},{aportado:0,retirado:0,value:0,gain:0,realized:0,n:0,nd:0});
+  const Tpct=T.aportado>0?T.gain/T.aportado*100:0;
+  const head=card("Administrador de clientes",`Resumen de la gestión de cada cliente que administras, incluida tu propia cartera · ${CLIENTS.length} cliente${CLIENTS.length!==1?"s":""} · ${T.n} proyecto${T.n!==1?"s":""} de inversión`,
+    `<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+      ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado en cartera",indigo,ink)}
+      ${tile("Capital retirado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
+      ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
+      ${tile("Ganancia / pérdida",(T.gain>=0?"+":"−")+fmtCLP(Math.abs(T.gain)),"valor + retirado − aportado",indigo,T.gain>=0?green:red)}
+      ${tile("Rentabilidad %",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}</div>`);
+  const rows=stats.map(({c,s})=>{const act=c.id===activeClient;
+    return `<tr class="adm-row ${act?"on":""}">
+      <td class="adm-cli"><span class="cli-dot" style="background:${c.color}"></span><div><div class="adm-name">${(""+c.name).replace(/</g,"&lt;")}${act?' <span class="badge pos">ACTIVO</span>':''}</div><div class="adm-sub">${s.n} proyecto${s.n!==1?"s":""}${(s.n-s.withData)>0?` · ${s.n-s.withData} sin seguimiento`:""}</div></div></td>
+      <td>${fmtCLP(s.aportado)}</td>
+      <td>${s.retirado>0?fmtCLP(s.retirado):"—"}</td>
+      <td>${fmtCLP(s.value)}</td>
+      <td style="color:${s.gain>=0?green:red};font-weight:800">${(s.gain>=0?"+":"−")+fmtCLP(Math.abs(s.gain))}</td>
+      <td style="color:${s.pct>=0?green:red};font-weight:800">${(s.pct>=0?"+":"")+s.pct.toFixed(2)}%</td>
+      <td class="adm-c">${s.ndistinct}</td>
+      <td class="adm-act">${act?'<span class="adm-here">estás aquí</span>':`<button class="btn" data-cliswitch="${c.id}">Entrar →</button>`}<button class="prj-del" data-clirename2="${c.id}" title="Renombrar">✎</button><button class="prj-del" data-clidel="${c.id}" title="Eliminar cliente">🗑</button></td>
+    </tr>`;}).join("");
+  const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${T.gain>=0?green:red}">${(T.gain>=0?"+":"−")+fmtCLP(Math.abs(T.gain))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%</td><td class="adm-c">—</td><td></td></tr>`;
+  const tbl=card("Carteras por cliente","Capital aportado y retirado, valor actual, ganancia/pérdida ($ y %) y número de acciones distintas en cartera. Entra a un cliente para gestionar sus proyectos.",
+    `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Ganancia $</th><th>Rentab. %</th><th class="cc">Acciones</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
+     <div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-pri" id="cliAddBtn">+ Nuevo cliente</button><button class="btn" data-go-proj>Ver proyectos de ${(""+activeClientObj().name).replace(/</g,"&lt;")} →</button></div>`);
+  return head+tbl;
+}
+function attachClientes(){
+  document.querySelectorAll("[data-cliswitch]").forEach(b=>b.onclick=()=>clientSwitch(b.dataset.cliswitch));
+  document.querySelectorAll("[data-clidel]").forEach(b=>b.onclick=()=>clientDelete(b.dataset.clidel));
+  document.querySelectorAll("[data-clirename2]").forEach(b=>b.onclick=()=>{const c=CLIENTS.find(x=>x.id===b.dataset.clirename2);if(!c)return;const n=window.prompt("Nuevo nombre del cliente:",c.name);if(n!==null&&n.trim())clientRename(c.id,n.trim());});
+  const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>{const n=window.prompt("Nombre del nuevo cliente:");if(n!==null&&n.trim())clientAdd(n.trim());};
+  const _gp=document.querySelector("[data-go-proj]");if(_gp)_gp.onclick=()=>{modulo="proyectos";page="hub";render();};
 }
 
 /* ===== MODO ASESOR: gestión de clientes ===== */
@@ -3767,6 +3825,26 @@ function clientDelete(id){
 }
 function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=localStorage.getItem("pf_projects_v1__"+id);return v?JSON.parse(v):[];}catch(e){return [];}}
 function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.forEach(p=>{try{const s=projSummary(p);inv+=s.invested;val+=s.value;}catch(e){}});return {inv,val,gain:val-inv,pct:inv>0?(val-inv)/inv*100:0,n:ps.length};}
+/* Resumen de gestión por cliente: aportado/retirado brutos, valor, ganancia y acciones distintas */
+function clientStats(id){
+  const ps=clientProjects(id)||[];
+  let aportado=0,retirado=0,value=0,realized=0,withData=0;const tickers={};
+  ps.forEach(p=>{try{withProject(p,function(){
+    const w=p.weeks||[];const L=w.length?ledger():null,IM=w.length?invMetrics():null;
+    if(L&&IM&&L.tx&&L.tx.length){
+      L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;});
+      value+=IM.last.val;
+      realized+=(L.realized||[]).reduce((a,r)=>a+r.gain,0);
+      Object.keys(L.sh).forEach(t=>{if((L.sh[t]||0)>1e-6)tickers[t]=1;});
+      withData++;
+    }else{
+      aportado+=p.amount||0;value+=p.amount||0;
+      (p.holdings||[]).forEach(hd=>{tickers[hd.t]=1;});
+    }
+  });}catch(e){}});
+  const gain=value+retirado-aportado,pct=aportado>0?gain/aportado*100:0;
+  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,pct,ndistinct:Object.keys(tickers).length};
+}
 /* topbar switcher */
 function clientMenuClose(){const m=document.getElementById("clientMenu");if(m)m.classList.remove("open");}
 function renderClientBar(){
@@ -3777,7 +3855,7 @@ function renderClientBar(){
   if(cm){cm.innerHTML=CLIENTS.map(c=>`<button class="cli-item ${c.id===activeClient?"on":""}" data-cliid="${c.id}"><span class="cli-dot" style="background:${c.color||"#1E5FD1"}"></span><span style="flex:1;text-align:left">${(""+c.name).replace(/</g,"&lt;")}</span>${c.id===activeClient?'<span class="cli-chk">✓</span>':""}</button>`).join("")+`<div class="cli-sep"></div><button class="cli-item act" data-cliadd>+ Nuevo cliente</button><button class="cli-item act" data-cligo>⚙ Gestionar clientes</button>`;
     cm.querySelectorAll("[data-cliid]").forEach(b=>b.onclick=()=>{clientMenuClose();clientSwitch(b.dataset.cliid);});
     const ca=cm.querySelector("[data-cliadd]");if(ca)ca.onclick=()=>{clientMenuClose();const n=window.prompt("Nombre del nuevo cliente (ej. tu polola):");if(n!==null&&n.trim())clientAdd(n.trim());};
-    const cg=cm.querySelector("[data-cligo]");if(cg)cg.onclick=()=>{clientMenuClose();modulo="proyectos";page="hub";render();};}
+    const cg=cm.querySelector("[data-cligo]");if(cg)cg.onclick=()=>{clientMenuClose();modulo="clientes";render();};}
   const cb=document.getElementById("clientBtn");if(cb&&!cb._b){cb._b=1;cb.onclick=e=>{e.stopPropagation();const m=document.getElementById("clientMenu");if(m)m.classList.toggle("open");};}
 }
 
