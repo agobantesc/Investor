@@ -64,7 +64,8 @@ Esto permite **contrastar E(R) CAPM vs E(R) multifactor** acción por acción, c
 Un agente de IA (API de Claude) **funcional**, disponible desde el botón flotante ✨ en cualquier módulo, que conversa con **tus datos reales**:
 
 - **Bring-Your-Own-Key (BYOK):** pegas tu propia clave de Anthropic; se guarda **solo en tu navegador** (`localStorage`) y las llamadas van **directo** desde tu equipo a la API (`anthropic-dangerous-direct-browser-access`), sin servidores intermedios.
-- **Tool use (function calling):** el agente lee tu portafolio activo y su seguimiento, las métricas CAPM + multifactor de las 14 acciones, la matriz de correlación, tus escenarios y la cartera del Constructor; y puede **evaluar carteras hipotéticas** (`evaluate_portfolio`) para proponer y comparar rebalanceos con cifras reales.
+- **Respuestas en streaming:** el copiloto **escribe progresivamente** (no aparece todo de golpe), en mensajes breves y por pasos para que sea fácil de seguir.
+- **Tool use (function calling):** el agente lee tu portafolio activo y su seguimiento, las métricas CAPM + multifactor de las 14 acciones (herramienta `get_multifactor` dedicada), la matriz de correlación, tus escenarios, la cartera del Constructor y los **indicadores de mercado** (`get_market_indicators`); y puede **evaluar carteras hipotéticas** (`evaluate_portfolio`) con cifras reales. Está instruido para **integrar siempre el modelo multifactor** además del CAPM.
 - **Selector de modelo:** Claude **Opus 4.8** (por defecto), Sonnet 4.6 o Haiku 4.5.
 - **Seguro y educativo:** el agente analiza y propone; tú ejecutas los cambios en Constructor / Operar. No es asesoría financiera regulada y los disclaimers están a la vista. Costo aprox. 1–3 ¢ por consulta a tu cuenta de Anthropic.
 
@@ -111,7 +112,7 @@ Toda la funcionalidad anterior se mantiene intacta:
 
 - **Análisis** — Comparativa (mapa riesgo-retorno, correlaciones), Detalle por acción (recta característica/SCL), CAPM/SML, **Multifactor (nuevo)**.
 - **Simulación** — Constructor de portafolio (pesos, métricas, VaR, proyección, PDF), Asistente multi-perfil, Comparación de escenarios.
-- **Inversión** — Seguimiento real con TWR, CAGR, Sharpe realizado, drawdown, tracking error, information ratio, drift, rebalanceo, inyección de capital e informes.
+- **Inversión** — Seguimiento real con TWR, CAGR, Sharpe realizado, drawdown, tracking error, information ratio y drift; **Operar** (registrar compra/venta por acción con precio y cantidad → recálculo de capital, valor y drift; e inyección de capital); **Contabilidad** (libro de compras/ventas, ganancia realizada/no realizada por costo promedio, e informe imprimible para el contador) e informes.
 
 ---
 

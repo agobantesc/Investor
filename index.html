@@ -789,6 +789,20 @@
   .impset-act{padding:.4rem .7rem;font-size:12px;}
   .impset-del{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--muted);cursor:pointer;font-size:13px;flex-shrink:0;}
   .impset-del:hover{color:var(--red);border-color:var(--red);}
+
+  /* ════════════ Operar: compra/venta ════════════ */
+  .op-form{display:flex;flex-direction:column;gap:14px;}
+  .op-side{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:var(--card2);width:max-content;}
+  .op-side .opbtn{border:none;background:transparent;padding:.5rem 1.15rem;font:800 13px var(--font);color:var(--muted);cursor:pointer;transition:.14s var(--ease-out);}
+  .op-side .opbtn.buy.on{color:#fff;background:linear-gradient(180deg,#1BAE6E,#0E8C5E);}
+  .op-side .opbtn.sell.on{color:#fff;background:linear-gradient(180deg,#E0574E,#C0392B);}
+  .op-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;}
+  .op-grid .genl{margin-bottom:6px;}
+  .op-grid input,.op-grid select{width:100%;padding:.55rem .6rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 13px var(--font);color:var(--ink);}
+  .op-grid input:focus,.op-grid select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  .op-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;}
+  .op-amt{font-size:13px;color:var(--muted);font-weight:600;}
+  .op-amt b{color:var(--navy);font-size:17px;font-weight:850;margin-left:5px;}
 </style>
 </head>
 <body>
@@ -964,7 +978,7 @@ const MODS={
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
   perfil:{label:"Perfil",tabs:[{id:"perfil",label:"Perfil de inversionista",n:"1"}]},
-  inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Ingresar datos",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"}]},
+  inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Ingresar datos",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"},{id:"contabilidad",label:"Contabilidad",n:"5"}]},
   pro:{label:"Pro · Roadmap",tabs:[{id:"realtime",label:"Datos en tiempo real",n:"1"},{id:"copilot",label:"Copiloto IA",n:"2"}]},
 };
 const ICO={
@@ -1676,6 +1690,7 @@ function invMetrics(){
     if(w.ev){
       if(w.ev.kind==="inject"){const al=w.ev.alloc||{};Object.keys(al).forEach(t=>{const p=w.prices[t]||base.prices[t]||1;sh[t]=(sh[t]||0)+al[t]/p;cost[t]=(cost[t]||0)+al[t];});inflow=w.ev.amount||0;aport+=inflow;}
       else if(w.ev.kind==="rebal"&&w.ev.shares){PF.holdings.forEach(hd=>{const old=sh[hd.t]||0,nw=w.ev.shares[hd.t]!=null?w.ev.shares[hd.t]:old,p=w.prices[hd.t]||base.prices[hd.t]||1;if(nw<old)cost[hd.t]=(cost[hd.t]||0)*(old>0?nw/old:1);else if(nw>old)cost[hd.t]=(cost[hd.t]||0)+(nw-old)*p;sh[hd.t]=nw;});}
+      else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;}else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;}}
     }
     const val=PF.holdings.reduce((a,hd)=>a+(sh[hd.t]||0)*(w.prices[hd.t]||0),0);
     if(i>0&&prevVal>0){const r=(val-inflow)/prevVal-1;twr*=(1+r);pr.push(r);mr.push(w.ipsa/WEEKS[i-1].ipsa-1);}
@@ -1857,10 +1872,26 @@ function viewOperar(){
   const IM=invMetrics();
   if(!IM)return projbar+summary+notecard("Primero registra la <b>compra inicial</b> en la pestaña <b>Ingresar datos</b>. Luego podrás rebalancear o inyectar capital aquí.");
   const L=IM.last,V=L.val,lastW=WEEKS[WEEKS.length-1];
-  const rbRows=IM.perStock.map(p=>{const tv=V*p.hd.w,tr=tv-p.val,pp=lastW.prices[p.hd.t]||p.cur,shT=pp>0?Math.round(tr/pp):0,small=Math.abs(tr)<V*0.005;const act=small?`<span style="color:${muted}">Mantener</span>`:(tr>0?`<span style="color:${green};font-weight:700">Comprar ${fmtCLP(Math.abs(tr))}</span>`:`<span style="color:${red};font-weight:700">Vender ${fmtCLP(Math.abs(tr))}</span>`);return `<tr><td>${tk(p.hd)}</td><td class="r">${((p.val/V)*100).toFixed(1)}%</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r">${act}</td><td class="r" style="color:${muted}">${small?"—":(tr>0?"+":"−")+Math.abs(shT).toLocaleString("es-CL")+" acc"}</td></tr>`;}).join("");
-  const turnover=IM.perStock.reduce((a,p)=>a+Math.max(0,V*p.hd.w-p.val),0);
-  const rebBody=`<div class="note" style="margin-bottom:12px">Vuelve a tus pesos objetivo según los <b>últimos precios registrados</b> (${lastW.date}). Capital actual ${fmtCLP(V)} · el plan mueve <b>${fmtCLP(turnover)}</b> (las ventas financian las compras).</div><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Actual</th><th class="r">Objetivo</th><th class="r">Operación</th><th class="r">Acciones aprox.</th></tr></thead><tbody>${rbRows}</tbody></table></div><div style="margin-top:13px"><button class="btn btn-pri" id="dorebal">✓ Registrar rebalanceo</button></div>`;
-  const rebCard=card("Rebalanceo de la cartera","Vender lo sobreponderado y comprar lo subponderado para volver a los pesos objetivo · mantiene tu capital",rebBody);
+  if(opState.pid!==activeId)opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
+  const posRows=IM.perStock.map(p=>{const aw=V>0?p.val/V*100:0,tw=p.hd.w*100,dr=aw-tw,drc=Math.abs(dr)<1.5?muted:(dr>0?red:green);return `<tr><td>${tk(p.hd)}</td><td class="r">${p.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(p.cur)}</td><td class="r">${fmtCLP(p.val)}</td><td class="r">${aw.toFixed(1)}%</td><td class="r" style="color:${muted}">${tw.toFixed(1)}%</td><td class="r" style="color:${drc};font-weight:700">${(dr>=0?"+":"")}${dr.toFixed(1)} pts</td></tr>`;}).join("");
+  const posTable=`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio últ.</th><th class="r">Valor</th><th class="r">Peso actual</th><th class="r">Objetivo</th><th class="r">Drift</th></tr></thead><tbody>${posRows}</tbody></table></div>`;
+  const sellOpts=IM.perStock.filter(p=>p.sh>1e-4).map(p=>p.hd.t);
+  const buyOpts=STOCKS.map(s=>s.t);
+  const tkrOpts=(opState.side==="sell"?sellOpts:buyOpts);
+  if(opState.tkr&&tkrOpts.indexOf(opState.tkr)<0)opState.tkr=null;
+  const osel=opState.tkr||tkrOpts[0]||"";
+  const lastPrice=(lastW.prices[osel]!=null?lastW.prices[osel]:"");
+  const priceVal=opState.price!==""?opState.price:lastPrice;
+  const omonto=(parseFloat(opState.qty)>0&&parseFloat(priceVal)>0)?(parseFloat(opState.qty)*parseFloat(priceVal)):0;
+  const opBody=`<div class="op-form"><div class="op-side"><button class="opbtn buy ${opState.side==="buy"?"on":""}" data-opside="buy">Comprar</button><button class="opbtn sell ${opState.side==="sell"?"on":""}" data-opside="sell">Vender</button></div>
+    <div class="op-grid">
+      <div><div class="genl">Acción</div><select id="optkr">${tkrOpts.length?tkrOpts.map(t=>{const st=STOCKS.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones para vender</option>'}</select></div>
+      <div><div class="genl">Cantidad (acciones)</div><input type="number" step="any" id="opqty" value="${opState.qty}" placeholder="Ej: 100"></div>
+      <div><div class="genl">Precio por acción (CLP)</div><input type="number" step="any" id="opprice" value="${priceVal}" placeholder="${lastPrice||"precio"}"></div>
+      <div><div class="genl">Fecha</div><input type="date" id="opdate" value="${opState.date||new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="op-foot"><div class="op-amt">${opState.side==="sell"?"Monto a recibir":"Monto a invertir"}: <b>${omonto>0?fmtCLP(omonto):"—"}</b></div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
+  const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Se recalcula el capital, el valor de la cartera y el drift de cada posición — sin tener que rebalancear todo.",opBody+`<div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
   const heldT=PF.holdings.map(h=>h.t);const allT=injTickers();
   const wrows=allT.map(t=>{const st=STOCKS.find(x=>x.t===t)||{t,n:t,c:"#888"};const isX=heldT.indexOf(t)<0;return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${st.c}"></span><b style="color:${st.c}">${t}</b><span class="simsec">${st.n||""}${isX?" · nueva":""}</span></div><div class="simw"><input type="number" step="any" class="iwinp" data-iw="${t}" value="${injState.weights[t]}" style="width:64px;text-align:right"><span>%</span></div></div>`;}).join("");
   const avail=STOCKS.filter(s=>allT.indexOf(s.t)<0);
@@ -1868,7 +1899,7 @@ function viewOperar(){
   const sumW=allT.reduce((a,t)=>a+(parseFloat(injState.weights[t])||0),0);
   const injBody=`<div class="simhead"><div><div class="genl">Capital a inyectar (CLP)</div><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="injamt" value="${injState.amount?injState.amount.toLocaleString("es-CL"):""}" placeholder="Ej: 500.000" style="width:160px"></div></div></div><div class="genl" style="margin-top:14px;display:flex;justify-content:space-between">Pesos objetivo por acción (editable) <span style="color:${Math.abs(sumW-100)<0.5?green:amber};font-weight:800">Σ ${sumW.toFixed(1)}%</span></div><div class="simlist" style="margin-top:8px">${wrows}</div><div style="margin-top:9px">${addSel}</div><div class="genl" style="margin-top:14px">Compra sugerida</div><div id="injprev" style="margin-top:6px">${injPreview()}</div><div style="margin-top:13px"><button class="btn btn-pri" id="doinject">✓ Registrar inyección</button></div><div class="note" style="margin-top:11px">Por defecto mantiene tus pesos objetivo; puedes <b>editarlos</b> o <b>agregar acciones nuevas</b>. El aporte se reparte según esos pesos, que pasan a ser tu nuevo objetivo. El aporte <b>no</b> cuenta como rentabilidad. Para acciones nuevas se usa su último precio de referencia hasta que registres su precio real. Tú decides la distribución final.</div>`;
   const injCard=card("Inyectar capital nuevo","Compra de nuevas acciones · sugerencia para mantener los pesos objetivo",injBody);
-  return projbar+summary+rebCard+injCard;
+  return projbar+summary+opCard+injCard;
 }
 
 function exportInvCSV(){
@@ -2052,6 +2083,14 @@ function attachInv(){
     injState={pid:null,amount:0,weights:{},extra:[]};
     saveProjects();page="seguimiento";render();};
   const dr=document.getElementById("dorebal");if(dr)dr.onclick=()=>{if(!window.confirm("¿Registrar el rebalanceo a los pesos objetivo según los últimos precios registrados?"))return;const IM=invMetrics();if(!IM)return;const V=IM.last.val,lw=WEEKS[WEEKS.length-1],ns={};PF.holdings.forEach(hd=>{const p=lw.prices[hd.t]||1;ns[hd.t]=(V*hd.w)/p;});WEEKS.push({date:new Date().toISOString().slice(0,10),prices:Object.assign({},lw.prices),ipsa:lw.ipsa,ev:{kind:"rebal",shares:ns}});saveProjects();page="seguimiento";render();};
+  document.querySelectorAll("[data-opside]").forEach(b=>b.onclick=()=>{opState.side=b.dataset.opside;opState.tkr=null;opState.price="";render();});
+  const _ot=document.getElementById("optkr");if(_ot)_ot.onchange=()=>{opState.tkr=_ot.value;opState.price="";render();};
+  function _opAmt(){const q=parseFloat(opState.qty),p=parseFloat(opState.price);const m=(q>0&&p>0)?q*p:0;const el=document.querySelector(".op-amt b");if(el)el.textContent=m>0?fmtCLP(m):"—";}
+  const _oq=document.getElementById("opqty");if(_oq)_oq.oninput=()=>{opState.qty=_oq.value;_opAmt();};
+  const _op=document.getElementById("opprice");if(_op)_op.oninput=()=>{opState.price=_op.value;_opAmt();};
+  const _od=document.getElementById("opdate");if(_od)_od.onchange=()=>{opState.date=_od.value;};
+  const _odo=document.getElementById("opdo");if(_odo)_odo.onclick=opDo;
+  const _crep=document.getElementById("contabreport");if(_crep)_crep.onclick=genContabReport;
   const rs=document.getElementById("resetpf");
   if(rs)rs.onclick=()=>{if(window.confirm("¿Eliminar este proyecto y todo su seguimiento? Esta acción no se puede deshacer.")){PROJECTS=PROJECTS.filter(p=>p.id!==activeId);activeId=PROJECTS.length?PROJECTS[0].id:null;editIdx=null;saveProjects();syncProj();render();}};
 }
@@ -2069,7 +2108,7 @@ function render(){
   refreshPalette();
   window.__sgN=0;
   let h="";
-  if(modulo==="inv") h=(page==="operar"?viewOperar():viewInv());
+  if(modulo==="inv") h=(page==="operar"?viewOperar():page==="contabilidad"?viewContab():viewInv());
   else if(modulo==="pro") h=viewPro();
   else if(modulo==="mercados") h=viewMercados();
   else if(modulo==="perfil") h=viewPerfil();
@@ -2455,6 +2494,7 @@ const COPILOT_TOOLS=[
   {name:"evaluate_portfolio",description:"Evalúa una cartera hipotética. Entrega pesos por ticker (en %, suman ~100). Devuelve β, E(R) CAPM, E(R) multifactor, σ, Sharpe, correlación media y exposición factorial. Úsalo para proponer/comparar carteras.",input_schema:{type:"object",properties:{weights:{type:"object",description:"Mapa ticker->peso %, ej. {\"BCI\":40,\"ENELCHILE\":30,\"COLBUN\":30}",additionalProperties:{type:"number"}},amount:{type:"number",description:"Monto a invertir en CLP (opcional)"}},required:["weights"]}},
   {name:"get_investor_profile",description:"Perfil de inversionista del usuario (conservador/moderado/riesgoso) para personalizar recomendaciones.",input_schema:{type:"object",properties:{}}},
   {name:"get_imported_analysis",description:"Si el usuario importó un set de acciones propio, devuelve sus métricas CAPM, benchmark y correlaciones. Vacío si usa el set demo.",input_schema:{type:"object",properties:{}}},
+  {name:"get_multifactor",description:"Modelo multifactor de estilo (más allá del CAPM). Por cada acción del set activo: Composite, z-scores de los 6 factores (Momentum, Low-Vol, Value, Quality, Size, Dividend Yield), E(R) multifactor y estilo; más los pesos de factor del perfil. Úsalo para analizar/recomendar con factores, no solo β.",input_schema:{type:"object",properties:{}}},
   {name:"get_market_indicators",description:"Indicadores financieros y macroeconómicos EN VIVO de Chile (mindicador.cl): dólar, euro, cobre, UF, UTM, IPC, tasa de desempleo, Imacec, TPM, bitcoin, más indicadores manuales del usuario (ej. petróleo, S&P 500). Úsalos para contextualizar recomendaciones con el entorno de mercado actual.",input_schema:{type:"object",properties:{}}}
 ];
 
@@ -2516,6 +2556,12 @@ function cpRunTool(name,input){
     }
     if(name==="get_investor_profile"){return invProfile?JSON.stringify({perfil:invProfile.profile,etiqueta:invProfile.label,puntaje:invProfile.score+"/40",guia:invProfile.guideShort}):"El usuario aún no completó su perfil de inversionista (módulo Perfil). Puedes sugerirle hacerlo.";}
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
+    if(name==="get_multifactor"){
+      const acc=STOCKS.map(s=>{const z=MF.z[s.t]||{};return {t:s.t,composite:+(+MF.comp[s.t]||0).toFixed(2),erMF_pct:+(+MF.er[s.t]||0).toFixed(2),z:{momentum:+(+z.momentum||0).toFixed(2),lowvol:+(+z.lowvol||0).toFixed(2),value:+(+z.value||0).toFixed(2),quality:+(+z.quality||0).toFixed(2),size:+(+z.size||0).toFixed(2),yield:+(+z.yield||0).toFixed(2)},estilo:cpStyleOf(s.t)};}).sort((a,b)=>b.composite-a.composite);
+      const out={primasFactor:LAMBDA,pesosPerfil:invProfile?(PROFILE_W[invProfile.profile]||null):null,acciones:acc};
+      if(typeof DATASET!=="undefined"&&DATASET==="import")out.nota="Set importado: Momentum y Low-Vol vienen de tus precios; los factores fundamentales (Value/Quality/Size/Yield) no aplican y quedan neutros.";
+      return JSON.stringify(out);
+    }
     if(name==="get_market_indicators"){
       const hasM=(typeof MIND!=="undefined"&&MIND),hasOil=(typeof OIL!=="undefined"&&OIL);
       if(!hasM&&!hasOil)return "El usuario aún no cargó indicadores de mercado (módulo Mercados, botón superior). Sugiérele abrirlo y pulsar Actualizar para traer dólar, euro, cobre, petróleo, IPC, desempleo, etc.";
@@ -2604,33 +2650,51 @@ function cpRenderFoot(){
 }
 
 /* ---- loop agéntico ---- */
+async function cpStreamOnce(){
+  const body={model:cpModel,max_tokens:2048,system:cpSystemPrompt(),tools:COPILOT_TOOLS,messages:cpApiMessages(),stream:true};
+  let res;
+  try{res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
+    "content-type":"application/json","x-api-key":cpKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});}
+  catch(err){return {error:"No se pudo conectar con Anthropic: "+err.message+"."};}
+  if(!res.ok){let msg="Error "+res.status;try{const ej=await res.json();msg=(ej.error&&ej.error.message)||msg;}catch(_){}if(res.status===401)msg="Clave inválida o sin crédito. Revisa tu clave de Anthropic.";return {error:msg};}
+  if(!res.body||!res.body.getReader){const data=await res.json();cpMsgs.push({role:"assistant",content:data.content});cpRenderBody();return {stopReason:data.stop_reason};}
+  const reader=res.body.getReader(),dec=new TextDecoder();const content=[];let stopReason=null,buf="";
+  cpMsgs.push({role:"assistant",content});
+  while(true){
+    const rd=await reader.read();if(rd.done)break;
+    buf+=dec.decode(rd.value,{stream:true});let nl;
+    while((nl=buf.indexOf("\n"))>=0){
+      const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);
+      if(!line.startsWith("data:"))continue;
+      const pl=line.slice(5).trim();if(!pl||pl==="[DONE]")continue;
+      let ev;try{ev=JSON.parse(pl);}catch(e){continue;}
+      if(ev.type==="content_block_start"){const cb=ev.content_block;content[ev.index]=cb.type==="tool_use"?{type:"tool_use",id:cb.id,name:cb.name,input:{},_j:""}:{type:"text",text:""};cpRenderBody();}
+      else if(ev.type==="content_block_delta"){const b=content[ev.index];if(!b)continue;if(ev.delta.type==="text_delta"){b.text+=ev.delta.text;cpRenderBody();}else if(ev.delta.type==="input_json_delta"){b._j=(b._j||"")+ev.delta.partial_json;}}
+      else if(ev.type==="content_block_stop"){const b=content[ev.index];if(b&&b.type==="tool_use"){try{b.input=b._j?JSON.parse(b._j):{};}catch(e){b.input={};}delete b._j;}}
+      else if(ev.type==="message_delta"){if(ev.delta&&ev.delta.stop_reason)stopReason=ev.delta.stop_reason;}
+      else if(ev.type==="error"){return {error:(ev.error&&ev.error.message)||"Error de streaming."};}
+    }
+  }
+  return {stopReason};
+}
 async function cpSend(text){
   text=(text||"").trim();if(!text||cpBusy||!cpKey)return;
   cpMsgs.push({role:"user",content:text});cpBusy=true;cpRenderBody();cpRenderFoot();
   try{
     let guard=0;
     while(guard++<8){
-      const body={model:cpModel,max_tokens:2048,system:cpSystemPrompt(),tools:COPILOT_TOOLS,messages:cpApiMessages()};
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
-        "content-type":"application/json","x-api-key":cpKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
-      if(!res.ok){
-        let msg="Error "+res.status;try{const e=await res.json();msg=(e.error&&e.error.message)||msg;}catch(_){}
-        if(res.status===401)msg="Clave inválida o sin crédito. Revisa tu clave de Anthropic.";
-        cpMsgs.push({role:"assistant",content:[{type:"text",text:"⚠ "+msg}]});break;
-      }
-      const data=await res.json();
-      cpMsgs.push({role:"assistant",content:data.content});cpRenderBody();
-      if(data.stop_reason==="tool_use"){
-        const results=(data.content||[]).filter(b=>b.type==="tool_use").map(b=>({type:"tool_result",tool_use_id:b.id,content:cpRunTool(b.name,b.input)}));
+      const out=await cpStreamOnce();
+      if(out.error){cpMsgs.push({role:"assistant",content:[{type:"text",text:"⚠ "+out.error}]});break;}
+      if(out.stopReason==="tool_use"){
+        const lc=cpMsgs[cpMsgs.length-1].content;
+        const results=(lc||[]).filter(b=>b.type==="tool_use").map(b=>({type:"tool_result",tool_use_id:b.id,content:cpRunTool(b.name,b.input)}));
         cpMsgs.push({role:"user",content:results});cpRenderBody();continue;
       }
       break;
     }
-  }catch(err){cpMsgs.push({role:"assistant",content:[{type:"text",text:"⚠ No se pudo conectar con Anthropic: "+err.message+". Si ves un error de CORS, revisa que tu clave sea válida."}]});}
+  }catch(err){cpMsgs.push({role:"assistant",content:[{type:"text",text:"⚠ No se pudo conectar con Anthropic: "+err.message+"."}]});}
   cpBusy=false;cpRenderBody();cpRenderFoot();
 }
-
-/* ---- panel / FAB ---- */
 function cpEnsureDOM(){
   if(document.getElementById("cpPanel"))return;
   const fab=document.createElement("button");fab.className="cp-fab";fab.id="cpFab";
@@ -2881,7 +2945,8 @@ function cfgRender(){
 
 /* ---------------- COPILOTO: perfil + dataset ---------------- */
 function cpProfileNote(){if(!invProfile)return "";return "\n\nPERFIL DEL USUARIO (úsalo para personalizar TODO): es un inversionista **"+invProfile.profile.toUpperCase()+"** ("+invProfile.label+", puntaje "+invProfile.score+"/40). "+invProfile.guideShort+" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";}
-function cpSystemPrompt(){return CP_SYSTEM+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"");}
+const CP_MF_NOTE="\n\nSIEMPRE integra el modelo MULTIFACTOR además del CAPM: para analizar o recomendar acciones, considera los 6 factores de estilo (Momentum, Low-Volatility, Value, Quality, Size, Dividend Yield), el Composite y el E(R) multifactor — no solo β/CAPM. Llama a get_multifactor para la foto completa y alinea con el perfil del usuario.\n\nESTILO DE RESPUESTA: sé breve y ve por pasos. Evita muros de texto; usa frases cortas, listas y máximo 2–4 puntos por mensaje. Entrega primero lo esencial y ofrece profundizar si hace falta.";
+function cpSystemPrompt(){return CP_SYSTEM+CP_MF_NOTE+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"");}
 
 /* init */
 if(invProfile)simState.profile=invProfile.profile;
@@ -3044,6 +3109,121 @@ function attachMercados(){
   const rt=document.getElementById("mindRetry");if(rt)rt.onclick=mindFetch;
   if(!mindAuto){mindAuto=true;if((!MIND||!OIL)&&!mindBusy)mindFetch();}
 }
+/* ===== OPERACIONES (compra/venta) + CONTABILIDAD ===== */
+let opState={pid:null,side:"buy",tkr:null,qty:"",price:"",date:""};
+
+function opDo(){
+  syncProj();if(!PF)return;
+  const selEl=document.getElementById("optkr"),qEl=document.getElementById("opqty"),pEl=document.getElementById("opprice"),dEl=document.getElementById("opdate");
+  const t=selEl?selEl.value:opState.tkr,side=opState.side,q=parseFloat(qEl?qEl.value:opState.qty),p=parseFloat(pEl?pEl.value:opState.price);
+  if(!t){window.alert("Elige una acción.");return;}
+  if(!(q>0)){window.alert("Indica la cantidad de acciones (mayor que 0).");return;}
+  if(!(p>0)){window.alert("Indica el precio por acción (mayor que 0).");return;}
+  const last=WEEKS.length?WEEKS[WEEKS.length-1]:null;
+  let hd=PF.holdings.find(h=>h.t===t);
+  if(!hd){
+    if(side==="sell"){window.alert("No tienes "+t+" en la cartera.");return;}
+    const st=STOCKS.find(x=>x.t===t)||{t,n:t,s:"importada",c:"#1E5FD1",b:1};
+    hd={t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0};PF.holdings.push(hd);
+  }
+  let qty=q;
+  if(side==="sell"){const IM=invMetrics();const ps=IM&&IM.perStock.find(x=>x.hd.t===t);const held=ps?ps.sh:0;
+    if(held<=1e-9){window.alert("No tienes acciones de "+t+" para vender.");return;}
+    if(q>held+1e-6){if(!window.confirm("Indicaste "+q+" pero solo tienes "+held.toLocaleString("es-CL",{maximumFractionDigits:2})+". ¿Vender todo lo que tienes?"))return;qty=held;}}
+  const prices=Object.assign({},last?last.prices:{});prices[t]=p;
+  const ipsa=last?last.ipsa:1;
+  const date=(dEl&&dEl.value)?dEl.value:(opState.date||new Date().toISOString().slice(0,10));
+  PF.weeks.push({date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}});
+  saveProjects();
+  opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
+  render();
+}
+
+/* libro de operaciones reconstruido evento a evento, con costo promedio */
+function ledger(){
+  if(!PF||!WEEKS.length)return null;
+  const base=WEEKS[0],sh={},avg={},tx=[],realized=[];
+  function buy(date,t,qq,pp,tipo){if(!(qq>0))return;const old=sh[t]||0,oc=(avg[t]||0)*old;sh[t]=old+qq;avg[t]=(oc+qq*pp)/sh[t];tx.push({date,t,side:"buy",shares:qq,price:pp,monto:qq*pp,tipo});}
+  function sell(date,t,qq,pp,tipo){const old=sh[t]||0,s=Math.min(qq,old);if(s<=1e-9)return;const cb=(avg[t]||0)*s,proceeds=s*pp,gain=proceeds-cb;sh[t]=old-s;tx.push({date,t,side:"sell",shares:s,price:pp,monto:proceeds,tipo,cost:cb,gain});realized.push({date,t,shares:s,price:pp,cost:cb,gain});}
+  PF.holdings.forEach(hd=>{const p=base.prices[hd.t];if(p==null)return;const q=(base.qty&&base.qty[hd.t]!=null)?base.qty[hd.t]:(hd.monto/p);buy(base.date,hd.t,q,p,"Compra inicial");});
+  for(let i=1;i<WEEKS.length;i++){const w=WEEKS[i];if(!w.ev)continue;
+    if(w.ev.kind==="inject"){const al=w.ev.alloc||{};Object.keys(al).forEach(t=>{const p=w.prices[t]||base.prices[t]||1;buy(w.date,t,al[t]/p,p,"Aporte");});}
+    else if(w.ev.kind==="trade"){const t=w.ev.t,p=w.ev.price||w.prices[t]||1;if(w.ev.side==="sell")sell(w.date,t,+w.ev.shares,p,"Venta");else buy(w.date,t,+w.ev.shares,p,"Compra");}
+    else if(w.ev.kind==="rebal"&&w.ev.shares){Object.keys(w.ev.shares).forEach(t=>{const ns=w.ev.shares[t],old=sh[t]||0,p=w.prices[t]||base.prices[t]||1;if(ns>old+1e-9)buy(w.date,t,ns-old,p,"Rebalanceo");else if(ns<old-1e-9)sell(w.date,t,old-ns,p,"Rebalanceo");});}
+  }
+  return {tx,realized,sh,avg};
+}
+function contabAgg(){
+  const L=ledger(),IM=invMetrics();if(!L||!IM||!L.tx.length)return null;
+  const lastW=WEEKS[WEEKS.length-1];
+  const perT={};L.tx.forEach(x=>{const o=perT[x.t]||(perT[x.t]={t:x.t,buyMonto:0,buyQty:0,sellMonto:0,sellQty:0,realized:0});if(x.side==="buy"){o.buyMonto+=x.monto;o.buyQty+=x.shares;}else{o.sellMonto+=x.monto;o.sellQty+=x.shares;o.realized+=(x.gain||0);}});
+  const rows=Object.values(perT).map(o=>{const sh=L.sh[o.t]||0,avg=L.avg[o.t]||0,cur=(lastW.prices[o.t]!=null?lastW.prices[o.t]:avg),val=sh*cur,unreal=(cur-avg)*sh;return Object.assign(o,{sh,avg,cur,val,unreal});});
+  const totBuy=L.tx.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0);
+  const totSell=L.tx.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0);
+  const totReal=L.realized.reduce((a,r)=>a+r.gain,0);
+  const totUnreal=rows.reduce((a,o)=>a+o.unreal,0);
+  return {L,IM,rows,totBuy,totSell,totReal,totUnreal,V:IM.last.val,lastW};
+}
+function viewContab(){
+  syncProj();
+  if(!PROJECTS.length)return viewInv();
+  if(!PF){activeId=PROJECTS[0].id;syncProj();}
+  const projbar=card("Contabilidad","Registro ordenado de tus compras y ventas para tu contador · rentabilidad realizada y no realizada",
+    `<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name}</button>`).join("")+`</div>`,
+    `<button class="btn btn-pri" id="contabreport">🧾 Informe para el contador</button>`);
+  const A=contabAgg();
+  if(!A)return projbar+notecard("Aún no hay operaciones registradas. Registra la <b>compra inicial</b> en <b>Ingresar datos</b>, o una <b>compra / venta</b> en <b>Operar</b>.");
+  const tiles=`<div class="tiles">
+    ${tile("Invertido (compras)",fmtCLP(A.totBuy),"capital total aportado a compras",indigo,ink)}
+    ${tile("Recuperado (ventas)",A.totSell?fmtCLP(A.totSell):"—","efectivo recibido por ventas",indigo,ink)}
+    ${tile("Valor actual cartera",fmtCLP(A.V),"a los últimos precios registrados",indigo,accentT)}
+    ${tile("Ganancia realizada",(A.totReal>=0?"+":"")+fmtCLP(A.totReal),"por ventas · base costo promedio",indigo,A.totReal>=0?green:red)}
+    ${tile("Ganancia no realizada",(A.totUnreal>=0?"+":"")+fmtCLP(A.totUnreal),"posiciones aún abiertas",indigo,A.totUnreal>=0?green:red)}
+  </div>`;
+  const sumRows=A.rows.map(o=>{const st=STOCKS.find(s=>s.t===o.t)||{t:o.t,c:muted,n:o.t};return `<tr><td><b style="color:${st.c}">${o.t}</b></td><td class="r">${o.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(o.avg)}</td><td class="r">${fmtCLP(o.cur)}</td><td class="r">${fmtCLP(o.buyMonto)}</td><td class="r">${o.sellMonto?fmtCLP(o.sellMonto):"—"}</td><td class="r">${fmtCLP(o.val)}</td><td class="r" style="color:${o.unreal>=0?green:red};font-weight:700">${(o.unreal>=0?"+":"")+fmtCLP(o.unreal)}</td><td class="r" style="color:${o.realized>=0?green:red};font-weight:700">${o.realized?((o.realized>=0?"+":"")+fmtCLP(o.realized)):"—"}</td></tr>`;}).join("");
+  const sumCard=card("Resumen por acción","Costo promedio, valor actual y ganancia realizada / no realizada por acción",
+    `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Costo prom.</th><th class="r">Precio actual</th><th class="r">Comprado</th><th class="r">Vendido</th><th class="r">Valor actual</th><th class="r">G. no realizada</th><th class="r">G. realizada</th></tr></thead><tbody>${sumRows}</tbody></table></div>`);
+  const txRows=A.L.tx.slice().reverse().map(x=>{const st=STOCKS.find(s=>s.t===x.t)||{t:x.t,c:muted};return `<tr><td>${x.date}</td><td><b style="color:${st.c}">${x.t}</b></td><td><span class="badge ${x.side==="sell"?"neg":"pos"}">${x.tipo}</span></td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(x.price)}</td><td class="r">${fmtCLP(x.monto)}</td><td class="r" style="color:${x.gain!=null?(x.gain>=0?green:red):muted};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?((x.gain>=0?"+":"")+fmtCLP(x.gain)):"—"}</td></tr>`;}).join("");
+  const txCard=card("Libro de operaciones",`${A.L.tx.length} operaciones · más recientes arriba`,
+    `<div class="tw"><table><thead><tr><th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table></div>`);
+  const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción — es una guía de gestión. Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen, fechas de adquisición). Entrega el informe a tu contador como respaldo ordenado.");
+  return projbar+tiles+sumCard+txCard+disc;
+}
+function genContabReport(){
+  const A=contabAgg();if(!A){window.alert("No hay operaciones para informar.");return;}
+  const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
+  const clp=n=>"$"+Math.round(n||0).toLocaleString("es-CL");
+  const sgn=n=>(n>=0?"+":"")+clp(n);
+  const sumRows=A.rows.map(o=>`<tr><td>${o.t}</td><td class="r">${o.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(o.avg)}</td><td class="r">${clp(o.cur)}</td><td class="r">${clp(o.buyMonto)}</td><td class="r">${o.sellMonto?clp(o.sellMonto):"—"}</td><td class="r">${clp(o.val)}</td><td class="r" style="color:${o.unreal>=0?'#0E8C5E':'#C0392B'}">${sgn(o.unreal)}</td><td class="r" style="color:${o.realized>=0?'#0E8C5E':'#C0392B'}">${o.realized?sgn(o.realized):"—"}</td></tr>`).join("");
+  const txRows=A.L.tx.map(x=>`<tr><td>${x.date}</td><td>${x.t}</td><td>${x.tipo}</td><td>${x.side==="sell"?"Venta":"Compra"}</td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(x.price)}</td><td class="r">${clp(x.monto)}</td><td class="r">${x.gain!=null?sgn(x.gain):"—"}</td></tr>`).join("");
+  const html=`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Informe contable — ${PF.name}</title>
+  <style>*{box-sizing:border-box}body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#16263F;margin:34px;font-size:12px}
+  h1{font-size:20px;margin:0 0 2px}h2{font-size:13px;margin:26px 0 8px;color:#1E5FD1;border-bottom:2px solid #E3EAF4;padding-bottom:4px}
+  .sub{color:#5A6B82;font-size:11px;margin-bottom:18px}
+  table{width:100%;border-collapse:collapse;margin-top:6px}th,td{padding:6px 8px;border-bottom:1px solid #E8EDF5;text-align:left}
+  th{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#5A6B82;background:#F6F9FD}.r{text-align:right}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}.kpi{flex:1 1 150px;border:1px solid #E3EAF4;border-radius:8px;padding:10px 12px}
+  .kpi .l{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:#5A6B82}.kpi .v{font-size:17px;font-weight:800;margin-top:3px}
+  .foot{margin-top:26px;font-size:10px;color:#7A8AA0;border-top:1px solid #E8EDF5;padding-top:10px}
+  @media print{body{margin:12mm}h2{page-break-after:avoid}tr{page-break-inside:avoid}}</style></head><body>
+  <h1>Informe contable de inversiones</h1>
+  <div class="sub">Proyecto: <b>${PF.name}</b> · Período: ${WEEKS[0].date} a ${A.lastW.date} · Emitido: ${fch} · INVERSOR 2.0</div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Invertido (compras)</div><div class="v">${clp(A.totBuy)}</div></div>
+    <div class="kpi"><div class="l">Recuperado (ventas)</div><div class="v">${A.totSell?clp(A.totSell):"—"}</div></div>
+    <div class="kpi"><div class="l">Valor actual</div><div class="v">${clp(A.V)}</div></div>
+    <div class="kpi"><div class="l">Ganancia realizada</div><div class="v" style="color:${A.totReal>=0?'#0E8C5E':'#C0392B'}">${sgn(A.totReal)}</div></div>
+    <div class="kpi"><div class="l">Ganancia no realizada</div><div class="v" style="color:${A.totUnreal>=0?'#0E8C5E':'#C0392B'}">${sgn(A.totUnreal)}</div></div>
+  </div>
+  <h2>Resumen por acción</h2>
+  <table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Costo prom.</th><th class="r">Precio actual</th><th class="r">Comprado</th><th class="r">Vendido</th><th class="r">Valor actual</th><th class="r">G. no realizada</th><th class="r">G. realizada</th></tr></thead><tbody>${sumRows}</tbody></table>
+  <h2>Libro de operaciones (cronológico)</h2>
+  <table><thead><tr><th>Fecha</th><th>Acción</th><th>Concepto</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table>
+  <div class="foot">Las ganancias realizadas se calculan con <b>costo promedio</b> por acción y son referenciales para gestión. El tratamiento tributario del mayor valor en Chile puede diferir (corrección monetaria, régimen y fechas de adquisición). Documento de respaldo generado por INVERSOR 2.0 — simulación educativa, no constituye asesoría tributaria.</div>
+  <script>setTimeout(function(){window.print();},350);<\/script></body></html>`;
+  const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
+}
+
 let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
 function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
 applyScale(uiScale);
