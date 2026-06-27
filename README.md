@@ -112,7 +112,7 @@ Toda la funcionalidad anterior se mantiene intacta:
 
 - **Análisis** — Comparativa (mapa riesgo-retorno, correlaciones), Detalle por acción (recta característica/SCL), CAPM/SML, **Multifactor (nuevo)**.
 - **Simulación** — Constructor de portafolio (pesos, métricas, VaR, proyección, PDF), Asistente multi-perfil, Comparación de escenarios.
-- **Inversión** — Seguimiento real con TWR, CAGR, Sharpe realizado, drawdown, tracking error, information ratio y drift; **Operar** (registrar compra/venta por acción con precio y cantidad → recálculo de capital, valor y drift; e inyección de capital); **Contabilidad** (libro de compras/ventas, ganancia realizada/no realizada por costo promedio, e informe imprimible para el contador) e informes.
+- **Inversión** — Seguimiento real con TWR, CAGR, Sharpe realizado, drawdown, tracking error, information ratio y drift; **Operar** (registrar compra/venta por acción con precio y cantidad → recálculo de capital, valor y drift; e **inyección de capital** como lista de compras *acción · cantidad · precio*, donde INVERSOR calcula el monto por acción — sin porcentajes objetivo); **Contabilidad** (libro de compras/ventas, ganancia realizada/no realizada por costo promedio, e informe imprimible para el contador) e informes.
 
 ---
 

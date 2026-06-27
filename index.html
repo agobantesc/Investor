@@ -803,6 +803,19 @@
   .op-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;}
   .op-amt{font-size:13px;color:var(--muted);font-weight:600;}
   .op-amt b{color:var(--navy);font-size:17px;font-weight:850;margin-left:5px;}
+
+  /* ════════════ Inyectar capital: filas compra ════════════ */
+  .inj-head,.inj-row{display:grid;grid-template-columns:1fr 120px 130px 110px 34px;gap:10px;align-items:center;}
+  .inj-head{padding:0 .2rem 3px;font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
+  .inj-list{display:flex;flex-direction:column;gap:8px;}
+  .inj-row select,.inj-row input{width:100%;padding:.5rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 12.5px var(--font);color:var(--ink);}
+  .inj-row select:focus,.inj-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  .inj-row input[type=number]{text-align:right;}
+  .inj-monto{font-size:12.5px;font-weight:800;color:var(--navy);text-align:right;}
+  .inj-rm{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--muted);cursor:pointer;}
+  .inj-rm:hover{color:var(--red);border-color:var(--red);}
+  .inj-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;margin-top:15px;}
+  @media(max-width:720px){.inj-head{display:none}.inj-row{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
@@ -1183,7 +1196,7 @@ function syncProj(){PF=curProj();WEEKS=PF?PF.weeks:[];}
 function saveProjects(){lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);}
 syncProj();
 let SCEN=lsGet("pf_scenarios_v1")||[],scenEditId=null;
-let injState={pid:null,amount:0,weights:{},extra:[]};
+let injState={pid:null,rows:[]};
 function fix100(){const k=Object.keys(simState.sel);if(!k.length)return;let s=k.reduce((a,x)=>a+(+simState.sel[x]||0),0);if(s<=0){k.forEach(x=>simState.sel[x]=+(100/k.length).toFixed(1));return;}const d=+(100-s).toFixed(1);simState.sel[k[0]]=+((+simState.sel[k[0]]||0)+d).toFixed(1);}
 function scaleAll100(){const k=Object.keys(simState.sel);if(!k.length)return;const s=k.reduce((a,x)=>a+(+simState.sel[x]||0),0)||1;k.forEach(x=>simState.sel[x]=+((+simState.sel[x]||0)*100/s).toFixed(1));fix100();}
 function forceWeight(t,v){v=Math.max(0,Math.min(100,v));const others=Object.keys(simState.sel).filter(k=>k!==t);const os=others.reduce((a,k)=>a+(+simState.sel[k]||0),0);const rem=100-v;simState.sel[t]=+v.toFixed(1);if(others.length){if(os>0)others.forEach(k=>simState.sel[k]=+((+simState.sel[k]||0)*rem/os).toFixed(1));else others.forEach(k=>simState.sel[k]=+(rem/others.length).toFixed(1));}fix100();}
@@ -1863,9 +1876,7 @@ function viewOperar(){
   if(!PROJECTS.length) return viewInv();
   if(!PF){activeId=PROJECTS[0].id;syncProj();}
   const fr=FREQ[PF.freq||"diario"];
-  if(injState.pid!==activeId)injState={pid:activeId,amount:0,weights:{},extra:[]};
-  PF.holdings.forEach(hd=>{if(injState.weights[hd.t]==null)injState.weights[hd.t]=+(hd.w*100).toFixed(1);});
-  injState.extra.forEach(t=>{if(injState.weights[t]==null)injState.weights[t]=10;});
+  if(injState.pid!==activeId)injState={pid:activeId,rows:[]};
   const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos desde Simulación → Aplicar inversión",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
   const summary=card(PF.name,`Aplicada el ${PF.date} · capital ${fmtCLP(PF.amount)} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="resetpf">Eliminar proyecto</button>`);
@@ -1892,13 +1903,11 @@ function viewOperar(){
     </div>
     <div class="op-foot"><div class="op-amt">${opState.side==="sell"?"Monto a recibir":"Monto a invertir"}: <b>${omonto>0?fmtCLP(omonto):"—"}</b></div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
   const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Se recalcula el capital, el valor de la cartera y el drift de cada posición — sin tener que rebalancear todo.",opBody+`<div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
-  const heldT=PF.holdings.map(h=>h.t);const allT=injTickers();
-  const wrows=allT.map(t=>{const st=STOCKS.find(x=>x.t===t)||{t,n:t,c:"#888"};const isX=heldT.indexOf(t)<0;return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${st.c}"></span><b style="color:${st.c}">${t}</b><span class="simsec">${st.n||""}${isX?" · nueva":""}</span></div><div class="simw"><input type="number" step="any" class="iwinp" data-iw="${t}" value="${injState.weights[t]}" style="width:64px;text-align:right"><span>%</span></div></div>`;}).join("");
-  const avail=STOCKS.filter(s=>allT.indexOf(s.t)<0);
-  const addSel=avail.length?`<select id="injadd" class="selinp" style="padding:.5rem .6rem;border:1px solid var(--line2);border-radius:9px;font-family:var(--font);font-size:12.5px;background:#fff"><option value="">+ Agregar acción nueva…</option>${avail.map(s=>`<option value="${s.t}">${s.t} · ${s.n}</option>`).join("")}</select>`:"";
-  const sumW=allT.reduce((a,t)=>a+(parseFloat(injState.weights[t])||0),0);
-  const injBody=`<div class="simhead"><div><div class="genl">Capital a inyectar (CLP)</div><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="injamt" value="${injState.amount?injState.amount.toLocaleString("es-CL"):""}" placeholder="Ej: 500.000" style="width:160px"></div></div></div><div class="genl" style="margin-top:14px;display:flex;justify-content:space-between">Pesos objetivo por acción (editable) <span style="color:${Math.abs(sumW-100)<0.5?green:amber};font-weight:800">Σ ${sumW.toFixed(1)}%</span></div><div class="simlist" style="margin-top:8px">${wrows}</div><div style="margin-top:9px">${addSel}</div><div class="genl" style="margin-top:14px">Compra sugerida</div><div id="injprev" style="margin-top:6px">${injPreview()}</div><div style="margin-top:13px"><button class="btn btn-pri" id="doinject">✓ Registrar inyección</button></div><div class="note" style="margin-top:11px">Por defecto mantiene tus pesos objetivo; puedes <b>editarlos</b> o <b>agregar acciones nuevas</b>. El aporte se reparte según esos pesos, que pasan a ser tu nuevo objetivo. El aporte <b>no</b> cuenta como rentabilidad. Para acciones nuevas se usa su último precio de referencia hasta que registres su precio real. Tú decides la distribución final.</div>`;
-  const injCard=card("Inyectar capital nuevo","Compra de nuevas acciones · sugerencia para mantener los pesos objetivo",injBody);
+  if(!injState.rows.length){injState.rows=PF.holdings.map(hd=>({t:hd.t,qty:"",price:(lastW.prices[hd.t]!=null?lastW.prices[hd.t]:(((STOCKS.find(s=>s.t===hd.t)||{}).prices||[]).slice(-1)[0]||""))}));}
+  let injTotal=0;
+  const injRows=injState.rows.map((r,i)=>{const q=parseFloat(r.qty),p=parseFloat(r.price),m=(q>0&&p>0)?q*p:0;injTotal+=m;return `<div class="inj-row"><select data-injt="${i}">${STOCKS.map(s=>`<option value="${s.t}" ${s.t===r.t?"selected":""}>${s.t} · ${s.n}</option>`).join("")}</select><input type="number" step="any" data-injq="${i}" value="${r.qty}" placeholder="Cantidad"><input type="number" step="any" data-injp="${i}" value="${r.price}" placeholder="Precio"><span class="inj-monto">${m>0?fmtCLP(m):"—"}</span><button class="inj-rm" data-injrm="${i}" title="Quitar fila">✕</button></div>`;}).join("");
+  const injBody=`<div class="inj-head"><span>Acción</span><span>Cantidad</span><span>Precio (CLP)</span><span>Monto</span><span></span></div><div class="inj-list">${injRows||'<div class="note" style="margin:0">Agrega las acciones que compraste con el aporte.</div>'}</div><div style="margin-top:11px"><button class="btn" id="injadd">+ Agregar acción</button></div><div class="inj-foot"><div class="op-amt">Total a inyectar: <b>${injTotal>0?fmtCLP(injTotal):"—"}</b></div><button class="btn btn-pri" id="doinject">✓ Registrar compras del aporte</button></div><div class="note" style="margin-top:11px">Indica <b>acción, cantidad y precio</b> de cada compra; INVERSOR calcula el monto por acción, suma el capital aportado y recalcula el valor de la cartera y el drift. El aporte <b>no</b> cuenta como rentabilidad.</div>`;
+  const injCard=card("Inyectar capital nuevo","Registra las compras del aporte por acción, cantidad y precio — sin porcentajes objetivo.",injBody);
   return projbar+summary+opCard+injCard;
 }
 
@@ -2067,22 +2076,20 @@ function attachInv(){
   const vs=document.getElementById("versim");if(vs)vs.onclick=()=>{let sel,amt;const b0=WEEKS[0];if(b0&&b0.qty){let tot=0;const per={};PF.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*(b0.prices[hd.t]||0);per[hd.t]=m;tot+=m;});sel={};PF.holdings.forEach(hd=>{sel[hd.t]=+((tot?per[hd.t]/tot:0)*100).toFixed(1);});const ks=Object.keys(sel);if(ks.length){const sm=ks.reduce((a,k)=>a+sel[k],0);sel[ks[0]]=+(sel[ks[0]]+(100-sm)).toFixed(1);}amt=Math.round(tot);}else{const o=PF.origSim||{sel:(function(){const s={};PF.holdings.forEach(hd=>{s[hd.t]=+(hd.w*100).toFixed(1);});return s;})(),amount:PF.amount};sel=Object.assign({},o.sel);amt=o.amount;}simState.sel=sel;simState.amount=amt;scenEditId=null;modulo="sim";page="constructor";render();};
   const gi=document.getElementById("geninforme");if(gi)gi.onclick=genInvReport;
   const gx=document.getElementById("genxls");if(gx)gx.onclick=exportInvCSV;
-  const ia=document.getElementById("injamt");if(ia)ia.oninput=e=>{const raw=e.target.value.replace(/\D/g,"");const v=parseInt(raw)||0;e.target.value=v?v.toLocaleString("es-CL"):"";injState.amount=v;const pv=document.getElementById("injprev");if(pv)pv.innerHTML=injPreview();};
-  document.querySelectorAll(".iwinp").forEach(inp=>inp.oninput=e=>{injState.weights[e.target.dataset.iw]=parseFloat(e.target.value)||0;const pv=document.getElementById("injprev");if(pv)pv.innerHTML=injPreview();});
-  const iadd=document.getElementById("injadd");if(iadd)iadd.onchange=e=>{const t=e.target.value;if(t&&injState.extra.indexOf(t)<0){injState.extra.push(t);injState.weights[t]=10;render();}};
+  document.querySelectorAll("[data-injt]").forEach(s=>s.onchange=()=>{const i=+s.dataset.injt;if(!injState.rows[i])return;injState.rows[i].t=s.value;const lw=WEEKS[WEEKS.length-1];injState.rows[i].price=(lw&&lw.prices[s.value]!=null)?lw.prices[s.value]:(((STOCKS.find(x=>x.t===s.value)||{}).prices||[]).slice(-1)[0]||"");render();});
+  function _injAmt(){let tot=0;injState.rows.forEach(r=>{const q=parseFloat(r.qty),p=parseFloat(r.price);if(q>0&&p>0)tot+=q*p;});const el=document.querySelector(".inj-foot .op-amt b");if(el)el.textContent=tot>0?fmtCLP(tot):"—";document.querySelectorAll(".inj-row").forEach((row,i)=>{const r=injState.rows[i];if(!r)return;const q=parseFloat(r.qty),p=parseFloat(r.price),m=(q>0&&p>0)?q*p:0;const mm=row.querySelector(".inj-monto");if(mm)mm.textContent=m>0?fmtCLP(m):"—";});}
+  document.querySelectorAll("[data-injq]").forEach(inp=>inp.oninput=()=>{injState.rows[+inp.dataset.injq].qty=inp.value;_injAmt();});
+  document.querySelectorAll("[data-injp]").forEach(inp=>inp.oninput=()=>{injState.rows[+inp.dataset.injp].price=inp.value;_injAmt();});
+  document.querySelectorAll("[data-injrm]").forEach(b=>b.onclick=()=>{injState.rows.splice(+b.dataset.injrm,1);render();});
+  const iadd=document.getElementById("injadd");if(iadd)iadd.onclick=()=>{injState.rows.push({t:(STOCKS[0]||{}).t||"",qty:"",price:""});render();};
   const di=document.getElementById("doinject");if(di)di.onclick=()=>{
-    const amt=injState.amount||0;if(amt<=0){window.alert("Ingresa el monto a inyectar.");return;}
-    const ts=injTickers(),sum=ts.reduce((a,t)=>a+(parseFloat(injState.weights[t])||0),0);
-    if(sum<=0){window.alert("Define los pesos objetivo (deben sumar más de 0).");return;}
-    const lw=WEEKS[WEEKS.length-1],alloc={},prices=Object.assign({},lw.prices),newW={};
-    ts.forEach(t=>{const w=(parseFloat(injState.weights[t])||0)/sum;newW[t]=w;const a=amt*w;if(a>0)alloc[t]=+a.toFixed(0);const st=STOCKS.find(x=>x.t===t);if(prices[t]==null&&st)prices[t]=st.prices[st.prices.length-1];});
-    injState.extra.forEach(t=>{const st=STOCKS.find(x=>x.t===t);if(st&&!PF.holdings.some(hd=>hd.t===t))PF.holdings.push({t:st.t,n:st.n,s:st.s,c:st.c,b:st.b,w:newW[t]||0,monto:0});});
-    PF.holdings.forEach(hd=>{hd.w=newW[hd.t]!=null?newW[hd.t]:0;});
-    PF.bp=PF.holdings.reduce((a,hd)=>a+hd.w*hd.b,0);PF.erCapm=RF+PF.bp*PRIMA;
-    WEEKS.push({date:new Date().toISOString().slice(0,10),prices,ipsa:lw.ipsa,ev:{kind:"inject",amount:amt,alloc}});
-    injState={pid:null,amount:0,weights:{},extra:[]};
-    saveProjects();page="seguimiento";render();};
-  const dr=document.getElementById("dorebal");if(dr)dr.onclick=()=>{if(!window.confirm("¿Registrar el rebalanceo a los pesos objetivo según los últimos precios registrados?"))return;const IM=invMetrics();if(!IM)return;const V=IM.last.val,lw=WEEKS[WEEKS.length-1],ns={};PF.holdings.forEach(hd=>{const p=lw.prices[hd.t]||1;ns[hd.t]=(V*hd.w)/p;});WEEKS.push({date:new Date().toISOString().slice(0,10),prices:Object.assign({},lw.prices),ipsa:lw.ipsa,ev:{kind:"rebal",shares:ns}});saveProjects();page="seguimiento";render();};
+    const rows=(injState.rows||[]).map(r=>({t:r.t,q:parseFloat(r.qty),p:parseFloat(r.price)})).filter(r=>r.t&&r.q>0&&r.p>0);
+    if(!rows.length){window.alert("Agrega al menos una compra con acción, cantidad y precio.");return;}
+    const agg={};rows.forEach(r=>{const o=agg[r.t]||(agg[r.t]={qty:0,money:0});o.qty+=r.q;o.money+=r.q*r.p;});
+    const lw=WEEKS[WEEKS.length-1],prices=Object.assign({},lw?lw.prices:{}),alloc={};let amount=0;
+    Object.keys(agg).forEach(t=>{const o=agg[t],avgP=o.money/o.qty;if(!PF.holdings.some(hd=>hd.t===t)){const st=STOCKS.find(x=>x.t===t)||{t,n:t,s:"",c:"#1E5FD1",b:1};PF.holdings.push({t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0});}prices[t]=avgP;alloc[t]=+o.money.toFixed(0);amount+=o.money;});
+    WEEKS.push({date:new Date().toISOString().slice(0,10),prices,ipsa:lw?lw.ipsa:1,ev:{kind:"inject",amount:+amount.toFixed(0),alloc}});
+    saveProjects();injState={pid:activeId,rows:[]};render();};
   document.querySelectorAll("[data-opside]").forEach(b=>b.onclick=()=>{opState.side=b.dataset.opside;opState.tkr=null;opState.price="";render();});
   const _ot=document.getElementById("optkr");if(_ot)_ot.onchange=()=>{opState.tkr=_ot.value;opState.price="";render();};
   function _opAmt(){const q=parseFloat(opState.qty),p=parseFloat(opState.price);const m=(q>0&&p>0)?q*p:0;const el=document.querySelector(".op-amt b");if(el)el.textContent=m>0?fmtCLP(m):"—";}
