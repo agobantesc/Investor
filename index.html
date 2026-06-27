@@ -816,9 +816,40 @@
   .inj-rm:hover{color:var(--red);border-color:var(--red);}
   .inj-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;margin-top:15px;}
   @media(max-width:720px){.inj-head{display:none}.inj-row{grid-template-columns:1fr 1fr;}}
+
+  /* ════════════════ ACCESO CONTROLADO (login) ════════════════ */
+  .auth-gate{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(1100px 620px at 72% -12%,#143a78 0%,#0A1E3D 56%,#06142C 100%);}
+  .auth-gate.open{display:flex;animation:agFade .3s ease;}
+  @keyframes agFade{from{opacity:0}to{opacity:1}}
+  .auth-card{width:404px;max-width:94vw;background:var(--card);border:1px solid var(--line2);border-radius:20px;
+    box-shadow:0 34px 90px rgba(3,10,26,.62);padding:2rem 1.9rem 1.55rem;animation:agRise .4s var(--ease-out);}
+  @keyframes agRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+  .auth-brand{display:flex;align-items:center;gap:13px;margin-bottom:1.45rem;}
+  .auth-mark{width:54px;height:54px;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    background:linear-gradient(150deg,rgba(59,130,246,.16),rgba(34,211,238,.06));border:1px solid rgba(127,176,242,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
+  .auth-eye{font-size:8px;letter-spacing:2.2px;color:#3E8FCB;font-weight:800;text-transform:uppercase;margin-bottom:5px;}
+  .auth-wm{font:850 23px var(--font);letter-spacing:-.5px;color:var(--navy);line-height:1;}
+  .auth-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand-grad);margin-left:4px;vertical-align:baseline;}
+  .auth-h{font:850 20px var(--font);color:var(--navy);letter-spacing:-.4px;}
+  .auth-sub{font-size:12px;color:var(--muted);margin:5px 0 18px;line-height:1.5;}
+  .auth-f{margin-bottom:13px;}
+  .auth-f label{display:block;font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+  .auth-f input{width:100%;padding:.72rem .8rem;border:1px solid var(--line2);border-radius:11px;background:var(--card2);font:600 14px var(--font);color:var(--ink);}
+  .auth-f input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.15);background:var(--card);}
+  .auth-msg{font-size:11.5px;color:var(--amber);background:var(--amberbg);border:1px solid var(--amber-line);border-radius:9px;padding:.55rem .7rem;margin-bottom:13px;font-weight:600;}
+  .auth-btn{width:100%;padding:.82rem;border:none;border-radius:12px;cursor:pointer;color:#fff;font:800 14px var(--font);
+    background:linear-gradient(180deg,var(--a-400),var(--accent));box-shadow:0 6px 18px rgba(30,95,209,.36);transition:.15s var(--ease-out);}
+  .auth-btn:hover{transform:translateY(-1px);box-shadow:0 9px 24px rgba(30,95,209,.46);}
+  .auth-btn:active{transform:translateY(0);}
+  .auth-skip{text-align:center;margin-top:13px;}
+  .auth-skip a{font-size:11.5px;color:var(--indigo);font-weight:700;cursor:pointer;}
+  .auth-skip a:hover{text-decoration:underline;}
+  .auth-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:9.5px;color:var(--faint);text-align:center;line-height:1.55;}
 </style>
 </head>
 <body>
+<div class="auth-gate" id="authGate"></div>
 <div id="app">
   <aside>
     <div class="brand"><div class="brand-mark"><svg class="logomark" viewBox="0 0 32 32" width="30" height="30" role="img" aria-label="Inversor 2.0"><defs><linearGradient id="lgGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs><path d="M16 3a13 13 0 1 0 11.6 7.1" fill="none" stroke="url(#lgGrad)" stroke-width="3.4" stroke-linecap="round"/><path d="M10.5 19.5 L15 15 L18.5 17.5 L23 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="11" r="2.4" fill="url(#lgGrad)"/></svg></div><div><div class="beye">PORTFOLIO INTELLIGENCE · 2.0</div><div class="bt">INVERSOR<span class="wm-dot"></span></div></div></div>
@@ -1751,7 +1782,7 @@ function viewInvActive(){
   const _b0=WEEKS[0];
   const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;const bp=per.reduce((a,x)=>a+(x.m/tot)*x.hd.b,0);return {per,tot,bp};})():null;
   const chips=(_real?_real.per.map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
-  const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${_real.bp.toFixed(2)} · σ ${PF.sig.toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(PF.amount)} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)} · E(R) CAPM ${PF.erCapm.toFixed(2)}% · σ ${PF.sig.toFixed(1)}%`;
+  const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${_real.bp.toFixed(2)} · σ ${PF.sig.toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)} · E(R) CAPM ${PF.erCapm.toFixed(2)}% · σ ${PF.sig.toFixed(1)}%`;
   const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
   const compraMode=isFirst||editIdx===0;
@@ -1879,7 +1910,7 @@ function viewOperar(){
   if(injState.pid!==activeId)injState={pid:activeId,rows:[]};
   const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos desde Simulación → Aplicar inversión",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
-  const summary=card(PF.name,`Aplicada el ${PF.date} · capital ${fmtCLP(PF.amount)} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="resetpf">Eliminar proyecto</button>`);
+  const summary=card(PF.name,`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const IM=invMetrics();
   if(!IM)return projbar+summary+notecard("Primero registra la <b>compra inicial</b> en la pestaña <b>Ingresar datos</b>. Luego podrás rebalancear o inyectar capital aquí.");
   const L=IM.last,V=L.val,lastW=WEEKS[WEEKS.length-1];
@@ -2514,7 +2545,7 @@ function cpRunTool(name,input){
     if(name==="get_active_portfolio"){
       syncProj();
       if(!PROJECTS.length||!PF)return "No hay ningún proyecto de inversión activo. Sugiere armar uno en Simulación → Constructor y aplicarlo.";
-      const out={nombre:PF.name,aplicada:PF.date,objetivoCLP:PF.amount,betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
+      const out={nombre:PF.name,aplicada:PF.date,objetivoCLP:PF.amount,capitalRealInvertidoCLP:Math.round(realCap()),betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
         holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,peso:+(h.w*100).toFixed(1),montoCLP:Math.round(h.monto),beta:h.b}))};
       const exp=cpExposure((function(){const s={};PF.holdings.forEach(h=>s[h.t]=+(h.w*100).toFixed(1));return s;})());
       out.exposicionFactorial=exp.Z; out.erMultifactor=exp.erMF; out.correlacionMedia=+exp.PM.corrAvg.toFixed(2);
@@ -2934,6 +2965,7 @@ function cfgRender(){
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Apariencia</div><div class="cfg-row"><div class="cfg-k">Tema</div><div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Escala de interfaz<div class="cfg-sub">Tamaño general, como el zoom del navegador</div></div><div class="cfg-seg">${[80,90,100,110].map(s=>'<button class="'+(Math.round(uiScale*100)===s?"on":"")+'" data-scale="'+s+'">'+s+'%</button>').join("")}</div></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Copiloto IA</div><div class="cfg-row"><div class="cfg-k">Clave de Anthropic ${keyOk}</div><button class="btn" id="cfgKey">${cpKey?"Gestionar":"Configurar"}</button></div><div class="cfg-row"><div class="cfg-k">Modelo</div><select id="cfgModel" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Datos</div><div class="cfg-row"><div class="cfg-k">Set de análisis activo<div class="cfg-sub">${ds}</div></div>${IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Importa en Análisis → Importar</span>'}</div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Respaldo de tu seguimiento<div class="cfg-sub">Exporta/restaura todo como archivo JSON</div></div><div style="display:flex;gap:7px"><button class="btn" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Fuente de petróleo (URL JSON)<div class="cfg-sub">Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.</div></div><input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="flex:1 1 230px;min-width:200px;padding:.45rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 11.5px var(--font);color:var(--ink)"></div></div>
+    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Acceso</div><div class="cfg-row"><div class="cfg-k">${(AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña"}<div class="cfg-sub">Pantalla de inicio de sesión local en este navegador</div></div><div style="display:flex;gap:7px;flex-wrap:wrap">${(AUTH&&AUTH.enabled)?('<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'):'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>'}</div></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Pro · Roadmap<div class="cfg-sub">Precios en vivo, arquitectura y próximos pasos</div></div><button class="btn" id="cfgPro">Ver roadmap →</button></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">INVERSOR 2.0 · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
     <input type="file" id="cfgRstFile" accept="application/json,.json" style="display:none">`;
   m.querySelector("#cfgX").onclick=cfgClose;
@@ -2941,6 +2973,10 @@ function cfgRender(){
   m.querySelectorAll("[data-theme-set]").forEach(b=>b.onclick=()=>{const d=document.documentElement;if(b.dataset.themeSet==="dark")d.setAttribute("data-theme","dark");else d.removeAttribute("data-theme");try{localStorage.setItem("inv_theme",b.dataset.themeSet);}catch(e){}refreshPalette();updateThemeBtn();render();cfgRender();});
   m.querySelectorAll("[data-scale]").forEach(b=>b.onclick=()=>{applyScale((+b.dataset.scale)/100);cfgRender();});
   const _cfp=m.querySelector("#cfgPro");if(_cfp)_cfp.onclick=()=>cfgGo("pro","realtime");
+  const _lk=m.querySelector("#cfgLock");if(_lk)_lk.onclick=()=>{cfgClose();authLock();};
+  const _ac=m.querySelector("#cfgAuthChg");if(_ac)_ac.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
+  const _ao=m.querySelector("#cfgAuthOff");if(_ao)_ao.onclick=()=>{if(confirm("¿Quitar la protección por contraseña?")){AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{sessionStorage.removeItem("inv_sess_v1");}catch(e){}cfgRender();}};
+  const _an=m.querySelector("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
   m.querySelector("#cfgKey").onclick=()=>{cfgClose();cpOpenPanel();};
   m.querySelector("#cfgModel").onchange=e=>{cpModel=e.target.value;lsSet("inv_cp_model",cpModel);const s=document.getElementById("cpModelSel");if(s)s.value=cpModel;};
   m.querySelectorAll("[data-ds]").forEach(b=>b.onclick=()=>{applyDataset(b.dataset.ds);cfgRender();});
@@ -3118,6 +3154,7 @@ function attachMercados(){
 }
 /* ===== OPERACIONES (compra/venta) + CONTABILIDAD ===== */
 let opState={pid:null,side:"buy",tkr:null,qty:"",price:"",date:""};
+function realCap(){if(!PF)return 0;const b=(typeof WEEKS!=="undefined"&&WEEKS.length)?WEEKS[0]:null;if(b&&b.qty)return PF.holdings.reduce((a,hd)=>a+(b.qty[hd.t]||0)*(b.prices[hd.t]||0),0);return PF.amount||0;}
 
 function opDo(){
   syncProj();if(!PF)return;
@@ -3231,10 +3268,68 @@ function genContabReport(){
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
 }
 
+/* ===== ACCESO CONTROLADO (login local) ===== */
+let AUTH=lsGet("inv_auth_v1"); /* null | {enabled:false} | {enabled:true,user,salt,hash} */
+let authMode="login", authMsg="";
+function authHashFallback(pw,salt){let h=5381;const s=salt+"|"+pw;for(let i=0;i<s.length;i++){h=(((h<<5)+h)^s.charCodeAt(i))>>>0;}let g=52711;for(let i=s.length-1;i>=0;i--){g=(((g<<5)+g)^s.charCodeAt(i))>>>0;}return h.toString(16).padStart(8,"0")+g.toString(16).padStart(8,"0");}
+async function authHash(pw,salt){try{if(window.crypto&&crypto.subtle){const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+"|"+pw));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");}}catch(e){}return authHashFallback(pw,salt);}
+function authSalt(){let s="";const a="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";for(let i=0;i<16;i++)s+=a[Math.floor((window.crypto&&crypto.getRandomValues?crypto.getRandomValues(new Uint32Array(1))[0]/4294967296:Math.random())*a.length)];return s;}
+function authSessionOk(){try{return AUTH&&AUTH.enabled&&sessionStorage.getItem("inv_sess_v1")===AUTH.user;}catch(e){return false;}}
+function authGateEl(){return document.getElementById("authGate");}
+function authShow(show){const g=authGateEl();if(!g)return;g.classList.toggle("open",!!show);try{document.body.style.overflow=show?"hidden":"";}catch(e){}}
+function authInit(){
+  AUTH=lsGet("inv_auth_v1");
+  if(!AUTH){authMode="create";authRender();authShow(true);return;}
+  if(!AUTH.enabled){authShow(false);return;}
+  if(authSessionOk()){authShow(false);return;}
+  authMode="login";authRender();authShow(true);
+}
+function authRender(){
+  const g=authGateEl();if(!g)return;
+  const create=authMode==="create";
+  const logo='<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true"><defs><linearGradient id="agG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs><path d="M16 3a13 13 0 1 0 11.6 7.1" fill="none" stroke="url(#agG)" stroke-width="3.4" stroke-linecap="round"/><path d="M10.5 19.5 L15 15 L18.5 17.5 L23 11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="11" r="2.4" fill="url(#agG)"/></svg>';
+  g.innerHTML=`<div class="auth-card">
+    <div class="auth-brand"><div class="auth-mark">${logo}</div><div><div class="auth-eye">PORTFOLIO INTELLIGENCE · 2.0</div><div class="auth-wm">INVERSOR<span class="auth-dot"></span></div></div></div>
+    <div class="auth-h">${create?"Crea tu acceso":"Bienvenido de vuelta"}</div>
+    <div class="auth-sub">${create?"Protege tu plataforma con usuario y contraseña. Se guardan cifrados en este navegador.":"Ingresa para continuar con tu análisis y seguimiento."}</div>
+    <div class="auth-f"><label>Usuario</label><input id="authUser" type="text" autocomplete="username" value="${(!create&&AUTH&&AUTH.user)?(""+AUTH.user).replace(/"/g,"&quot;"):""}" placeholder="tu usuario"></div>
+    <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
+    ${create?`<div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
+    ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
+    <button class="auth-btn" id="authGo">${create?"Crear acceso y entrar":"Entrar"}</button>
+    ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
+    <div class="auth-foot">Acceso local · tus datos viven solo en este navegador · simulación educativa, no es asesoría financiera</div>
+  </div>`;
+  const go=document.getElementById("authGo");if(go)go.onclick=authSubmit;
+  ["authUser","authPass","authPass2"].forEach(id=>{const e=document.getElementById(id);if(e)e.onkeydown=ev=>{if(ev.key==="Enter")authSubmit();};});
+  const sk=document.getElementById("authSkip");if(sk)sk.onclick=()=>{AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);authShow(false);};
+  const fg=document.getElementById("authForgot");if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Puedes restablecerlo (se mantienen tus datos) y crear uno nuevo.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer acceso";f.onclick=()=>{if(confirm('¿Restablecer el acceso? Se quitará la contraseña actual (tus proyectos y datos se conservan).')){AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authRender();}};}};
+}
+async function authSubmit(){
+  const u=(document.getElementById("authUser")||{}).value||"",p=(document.getElementById("authPass")||{}).value||"";
+  if(authMode==="create"){
+    const p2=(document.getElementById("authPass2")||{}).value||"";
+    if(u.trim().length<2){authMsg="Elige un usuario de al menos 2 caracteres.";authRender();return;}
+    if(p.length<4){authMsg="La contraseña debe tener al menos 4 caracteres.";authRender();return;}
+    if(p!==p2){authMsg="Las contraseñas no coinciden.";authRender();return;}
+    const salt=authSalt(),hash=await authHash(p,salt);
+    AUTH={enabled:true,user:u.trim(),salt,hash};lsSet("inv_auth_v1",AUTH);
+    try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}
+    authMsg="";authShow(false);
+  }else{
+    if(!AUTH||!AUTH.enabled){authShow(false);return;}
+    const hash=await authHash(p,AUTH.salt);
+    if(u.trim()===AUTH.user&&hash===AUTH.hash){try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}authMsg="";authShow(false);}
+    else{authMsg="Usuario o contraseña incorrectos.";authRender();}
+  }
+}
+function authLock(){try{sessionStorage.removeItem("inv_sess_v1");}catch(e){}authInit();}
+
 let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
 function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
 applyScale(uiScale);
 render();
+authInit();
 </script>
 </body>
 </html>
