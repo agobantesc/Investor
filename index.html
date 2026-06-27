@@ -587,6 +587,52 @@
   .prof-bar{height:9px;border-radius:6px;background:rgba(255,255,255,.22);margin-top:14px;overflow:hidden;position:relative;}
   .prof-bar i{display:block;height:100%;background:#fff;border-radius:6px;}
   .prof-scale{display:flex;justify-content:space-between;font-size:10px;font-weight:700;opacity:.85;margin-top:5px;}
+  .prof-scale5{display:flex;gap:6px;margin-top:14px;position:relative;}
+  .prof-scale5 span{flex:1;text-align:center;font:800 11px var(--font);padding:5px 0;border-radius:7px;background:rgba(255,255,255,.16);opacity:.7;}
+  .prof-scale5 span.on{background:#fff;color:var(--navy);opacity:1;box-shadow:0 2px 9px rgba(0,0,0,.18);transform:scale(1.06);}
+  /* question groups */
+  .prof-grp{display:flex;gap:11px;align-items:flex-start;margin-bottom:14px;padding-bottom:13px;border-bottom:1px solid var(--line);}
+  .prof-grp-tag{flex:0 0 auto;width:34px;height:34px;border-radius:9px;color:#fff;font:800 12px var(--font);display:flex;align-items:center;justify-content:center;}
+  .prof-grp-n{font:800 15px var(--font);color:var(--navy);}
+  .prof-grp-s{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.4;}
+  .qrow{padding:11px 0;border-bottom:1px dashed var(--line);}
+  .qrow:last-child{border-bottom:none;padding-bottom:2px;}
+  .qrow .qtxt{margin-bottom:9px;}
+  .qhint{font-weight:600;color:var(--mut);font-size:11px;}
+  .qopt .qb.sq{border-radius:5px;}
+  .qopt.on .qb.sq{background:#fff;}
+  /* dimension breakdown */
+  .prof-dim{margin-bottom:15px;}
+  .prof-dim:last-child{margin-bottom:0;}
+  .prof-dim-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px;}
+  .prof-dim-n{font:800 13.5px var(--font);color:var(--navy);}
+  .prof-dim-s{font-size:11px;color:var(--mut);margin-top:1px;}
+  .prof-dim-v{flex:0 0 auto;font-size:11px;color:var(--mut);font-weight:700;text-align:right;white-space:nowrap;}
+  .prof-dim-v b{font-size:16px;color:var(--navy);font-weight:800;}
+  .prof-dim-bar{height:8px;border-radius:5px;background:var(--surface);overflow:hidden;}
+  .prof-dim-bar i{display:block;height:100%;border-radius:5px;transition:width .4s var(--ease);}
+  .prof-dim-lvl{font-size:10.5px;font-weight:700;color:var(--mut);margin-top:4px;}
+  .prof-flags{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;}
+  .prof-flag{font:700 11px var(--font);padding:.34rem .62rem;border-radius:7px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);}
+  .prof-flag.warn{background:#FEF3E2;border-color:#F4C77B;color:#9A5B0B;}
+  .prof-flag.block{background:#FDECEC;border-color:#F1B0B0;color:#A52121;}
+  .prof-flag.ok{background:#E6F6EF;border-color:#9BD9BE;color:#0A6B47;}
+  .prof-flag.info{background:#EEF1FB;border-color:#BAC6EE;color:#3653A4;}
+  [data-theme="dark"] .prof-flag.warn{background:#3A2C12;border-color:#6B4F1E;color:#F0C078;}
+  [data-theme="dark"] .prof-flag.block{background:#3A1A1A;border-color:#6B2A2A;color:#F0A0A0;}
+  [data-theme="dark"] .prof-flag.ok{background:#10311F;border-color:#1E6B47;color:#7AD6A8;}
+  [data-theme="dark"] .prof-flag.info{background:#1A2240;border-color:#33437A;color:#A0B4F0;}
+  /* allocation bar */
+  .prof-alloc-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line);}
+  .prof-alloc-bar span{display:block;height:100%;}
+  .prof-alloc-leg{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;font-size:11.5px;font-weight:700;color:var(--ink);}
+  .prof-alloc-leg span{display:flex;align-items:center;gap:6px;}
+  .prof-alloc-leg i{width:11px;height:11px;border-radius:3px;display:inline-block;}
+  /* goal inputs */
+  .prof-goal{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:6px;}
+  .prof-goal label{display:flex;flex-direction:column;gap:5px;font:700 11px var(--font);color:var(--mut);}
+  .prof-goal input,.prof-goal select{padding:.5rem .6rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 13px var(--font);color:var(--ink);}
+  .prof-goal input:focus,.prof-goal select:focus{outline:none;border-color:var(--accent);}
 
   /* ════════════════ IMPORTAR ACCIONES ════════════════ */
   .imp-drop{border:1.5px dashed var(--line2);border-radius:var(--r);padding:1.7rem;text-align:center;background:var(--surface);transition:.15s;cursor:pointer;}
@@ -1312,7 +1358,7 @@ let simState={amount:0,sel:{},profile:"moderado",nstocks:3,proj:"semanal",horizo
 const HZN={semanal:[12,26,52],mensual:[12,24,36],anual:[1,2,3,4]};
 const HZNUNIT={semanal:"sem",mensual:"meses",anual:"años"};
 const HZNDEF={semanal:52,mensual:36,anual:3};
-const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1};
+const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1,inv_profile_goal_v1:1};
 let activeClient=localStorage.getItem("inv_active_client")||"c_me";
 function ck(k){return CLIENT_KEYS[k]?(k+"__"+activeClient):k;}
 function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -2731,7 +2777,7 @@ function cpRunTool(name,input){
         composicion:e.PM.ws.map(x=>({t:x.s.t,peso:+(x.w*100).toFixed(1),montoCLP:amount?Math.round(amount*x.w):undefined}))};
       return JSON.stringify(res);
     }
-    if(name==="get_investor_profile"){return invProfile?JSON.stringify({perfil:invProfile.profile,etiqueta:invProfile.label,puntaje:invProfile.score+"/40",guia:invProfile.guideShort}):"El usuario aún no completó su perfil de inversionista (módulo Perfil). Puedes sugerirle hacerlo.";}
+    if(name==="get_investor_profile"){if(!invProfile||!invProfile.levels)return "El usuario aún no completó (o debe reevaluar) su perfil de inversionista en el módulo Perfil. Puedes sugerirle hacerlo.";return JSON.stringify({nivel:invProfile.level+"/5",etiqueta:invProfile.label,perfilFactores:invProfile.profile,subniveles:invProfile.levels,subpuntajes:invProfile.scores,retornoRequerido_pct:invProfile.reqCAGR,nota:invProfile.note,instrumentosComplejos:invProfile.complex_ok?"permitidos":"bloqueados (idoneidad)",saaSugerida:invProfile.alloc,guia:invProfile.guideShort});}
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     if(name==="get_multifactor"){
       const acc=STOCKS.map(s=>{const z=MF.z[s.t]||{};return {t:s.t,composite:+(+MF.comp[s.t]||0).toFixed(2),erMF_pct:+(+MF.er[s.t]||0).toFixed(2),z:{momentum:+(+z.momentum||0).toFixed(2),lowvol:+(+z.lowvol||0).toFixed(2),value:+(+z.value||0).toFixed(2),quality:+(+z.quality||0).toFixed(2),size:+(+z.size||0).toFixed(2),yield:+(+z.yield||0).toFixed(2)},estilo:cpStyleOf(s.t)};}).sort((a,b)=>b.composite-a.composite);
@@ -2897,47 +2943,166 @@ cpEnsureDOM();
 /* ===== PERFIL DE INVERSIONISTA + IMPORTAR ACCIONES =================== */
 
 /* ---------------- PERFIL ---------------- */
-const PROF_Q=[
-  {q:"¿Cuándo planeas necesitar este dinero?",o:[["En menos de 1 año",1],["1 a 3 años",2],["3 a 5 años",3],["5 a 10 años",4],["Más de 10 años",5]]},
-  {q:"¿Cuál es tu objetivo principal?",o:[["Preservar el capital",1],["Ingresos estables",2],["Crecimiento moderado",3],["Crecimiento alto",4],["Maximizar el retorno a toda costa",5]]},
-  {q:"Si tu cartera cae 20% en un mes, ¿qué haces?",o:[["Vendo todo",1],["Vendo una parte",2],["No hago nada / espero",3],["Aporto un poco más",4],["Aporto agresivamente (oportunidad)",5]]},
-  {q:"¿Cuánta experiencia tienes invirtiendo?",o:[["Ninguna",1],["Poca: depósitos / fondos mutuos",2],["Media: algunas acciones",3],["Alta: acciones y derivados",4],["Profesional / sector financiero",5]]},
-  {q:"¿Qué % de tus ingresos puedes invertir sin afectar tus gastos?",o:[["Menos de 5%",1],["5% a 10%",2],["10% a 20%",3],["20% a 35%",4],["Más de 35%",5]]},
-  {q:"Tu fondo de emergencia cubre…",o:[["No tengo fondo",1],["Menos de 3 meses",2],["3 a 6 meses",3],["6 a 12 meses",4],["Más de 12 meses",5]]},
-  {q:"¿Qué prefieres?",o:[["Estabilidad, aunque rente poco",1],["Algo de variación",2],["Equilibrio riesgo-retorno",3],["Acepto vaivenes por más retorno",4],["Máximo retorno y máxima volatilidad",5]]},
-  {q:"Tu conocimiento de β, volatilidad y diversificación es…",o:[["Nulo",1],["Básico",2],["Intermedio",3],["Avanzado",4],["Experto",5]]}
+/* ============ MOTOR DE PERFILAMIENTO (4 dimensiones: RTS · RCS · KE · RR) ============ */
+const PROF_DIMS=[
+  {key:"RTS",name:"Tolerancia al riesgo",sub:"cuánto riesgo QUIERES asumir",col:"#1E5FD1"},
+  {key:"RCS",name:"Capacidad de riesgo",sub:"cuánto riesgo PUEDES asumir sin comprometer tus finanzas",col:"#0E8C5E"},
+  {key:"KE",name:"Conocimiento y experiencia",sub:"qué instrumentos entiendes y has operado",col:"#7C3AED"}
 ];
-let profAns=lsGet("inv_profile_ans_v1")||{}, invProfile=lsGet("inv_profile_v1")||null, profEdit=false;
+const PROF_Q=[
+  {id:"T1",dim:"RTS",w:3,q:"Ante una caída del 20% de tu portafolio en un mes, ¿qué harías?",o:[["Vendería todo para evitar más pérdidas",0],["Vendería una parte",1],["No haría nada y esperaría",2],["Compraría más aprovechando precios bajos",3]]},
+  {id:"T2",dim:"RTS",w:3,q:"¿Con qué afirmación te identificas más?",o:[["Prefiero ganancias bajas pero seguras",0],["Acepto algo de variabilidad por un retorno algo mayor",1],["Acepto fluctuaciones importantes por un retorno potencial alto",2],["Busco el máximo retorno aunque implique pérdidas significativas",3]]},
+  {id:"T3",dim:"RTS",w:2,q:"Elige entre estos escenarios a un año:",o:[["Ganancia segura de 4%",0],["50% de probabilidad de +15% y 50% de −5%",2],["50% de probabilidad de +30% y 50% de −15%",3]]},
+  {id:"T4",dim:"RTS",w:2,rev:true,q:"Me cuesta dormir cuando mis inversiones pierden valor.",o:[["Totalmente de acuerdo",3],["De acuerdo",2],["En desacuerdo",1],["Totalmente en desacuerdo",0]]},
+  {id:"T5",dim:"RTS",w:1,q:"¿Cómo describirías tu experiencia emocional invirtiendo?",o:[["Las pérdidas me afectan mucho más que el placer de las ganancias",0],["Me afectan algo más",1],["Las vivo de forma equilibrada",2],["Las ganancias me motivan más de lo que me afectan las pérdidas",3]]},
+  {id:"C1",dim:"RCS",w:3,q:"Horizonte: ¿en cuánto tiempo necesitarás este dinero?",o:[["Menos de 1 año",0],["1 a 3 años",1],["3 a 7 años",2],["Más de 7 años",3]]},
+  {id:"C2",dim:"RCS",w:3,q:"¿Qué porción de tu patrimonio total representa este monto a invertir?",o:[["Casi todo (>75%)",0],["Una parte importante (50–75%)",1],["Una porción moderada (25–50%)",2],["Una porción menor (<25%)",3]]},
+  {id:"C3",dim:"RCS",w:2,q:"¿Tienes un fondo de emergencia (3–6 meses de gastos) aparte de esta inversión?",o:[["No",0],["Parcial (1–3 meses)",1],["Sí, 3–6 meses",2],["Sí, más de 6 meses",3]]},
+  {id:"C4",dim:"RCS",w:2,q:"Estabilidad de tus ingresos:",o:[["Inestables / variables / sin ingreso fijo",0],["Algo variables",1],["Estables",2],["Muy estables y diversificados",3]]},
+  {id:"C5",dim:"RCS",w:2,q:"Cargas financieras (dependientes, deudas relevantes):",o:[["Altas",0],["Moderadas",1],["Bajas",2],["Ninguna",3]]},
+  {id:"C6",dim:"RCS",w:2,q:"¿Podrías sostener una pérdida temporal sin alterar tu estilo de vida ni tus metas?",o:[["No",0],["Una pérdida pequeña",1],["Una pérdida moderada",2],["Sí, una pérdida significativa",3]]},
+  {id:"K1",dim:"KE",w:1,multi:true,q:"¿Qué productos has operado antes? (marca todos los que apliquen)",o:[["Depósitos a plazo / money market",1],["Fondos mutuos / ETF",1],["Acciones",2],["Renta fija (bonos)",2],["Derivados / apalancamiento / cripto / alternativos",3]]},
+  {id:"K2",dim:"KE",w:1,q:"¿Entiendes la relación entre riesgo y retorno y el concepto de diversificación?",o:[["No",0],["Algo",1],["Sí, claramente",2]]},
+  {id:"K3",dim:"KE",bool:true,q:"¿Reconoces que el valor puede caer y que las rentabilidades pasadas no garantizan las futuras?",o:[["Sí, lo entiendo",1],["No / no estoy seguro/a",0]]}
+];
+const PROF_REQUIRED=["T1","T2","T3","T4","T5","C1","C2","C3","C4","C5","C6","K2","K3"];
+/* nivel 1–5 → guía de estrategia + asignación estratégica (SAA) */
+const PROF_LEVELS={
+  1:{name:"Conservador",cls:"cons",profile:"conservador",desc:"Priorizas no perder. Buscas estabilidad, baja volatilidad e ingresos por dividendo; el crecimiento es secundario.",factores:"Low-Volatility, Quality y Dividend Yield",mix:"5–6 acciones defensivas, máx ~25% por acción",beta:"β bajo (≈0,5–0,8)",alloc:{rf:90,rv:10,alt:0},guideShort:"Preservar capital: baja volatilidad, calidad y dividendos; cartera muy diversificada y β bajo."},
+  2:{name:"Moderado-conservador",cls:"cons",profile:"conservador",desc:"Aceptas algo de variación por un retorno algo mayor, manteniendo un sesgo defensivo y resguardo del capital.",factores:"Low-Volatility y Quality, con algo de Value y Dividend Yield",mix:"4–6 acciones, máx ~30% por acción",beta:"β bajo (≈0,7–0,9)",alloc:{rf:68,rv:30,alt:2},guideShort:"Sesgo defensivo con algo de crecimiento: calidad y baja volatilidad, β por debajo del mercado."},
+  3:{name:"Balanceado",cls:"mod",profile:"moderado",desc:"Buscas el mejor equilibrio entre riesgo y retorno. Toleras caídas temporales a cambio de crecimiento sostenido.",factores:"Quality y Value (núcleo), con Momentum y Low-Vol balanceados",mix:"3–5 acciones, máx ~40% por acción",beta:"β cercano al mercado (≈0,9–1,1)",alloc:{rf:48,rv:47,alt:5},guideShort:"Equilibra riesgo y retorno (estilo Sharpe): núcleo de calidad y valor, β cercano al mercado."},
+  4:{name:"Moderado-agresivo",cls:"agr",profile:"riesgoso",desc:"Priorizas el crecimiento y toleras volatilidad importante. Aceptas cierta concentración por mayor retorno potencial.",factores:"Momentum y Value, con Quality de soporte",mix:"3–4 acciones, hasta ~45% por acción",beta:"β sobre el mercado (≈1,1–1,3)",alloc:{rf:28,rv:64,alt:8},guideShort:"Crecimiento con tolerancia a vaivenes: momentum y valor, β por sobre el mercado, cartera más concentrada."},
+  5:{name:"Agresivo",cls:"agr",profile:"riesgoso",desc:"Buscas maximizar el crecimiento y toleras alta volatilidad. Aceptas fuerte concentración y caídas profundas por mayor retorno potencial.",factores:"Momentum, Size (small-cap) y Growth",mix:"2–4 acciones, hasta ~50% por acción",beta:"β alto (>1,3)",alloc:{rf:8,rv:82,alt:10},guideShort:"Maximiza crecimiento y tolera volatilidad: momentum, small-cap y growth, cartera concentrada, β alto."}
+};
+const PROF_FREQ={mensual:12,trimestral:4,anual:1};
+let profAns=lsGet("inv_profile_ans_v1")||{}, profGoal=lsGet("inv_profile_goal_v1")||{}, invProfile=lsGet("inv_profile_v1")||null, profEdit=false;
+function profQMax(q){return q.multi?q.o.reduce((a,o)=>a+o[1],0):Math.max.apply(null,q.o.map(o=>o[1]));}
+function profDimScore(dim){
+  let num=0,den=0;
+  PROF_Q.filter(q=>q.dim===dim&&!q.bool).forEach(q=>{
+    const mx=profQMax(q),w=q.w||1;
+    let s;
+    if(q.multi){const arr=profAns[q.id]||[];s=q.o.reduce((a,o,i)=>a+(arr.indexOf(i)>=0?o[1]:0),0);}
+    else{const v=profAns[q.id];s=(v==null)?0:+v;if(q.rev)s=mx-s;}
+    num+=s*w;den+=mx*w;
+  });
+  return den?100*num/den:0;
+}
+function profBand(s){return s<=20?1:s<=40?2:s<=60?3:s<=80?4:5;}
+function profReqCAGR(g){
+  g=g||{};const A=+g.actual||0,O=+g.objetivo||0,m=+g.aporte||0,n=+g.anios||0;
+  if(!(O>0&&n>0))return null;
+  const aa=m*(PROF_FREQ[g.freq]||12);
+  const fv=r=>{if(Math.abs(r)<1e-9)return A+aa*n;const g1=Math.pow(1+r,n);return A*g1+aa*(g1-1)/r;};
+  let lo=-0.5,hi=2.0;
+  if(fv(lo)>=O)return -0.5;
+  if(fv(hi)<=O)return 2.0;
+  for(let i=0;i<90;i++){const mid=(lo+hi)/2;if(fv(mid)<O)lo=mid;else hi=mid;}
+  return (lo+hi)/2;
+}
+function profRRlevel(cagr){if(cagr==null)return null;return cagr<=0.02?1:cagr<=0.04?2:cagr<=0.06?3:cagr<=0.08?4:5;}
+function profAnswered(){return PROF_REQUIRED.filter(id=>{const v=profAns[id];return v!==undefined&&v!==null;}).length;}
 function profCompute(){
-  let score=0;for(let i=0;i<PROF_Q.length;i++)score+=(+profAns[i]||0);
-  const profile=score<=18?"conservador":score<=29?"moderado":"riesgoso";
-  const D={conservador:{label:"Conservador",cls:"cons",desc:"Priorizas no perder. Buscas estabilidad, baja volatilidad e ingresos por dividendo; el crecimiento es secundario.",factores:"Low-Volatility, Quality y Dividend Yield",mix:"4–6 acciones defensivas, máx ~30% por acción",beta:"β bajo (≈0,6–0,9)",guideShort:"Prioriza preservar capital: baja volatilidad, calidad y dividendos; cartera diversificada (4–6 acciones), poca concentración y β bajo."},
-    moderado:{label:"Moderado",cls:"mod",desc:"Buscas el mejor equilibrio entre riesgo y retorno. Toleras caídas temporales a cambio de crecimiento sostenido.",factores:"Quality y Value (núcleo), con Momentum y Low-Vol balanceados",mix:"3–5 acciones, máx ~40% por acción",beta:"β cercano al mercado (≈0,9–1,1)",guideShort:"Equilibra riesgo y retorno (estilo Sharpe): núcleo de calidad y valor, β cercano al mercado, 3–5 acciones."},
-    riesgoso:{label:"Riesgoso / Agresivo",cls:"agr",desc:"Buscas maximizar el crecimiento y toleras alta volatilidad. Aceptas concentración y caídas fuertes por mayor retorno potencial.",factores:"Momentum, Size (small-cap) y Growth",mix:"2–4 acciones, hasta ~50% por acción",beta:"β alto (>1,1)",guideShort:"Maximiza crecimiento y tolera volatilidad: momentum, small-cap y growth, cartera más concentrada (2–4 acciones), β alto."}};
-  const d=D[profile];return {profile,score,label:d.label,cls:d.cls,desc:d.desc,factores:d.factores,mix:d.mix,betaGuide:d.beta,guideShort:d.guideShort,date:new Date().toLocaleDateString("es-CL")};
+  const RTS=Math.round(profDimScore("RTS")),RCS=Math.round(profDimScore("RCS")),KE=Math.round(profDimScore("KE"));
+  const cagr=profReqCAGR(profGoal),RRlvl=profRRlevel(cagr);
+  const lRTS=profBand(RTS),lRCS=profBand(RCS),lKE=profBand(KE);
+  let base=Math.min(lRTS,lRCS),rec,note;
+  const flags={inconsistency:false,goal_gap:false,liquidity_warning:false,short_horizon:false};
+  if(RRlvl==null){rec=base;note="Meta no definida: el riesgo recomendado se basa en lo que quieres (tolerancia) y puedes (capacidad) asumir. Completa tu meta para detectar brechas.";}
+  else if(RRlvl<base){rec=RRlvl;note="Tu objetivo es alcanzable con menos riesgo del que toleras y puedes asumir: no conviene exponerte de más.";}
+  else if(RRlvl>base){rec=base;flags.goal_gap=true;note="Brecha de meta: tu objetivo exigiría más riesgo del que puedes/quieres tomar. En vez de subir el riesgo, considera aumentar el aporte, extender el horizonte o ajustar el monto objetivo.";}
+  else{rec=base;note="Tu tolerancia, tu capacidad y la meta están alineadas.";}
+  /* reglas de negocio */
+  if((+profAns.C1)===0){rec=Math.min(rec,2);flags.short_horizon=true;}
+  if((+profAns.C3)===0){rec=Math.min(rec,3);flags.liquidity_warning=true;}
+  /* control de consistencia: T4 (invertido) vs media de ítems directos de RTS */
+  const dir=["T1","T2","T3","T5"].map(id=>{const q=PROF_Q.find(x=>x.id===id);const v=profAns[id];return v==null?null:(+v)/profQMax(q);}).filter(v=>v!=null);
+  const t4v=profAns.T4;if(dir.length&&t4v!=null){const t4n=(3-(+t4v))/3,dm=dir.reduce((a,b)=>a+b,0)/dir.length;if(Math.abs(dm-t4n)>0.5)flags.inconsistency=true;}
+  /* gate de idoneidad */
+  const complex_ok=!(profAns.K3===0||profAns.K3===false||lKE===1);
+  rec=Math.max(1,Math.min(5,rec));
+  const L=PROF_LEVELS[rec];
+  return {version:"2.0",profile:L.profile,level:rec,label:L.name,levelName:L.name,cls:L.cls,desc:L.desc,factores:L.factores,mix:L.mix,betaGuide:L.beta,guideShort:L.guideShort,alloc:L.alloc,
+    scores:{RTS:Math.round(RTS),RCS:Math.round(RCS),KE:Math.round(KE)},levels:{RTS:lRTS,RCS:lRCS,KE:lKE,RR:RRlvl},
+    reqCAGR:cagr==null?null:+(cagr*100).toFixed(1),note,flags,complex_ok,score:rec,date:new Date().toLocaleDateString("es-CL")};
+}
+function profFlagBadges(p){
+  const b=[];
+  if(p.flags){
+    if(p.flags.goal_gap)b.push('<span class="prof-flag warn">⚠ Brecha de meta</span>');
+    if(p.flags.short_horizon)b.push('<span class="prof-flag warn">⏳ Horizonte corto · riesgo acotado</span>');
+    if(p.flags.liquidity_warning)b.push('<span class="prof-flag warn">💧 Sin fondo de emergencia</span>');
+    if(p.flags.inconsistency)b.push('<span class="prof-flag info">↺ Requiere confirmación (respuestas poco consistentes)</span>');
+  }
+  b.push(p.complex_ok?'<span class="prof-flag ok">Instrumentos complejos habilitados</span>':'<span class="prof-flag block">Instrumentos complejos bloqueados (idoneidad)</span>');
+  return b.length?`<div class="prof-flags">${b.join("")}</div>`:"";
+}
+function profDimRow(d,score,lvl){
+  const nm=["","Conservador","Mod-conservador","Balanceado","Mod-agresivo","Agresivo"][lvl]||"—";
+  const pct=lvl==null?0:Math.max(4,Math.round(score));
+  return `<div class="prof-dim"><div class="prof-dim-h"><div><div class="prof-dim-n">${d.name}</div><div class="prof-dim-s">${d.sub}</div></div><div class="prof-dim-v">${lvl==null?"—":('<b>'+score+'</b><span>/100 · N'+lvl+'</span>')}</div></div><div class="prof-dim-bar"><i style="width:${pct}%;background:${d.col}"></i></div><div class="prof-dim-lvl">${nm}</div></div>`;
+}
+function profAllocBar(a){
+  const seg=(v,c,l)=>v>0?`<span style="width:${v}%;background:${c}" title="${l} ${v}%"></span>`:"";
+  return `<div class="prof-alloc"><div class="prof-alloc-bar">${seg(a.rf,"#0E8C5E","Renta fija / liquidez")}${seg(a.rv,"#1E5FD1","Renta variable")}${seg(a.alt,"#7C3AED","Alternativos")}</div>
+    <div class="prof-alloc-leg"><span><i style="background:#0E8C5E"></i>Renta fija / liquidez ${a.rf}%</span><span><i style="background:#1E5FD1"></i>Renta variable ${a.rv}%</span><span><i style="background:#7C3AED"></i>Alternativos ${a.alt}%</span></div></div>`;
 }
 function viewPerfil(){
-  const done=invProfile&&!profEdit;
+  const done=invProfile&&invProfile.levels&&!profEdit;
   if(done){
-    const p=invProfile,pct=Math.round((p.score-8)/32*100);
-    const hero=`<div class="prof-hero ${p.cls}"><div class="pl">Tu perfil de inversionista</div><h1>${p.label}</h1><p>${p.desc}</p>
-      <div class="prof-bar"><i style="width:${pct}%"></i></div><div class="prof-scale"><span>Conservador</span><span>Moderado</span><span>Agresivo</span></div>
-      <div style="position:relative;margin-top:12px;font-size:11px;opacity:.85">Puntaje ${p.score}/40 · evaluado el ${p.date}</div></div>`;
-    const guide=card("Qué significa para tu estrategia","Cómo se ajustan el análisis multifactor y el asistente a tu perfil",`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+    const p=invProfile,pct=Math.round((p.level-0.5)/5*100);
+    const hero=`<div class="prof-hero ${p.cls}"><div class="pl">Perfil recomendado · nivel ${p.level} de 5</div><h1>${p.label}</h1><p>${p.desc}</p>
+      <div class="prof-scale5">${[1,2,3,4,5].map(i=>`<span class="${i===p.level?'on':''}">${i}</span>`).join("")}</div>
+      <div class="prof-bar"><i style="width:${pct}%"></i></div>
+      <div style="position:relative;margin-top:11px;font-size:11px;opacity:.9">${p.note}</div>
+      <div style="position:relative;margin-top:9px;font-size:10.5px;opacity:.7">Evaluado el ${p.date} · cuestionario v${p.version}</div></div>`;
+    const rr=p.levels&&p.levels.RR;
+    const dims=card("Por qué se asignó este perfil","El nivel final es el mínimo entre tu tolerancia y tu capacidad; la necesidad de la meta no sube el riesgo, solo detecta brechas",
+      `${profDimRow(PROF_DIMS[0],p.scores.RTS,p.levels.RTS)}${profDimRow(PROF_DIMS[1],p.scores.RCS,p.levels.RCS)}${profDimRow(PROF_DIMS[2],p.scores.KE,p.levels.KE)}
+       <div class="prof-dim"><div class="prof-dim-h"><div><div class="prof-dim-n">Necesidad de riesgo (meta)</div><div class="prof-dim-s">retorno requerido para tu objetivo</div></div><div class="prof-dim-v">${rr==null?'<span style="font-weight:700;color:var(--mut)">no definida</span>':('<b>'+p.reqCAGR+'%</b><span> CAGR · N'+rr+'</span>')}</div></div>${rr==null?'':`<div class="prof-dim-bar"><i style="width:${Math.max(4,rr*20)}%;background:#D9730D"></i></div>`}<div class="prof-dim-lvl">${rr==null?'Completa tu meta abajo para calcularla':['','Muy baja','Baja','Media','Alta','Muy alta'][rr]}</div></div>
+       ${profFlagBadges(p)}`);
+    const saa=card("Asignación estratégica sugerida (SAA)","Banda objetivo por clase de activo para tu nivel · rebalancea con tolerancia ±5%",
+      profAllocBar(p.alloc)+`<div class="note" style="margin-top:12px">Esta plataforma se enfoca en <b>renta variable chilena (IPSA)</b>: dentro de esa porción, el análisis multifactor y el asistente aplican el sesgo de factores de tu perfil. La renta fija/alternativos son referencia de diversificación.</div>`);
+    const guide=card("Qué significa para tu estrategia de acciones","Cómo se ajustan el análisis multifactor y el asistente a tu perfil",`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
       ${tile("Factores a enfatizar",p.factores.split(",")[0],p.factores,indigo,indigo)}${tile("Composición sugerida",p.mix.split(",")[0],p.mix,indigo,ink)}${tile("β objetivo de cartera",p.betaGuide,"sensibilidad al mercado",indigo,accentT)}
-      </div><div class="note" style="margin-top:13px">Tu perfil ahora <b>personaliza tu Copiloto IA</b> y queda como <b>perfil por defecto del Asistente de simulación</b>.</div>`,`<button class="btn" id="profEdit">↺ Volver a evaluar</button>`);
-    const cta=notecard(`¿Quieres que el copiloto arme una cartera para tu perfil <b>${p.label.toLowerCase()}</b>? <button class="btn btn-pri" data-opencopilot style="margin-left:6px;padding:.32rem .7rem">✨ Abrir copiloto IA</button>`);
-    return hero+guide+cta;
+      </div><div class="note" style="margin-top:13px">Tu perfil <b>personaliza el Agente de inversiones</b> y queda como <b>perfil por defecto del Asistente de simulación</b>.</div>`,`<button class="btn" id="profEdit">↺ Volver a evaluar</button>`);
+    const cta=notecard(`¿Quieres que el agente arme una cartera para tu perfil <b>${p.label.toLowerCase()}</b>? <button class="btn btn-pri" data-opencopilot style="margin-left:6px;padding:.32rem .7rem">✨ Abrir Agente de inversiones</button>`);
+    return hero+dims+saa+guide+cta;
   }
-  const intro=card("Evaluación de perfil de inversionista","8 preguntas · define tu tolerancia al riesgo para personalizar el análisis y el copiloto IA",`<div class="note" style="margin:0">Responde con sinceridad. Al terminar obtendrás tu perfil (Conservador, Moderado o Agresivo), una guía de estrategia y un copiloto IA ajustado a ti.</div>`);
-  const qs=PROF_Q.map((Q,i)=>`<div class="card qcard"><div class="bd"><div class="qhd"><div class="qnum">${i+1}</div><div class="qtxt">${Q.q}</div></div><div class="qopts">${Q.o.map((o)=>`<button class="qopt ${profAns[i]==o[1]?"on":""}" data-q="${i}" data-pts="${o[1]}"><span class="qb"></span>${o[0]}</button>`).join("")}</div></div></div>`).join("");
-  const answered=Object.keys(profAns).filter(k=>profAns[k]).length;
-  const submit=`<div style="display:flex;gap:11px;align-items:center;flex-wrap:wrap"><button class="btn btn-pri" id="profCalc" ${answered<8?'disabled style="opacity:.5;cursor:not-allowed"':""}>Calcular mi perfil</button><span class="note" style="margin:0">${answered}/8 respondidas</span></div>`;
-  return intro+qs+submit;
+  const intro=card("Evaluación de perfil de inversionista","Mide 4 dimensiones independientes — tolerancia, capacidad, conocimiento y la necesidad de tu meta — al estilo de un perfilamiento profesional (suitability)",`<div class="note" style="margin:0">Responde con sinceridad. El riesgo final nunca excede el <b>mínimo entre lo que quieres y lo que puedes</b> asumir; tu meta no sube el riesgo, solo revela brechas. Obtendrás un perfil de 5 niveles, el detalle por dimensión y una guía de estrategia.</div>`);
+  const groups=PROF_DIMS.map(d=>{
+    const qs=PROF_Q.filter(q=>q.dim===d.key);
+    const inner=qs.map(Q=>{
+      let opts;
+      if(Q.multi){const arr=profAns[Q.id]||[];opts=Q.o.map((o,i)=>`<button class="qopt ${arr.indexOf(i)>=0?"on":""}" data-qmulti="${Q.id}" data-oi="${i}"><span class="qb sq"></span>${o[0]}</button>`).join("");}
+      else if(Q.bool){opts=Q.o.map((o)=>`<button class="qopt ${profAns[Q.id]===o[1]?"on":""}" data-qbool="${Q.id}" data-bv="${o[1]}"><span class="qb"></span>${o[0]}</button>`).join("");}
+      else{opts=Q.o.map((o)=>`<button class="qopt ${profAns[Q.id]==o[1]?"on":""}" data-qid="${Q.id}" data-score="${o[1]}"><span class="qb"></span>${o[0]}</button>`).join("");}
+      return `<div class="qrow"><div class="qtxt">${Q.q}${Q.multi?' <span class="qhint">· opción múltiple</span>':''}</div><div class="qopts">${opts}</div></div>`;
+    }).join("");
+    return `<div class="card"><div class="bd"><div class="prof-grp"><span class="prof-grp-tag" style="background:${d.col}">${d.key}</span><div><div class="prof-grp-n">${d.name}</div><div class="prof-grp-s">${d.sub}</div></div></div>${inner}</div></div>`;
+  }).join("");
+  const g=profGoal||{};
+  const goal=`<div class="card"><div class="bd"><div class="prof-grp"><span class="prof-grp-tag" style="background:#D9730D">RR</span><div><div class="prof-grp-n">Tu meta financiera <span class="qhint">· opcional</span></div><div class="prof-grp-s">para calcular la necesidad de riesgo (retorno requerido). No sube tu perfil; detecta si tu objetivo es alcanzable.</div></div></div>
+    <div class="prof-goal">
+      <label>Capital actual (CLP)<input type="number" inputmode="numeric" id="pgActual" placeholder="0" value="${g.actual!=null?g.actual:""}"></label>
+      <label>Meta de capital (CLP)<input type="number" inputmode="numeric" id="pgObjetivo" placeholder="0" value="${g.objetivo!=null?g.objetivo:""}"></label>
+      <label>Aporte por período (CLP)<input type="number" inputmode="numeric" id="pgAporte" placeholder="0" value="${g.aporte!=null?g.aporte:""}"></label>
+      <label>Frecuencia<select id="pgFreq">${[["mensual","Mensual"],["trimestral","Trimestral"],["anual","Anual"]].map(f=>`<option value="${f[0]}" ${(g.freq||"mensual")===f[0]?"selected":""}>${f[1]}</option>`).join("")}</select></label>
+      <label>Horizonte (años)<input type="number" inputmode="numeric" id="pgAnios" placeholder="0" value="${g.anios!=null?g.anios:""}"></label>
+    </div></div></div>`;
+  const answered=profAnswered(),total=PROF_REQUIRED.length;
+  const submit=`<div style="display:flex;gap:11px;align-items:center;flex-wrap:wrap"><button class="btn btn-pri" id="profCalc" ${answered<total?'disabled style="opacity:.5;cursor:not-allowed"':""}>Calcular mi perfil</button><span class="note" style="margin:0">${answered}/${total} preguntas respondidas${answered<total?' · faltan obligatorias':''}</span></div>`;
+  return intro+groups+goal+submit;
 }
 function attachPerfil(){
-  document.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{const m=document.getElementById("main"),s=m?m.scrollTop:0;profAns[b.dataset.q]=+b.dataset.pts;lsSet("inv_profile_ans_v1",profAns);render();const m2=document.getElementById("main");if(m2)m2.scrollTop=s;});
-  const c=document.getElementById("profCalc");if(c)c.onclick=()=>{if(Object.keys(profAns).filter(k=>profAns[k]).length<8)return;invProfile=profCompute();lsSet("inv_profile_v1",invProfile);simState.profile=invProfile.profile;profEdit=false;render();};
+  const keep=fn=>{const m=document.getElementById("main"),s=m?m.scrollTop:0;fn();lsSet("inv_profile_ans_v1",profAns);render();const m2=document.getElementById("main");if(m2)m2.scrollTop=s;};
+  document.querySelectorAll("[data-qid]").forEach(b=>b.onclick=()=>keep(()=>{profAns[b.dataset.qid]=+b.dataset.score;}));
+  document.querySelectorAll("[data-qbool]").forEach(b=>b.onclick=()=>keep(()=>{profAns[b.dataset.qbool]=+b.dataset.bv;}));
+  document.querySelectorAll("[data-qmulti]").forEach(b=>b.onclick=()=>keep(()=>{const id=b.dataset.qmulti,oi=+b.dataset.oi,arr=profAns[id]||[];const k=arr.indexOf(oi);if(k>=0)arr.splice(k,1);else arr.push(oi);profAns[id]=arr;}));
+  const gset=()=>{profGoal={actual:(+(document.getElementById("pgActual")||{}).value)||null,objetivo:(+(document.getElementById("pgObjetivo")||{}).value)||null,aporte:(+(document.getElementById("pgAporte")||{}).value)||null,freq:((document.getElementById("pgFreq")||{}).value)||"mensual",anios:(+(document.getElementById("pgAnios")||{}).value)||null};lsSet("inv_profile_goal_v1",profGoal);};
+  ["pgActual","pgObjetivo","pgAporte","pgAnios"].forEach(id=>{const e=document.getElementById(id);if(e)e.onchange=gset;});
+  const fr=document.getElementById("pgFreq");if(fr)fr.onchange=gset;
+  const c=document.getElementById("profCalc");if(c)c.onclick=()=>{if(profAnswered()<PROF_REQUIRED.length)return;invProfile=profCompute();lsSet("inv_profile_v1",invProfile);simState.profile=invProfile.profile;profEdit=false;render();};
   const e=document.getElementById("profEdit");if(e)e.onclick=()=>{profEdit=true;render();};
 }
 
@@ -3098,7 +3263,7 @@ function cfgGo(m,p){modulo=m;if(p)page=p;cfgClose();render();}
 function cfgRender(){
   const m=document.getElementById("cfgModal");if(!m)return;
   const dark=document.documentElement.getAttribute("data-theme")==="dark";
-  const prof=invProfile?`<b>${invProfile.label}</b> · ${invProfile.score}/40`:"Sin evaluar";
+  const prof=(invProfile&&invProfile.levels)?`<b>${invProfile.label}</b> · nivel ${invProfile.level}/5`:(invProfile?"Reevaluar (cuestionario actualizado)":"Sin evaluar");
   const keyOk=cpKey?'<span class="cfg-pill ok">Configurada</span>':'<span class="cfg-pill no">No configurada</span>';
   const ds=DATASET==="import"&&IMP?`Importado (${IMP.assets.length} acciones)`:"Demo · IPSA";
   m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes generales de INVERSOR 2.0</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
@@ -3128,7 +3293,14 @@ function cfgRender(){
 }
 
 /* ---------------- COPILOTO: perfil + dataset ---------------- */
-function cpProfileNote(){if(!invProfile)return "";return "\n\nPERFIL DEL USUARIO (úsalo para personalizar TODO): es un inversionista **"+invProfile.profile.toUpperCase()+"** ("+invProfile.label+", puntaje "+invProfile.score+"/40). "+invProfile.guideShort+" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";}
+function cpProfileNote(){if(!invProfile||!invProfile.levels)return "";
+  const p=invProfile,L=p.levels||{},gap=p.flags&&p.flags.goal_gap,liq=p.flags&&p.flags.liquidity_warning;
+  let s="\n\nPERFIL DEL USUARIO (motor de 4 dimensiones; úsalo para personalizar TODO): nivel recomendado **"+p.level+"/5 — "+p.label.toUpperCase()+"** (sesgo de factores: "+p.profile+"). Sub-niveles 1–5: Tolerancia="+(L.RTS||"?")+", Capacidad="+(L.RCS||"?")+", Conocimiento="+(L.KE||"?")+(L.RR?(", Necesidad/meta="+L.RR):"")+". El nivel final es el MÍNIMO entre tolerancia y capacidad; la meta nunca sube el riesgo. "+p.guideShort;
+  if(gap)s+=" ATENCIÓN: hay BRECHA DE META (el objetivo exige más riesgo del que puede/quiere tomar): si lo plantea, sugiere subir aporte, extender horizonte o ajustar la meta, NO subir el riesgo.";
+  if(liq)s+=" No tiene fondo de emergencia: prioriza liquidez y no lo expongas de más.";
+  if(!p.complex_ok)s+=" Instrumentos complejos (derivados/apalancamiento/cripto) BLOQUEADOS por idoneidad: no los recomiendes.";
+  s+=" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";
+  return s;}
 const CP_MF_NOTE="\n\nSIEMPRE integra el modelo MULTIFACTOR además del CAPM: para analizar o recomendar acciones, considera los 6 factores de estilo (Momentum, Low-Volatility, Value, Quality, Size, Dividend Yield), el Composite y el E(R) multifactor — no solo β/CAPM. Llama a get_multifactor para la foto completa y alinea con el perfil del usuario.\n\nESTILO DE RESPUESTA: ajusta el largo a lo que se pide. Por defecto, para preguntas simples, transaccionales, de seguimiento o de un solo dato, responde BREVE (1–3 frases o pocos puntos) y ofrece profundizar. Da respuestas LARGAS y detalladas SOLO cuando el usuario pida un ANÁLISIS de fondo: estudiar o proyectar una inversión, evaluar o comparar alternativas, explicar conceptos o entregar recomendaciones razonadas. En esos casos desarrolla con estructura clara (secciones, listas, cifras tomadas de las herramientas) tanto como haga falta, sin relleno. Ante la duda, prefiere lo conciso y pregunta si quiere que profundices.";
 function cpClientNote(){return (typeof activeClientObj==="function"&&CLIENTS&&CLIENTS.length)?("\n\nCLIENTE ACTIVO: administras la cartera de **"+activeClientObj().name+"**. Todos los datos (proyectos, perfil, seguimiento, contabilidad) corresponden a este cliente."):"";}
 function cpSystemPrompt(){return CP_SYSTEM+cpClientNote()+CP_MF_NOTE+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"");}
@@ -3573,7 +3745,7 @@ function clientLoad(){
   SCEN=lsGet("pf_scenarios_v1")||[];
   IMPSETS=lsGet("inv_impsets_v1")||[];impActiveId=lsGet("inv_imp_active_id")||null;
   IMP=lsGet("inv_import_v1")||null;
-  invProfile=lsGet("inv_profile_v1")||null;profAns=lsGet("inv_profile_ans_v1")||{};profEdit=false;
+  invProfile=lsGet("inv_profile_v1")||null;profAns=lsGet("inv_profile_ans_v1")||{};profGoal=lsGet("inv_profile_goal_v1")||{};profEdit=false;
   try{ if(IMP&&lsGet("inv_dataset_active")==="import"){setActive(impToActive());DATASET="import";} else {setActive(DEMO);DATASET="demo";} }
   catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
   syncProj();
