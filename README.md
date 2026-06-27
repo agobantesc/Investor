@@ -89,7 +89,9 @@ Detalles:
 ### 5. **Perfil de inversionista** (módulo Perfil) — personaliza la IA
 - Cuestionario de **8 preguntas** (horizonte, tolerancia, capacidad, experiencia…) → perfil **Conservador / Moderado / Agresivo** con guía de estrategia (factores a enfatizar, composición y β objetivo).
 - El perfil **personaliza al Copiloto IA** (sus recomendaciones se alinean a tu tolerancia) y queda como perfil por defecto del Asistente de simulación.
-- El **Asistente de simulación** ahora puntúa las acciones combinando **CAPM** (retorno, Sharpe, α de Jensen, σ, β) **y el modelo multifactor** (los 6 factores ponderados según tu perfil), no solo CAPM.
+- El **Asistente de simulación** permite elegir el **enfoque de análisis**: **Combinado** (CAPM + multifactor, recomendado), **CAPM** (clásico, universo sobre la SML) o **Multifactor** (universo y puntaje por los 6 factores de estilo). El universo de acciones y el puntaje se ajustan al enfoque y al perfil.
+- El **Constructor de portafolio** tiene una **tabla rica y visual**: por cada acción muestra β, retorno 24m, σ, Sharpe (con barra), α de Jensen y el **composite multifactor** con su estilo, todo con color para decidir de un vistazo.
+- **Acceso controlado:** pantalla de inicio de sesión local (usuario + contraseña, hash en el navegador) con la identidad de INVERSOR; opcional, gestionable desde Configuración (bloquear / cambiar / quitar). Es un control de acceso local del navegador, no seguridad de servidor.
 
 ### 6. **Mercados · indicadores en vivo** (botón superior) — datos financieros reales, sin backend
 Panel tipo "noticias financieras" que trae **datos de mercado en tiempo casi-real directo desde tu navegador**, sin servidor ni API key:

@@ -846,6 +846,41 @@
   .auth-skip a{font-size:11.5px;color:var(--indigo);font-weight:700;cursor:pointer;}
   .auth-skip a:hover{text-decoration:underline;}
   .auth-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:9.5px;color:var(--faint);text-align:center;line-height:1.55;}
+
+  /* ════════════ Constructor: tabla rica ════════════ */
+  .cons-tw{border:1px solid var(--line);border-radius:var(--r-lg);overflow:auto;}
+  .cons-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:780px;}
+  .cons-tbl th{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:800;padding:9px 11px;text-align:left;border-bottom:1px solid var(--line);background:var(--card2);position:sticky;top:0;z-index:1;}
+  .cons-tbl th.r{text-align:right;}
+  .cons-tbl td{padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  .cons-tbl tbody tr:last-child td{border-bottom:none;}
+  .cons-row{transition:background .12s;}
+  .cons-row:hover{background:var(--card2);}
+  .cons-row.on{background:rgba(30,95,209,.055);}
+  .cons-row.on:hover{background:rgba(30,95,209,.085);}
+  .cons-pick{width:36px;}
+  .cons-chk{width:17px;height:17px;accent-color:var(--accent);cursor:pointer;}
+  .cons-name{display:flex;align-items:center;gap:7px;font-size:13px;line-height:1.1;}
+  .cons-name .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .cons-sec{font-size:10px;color:var(--faint);margin-top:2px;padding-left:16px;}
+  .cons-beta{font-weight:800;}
+  .cons-shwrap{display:flex;align-items:center;gap:7px;justify-content:flex-end;}
+  .cons-bar{width:46px;height:6px;border-radius:4px;background:var(--line);overflow:hidden;flex-shrink:0;}
+  .cons-bar i{display:block;height:100%;border-radius:4px;}
+  .cons-comp{font-weight:800;padding:.12rem .42rem;border-radius:var(--r-pill);font-size:11px;white-space:nowrap;}
+  .cons-comp.pos{color:var(--green);background:var(--greenbg);}
+  .cons-comp.neg{color:var(--red);background:var(--redbg);}
+  .cons-comp.neu{color:var(--muted);background:var(--card2);}
+  .cons-style{font-size:9.5px;color:var(--faint);margin-top:4px;max-width:160px;margin-left:auto;}
+  .cons-wcell .winp{width:54px;text-align:right;padding:.36rem .42rem;border:1px solid var(--line2);border-radius:8px;background:var(--card);font:700 12px var(--font);color:var(--ink);}
+  .cons-wcell .winp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  .cons-add{font-size:10.5px;color:var(--faint);font-weight:700;}
+
+  /* ════════════ Pulido profesional v4 ════════════ */
+  .pbtn.on,.nbtn.on{background:linear-gradient(180deg,var(--a-400),var(--accent));border-color:transparent;box-shadow:0 3px 10px rgba(30,95,209,.28);}
+  .tile{border-radius:13px;}
+  .tile:hover .edge{width:4px;}
+  .badge{letter-spacing:.2px;}
 </style>
 </head>
 <body>
@@ -1367,11 +1402,27 @@ function corrCardSim(M){
 }
 function viewSim(){
   const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState.sel[t]||0),0);
-  const rows=STOCKS.map(s=>{const on=simState.sel[s.t]!=null;
-    return `<div class="simrow ${on?'on':''}"><label class="simchk"><input type="checkbox" data-tog="${s.t}" ${on?'checked':''}/><span class="dot" style="background:${s.c}"></span><b style="color:${s.c}">${s.t}</b><span class="simsec">${s.s}</span></label><div class="simw">${on?`<input type="number" class="winp" data-w="${s.t}" value="${simState.sel[s.t]}" step="1" min="0" max="100"/><span>%</span>`:`<span class="simoff">no incluida</span>`}</div><div class="simb tnum">β ${s.b.toFixed(2)} · Sharpe ${s.a24.sharpe.toFixed(2)}</div></div>`;}).join("");
+  const shs=STOCKS.map(s=>s.a24.sharpe),maxSh=Math.max(0.01,...shs),loSh=Math.min(0,...shs);
+  const comps=STOCKS.map(s=>MF.comp[s.t]||0),maxAbsC=Math.max(0.01,...comps.map(Math.abs));
+  const head=`<thead><tr><th></th><th>Acción</th><th class="r">β</th><th class="r">Ret 24m</th><th class="r">σ</th><th class="r">Sharpe</th><th class="r">α Jensen</th><th class="r">Multifactor</th><th class="r">Peso</th></tr></thead>`;
+  const rows=STOCKS.map(s=>{const on=simState.sel[s.t]!=null,a=s.a24,comp=MF.comp[s.t]||0;
+    const bcol=s.b<0.85?green:(s.b>1.2?red:ink);
+    const shPct=Math.max(5,Math.min(100,(a.sharpe-loSh)/(maxSh-loSh)*100));
+    const cClass=comp>=0.15?"pos":(comp<=-0.15?"neg":"neu");
+    return `<tr class="cons-row ${on?"on":""}">
+      <td class="cons-pick"><input type="checkbox" class="cons-chk" data-tog="${s.t}" ${on?"checked":""}></td>
+      <td><div class="cons-name"><span class="dot" style="background:${s.c}"></span><b style="color:${s.c}">${s.t}</b></div><div class="cons-sec">${s.s}</div></td>
+      <td class="r"><span class="cons-beta" style="color:${bcol}">${s.b.toFixed(2)}</span></td>
+      <td class="r" style="color:${col(a.ret)};font-weight:700">${pc(a.ret)}</td>
+      <td class="r" style="color:var(--muted)">${a.sig.toFixed(1)}%</td>
+      <td class="r"><div class="cons-shwrap"><div class="cons-bar"><i style="width:${shPct}%;background:${a.sharpe>=0?green:red}"></i></div><span style="color:${a.sharpe>=0?green:red};font-weight:800">${a.sharpe.toFixed(2)}</span></div></td>
+      <td class="r" style="color:${col(a.jensen)};font-weight:700">${(a.jensen>=0?"+":"")+a.jensen.toFixed(1)}</td>
+      <td class="r"><span class="cons-comp ${cClass}">${comp>=0?"+":""}${comp.toFixed(2)}</span><div class="cons-style">${cpStyleOf(s.t)}</div></td>
+      <td class="r cons-wcell">${on?`<input type="number" class="winp" data-w="${s.t}" value="${simState.sel[s.t]}" step="1" min="0" max="100">%`:`<span class="cons-add">+ añadir</span>`}</td>
+    </tr>`;}).join("");
   const sc=Math.abs(sum-100)<0.5?green:amber;
-  const controls=card("Selección y pesos","Marca las acciones y define su % (se ajusta automáticamente para sumar 100%)",
-    `<div class="simhead"><div class="simamt"><span class="l">Monto a invertir (CLP)</span><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="amtinp" value="${simState.amount?simState.amount.toLocaleString('es-CL'):''}" placeholder="Ej: 1.000.000"/></div></div><button class="btn" id="eqw">Equiponderar</button></div><div class="simlist">${rows}</div><div class="simsum">Suma de pesos: <b id="sumv" style="color:${sc}">${sum.toFixed(1)}%</b></div>`);
+  const controls=card("Selección y pesos","Marca las acciones (✓) y define su % · métricas CAPM + multifactor con color para decidir de un vistazo",
+    `<div class="simhead"><div class="simamt"><span class="l">Monto a invertir (CLP)</span><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="amtinp" value="${simState.amount?simState.amount.toLocaleString('es-CL'):''}" placeholder="Ej: 1.000.000"/></div></div><button class="btn" id="eqw">Equiponderar</button></div><div class="tw cons-tw" style="margin-top:13px"><table class="cons-tbl">${head}<tbody>${rows}</tbody></table></div><div class="simsum">Suma de pesos: <b id="sumv" style="color:${sc}">${sum.toFixed(1)}%</b></div>`);
   const edSc=scenEditId!=null?SCEN.find(s=>s.id===scenEditId):null;
   const scenBtns=edSc?`<span class="genl" style="margin:0;color:var(--indigo)">✎ Editando escenario: <b>${edSc.name}</b></span><button class="btn" id="cancelscen">Cancelar</button><button class="btn" id="savescen">Guardar como nuevo</button><button class="btn btn-pri" id="updscen">💾 Actualizar escenario</button>`:`<button class="btn" id="savescen">💾 Guardar escenario</button>`;
   return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:2px;flex-wrap:wrap;align-items:center">${scenBtns}<button class="btn" id="genpdf">📄 Descargar PDF</button><button class="btn btn-pri" id="applyinv">✓ Aplicar inversión</button></div>`+controls+`<div id="simres">${simResults()}</div>`;
@@ -1450,15 +1501,19 @@ function updSum(){const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState
 let simAlts=[];
 function efficientStocks(){return STOCKS.filter(s=>s.a24.jensen>=0);}
 function zscores(a){const m=a.reduce((x,y)=>x+y,0)/a.length;const sd=Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/a.length)||1;return a.map(x=>(x-m)/sd);}
+let asLens="combinado";
+function lensUniverse(lens){if(lens==="capm")return STOCKS.filter(s=>s.a24.jensen>=0);if(lens==="multifactor")return STOCKS.filter(s=>(MF.comp[s.t]||0)>0);return STOCKS.filter(s=>s.a24.jensen>=0||(MF.comp[s.t]||0)>0);}
 function mfProfileScore(t,profile){const z=(typeof MF!=="undefined"&&MF.z)?MF.z[t]:null;if(!z)return 0;const w=PROFILE_W[profile]||PROFILE_W.moderado;return MFSTYLE.reduce((a,k)=>a+(w[k]||0)*(z[k]||0),0);}
-function scoreStocks(list,profile){
+function scoreStocks(list,profile,lens){
+  lens=lens||"combinado";
   const zr=zscores(list.map(s=>s.a24.ret)),zs=zscores(list.map(s=>s.a24.sig)),zh=zscores(list.map(s=>s.a24.sharpe)),zj=zscores(list.map(s=>s.a24.jensen)),zb=zscores(list.map(s=>s.b));
   const zmf=zscores(list.map(s=>mfProfileScore(s.t,profile)));
-  return list.map((s,i)=>{let sc;
-    if(profile==="conservador")sc=-0.8*zs[i]-0.45*zb[i]+0.4*zh[i]+0.18*zj[i]+0.6*zmf[i];
-    else if(profile==="riesgoso")sc=0.7*zr[i]+0.5*zj[i]+0.3*zb[i]-0.1*zs[i]+0.6*zmf[i];
-    else sc=0.9*zh[i]+0.35*zj[i]-0.2*zs[i]-0.1*Math.abs(zb[i])+0.6*zmf[i];
-    return {s,sc};});
+  const wMf=lens==="multifactor"?1.4:(lens==="capm"?0:0.65), wCp=lens==="multifactor"?0.3:1.0;
+  return list.map((s,i)=>{let base;
+    if(profile==="conservador")base=-0.8*zs[i]-0.45*zb[i]+0.4*zh[i]+0.18*zj[i];
+    else if(profile==="riesgoso")base=0.7*zr[i]+0.5*zj[i]+0.3*zb[i]-0.1*zs[i];
+    else base=0.9*zh[i]+0.35*zj[i]-0.2*zs[i]-0.1*Math.abs(zb[i]);
+    return {s,sc:wCp*base+wMf*zmf[i]};});
 }
 function pickBySector(scored,N,mx){
   const out=[],cnt={};
@@ -1478,10 +1533,11 @@ function altWeights(list,profile){
   const k=Object.keys(sel);if(k.length){let s2=k.reduce((a,x)=>a+sel[x],0);sel[k[0]]=+(sel[k[0]]+(100-s2)).toFixed(1);}
   return sel;
 }
-function genAlternatives(profile){
-  let uni=efficientStocks();
+function genAlternatives(profile,lens){
+  lens=lens||"combinado";
+  let uni=lensUniverse(lens);
   if(profile==="conservador"){const f=uni.filter(s=>!(s.a24.sig>30&&s.b>1.2));if(f.length>=2)uni=f;}
-  const scored=scoreStocks(uni,profile).sort((a,b)=>b.sc-a.sc);
+  const scored=scoreStocks(uni,profile,lens).sort((a,b)=>b.sc-a.sc);
   const names={2:"Concentrada",3:"Enfocada",4:"Balanceada",5:"Amplia",6:"Diversificada"};
   const wlbl=profile==="conservador"?"ponderación inversa a la volatilidad":profile==="riesgoso"?"ponderación por retorno":"mezcla Sharpe + equiponderada";
   let sizes=[6,5,4,3,2].filter(k=>k<=scored.length);
@@ -1490,11 +1546,15 @@ function genAlternatives(profile){
 }
 
 function viewAsistente(){
-  const prof=simState.profile;const eff=efficientStocks();const exc=STOCKS.filter(s=>s.a24.jensen<0);
+  const prof=simState.profile,lens=asLens;
+  const eff=lensUniverse(lens),exc=STOCKS.filter(s=>eff.indexOf(s)<0);
   const pB=[["conservador","Conservador"],["moderado","Moderado"],["riesgoso","Riesgoso"]].map(([k,l])=>`<button class="pbtn ${prof===k?'on':''}" data-aprof="${k}">${l}</button>`).join("");
-  const intro=card("Asistente de simulación","Propone portafolios según tu perfil · universo: acciones sobre la SML (α ≥ 0) · puntaje que combina CAPM (retorno, Sharpe, α, σ, β) con el modelo multifactor (6 factores ponderados por tu perfil) · máx 2 acciones por sector",
-    `<div class="genrow"><div><div class="genl">Perfil de inversionista</div><div class="pbtns">${pB}</div></div></div><div class="genhint">${profHint(prof)}<br><b>Universo eficiente (${eff.length}):</b> ${eff.map(s=>s.t).join(", ")}. <b>Excluidas (bajo la SML):</b> ${exc.map(s=>s.t).join(", ")||"ninguna"}.</div>`);
-  simAlts=genAlternatives(prof);
+  const lensInfo={combinado:["CAPM + multifactor","mezcla la señal del CAPM (β, Sharpe, α) con el composite multifactor ponderado a tu perfil"],capm:["Solo CAPM (SML)","universo y puntaje clásicos: acciones sobre la SML (α ≥ 0), por β/Sharpe/α"],multifactor:["Solo multifactor","universo y puntaje por los 6 factores de estilo (composite) ponderados a tu perfil"]};
+  const lB=[["combinado","Combinado","✦"],["capm","CAPM","β"],["multifactor","Multifactor","◆"]].map(([k,l,ic])=>`<button class="pbtn ${lens===k?'on':''}" data-aslens="${k}">${l}${k==="combinado"?' <span style="opacity:.7;font-weight:600">· recom.</span>':''}</button>`).join("");
+  const uniLbl=lens==="capm"?"sobre la SML (α ≥ 0)":lens==="multifactor"?"con composite multifactor > 0":"con señal positiva en CAPM o multifactor";
+  const intro=card("Asistente de simulación","Propone portafolios según tu perfil y el enfoque elegido · máx 2 acciones por sector",
+    `<div class="genrow" style="gap:24px;flex-wrap:wrap"><div><div class="genl">Perfil de inversionista</div><div class="pbtns">${pB}</div></div><div><div class="genl">Enfoque de análisis</div><div class="pbtns">${lB}</div></div></div><div class="genhint" style="margin-top:12px"><b>${lensInfo[lens][0]}:</b> ${lensInfo[lens][1]}.<br>${profHint(prof)}<br><b>Universo (${eff.length}, ${uniLbl}):</b> ${eff.map(s=>s.t).join(", ")||"ninguna"}. <b>Excluidas:</b> ${exc.map(s=>s.t).join(", ")||"ninguna"}.</div>`);
+  simAlts=genAlternatives(prof,lens);
   const altData=simAlts.map(alt=>({alt,M:pMetrics(alt.sel)}));
   const bestSh=altData.reduce((b,x,i)=>x.M.sharpe>altData[b].M.sharpe?i:b,0);
   const bestRt=altData.reduce((b,x,i)=>x.M.retH>altData[b].M.retH?i:b,0);
@@ -1516,6 +1576,7 @@ function viewAsistente(){
   return intro+cards;}
 function attachAsistente(){
   document.querySelectorAll("[data-aprof]").forEach(b=>b.onclick=()=>{simState.profile=b.dataset.aprof;render();});
+  document.querySelectorAll("[data-aslens]").forEach(b=>b.onclick=()=>{asLens=b.dataset.aslens;render();});
   document.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{const a=simAlts[+b.dataset.load];if(a){scenEditId=null;simState.sel=Object.assign({},a.sel);page="constructor";render();}});
 }
 
