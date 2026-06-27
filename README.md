@@ -13,6 +13,7 @@ Abre `index.html` en cualquier navegador moderno (doble clic o arrástralo). No 
 **Dónde se guardan tus datos:** todo (proyectos de inversión y su seguimiento, escenarios, perfil, acciones importadas, clave del copiloto, tema) se guarda en el **`localStorage` de ese navegador** — local, privado, sin nube. Implicaciones: persiste entre sesiones en el mismo equipo/navegador; **no se sincroniza** entre dispositivos; y se pierde si borras los datos del sitio o usas modo incógnito. Para no depender de un solo navegador, usa **Inversión → Respaldar datos** (exporta un JSON) y **Restaurar** para moverlo o resguardarlo. Sí, puedes empezar a llevar tu seguimiento real desde ya.
 
 - **Tema claro / oscuro:** botón ◐ en la barra superior (se recuerda entre sesiones).
+- **Configuración (⚙):** botón junto al de tema. Abre un panel central con tu **perfil**, **apariencia** (tema), **copiloto IA** (estado de la clave y modelo), **datos** (set de análisis activo demo/importado y respaldo/restauración) y **plataforma** (reinicio total). Centraliza los ajustes sin salir del módulo en que estés.
 - `inversor-v1-original.html` se conserva como referencia de la versión anterior.
 
 ---
@@ -67,12 +68,17 @@ Un agente de IA (API de Claude) **funcional**, disponible desde el botón flotan
 > **Seguridad:** una clave en el navegador es accesible a los scripts de la página. Úsala en tu equipo personal, ponle límite de gasto en la consola de Anthropic y no publiques el archivo con la clave incrustada.
 
 ### 4. **Importar acciones** (Análisis → tab 5) — analiza tu propio universo
-Para **analizar muchas acciones candidatas y decidir antes de armar el portafolio**:
-- Sube un **CSV o Excel (.xlsx)** con una fila por fecha y una columna por acción, más una columna de índice/benchmark (ej. IPSA). Hay **plantilla descargable**.
-- Elige la **periodicidad** (diario / semanal / mensual); las métricas se anualizan en consecuencia (√252 / √52 / √12).
-- Calcula **β, retorno, volatilidad, Sharpe, α de Jensen, R²** (contra el benchmark) y la **matriz de correlación**.
-- Las acciones importadas pasan a usarse en **toda la plataforma**: Comparativa, Detalle, CAPM/SML, Multifactor y el Constructor. Un clic vuelve al set demo IPSA.
-- Parser de Excel propio (sin librerías externas, vía `DecompressionStream`); si un `.xlsx` no carga, guárdalo como CSV.
+Para **analizar muchas acciones candidatas y decidir antes de armar el portafolio**. Dos formas de cargar:
+
+- **Archivos de Investing.com (recomendado), uno por acción** — tal como los descargas (`"Date","Price","Open","High","Low","Vol.","Change %"`, fechas MM/DD/YYYY, números US). **Sube varios a la vez**; el ticker se deriva del nombre del archivo (con mapa de empresas conocidas del IPSA: BCI, CCU, COPEC, SQM-B…) y es **editable** en pantalla. El módulo detecta el formato automáticamente.
+- **Un archivo combinado** (CSV/Excel `.xlsx`): una fila por fecha, una columna por acción + una de índice. Hay **plantilla descargable**.
+
+Detalles:
+- Elige la **periodicidad** que descargaste (diario / semanal / mensual); las métricas se anualizan en consecuencia (√252 / √52 / √12).
+- **Benchmark:** sube también el **índice** (ej. IPSA) como un archivo más; si no, se usa un **índice promedio equiponderado** de tus acciones como proxy.
+- Alinea las series por **fechas en común**, omite las que tengan huecos y calcula **β, retorno, volatilidad, Sharpe, α de Jensen, R²** (contra el benchmark) y la **matriz de correlación**.
+- Las acciones importadas pasan a usarse en **toda la plataforma**: Comparativa, Detalle, CAPM/SML, Multifactor y el Constructor. Un clic (o el panel de Configuración) vuelve al set demo IPSA.
+- Parser de CSV (Investing y combinado) y de **Excel propio** (sin librerías externas, vía `DecompressionStream`); si un `.xlsx` no carga, guárdalo como CSV.
 
 ### 5. **Perfil de inversionista** (módulo Perfil) — personaliza la IA
 - Cuestionario de **8 preguntas** (horizonte, tolerancia, capacidad, experiencia…) → perfil **Conservador / Moderado / Agresivo** con guía de estrategia (factores a enfatizar, composición y β objetivo).
