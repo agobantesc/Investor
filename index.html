@@ -2749,8 +2749,9 @@ function cpRenderFoot(){
 }
 
 /* ---- loop agéntico ---- */
+function cpTools(){const t=COPILOT_TOOLS.slice();if(t.length)t[t.length-1]=Object.assign({},t[t.length-1],{cache_control:{type:"ephemeral"}});return t;}
 async function cpStreamOnce(){
-  const body={model:cpModel,max_tokens:2048,system:cpSystemPrompt(),tools:COPILOT_TOOLS,messages:cpApiMessages(),stream:true};
+  const body={model:cpModel,max_tokens:2048,system:[{type:"text",text:cpSystemPrompt(),cache_control:{type:"ephemeral"}}],tools:cpTools(),messages:cpApiMessages(),stream:true};
   let res;
   try{res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
     "content-type":"application/json","x-api-key":cpKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});}

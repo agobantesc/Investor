@@ -64,7 +64,8 @@ Esto permite **contrastar E(R) CAPM vs E(R) multifactor** acción por acción, c
 Un agente de IA (API de Claude) **funcional**, disponible desde el botón flotante ✨ en cualquier módulo, que conversa con **tus datos reales**:
 
 - **Bring-Your-Own-Key (BYOK):** pegas tu propia clave de Anthropic; se guarda **solo en tu navegador** (`localStorage`) y las llamadas van **directo** desde tu equipo a la API (`anthropic-dangerous-direct-browser-access`), sin servidores intermedios.
-- **Respuestas en streaming:** el copiloto **escribe progresivamente** (no aparece todo de golpe), en mensajes breves y por pasos para que sea fácil de seguir.
+- **Respuestas en streaming:** el copiloto **escribe progresivamente** (no aparece todo de golpe), en mensajes breves y por pasos para que sea fácil de seguir. El largo se adapta: conciso para preguntas simples, detallado solo cuando pides análisis.
+- **Prompt caching:** el *system prompt* y las herramientas se envían con `cache_control` (efímero). Dentro de un mismo turno agéntico (pregunta → tool_use → respuesta) hay varias llamadas que reutilizan ese prefijo, con **lecturas de caché ~90% más baratas** y menor latencia.
 - **Tool use (function calling):** el agente lee tu portafolio activo y su seguimiento, las métricas CAPM + multifactor de las 14 acciones (herramienta `get_multifactor` dedicada), la matriz de correlación, tus escenarios, la cartera del Constructor y los **indicadores de mercado** (`get_market_indicators`); y puede **evaluar carteras hipotéticas** (`evaluate_portfolio`) con cifras reales. Está instruido para **integrar siempre el modelo multifactor** además del CAPM.
 - **Selector de modelo:** Claude **Opus 4.8** (por defecto), Sonnet 4.6 o Haiku 4.5.
 - **Seguro y educativo:** el agente analiza y propone; tú ejecutas los cambios en Constructor / Operar. No es asesoría financiera regulada y los disclaimers están a la vista. Costo aprox. 1–3 ¢ por consulta a tu cuenta de Anthropic.
