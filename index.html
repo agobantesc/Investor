@@ -911,6 +911,13 @@
   .prj-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--muted);}
   .prj-dot.demo{background:var(--muted);} .prj-dot.import{background:var(--brand-grad);} .prj-dot.sim{background:#7C3AED;}
   .prj-srow b{font-size:13px;color:var(--navy);} .prj-tag{font-size:10px;color:var(--faint);margin-left:8px;font-weight:600;}
+
+  .prj-chip.primary{border-color:var(--accent);background:rgba(30,95,209,.10);box-shadow:0 0 0 1px var(--accent) inset;}
+  .prj-chip.active .prj-go{text-decoration:underline;}
+  .prj-star{border:none;background:transparent;cursor:pointer;color:#C99A1E;font-size:12px;padding:0 1px;line-height:1;}
+  .prj-star:hover{color:#E0AC1F;}
+  .prj-chip .prj-go{border:none;background:transparent;cursor:pointer;color:inherit;font:inherit;font-weight:700;padding:0 2px;}
+  .prj-chip .prj-go:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -1751,7 +1758,7 @@ function applyInvestment(defName){
   const nm=window.prompt("Nombre del proyecto de inversión:",defName||("Proyecto "+(PROJECTS.length+1)));
   if(nm===null)return;
   const proj={id:Date.now(),name:(nm||("Proyecto "+(PROJECTS.length+1))).trim(),date:new Date().toLocaleDateString("es-CL"),amount:simState.amount,bp:M.bp,erCapm:M.erCapm,sig:M.sig,sharpe:M.sharpe,corrAvg:M.corrAvg,
-      freq:"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings:M.ws.map(x=>({t:x.s.t,n:x.s.n,s:x.s.s,c:x.s.c,b:x.s.b,w:x.w,monto:simState.amount*x.w})),weeks:[],links:{analyses:[currentAnalysisId()],scenarios:[]}};
+      freq:"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings:M.ws.map(x=>({t:x.s.t,n:x.s.n,s:x.s.s,c:x.s.c,b:x.s.b,w:x.w,monto:simState.amount*x.w})),weeks:[],links:{analyses:[currentAnalysisId()],scenarios:[],primary:currentAnalysisId()}};
   PROJECTS.push(proj);activeId=proj.id;editIdx=null;saveProjects();syncProj();
   modulo="inv";page="ingreso";render();
 }
@@ -3451,8 +3458,12 @@ function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const in
   const L=IM.last,inv=IM.aport,val=L.val,gain=val-inv;
   return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,twr:L.ret*100,hasData:true,beta:p.bp||0,nrec:(p.weeks||[]).length};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
-function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p||!id)return;const L=projLinks(p),arr=kind==="analysis"?L.analyses:L.scenarios,s=String(id);if(arr.map(String).indexOf(s)<0)arr.push(s);saveProjects();render();}
+function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p||!id)return;const L=projLinks(p),arr=kind==="analysis"?L.analyses:L.scenarios,s=String(id);if(arr.map(String).indexOf(s)<0)arr.push(s);if(kind==="analysis")L.primary=s;saveProjects();render();}
 function projDelLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;const L=projLinks(p),s=String(id);if(kind==="analysis")L.analyses=L.analyses.filter(x=>String(x)!==s);else L.scenarios=L.scenarios.filter(x=>String(x)!==s);saveProjects();render();}
+function projPrimaryAnalysis(p){const L=projLinks(p);if(L.primary&&L.analyses.map(String).indexOf(String(L.primary))>=0)return String(L.primary);return L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}
+function projSetPrimary(pid,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;projLinks(p).primary=String(id);saveProjects();render();}
+function activateAnalysis(id){if(!id)return false;if(String(id)==="demo"){applyDataset("demo");return true;}if(typeof impsetActivate==="function"&&(IMPSETS||[]).some(s=>String(s.id)===String(id))){impsetActivate(id);return true;}return false;}
+function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;activeId=p.id;saveProjects();syncProj();if(!activateAnalysis(projPrimaryAnalysis(p)))render();}
 
 function viewProyectos(){
   syncProj();
@@ -3469,7 +3480,8 @@ function viewProyectos(){
   const aOpts=analysisList().map(a=>`<option value="${a.id}">${(""+a.name).replace(/</g,"&lt;")} (${a.n})</option>`).join("");
   const sOpts=(SCEN||[]).map(s=>`<option value="${s.id}">${(""+s.name).replace(/</g,"&lt;")}</option>`).join("");
   const cards=all.map(({p,s})=>{const active=p.id===activeId,L=projLinks(p);
-    const aChips=L.analyses.length?L.analyses.map(id=>`<span class="prj-chip an">${analysisName(id)}<button class="prj-x" data-unlink="${p.id}|analysis|${id}">✕</button></span>`).join(""):'<span class="prj-none">— sin análisis —</span>';
+    const prim=projPrimaryAnalysis(p);
+    const aChips=L.analyses.length?L.analyses.map(id=>{const isP=String(id)===String(prim),act=currentAnalysisId()===String(id);return `<span class="prj-chip an ${isP?"primary":""} ${act?"active":""}"><button class="prj-star" data-primary="${p.id}|${id}" title="${isP?"Análisis vigente del proyecto":"Marcar como vigente"}">${isP?"★":"☆"}</button><button class="prj-go" data-actanalysis="${id}" title="Activar este análisis">${analysisName(id)}</button><button class="prj-x" data-unlink="${p.id}|analysis|${id}">✕</button></span>`;}).join(""):'<span class="prj-none">— sin análisis —</span>';
     const sChips=L.scenarios.length?L.scenarios.map(id=>`<span class="prj-chip sc">${scenName(id)}<button class="prj-x" data-unlink="${p.id}|scenario|${id}">✕</button></span>`).join(""):'<span class="prj-none">— sin simulaciones —</span>';
     return `<div class="prj-card ${active?"on":""}">
       <div class="prj-head"><div style="flex:1;min-width:0"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}"><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${p.date||"—"}</div></div>
@@ -3500,7 +3512,9 @@ function viewProyectos(){
 }
 function attachProyectos(){
   document.querySelectorAll("[data-prename]").forEach(inp=>inp.onchange=()=>{const p=PROJECTS.find(x=>String(x.id)===inp.dataset.prename);if(p){p.name=(inp.value||"").trim()||p.name;saveProjects();}});
-  document.querySelectorAll("[data-pact]").forEach(b=>b.onclick=()=>{activeId=PROJECTS.find(x=>String(x.id)===b.dataset.pact).id;saveProjects();syncProj();render();});
+  document.querySelectorAll("[data-pact]").forEach(b=>b.onclick=()=>projActivate(b.dataset.pact));
+  document.querySelectorAll("[data-primary]").forEach(b=>b.onclick=()=>{const[pid,id]=b.dataset.primary.split("|");projSetPrimary(pid,id);});
+  document.querySelectorAll("[data-actanalysis]").forEach(b=>b.onclick=()=>{if(!activateAnalysis(b.dataset.actanalysis))render();});
   document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{const p=PROJECTS.find(x=>String(x.id)===b.dataset.pdel);if(p&&confirm('¿Eliminar el proyecto "'+p.name+'" y todo su seguimiento? No se puede deshacer.')){PROJECTS=PROJECTS.filter(x=>x.id!==p.id);if(activeId===p.id)activeId=PROJECTS.length?PROJECTS[0].id:null;saveProjects();syncProj();render();}});
   document.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>{const[pid,kind,id]=b.dataset.unlink.split("|");projDelLink(pid,kind,id);});
   document.querySelectorAll("[data-addlink]").forEach(sel=>sel.onchange=()=>{const[pid,kind]=sel.dataset.addlink.split("|");if(sel.value)projAddLink(pid,kind,sel.value);});
