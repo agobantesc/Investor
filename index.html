@@ -982,7 +982,7 @@
   .prj-chip .prj-go:hover{text-decoration:underline;}
 
   /* ════════════ Modo asesor: clientes ════════════ */
-  .cli-wrap{position:relative;}
+  .cli-wrap{position:relative;display:none;}/* clientes ocultos por ahora — solo administración */
   .cli-btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 .7rem;border-radius:10px;border:1px solid var(--line2);background:var(--card);cursor:pointer;font:700 12.5px var(--font);color:var(--ink);box-shadow:var(--sh-xs);transition:.15s var(--ease);}
   .cli-btn:hover{border-color:var(--accent);}
   .cli-btn .cli-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;}
@@ -4230,8 +4230,8 @@ function applyPlatformPrices(date,ipsa,priceMap){
       if(new Date(date+"T00:00:00")<new Date(last.date+"T00:00:00")){nSkip++;return;}
       const newPrices=Object.assign({},last.prices||{});let any=false;
       (p.holdings||[]).forEach(hd=>{const v=priceMap[hd.t];if(v!=null&&isFinite(v)&&v>0){newPrices[hd.t]=v;any=true;}});
+      if(!any)return;   // solo proyectos que tienen alguna de las acciones cargadas
       const ip=(ipsa!=null&&isFinite(ipsa)&&ipsa>0)?ipsa:(last.ipsa||0);
-      if(!any&&(ipsa==null||!isFinite(ipsa)))return;
       if(last.date===date){last.prices=newPrices;last.ipsa=ip;}   // mismo día: actualiza en sitio (evita fechas duplicadas, incluso si fue un día con operación)
       else p.weeks.push({date,ipsa:ip,prices:newPrices});
       touched=true;nProj++;
@@ -4252,7 +4252,7 @@ function platformPricesRender(){
   const S=_ppxState;if(!S)return;
   const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-ppx="${i}" value="${r.price}" aria-label="Precio ${r.t}"></div>`).join("")
     :`<div class="note" style="margin:0">No hay acciones con seguimiento todavía. Registra la compra inicial de algún proyecto para poder actualizar precios masivamente.</div>`;
-  const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · toda la plataforma</div><div class="cs">Carga los precios de cierre de un día. Se agregan como nuevo punto de valoración a <b>todos los proyectos de todos los clientes</b> que tengan esas acciones.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
+  const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · toda la plataforma</div><div class="cs">Carga los precios de cierre de un día. Se agregan como nuevo punto de valoración a <b>todos tus proyectos</b> que tengan esas acciones.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
     <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa}"></label></div>
     <div class="ppx-grid">${rows}</div>
     <div class="ppx-foot"><button class="btn" id="ppxCancel">Cancelar</button><button class="btn btn-pri" id="ppxApply">Aplicar a toda la plataforma</button></div>`;
@@ -4268,7 +4268,7 @@ function platformPricesRender(){
     if(!Object.keys(pm).length&&ip==null){window.alert("Ingresa al menos un precio o el valor del IPSA.");return;}
     const res=applyPlatformPrices(S.date,ip,pm);
     modalCloseId("ppxBack");
-    window.alert("Precios del "+S.date+" aplicados.\n\n"+res.nProj+" proyecto(s) actualizados en "+res.nCli+" cliente(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" proyecto(s) omitidos por tener seguimiento posterior a esa fecha.":""));
+    window.alert("Precios del "+S.date+" aplicados.\n\n"+res.nProj+" proyecto(s) actualizados con esos precios de cierre."+(res.nSkip>0?"\n\n"+res.nSkip+" proyecto(s) omitidos por tener seguimiento posterior a esa fecha.":""));
     render();
   };
 }
@@ -4349,7 +4349,7 @@ function seedExamples(){
   }catch(e){}
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
-let homeStkFreq="diario";
+let homeStkFreq="mensual";
 function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
@@ -4364,35 +4364,28 @@ function viewHome(){
   const hero=`<div class="home-hero ${T.gainNet>=0?"pos":"neg"}">
     <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO</div>
       <div class="hh-val">${fmtCLP(T.value)}</div>
-      <div class="hh-sub">${CLIENTS.length} cliente${CLIENTS.length!==1?"s":""} · ${T.nproj} proyecto${T.nproj!==1?"s":""} · capital aportado ${fmtCLP(T.aportado)}</div></div>
+      <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}</div></div>
     <div class="hh-r"><div class="hh-gain">${sg(T.gainNet)}</div><div class="hh-pct">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
-  const tiles=card("Resumen consolidado","Todas tus carteras y clientes en una sola vista · neto de comisiones",`<div class="tiles">
+  const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles">
     ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
     ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
     ${tile("Ganancia neta",sg(T.gainNet),"después de comisiones",indigo,T.gainNet>=0?green:red)}
     ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital",indigo,Tpct>=0?green:red)}
     ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}</div>`);
-  // rankings de carteras — separados: tus fondos (administración) vs carteras de clientes; mismo formato estándar
+  // ranking de proyectos más rentables (todos propios de la administración)
   const ranked=D.projs.filter(p=>p.hasData).sort((a,b)=>b.pct-a.pct);
   const medal=["🥇","🥈","🥉"];
-  const cartCard=(p,i,isAdmin)=>{const pos=p.pct>=0;const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
+  const cartCards=ranked.slice(0,6).map((p,i)=>{const pos=p.pct>=0;const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
     const badge=i<3?`<span class="cart-medal">${medal[i]}</span>`:`<span class="cart-num">${i+1}</span>`;
-    const owner=isAdmin?`<span class="cart-own me">★ Tuya · modelo</span>`:`<span class="cart-own"><span class="rk-dot" style="background:${p.col}"></span>${(""+p.cli).replace(/</g,"&lt;")}</span>`;
-    return `<button class="home-cart ${i<3?"rk"+i:""} ${isAdmin?"mine":""}" data-gohome="${p.cliId}|${p.pid}">
-      <div class="cart-h">${badge}${owner}</div>
-      <div class="cart-name">${(""+p.name).replace(/</g,"&lt;")}</div>
+    return `<button class="home-cart ${i<3?"rk"+i:""}" data-gohome="${p.cliId}|${p.pid}">
+      <div class="cart-h">${badge}<span class="cart-name" style="flex:1;min-width:0">${(""+p.name).replace(/</g,"&lt;")}</span></div>
       <div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div>
       <div class="cart-spark">${spark}</div>
-      <div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
-  const adminCarts=ranked.filter(p=>p.cliId==="c_me").slice(0,4);
-  const clientAll=ranked.filter(p=>p.cliId!=="c_me"),clientCarts=clientAll.slice(0,3);
-  const adminBody=adminCarts.length?`<div class="home-cartgrid">${adminCarts.map((p,i)=>cartCard(p,i,true)).join("")}</div>`
-    :`<div class="note" style="margin:0">Aún no tienes carteras propias con seguimiento. Arma una en el <b>Constructor</b> y registra su compra inicial — servirá de modelo para tus clientes.</div>`;
-  const adminCard=card("Tus mejores fondos · administración","Tus carteras propias (cliente Administración), netas de comisiones — el modelo replicable que ofreces a tus clientes",adminBody);
-  const clientBody=clientCarts.length?`<div class="home-cartgrid">${clientCarts.map((p,i)=>cartCard(p,i,false)).join("")}</div>${clientAll.length>3?`<div class="note" style="margin:11px 0 0">+${clientAll.length-3} carteras de clientes más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todas →</a></div>`:""}`
-    :`<div class="note" style="margin:0">Aún no gestionas carteras de clientes con seguimiento. Crea un cliente desde el selector (arriba) y registra su cartera.</div>`;
-  const clientCard=card("Mejores proyectos de clientes","Top 3 carteras de terceros que gestionas, por rentabilidad neta",clientBody);
+      <div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;}).join("");
+  const rankCard=card("Proyectos más rentables","Tus carteras, netas de comisiones · compara cuál combinación de acciones rinde mejor para replicar",
+    ranked.length?`<div class="home-cartgrid">${cartCards}</div>${ranked.length>6?`<div class="note" style="margin:11px 0 0">+${ranked.length-6} carteras más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todas →</a></div>`:""}`
+    :`<div class="note" style="margin:0">Aún no tienes carteras con seguimiento. Arma una en el <b>Constructor</b> y registra su compra inicial para empezar a comparar rentabilidades reales.</div>`);
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
   const mvRows=movers.length?movers.map(x=>`<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${x.chg>=0?green:red}">${(x.chg>=0?"▲ +":"▼ ")+x.chg.toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k])||""}</div>`).join("")
@@ -4416,9 +4409,9 @@ function viewHome(){
     <button class="home-act" data-openprices><span class="ha-i">↻</span><b>Actualizar precios</b><span class="ha-s">Cierres del día · toda la plataforma</span></button>
     <button class="home-act" data-go="sim|constructor"><span class="ha-i">＋</span><b>Armar nueva cartera</b><span class="ha-s">Constructor de portafolio</span></button>
     <button class="home-act" data-go="eval|importar"><span class="ha-i">↥</span><b>Importar acciones</b><span class="ha-s">Analiza tu propio universo</span></button>
-    <button class="home-act" data-go="clientes|admin"><span class="ha-i">👥</span><b>Administrar clientes</b><span class="ha-s">Carteras de terceros</span></button>
+    <button class="home-act" data-go="proyectos|hub"><span class="ha-i">▦</span><b>Mis proyectos</b><span class="ha-s">Carteras, análisis y seguimientos</span></button>
     <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
-  return hero+tiles+adminCard+clientCard+stkCard+mvCard+actions;
+  return hero+tiles+rankCard+stkCard+mvCard+actions;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
@@ -4448,7 +4441,17 @@ let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
 function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
 applyScale(uiScale);
 try{document.addEventListener("click",clientMenuClose);}catch(e){}
-try{seedExamples();}catch(e){}
+/* por ahora: solo administración. Quita los clientes de ejemplo si existían y vuelve a la cartera propia. */
+function removeExampleClients(){try{
+  const before=CLIENTS.length;
+  CLIENTS=CLIENTS.filter(c=>!(c.example||/^c_ex_/.test(c.id)));
+  if(CLIENTS.length!==before){
+    saveClients();
+    ["c_ex_mjr","c_ex_dh","c_ex_ffs"].forEach(id=>{try{Object.keys(CLIENT_KEYS).forEach(k=>localStorage.removeItem(k+"__"+id));localStorage.removeItem("inv_profile_v1__"+id);}catch(e){}});
+  }
+  if(!CLIENTS.some(c=>c.id===activeClient)){activeClient="c_me";try{localStorage.setItem("inv_active_client","c_me");clientLoad();}catch(e){}}
+}catch(e){}}
+try{removeExampleClients();}catch(e){}
 render();
 authInit();
 </script>
