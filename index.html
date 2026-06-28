@@ -1141,6 +1141,13 @@
   /* recordar sesión */
   .auth-remember{display:flex;align-items:center;gap:8px;margin:2px 0 13px;font-size:11.5px;color:var(--mut);font-weight:600;cursor:pointer;user-select:none;}
   .auth-remember input{width:15px;height:15px;accent-color:var(--indigo);cursor:pointer;}
+  /* módulo Datos */
+  .imp-dz{display:flex;flex-direction:column;align-items:center;gap:7px;border:1.5px dashed var(--line2);border-radius:14px;padding:1.9rem 1.2rem;text-align:center;background:var(--surface);transition:.15s var(--ease);cursor:pointer;}
+  .imp-dz:hover,.imp-dz.over{border-color:var(--accent);background:var(--a-50);}
+  .imp-dz b{color:var(--navy);}
+  .datos-acts{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+  .datos-freq{margin-left:auto;display:flex;align-items:center;gap:8px;}
+  @media(max-width:760px){.datos-freq{margin-left:0;}}
 </style>
 </head>
 <body>
@@ -1314,6 +1321,7 @@ function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div 
 // ===== NAV =====
 const MODS={
   inicio:{label:"Inicio",tabs:[{id:"home",label:"Resumen general",n:"1"}]},
+  datos:{label:"Datos",tabs:[{id:"base",label:"Base de precios",n:"1"},{id:"cargar",label:"Cargar planilla",n:"2"},{id:"cierre",label:"Cierre diario",n:"3"}]},
   eval:{label:"Análisis",tabs:[{id:"comparativa",label:"Comparativa",n:"1"},{id:"detalle",label:"Detalle por acción",n:"2"},{id:"capm",label:"CAPM / SML",n:"3"},{id:"multifactor",label:"Multifactor",n:"4"},{id:"importar",label:"Importar acciones",n:"5"}]},
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
@@ -1326,6 +1334,7 @@ const MODS={
 const ICO={
  inicio:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
  eval:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>',
+ datos:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>',
  sim:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>',
  inv:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7"/><path d="M3 12h18"/></svg>',
  pro:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13H11l-1 9 8.5-12H12l1-8z"/></svg>',
@@ -1337,7 +1346,7 @@ const ICO={
 function renderChrome(){
   let nav=`<button class="modbtn home-btn ${modulo==='inicio'?'on':''}" data-mod="inicio"><span class="mi">${ICO.inicio}</span>Inicio</button>`;
   nav+=`<div class="sgroup">Módulos</div>`;
-  ["eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
+  ["datos","eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
   document.getElementById("snav").innerHTML=nav;
@@ -1515,7 +1524,7 @@ let simState={amount:0,sel:{},profile:"moderado",nstocks:3,proj:"semanal",horizo
 const HZN={semanal:[12,26,52],mensual:[12,24,36],anual:[1,2,3,4]};
 const HZNUNIT={semanal:"sem",mensual:"meses",anual:"años"};
 const HZNDEF={semanal:52,mensual:36,anual:3};
-const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1,inv_profile_goal_v1:1};
+const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1,inv_profile_goal_v1:1,inv_pricedb_v1:1};
 let activeClient=localStorage.getItem("inv_active_client")||"c_me";
 function ck(k){return CLIENT_KEYS[k]?(k+"__"+activeClient):k;}
 function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -2529,6 +2538,7 @@ function render(){
   window.__sgN=0;
   let h="";
   if(modulo==="inicio") h=viewHome();
+  else if(modulo==="datos") h=viewDatos();
   else if(modulo==="inv") h=(page==="operar"?viewOperar():page==="contabilidad"?viewContab():viewInv());
   else if(modulo==="pro") h=viewPro();
   else if(modulo==="mercados") h=viewMercados();
@@ -2554,7 +2564,8 @@ function render(){
   if(modulo==="proyectos") attachProyectos();
   if(modulo==="clientes") attachClientes();
   if(modulo==="inicio") attachHome();
-  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="importar";render();};}
+  if(modulo==="datos") attachDatos();
+  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="importar";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};}
   attachScatterAll();
 }
 
@@ -3413,6 +3424,153 @@ function impCalc(){
   const _id="s"+Date.now()+Math.floor(Math.random()*1000);IMPSETS.push({id:_id,name:impsetAutoName(IMP),date:new Date().toLocaleDateString("es-CL"),imp:IMP});impActiveId=_id;lsSet("inv_impsets_v1",IMPSETS);lsSet("inv_imp_active_id",impActiveId);impFiles=[];
   applyDataset("import");
 }
+/* ===================== BASE DE PRECIOS CENTRAL (PRICEDB) ===================== */
+/* Repositorio canónico de precios del sistema: { tickers:{T:{n,s,c,b}}, px:{T:{fecha:precio}}, ipsa:{fecha:valor} }
+   Alimenta Home, análisis, simulaciones y los seguimientos de todas las carteras. Namespaced por cliente. */
+let PRICEDB=(function(){const d=lsGet("inv_pricedb_v1");return (d&&d.px)?d:{tickers:{},px:{},ipsa:{}};})();
+let pricedbFreq=lsGet("inv_pricedb_freq")||"mensual";
+function savePriceDB(){PRICEDB.updated=new Date().toISOString().slice(0,10);return lsSet("inv_pricedb_v1",PRICEDB);}
+function pricedbEmpty(){return !PRICEDB||!PRICEDB.px||!Object.keys(PRICEDB.px).length;}
+function pricedbTickers(){return Object.keys(PRICEDB.px||{});}
+function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s[d]=1);Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>s[d]=1));return Object.keys(s).sort();}
+/* último valor ≤ D en un mapa fecha→valor (sus claves ya ordenadas) */
+function pdAsOf(map,sortedKeys,D){let lo=null;for(let i=0;i<sortedKeys.length;i++){if(sortedKeys[i]<=D)lo=sortedKeys[i];else break;}return lo!=null?map[lo]:null;}
+/* metadatos por defecto de un ticker (toma del universo demo si existe) */
+function pdMeta(t,srcName){const st=((typeof DEMO!=="undefined"&&DEMO.stocks)||(typeof STOCKS!=="undefined"?STOCKS:[])||[]).find(s=>s.t===t)||{};const ci=Object.keys(PRICEDB.tickers).length;return {n:srcName||st.n||t,s:st.s||"",c:st.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci%IMP_PAL.length]:"#1E5FD1"),b:(st.b!=null?st.b:null)};}
+/* carga diaria / puntual: escribe un día (fecha + IPSA + precios) en la base */
+function pricedbUpsertDay(date,ipsa,priceMap){
+  if(!date)return;
+  if(ipsa!=null&&isFinite(ipsa)&&ipsa>0)PRICEDB.ipsa[date]=+ipsa;
+  Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;(PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);});
+  savePriceDB();
+}
+/* carga masiva: fusiona series parseadas (formato impFiles: {name,src,dates,closes}) en la base */
+function pricedbMergeFiles(files,benchName){
+  let added=0,tk=0;const isB=n=>/^ipsa$|ipsa|índice|indice|index|bench/i.test(n)||(benchName&&n===benchName);
+  (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];
+    if(isB(f.name)){for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(d&&isFinite(v)&&v>0){PRICEDB.ipsa[d]=v;added++;}}return;}
+    const t=f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);
+    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(d&&isFinite(v)&&v>0){PRICEDB.px[t][d]=v;added++;}}
+  });
+  savePriceDB();return {added,tk};
+}
+function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];savePriceDB();}
+/* resumen para la vista: por ticker -> n puntos, rango, último precio */
+function pricedbSummary(){const out=[];pricedbTickers().forEach(t=>{const ds=Object.keys(PRICEDB.px[t]).sort();if(!ds.length)return;const m=PRICEDB.tickers[t]||{};out.push({t,n:m.n||t,s:m.s||"",c:m.c||"#1E5FD1",b:m.b,np:ds.length,from:ds[0],to:ds[ds.length-1],last:PRICEDB.px[t][ds[ds.length-1]]});});
+  out.sort((a,b)=>a.t<b.t?-1:1);const id=Object.keys(PRICEDB.ipsa||{});return {rows:out,ipsaN:id.length,ipsaFrom:id.length?id.sort()[0]:null,ipsaTo:id.length?id.sort()[id.length-1]:null};}
+/* deriva un dataset de análisis (IMP) desde la base, resampleado a la frecuencia pedida (reutiliza impStats/impBetaCorr) */
+function pricedbToIMP(freq){
+  freq=freq||"mensual";const PY={diario:252,semanal:52,mensual:12}[freq]||12;
+  const tickers=pricedbTickers();if(!tickers.length||!Object.keys(PRICEDB.ipsa||{}).length)return null;
+  const rs=m=>{const o={};Object.keys(m).sort().forEach(d=>{o[periodKey(d,freq)]=m[d];});return o;};
+  const ipsaP=rs(PRICEDB.ipsa),tickP={};tickers.forEach(t=>tickP[t]=rs(PRICEDB.px[t]));
+  let periods=Object.keys(ipsaP).sort().filter(pk=>tickers.some(t=>tickP[t][pk]!=null));
+  if(periods.length<4)return null;
+  const benchPrices=periods.map(pk=>ipsaP[pk]);if(benchPrices.some(v=>!isFinite(v)||v<=0))return null;
+  const bs=impStats(benchPrices,PY),rf=(typeof RF==="number"&&isFinite(RF)?RF:5.5),benchRet=bs.retAnn*100,prima=benchRet-rf;
+  const assets=[],dropped=[];let ci=0;
+  tickers.forEach(t=>{const arr=periods.map(pk=>tickP[t][pk]);if(arr.some(v=>v==null||!isFinite(v)||v<=0)){dropped.push(t);return;}
+    const st=impStats(arr,PY),bc=impBetaCorr(st.rets,bs.rets),retAnn=st.retAnn*100,er=rf+bc.beta*prima,jensen=retAnn-er,alphaR=(st.mean-bc.beta*bs.mean)*PY*100,sharpe=st.sigAnn>0?(retAnn-rf)/(st.sigAnn*100):0;
+    const meta=PRICEDB.tickers[t]||{};
+    assets.push({t,n:meta.n||t,s:meta.s||"sistema",c:meta.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci++%IMP_PAL.length]:"#1E5FD1"),b:bc.beta,rets:st.rets.map(r=>r*100),prices:arr,a24:{ret:retAnn,sig:st.sigAnn*100,r2:bc.r2,corr:bc.corr,jensen,alphaR,sharpe,er,tot:st.total*100}});});
+  if(assets.length<1)return null;
+  const N=assets.length,corr=[];for(let i=0;i<N;i++){corr[i]=[];for(let j=0;j<N;j++)corr[i][j]=i===j?1:impBetaCorr(assets[i].rets.map(x=>x/100),assets[j].rets.map(x=>x/100)).corr;}
+  return {freq,rf,prima,perYear:PY,window:periods[0]+" a "+periods[periods.length-1]+" · base del sistema ("+freq+")",n:periods.length-1,labels:periods.slice(1),
+    bench:{name:"IPSA",prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-rf)/(bs.sigAnn*100):0},assets,corr,dropped};
+}
+/* activa la base como universo de análisis/simulación (vía la maquinaria de import) */
+function pricedbActivateAnalysis(freq){freq=freq||pricedbFreq;pricedbFreq=freq;lsSet("inv_pricedb_freq",freq);
+  const imp=pricedbToIMP(freq);if(!imp){window.alert("Aún no hay suficiente data en la base para construir el análisis. Carga al menos 4 fechas con IPSA y precios.");return false;}
+  IMP=imp;impActiveId="datos";lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id","datos");applyDataset("import");return true;}
+/* actualiza los seguimientos/historia de TODAS las carteras con los precios de la base (catch-up de varios días) */
+function pricedbApplyToProjects(){
+  const px=PRICEDB.px||{},ipsaM=PRICEDB.ipsa||{};
+  const sk={};Object.keys(px).forEach(t=>sk[t]=Object.keys(px[t]).sort());const ik=Object.keys(ipsaM).sort();
+  const allDates=pricedbAllDates();
+  let nProj=0,nCli=0,nPts=0;
+  CLIENTS.forEach(c=>{const projs=clientProjects(c.id)||[];let touched=false;
+    projs.forEach(p=>{const ws=p.weeks||[];if(!ws.length)return;const held=(p.holdings||[]).map(h=>h.t);if(!held.length)return;
+      const baseDate=ws[0].date,basePrices=ws[0].prices||{};
+      const exIdx={};ws.forEach((w,i)=>{if(exIdx[w.date]==null)exIdx[w.date]=i;});
+      let pts=0;
+      allDates.forEach(D=>{if(D<=baseDate)return;
+        if(!held.some(t=>px[t]&&px[t][D]!=null))return;
+        const ip=pdAsOf(ipsaM,ik,D);
+        if(exIdx[D]!=null){const w=ws[exIdx[D]];if(w.ev)return;w.prices=w.prices||{};let ch=false;held.forEach(t=>{if(px[t]&&px[t][D]!=null){w.prices[t]=px[t][D];ch=true;}});if(ip!=null){w.ipsa=ip;ch=true;}if(ch)pts++;}
+        else{const prices={};held.forEach(t=>{const v=(px[t]&&px[t][D]!=null)?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));prices[t]=(v!=null?v:basePrices[t]);});
+          ws.push({date:D,ipsa:ip!=null?ip:(ws[ws.length-1].ipsa||0),prices});pts++;}
+      });
+      if(pts){const tg=ws.map((w,i)=>({w,i}));tg.sort((a,b)=>a.w.date<b.w.date?-1:a.w.date>b.w.date?1:a.i-b.i);p.weeks=tg.map(x=>x.w);touched=true;nProj++;nPts+=pts;}
+    });
+    if(touched){clientSaveProjects(c.id,projs);nCli++;}
+  });
+  syncProj();return {nProj,nCli,nPts};
+}
+/* ===================== MÓDULO DATOS (vista) ===================== */
+function datosTk(r){return `<b style="color:${r.c||"#1E5FD1"}">${r.t}</b> <span style="color:var(--muted);font-size:11px">${(""+(r.n||r.t)).replace(/</g,"&lt;")}</span>`;}
+function viewDatos(){const pg=page||"base";if(pg==="cargar")return datosCargar();if(pg==="cierre")return datosCierre();return datosBase();}
+function datosBase(){
+  const S=pricedbSummary(),empty=pricedbEmpty();
+  const active=(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos");
+  const freqSeg=`<div class="home-seg" role="group" aria-label="Frecuencia de análisis">${["diario","semanal","mensual"].map(f=>`<button data-dfreq="${f}" class="${pricedbFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
+  const kpis=`<div class="tiles">
+    ${tile("Acciones en la base",empty?"—":String(S.rows.length),"con historial cargado",indigo,ink)}
+    ${tile("Cobertura IPSA",S.ipsaN?(S.ipsaN+" fechas"):"—",S.ipsaFrom?(S.ipsaFrom+" → "+S.ipsaTo):"sin IPSA aún",indigo,ink)}
+    ${tile("Última actualización",PRICEDB.updated||"—","de la base",indigo,ink)}
+    ${tile("Universo de análisis",active?"Datos del sistema":(DATASET==="demo"?"IPSA demo":"Importado"),active?"activo":"actívalo abajo",indigo,active?green:muted)}</div>`;
+  const rows=empty?"":S.rows.map(r=>`<tr><td>${datosTk(r)}</td><td>${r.s||"—"}</td><td class="r">${r.np}</td><td>${r.from} → ${r.to}</td><td class="r">${fmtP(r.last)}</td><td class="r">${r.b!=null?r.b.toFixed(2):"—"}</td><td class="r"><button class="wbtn del" data-ddel="${r.t}" title="Quitar de la base">✕</button></td></tr>`).join("");
+  const table=empty?`<div class="note" style="margin:0">Tu base de precios está vacía. Ve a <b>Cargar planilla</b> para subir tus archivos de Investing, o usa <b>Cierre diario</b> para empezar a ingresar precios.</div>`
+    :`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Puntos</th><th>Rango de fechas</th><th class="r">Último</th><th class="r">β</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const actions=`<div class="datos-acts">
+    <button class="btn btn-pri" data-dactivate ${empty?"disabled":""}>Activar como universo de análisis</button>
+    <button class="btn" data-dapply ${empty?"disabled":""}>↻ Actualizar carteras con la base</button>
+    <button class="btn" data-dgo="cargar">+ Cargar planilla</button>
+    <button class="btn" data-dgo="cierre">Cierre diario</button>
+    <span class="datos-freq"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span></div>`;
+  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions);
+  const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
+  return intro+tbl;
+}
+function datosCargar(){
+  const drop=card("Cargar planilla a la base","Sube tus CSV/XLSX de Investing — un combinado (Fecha;IPSA;TICKER…) o un archivo por acción. Diario, semanal o mensual. Se fusionan en la base por fecha (lo nuevo actualiza, nunca borra).",
+    `<div class="imp-dz" id="dDrop" data-dpick><input type="file" id="dFile" multiple accept=".csv,.txt,.xlsx" style="display:none"><div style="font-size:30px;line-height:1">📈</div><div><b>Arrastra tus archivos aquí</b> o haz clic para elegir</div><div class="genl" style="margin:6px 0 0">CSV de Investing o XLSX · una o varias acciones · incluye una columna IPSA como benchmark</div></div>
+    ${impMsg?`<div class="note" style="margin:11px 0 0;color:var(--red)">${impMsg}</div>`:""}
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-dtmpl>Descargar plantilla CSV</button><button class="btn" data-dgo="base">← Volver a la base</button></div>`);
+  let preview="";
+  if(impFiles.length){
+    const rows=impFiles.map((s,i)=>`<tr><td><b>${(""+s.name).replace(/</g,"&lt;")}</b></td><td class="r">${s.dates.length}</td><td>${s.dates[0]} → ${s.dates[s.dates.length-1]}</td><td class="r">${fmtP(s.closes[s.closes.length-1])}</td><td class="r"><button class="wbtn del" data-drm="${i}">✕</button></td></tr>`).join("");
+    preview=card("Listo para cargar",`${impFiles.length} serie(s) detectada(s) · revisa y confirma`,{html:`<div class="tw"><table><thead><tr><th>Serie</th><th class="r">Fechas</th><th>Rango</th><th class="r">Último</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin:13px 1.1rem 0"><button class="btn btn-pri" data-dmerge>Cargar ${impFiles.length} serie(s) a la base</button><button class="btn" data-dclear>Descartar</button></div>
+      <div class="note" style="margin:11px 1.1rem 0">La serie llamada <b>IPSA</b> (o índice/benchmark) se usa como mercado. Tras cargar, se actualizan automáticamente los seguimientos de tus carteras con las fechas nuevas.</div>`,flush:true});
+  }
+  return drop+preview;
+}
+function datosCierre(){
+  const C=consolidatedSeries(),tickers=pricedbTickers(),held=allHeldTickers().map(h=>h.t);
+  const all=[...new Set([...tickers,...held])].sort();
+  const today=new Date().toISOString().slice(0,10);
+  const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="${(last!=null&&last!=="")?last:""}" aria-label="Precio ${t}"></div>`;}).join("")
+    :`<div class="note" style="margin:0">Aún no hay acciones. Carga una planilla en <b>Cargar planilla</b> o registra una compra en Inversión.</div>`;
+  const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="${lastKnownIpsa(C)}"></label></div>
+    <div class="ppx-grid" style="max-height:52vh">${rows}</div>
+    <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:14px"><button class="btn" data-dgo="base">← Volver a la base</button><button class="btn btn-pri" data-dcapply>Guardar cierre y actualizar carteras</button></div>`;
+  return card("Cierre diario","Ingresa los precios de cierre del día. Se guardan en la base y se aplican a todos los proyectos que tengan esas acciones. Si te atrasaste varios días, mejor carga la planilla completa en “Cargar planilla”.",body);
+}
+function attachDatos(){
+  document.querySelectorAll("[data-dgo]").forEach(b=>b.onclick=()=>{page=b.dataset.dgo;render();});
+  document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
+  const da=document.querySelector("[data-dactivate]");if(da)da.onclick=()=>{if(pricedbActivateAnalysis(pricedbFreq))window.alert("Listo. El análisis y las simulaciones ahora usan tu base de precios ("+pricedbFreq+").");};
+  const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();render();window.alert("Seguimientos actualizados con la base.\n\n"+r.nPts+" punto(s) agregados/actualizados en "+r.nProj+" cartera(s).");};
+  document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{if(confirm('¿Quitar '+b.dataset.ddel+' de la base de precios? (no afecta tus carteras ya registradas)')){pricedbDeleteTicker(b.dataset.ddel);render();}});
+  const fi=document.getElementById("dFile"),pick=document.querySelector("[data-dpick]");
+  if(pick&&fi){pick.onclick=e=>{if(e.target!==fi)fi.click();};fi.onchange=()=>{if(fi.files&&fi.files.length)impOnFiles(fi.files);};
+    const dz=document.getElementById("dDrop");if(dz){dz.ondragover=e=>{e.preventDefault();dz.classList.add("over");};dz.ondragleave=()=>dz.classList.remove("over");dz.ondrop=e=>{e.preventDefault();dz.classList.remove("over");if(e.dataTransfer.files.length)impOnFiles(e.dataTransfer.files);};}}
+  document.querySelectorAll("[data-drm]").forEach(b=>b.onclick=()=>{impFiles.splice(+b.dataset.drm,1);render();});
+  const dcl=document.querySelector("[data-dclear]");if(dcl)dcl.onclick=()=>{impFiles=[];impMsg="";render();};
+  const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) en "+r.tk+" acción(es).\n\nSeguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
+  const dtm=document.querySelector("[data-dtmpl]");if(dtm)dtm.onclick=()=>impDownloadTemplate();
+  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
+}
 function impDownloadTemplate(){const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B\n2025-01-31;6500;52000;5800;38000\n2025-02-28;6610;53400;6010;36500\n2025-03-31;6720;55100;5950;40200\n2025-04-30;6680;54200;6230;39100\n2025-05-31;6810;56800;6480;42500\n2025-06-30;6905;57500;6390;41000\n";const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
 function viewImport(){
   const tmpl=card("Importar acciones para analizar","Carga muchas acciones candidatas, córreles el análisis completo — CAPM, riesgo-retorno, SML, correlaciones — y decide antes de armar tu portafolio",
@@ -3446,7 +3604,8 @@ function viewImport(){
          <button class="btn btn-pri" id="impcalc">Calcular y guardar análisis →</button><button class="btn" id="impreset">Limpiar</button></div>
        ${impMsg?`<div class="note" style="margin-top:9px;color:var(--amber)">${impMsg}</div>`:""}`);
   }
-  return tmpl+saved+up+cfg;
+  const dbanner=`<div class="card" style="background:linear-gradient(160deg,var(--a-50),var(--card) 60%);border-color:var(--a-200)"><div class="bd" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:220px"><div style="font:800 13.5px var(--font);color:var(--navy)">¿Quieres centralizar tus precios?</div><div style="font-size:12px;color:var(--muted);margin-top:3px">El nuevo módulo <b>Datos</b> guarda todas tus planillas en una sola base que alimenta el análisis, las simulaciones, el Home y actualiza los seguimientos de todas tus carteras. Esta pestaña sigue creando análisis sueltos.</div></div><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
+  return dbanner+tmpl+saved+up+cfg;
 }
 function attachImport(){
   document.querySelectorAll("[data-impfreq]").forEach(b=>b.onclick=()=>{impFreq=b.dataset.impfreq;render();});
@@ -3954,7 +4113,7 @@ function authLock(){try{sessionStorage.removeItem("inv_sess_v1");localStorage.re
 
 /* ===== PROYECTOS: análisis + simulaciones + inversiones vinculados ===== */
 function currentAnalysisId(){return (typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId)?String(impActiveId):"demo";}
-function analysisList(){const out=[{id:"demo",name:"IPSA · demo",kind:"demo",n:(typeof DEMO!=="undefined"&&DEMO.stocks)?DEMO.stocks.length:14}];(IMPSETS||[]).forEach(s=>out.push({id:String(s.id),name:s.name,kind:"import",n:(s.imp&&s.imp.assets)?s.imp.assets.length:0}));return out;}
+function analysisList(){const out=[{id:"demo",name:"IPSA · demo",kind:"demo",n:(typeof DEMO!=="undefined"&&DEMO.stocks)?DEMO.stocks.length:14}];if(typeof pricedbEmpty==="function"&&!pricedbEmpty())out.push({id:"datos",name:"Datos del sistema",kind:"datos",n:pricedbTickers().length});(IMPSETS||[]).forEach(s=>out.push({id:String(s.id),name:s.name,kind:"import",n:(s.imp&&s.imp.assets)?s.imp.assets.length:0}));return out;}
 function analysisName(id){const a=analysisList().find(x=>x.id===String(id));return a?a.name:"(no disponible)";}
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
@@ -3977,7 +4136,7 @@ function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String
 function projDelLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;const L=projLinks(p),s=String(id);if(kind==="analysis")L.analyses=L.analyses.filter(x=>String(x)!==s);else L.scenarios=L.scenarios.filter(x=>String(x)!==s);saveProjects();render();}
 function projPrimaryAnalysis(p){const L=projLinks(p);if(L.primary&&L.analyses.map(String).indexOf(String(L.primary))>=0)return String(L.primary);return L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}
 function projSetPrimary(pid,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;projLinks(p).primary=String(id);saveProjects();render();}
-function activateAnalysis(id){if(!id)return false;if(String(id)==="demo"){applyDataset("demo");return true;}if(typeof impsetActivate==="function"&&(IMPSETS||[]).some(s=>String(s.id)===String(id))){impsetActivate(id);return true;}return false;}
+function activateAnalysis(id){if(!id)return false;if(String(id)==="demo"){applyDataset("demo");return true;}if(String(id)==="datos"){return pricedbActivateAnalysis();}if(typeof impsetActivate==="function"&&(IMPSETS||[]).some(s=>String(s.id)===String(id))){impsetActivate(id);return true;}return false;}
 function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;activeId=p.id;saveProjects();syncProj();if(!activateAnalysis(projPrimaryAnalysis(p)))render();}
 
 function viewProyectos(){
@@ -4097,6 +4256,7 @@ function clientLoad(){
   SCEN=lsGet("pf_scenarios_v1")||[];
   IMPSETS=lsGet("inv_impsets_v1")||[];impActiveId=lsGet("inv_imp_active_id")||null;
   IMP=lsGet("inv_import_v1")||null;
+  PRICEDB=(function(){const d=lsGet("inv_pricedb_v1");return (d&&d.px)?d:{tickers:{},px:{},ipsa:{}};})();pricedbFreq=lsGet("inv_pricedb_freq")||"mensual";
   invProfile=lsGet("inv_profile_v1")||null;profAns=lsGet("inv_profile_ans_v1")||{};profGoal=lsGet("inv_profile_goal_v1")||{};profEdit=false;
   try{ if(IMP&&lsGet("inv_dataset_active")==="import"){setActive(impToActive());DATASET="import";} else {setActive(DEMO);DATASET="demo";} }
   catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
@@ -4161,8 +4321,15 @@ function labelToDate(lab){const M={ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago
 /* histórico de precios por acción + IPSA: universo de análisis (todo el historial disponible) + lo ingresado en los seguimientos */
 function consolidatedSeries(){
   const tick={},names={},cols={},ipsaMap={};
-  // 1) base: historial del universo IPSA — TODAS las acciones con data histórica, no solo las invertidas
-  try{
+  // 1) base del sistema (PRICEDB): TODAS las acciones con data histórica cargada
+  let usedDB=false;
+  try{if(typeof PRICEDB!=="undefined"&&PRICEDB&&PRICEDB.px&&Object.keys(PRICEDB.px).length){usedDB=true;
+    Object.keys(PRICEDB.tickers||{}).forEach(t=>{const m=PRICEDB.tickers[t]||{};names[t]=m.n||t;cols[t]=m.c||cols[t]||"#1E5FD1";});
+    Object.keys(PRICEDB.px).forEach(t=>{names[t]=names[t]||t;Object.keys(PRICEDB.px[t]).forEach(d=>{const v=PRICEDB.px[t][d];if(v>0&&isFinite(v))(tick[t]=tick[t]||{})[d]=v;});});
+    Object.keys(PRICEDB.ipsa||{}).forEach(d=>{const v=PRICEDB.ipsa[d];if(v>0&&isFinite(v))ipsaMap[d]=v;});
+  }}catch(e){}
+  // fallback: universo demo IPSA reconstruido (mientras la base esté vacía)
+  if(!usedDB)try{
     const src=(typeof DEMO!=="undefined"&&DEMO.stocks&&DEMO.stocks.length)?DEMO.stocks:STOCKS;
     const labs=(typeof DATA!=="undefined"&&DATA.labels)?DATA.labels:null;
     if(src&&labs&&labs.length){
@@ -4221,6 +4388,7 @@ function lastKnownIpsa(C){C=C||consolidatedSeries();const ds=Object.keys(C.ipsaM
 function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;saveProjects();}else{try{localStorage.setItem("pf_projects_v1__"+cid,JSON.stringify(projs));}catch(e){saveWarn();}}}
 /* agrega un punto de valoración (precios de cierre) a TODOS los proyectos con seguimiento */
 function applyPlatformPrices(date,ipsa,priceMap){
+  try{pricedbUpsertDay(date,ipsa,priceMap);}catch(e){}   // el cierre diario también alimenta la base del sistema
   let nProj=0,nCli=0,nSkip=0;
   CLIENTS.forEach(c=>{
     const projs=clientProjects(c.id)||[];let touched=false;
