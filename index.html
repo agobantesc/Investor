@@ -3874,10 +3874,14 @@ function opDo(){
   if(side==="sell"){const IM=invMetrics();const ps=IM&&IM.perStock.find(x=>x.hd.t===t);const held=ps?ps.sh:0;
     if(held<=1e-9){window.alert("No tienes acciones de "+t+" para vender.");return;}
     if(q>held+1e-6){if(!window.confirm("Indicaste "+q+" pero solo tienes "+held.toLocaleString("es-CL",{maximumFractionDigits:2})+". ¿Vender todo lo que tienes?"))return;qty=held;}}
-  const prices=Object.assign({},last?last.prices:{});prices[t]=p;
-  const ipsa=last?last.ipsa:1;
   const date=(dEl&&dEl.value)?dEl.value:(opState.date||new Date().toISOString().slice(0,10));
+  let basePrices=last?last.prices:{},ipsa=last?last.ipsa:1;
+  // si ya hay una valoración (no-operación) en esa fecha —p.ej. de una carga masiva del módulo Datos— reutiliza sus precios y reemplázala por la operación (evita fechas duplicadas)
+  const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev);
+  if(sameIdx>=0){const sw=PF.weeks[sameIdx];basePrices=sw.prices||basePrices;if(sw.ipsa!=null)ipsa=sw.ipsa;PF.weeks.splice(sameIdx,1);}
+  const prices=Object.assign({},basePrices);prices[t]=p;
   PF.weeks.push({date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}});
+  PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);   // mantiene el orden cronológico aunque la operación sea de una fecha anterior
   saveProjects();
   opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
   render();
