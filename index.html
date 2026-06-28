@@ -1524,7 +1524,7 @@ let simState={amount:0,sel:{},profile:"moderado",nstocks:3,proj:"semanal",horizo
 const HZN={semanal:[12,26,52],mensual:[12,24,36],anual:[1,2,3,4]};
 const HZNUNIT={semanal:"sem",mensual:"meses",anual:"años"};
 const HZNDEF={semanal:52,mensual:36,anual:3};
-const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1,inv_profile_goal_v1:1,inv_pricedb_v1:1};
+const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1,inv_profile_goal_v1:1,inv_pricedb_v1:1,inv_pricedb_freq:1};
 let activeClient=localStorage.getItem("inv_active_client")||"c_me";
 function ck(k){return CLIENT_KEYS[k]?(k+"__"+activeClient):k;}
 function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -3498,7 +3498,7 @@ function pricedbApplyToProjects(){
         const ip=pdAsOf(ipsaM,ik,D);
         if(exIdx[D]!=null){const w=ws[exIdx[D]];if(w.ev)return;w.prices=w.prices||{};let ch=false;held.forEach(t=>{if(px[t]&&px[t][D]!=null){w.prices[t]=px[t][D];ch=true;}});if(ip!=null){w.ipsa=ip;ch=true;}if(ch)pts++;}
         else{const prices={};held.forEach(t=>{const v=(px[t]&&px[t][D]!=null)?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));prices[t]=(v!=null?v:basePrices[t]);});
-          ws.push({date:D,ipsa:ip!=null?ip:(ws[ws.length-1].ipsa||0),prices});pts++;}
+          ws.push({date:D,ipsa:ip!=null?ip:(ws[0].ipsa||0),prices});pts++;}   // fallback IPSA past-aware (compra), nunca un valor futuro
       });
       if(pts){const tg=ws.map((w,i)=>({w,i}));tg.sort((a,b)=>a.w.date<b.w.date?-1:a.w.date>b.w.date?1:a.i-b.i);p.weeks=tg.map(x=>x.w);touched=true;nProj++;nPts+=pts;}
     });
