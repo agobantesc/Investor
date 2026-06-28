@@ -3971,8 +3971,8 @@ function opDo(){
   const prices=Object.assign({},basePrices);prices[t]=p;
   PF.weeks.push({date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}});
   PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);   // mantiene el orden cronológico aunque la operación sea de una fecha anterior
-  // el precio real ingresado en la operación también alimenta la base del sistema (solo ese ticker en esa fecha; el IPSA/otros precios son arrastre, no observaciones)
-  try{pricedbUpsertDay(date,null,{[t]:p});}catch(e){}
+  // NOTA: el precio de la operación NO se escribe en la base de precios (PRICEDB) — es un dato de contabilidad
+  // (compra/venta), no un cierre de mercado. Se conserva solo en el libro de operaciones del proyecto (ev:trade).
   saveProjects();
   opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
   render();
@@ -4429,7 +4429,8 @@ function consolidatedSeries(){
     (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||names[hd.t]||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
     (p.weeks||[]).forEach(w=>{
       if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0)ipsaMap[w.date]=w.ipsa;
-      const pr=w.prices||{};Object.keys(pr).forEach(t=>{const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
+      const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // precio de la operación: es contabilidad, no un cierre → no mezclar en la serie de precios
+      const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
     });
   });
   return {tick,names,cols,ipsaMap};
