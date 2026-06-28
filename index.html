@@ -764,6 +764,8 @@
   .topnav:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 13px rgba(30,95,209,.16);}
   .topnav.on{color:#fff;background:linear-gradient(180deg,var(--a-400),var(--accent));border-color:transparent;box-shadow:0 3px 11px rgba(30,95,209,.32);}
   .topnav.on svg{opacity:1;}
+  .topnav-home{font-weight:800;}
+  .topnav-home:not(.on){color:var(--accent);border-color:var(--accent);background:var(--a-50);}
   @media(max-width:1080px){.topnav{padding:0 .6rem;}}
 
   /* ════════════════ META DE ANÁLISIS (ventana de datos) ════════════════ */
@@ -786,8 +788,8 @@
     background:linear-gradient(176deg,#FFFFFF 0%,#CADFF7 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;}
   .wm-dot{margin-bottom:5px;box-shadow:0 0 0 3px rgba(34,211,238,.22),0 0 11px rgba(34,211,238,.55);}
 
-  .snav{padding:.6rem .72rem .85rem;}
-  .sgroup{font-size:8px;letter-spacing:2.5px;color:#5D77A1;padding:.35rem .72rem .6rem;margin-top:.2rem;}
+  .snav{padding:1rem .72rem .85rem;}
+  .sgroup{font-size:8px;letter-spacing:2.5px;color:#5D77A1;padding:.35rem .72rem .6rem;margin-top:.1rem;}
   .modbtn{padding:.74rem .72rem;font-size:13px;font-weight:650;color:#C0D3EB;border-radius:12px;gap:12px;margin-bottom:5px;
     border:1px solid transparent;background:transparent;}
   .modbtn:hover{background:rgba(255,255,255,.06);color:#fff;transform:none;}
@@ -1226,7 +1228,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="cli-wrap"><button class="cli-btn" id="clientBtn"><span class="cli-dot"></span><span class="cli-lbl">Cliente</span><span class="cli-name" id="clientName"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="cli-menu" id="clientMenu"></div></div><div class="tnav"><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="cli-wrap"><button class="cli-btn" id="clientBtn"><span class="cli-dot"></span><span class="cli-lbl">Cliente</span><span class="cli-name" id="clientName"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="cli-menu" id="clientMenu"></div></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Volver al inicio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>Inicio</button><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
@@ -1411,7 +1413,7 @@ const ICO={
  clientes:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
 };
 function renderChrome(){
-  let nav=`<button class="modbtn home-btn ${modulo==='inicio'?'on':''}" data-mod="inicio"><span class="mi">${ICO.inicio}</span>Inicio</button>`;
+  let nav="";   // "Inicio" vive fijo en la barra superior (topbar), no en el menú lateral
   nav+=`<div class="sgroup">Módulos</div>`;
   ["eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
@@ -4177,7 +4179,7 @@ function authRender(){
     <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
     ${create?`<div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
     ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
-    <label class="auth-remember"><input type="checkbox" id="authRemember" ${(create||authRemembered())?"checked":""}> <span>Mantener sesión iniciada en este equipo</span></label>
+    <label class="auth-remember"><input type="checkbox" id="authRemember" ${(create||authRemembered())?"checked":""}> <span>Recordar contraseña en este equipo (no la pedirá al volver)</span></label>
     <button class="auth-btn" id="authGo">${create?"Crear acceso y entrar":"Entrar"}</button>
     ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
     <div class="auth-foot">Acceso local · tus datos viven solo en este navegador · simulación educativa, no es asesoría financiera</div>
@@ -4622,7 +4624,7 @@ function seedExamples(){
   }catch(e){}
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
-let homeStkFreq="mensual";
+let homeStkFreq="diario";
 function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
@@ -4670,14 +4672,15 @@ function viewHome(){
   const _greet=_hr<12?"Buenos días":_hr<20?"Buenas tardes":"Buenas noches";
   const _who=(typeof AUTH!=="undefined"&&AUTH&&AUTH.user)?(", "+(""+AUTH.user).replace(/</g,"&lt;")):"";
   const _fecha=_now.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-  const greetStrip=`<div class="home-greet"><div><div class="hg-hi">${_greet}${_who} 👋</div><div class="hg-date">${_fecha.charAt(0).toUpperCase()+_fecha.slice(1)} · tu panel para empezar el día</div></div><button class="btn btnu hg-cta" data-go="datos|cierre">↻ Cargar cierre del día</button></div>`;
+  const greetStrip=`<div class="home-greet"><div><div class="hg-hi">${_greet}${_who}</div><div class="hg-date">${_fecha.charAt(0).toUpperCase()+_fecha.slice(1)}</div></div><button class="btn btnu hg-cta" data-go="datos|cierre">↻ Cargar cierre del día</button></div>`;
   const patSeries=aggSeries(D.projs);
-  const hero=`<div class="home-hero ${T.gainNet>=0?"pos":"neg"}">
+  const _hpos=T.gainNet>=0,_hcol=_hpos?"#34D399":"#FB7185";
+  const hero=`<div class="home-hero ${_hpos?"pos":"neg"}">
     <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO</div>
-      <div class="hh-val">${fmtCLP(T.value)}</div>
+      <div class="hh-val" style="color:${_hcol}">${fmtCLP(T.value)}</div>
       <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}</div></div>
     ${patSeries.length>1?`<div class="hh-c">${heroSpark(patSeries)}</div>`:""}
-    <div class="hh-r"><div class="hh-gain">${sg(T.gainNet)}</div><div class="hh-pct">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
+    <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(T.gainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
   const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles">
     ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
