@@ -3971,6 +3971,8 @@ function opDo(){
   const prices=Object.assign({},basePrices);prices[t]=p;
   PF.weeks.push({date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}});
   PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);   // mantiene el orden cronológico aunque la operación sea de una fecha anterior
+  // el precio real ingresado en la operación también alimenta la base del sistema (solo ese ticker en esa fecha; el IPSA/otros precios son arrastre, no observaciones)
+  try{pricedbUpsertDay(date,null,{[t]:p});}catch(e){}
   saveProjects();
   opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
   render();
