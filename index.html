@@ -4156,13 +4156,28 @@ function betaTag(b){return b<0.8?"defensivo":b<1?"moderado":b<1.2?"de mercado":"
 
 /* ===================== DATOS CONSOLIDADOS DE SEGUIMIENTO ===================== */
 function allTrackedProjects(){const out=[];CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>out.push({c,p}));});return out;}
-/* histórico de precios por acción + IPSA, fusionando todos los seguimientos de todos los clientes */
+/* "jul-24" → "2024-07-15" (día medio del mes, para no chocar con fechas diarias de seguimiento) */
+function labelToDate(lab){const M={ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago:8,sep:9,oct:10,nov:11,dic:12};const p=(""+lab).split("-");const mo=M[(p[0]||"").toLowerCase()]||1;const yy=parseInt(p[1],10);const yr=isNaN(yy)?2025:(yy<100?2000+yy:yy);return yr+"-"+String(mo).padStart(2,"0")+"-15";}
+/* histórico de precios por acción + IPSA: universo de análisis (todo el historial disponible) + lo ingresado en los seguimientos */
 function consolidatedSeries(){
   const tick={},names={},cols={},ipsaMap={};
+  // 1) base: historial del universo IPSA — TODAS las acciones con data histórica, no solo las invertidas
+  try{
+    const src=(typeof DEMO!=="undefined"&&DEMO.stocks&&DEMO.stocks.length)?DEMO.stocks:STOCKS;
+    const labs=(typeof DATA!=="undefined"&&DATA.labels)?DATA.labels:null;
+    if(src&&labs&&labs.length){
+      const dts=labs.map(labelToDate);
+      src.forEach(s=>{names[s.t]=s.n||s.t;cols[s.t]=s.c||cols[s.t]||"#1E5FD1";
+        if(s.prices&&s.prices.length){const n=Math.min(s.prices.length,dts.length);for(let i=0;i<n;i++){const v=s.prices[i];if(v!=null&&isFinite(v)&&v>0)(tick[s.t]=tick[s.t]||{})[dts[i]]=v;}}});
+      // IPSA absoluto reconstruido desde los retornos de mercado (anclado ~8000 al cierre del histórico)
+      if(MKT&&MKT.rets&&MKT.rets.length){const r=MKT.rets,n=Math.min(r.length,dts.length),lvl=new Array(n);lvl[n-1]=8000;for(let i=n-1;i>0;i--)lvl[i-1]=lvl[i]/(1+(r[i]||0)/100);for(let i=0;i<n;i++)ipsaMap[dts[i]]=+lvl[i].toFixed(2);}
+    }
+  }catch(e){}
+  // 2) overlay: precios reales ingresados en los seguimientos (añaden fechas recientes / sobrescriben)
   allTrackedProjects().forEach(({p})=>{
-    (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
+    (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||names[hd.t]||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
     (p.weeks||[]).forEach(w=>{
-      if(w.ipsa!=null&&isFinite(w.ipsa))ipsaMap[w.date]=w.ipsa;
+      if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0)ipsaMap[w.date]=w.ipsa;
       const pr=w.prices||{};Object.keys(pr).forEach(t=>{const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
     });
   });
@@ -4358,23 +4373,26 @@ function viewHome(){
     ${tile("Ganancia neta",sg(T.gainNet),"después de comisiones",indigo,T.gainNet>=0?green:red)}
     ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital",indigo,Tpct>=0?green:red)}
     ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}</div>`);
-  // ranking de carteras más rentables (con seguimiento) — TODAS con formato estándar: tuyas y de clientes en igualdad
+  // rankings de carteras — separados: tus fondos (administración) vs carteras de clientes; mismo formato estándar
   const ranked=D.projs.filter(p=>p.hasData).sort((a,b)=>b.pct-a.pct);
   const medal=["🥇","🥈","🥉"];
-  const top=ranked.slice(0,9);
-  const cartCards=top.map((p,i)=>{const pos=p.pct>=0;const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
-    const mine=p.cliId==="c_me";
+  const cartCard=(p,i,isAdmin)=>{const pos=p.pct>=0;const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
     const badge=i<3?`<span class="cart-medal">${medal[i]}</span>`:`<span class="cart-num">${i+1}</span>`;
-    const owner=mine?`<span class="cart-own me">★ Tuya · modelo</span>`:`<span class="cart-own"><span class="rk-dot" style="background:${p.col}"></span>${(""+p.cli).replace(/</g,"&lt;")}</span>`;
-    return `<button class="home-cart ${i<3?"rk"+i:""} ${mine?"mine":""}" data-gohome="${p.cliId}|${p.pid}">
+    const owner=isAdmin?`<span class="cart-own me">★ Tuya · modelo</span>`:`<span class="cart-own"><span class="rk-dot" style="background:${p.col}"></span>${(""+p.cli).replace(/</g,"&lt;")}</span>`;
+    return `<button class="home-cart ${i<3?"rk"+i:""} ${isAdmin?"mine":""}" data-gohome="${p.cliId}|${p.pid}">
       <div class="cart-h">${badge}${owner}</div>
       <div class="cart-name">${(""+p.name).replace(/</g,"&lt;")}</div>
       <div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div>
       <div class="cart-spark">${spark}</div>
-      <div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;}).join("");
-  const rankBody=ranked.length?`<div class="home-cartgrid">${cartCards}</div>${ranked.length>9?`<div class="note" style="margin:11px 0 0">+${ranked.length-9} carteras más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todas →</a></div>`:""}`
-    :'<div class="note" style="margin:0">Aún no tienes carteras con seguimiento. Arma una en el <b>Constructor</b> y registra su compra inicial para empezar a comparar rentabilidades reales.</div>';
-  const rankCard=card("Proyectos más rentables","Rentabilidad neta de comisiones · todas las carteras —tuyas y de tus clientes— compiten en igualdad; las marcadas <b>★ Tuya · modelo</b> sirven de referencia replicable",rankBody);
+      <div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
+  const adminCarts=ranked.filter(p=>p.cliId==="c_me").slice(0,4);
+  const clientAll=ranked.filter(p=>p.cliId!=="c_me"),clientCarts=clientAll.slice(0,3);
+  const adminBody=adminCarts.length?`<div class="home-cartgrid">${adminCarts.map((p,i)=>cartCard(p,i,true)).join("")}</div>`
+    :`<div class="note" style="margin:0">Aún no tienes carteras propias con seguimiento. Arma una en el <b>Constructor</b> y registra su compra inicial — servirá de modelo para tus clientes.</div>`;
+  const adminCard=card("Tus mejores fondos · administración","Tus carteras propias (cliente Administración), netas de comisiones — el modelo replicable que ofreces a tus clientes",adminBody);
+  const clientBody=clientCarts.length?`<div class="home-cartgrid">${clientCarts.map((p,i)=>cartCard(p,i,false)).join("")}</div>${clientAll.length>3?`<div class="note" style="margin:11px 0 0">+${clientAll.length-3} carteras de clientes más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todas →</a></div>`:""}`
+    :`<div class="note" style="margin:0">Aún no gestionas carteras de clientes con seguimiento. Crea un cliente desde el selector (arriba) y registra su cartera.</div>`;
+  const clientCard=card("Mejores proyectos de clientes","Top 3 carteras de terceros que gestionas, por rentabilidad neta",clientBody);
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
   const mvRows=movers.length?movers.map(x=>`<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${x.chg>=0?green:red}">${(x.chg>=0?"▲ +":"▼ ")+x.chg.toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k])||""}</div>`).join("")
@@ -4392,15 +4410,15 @@ function viewHome(){
     ${stkBlock("Por rentabilidad","retorno acumulado",byRet,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red)}
     ${stkBlock("Por Sharpe","ajustado a riesgo",bySharpe,s=>s.sharpe.toFixed(2),s=>s.sharpe>=0?green:red)}
     ${stkBlock("Por α de Jensen","sobre/bajo lo exigido",byJensen,s=>(s.jensen>=0?"+":"")+s.jensen.toFixed(1)+"%",s=>s.jensen>=0?green:red)}</div>`
-    :`<div class="note" style="margin:0">Aún no hay suficientes precios en tus seguimientos para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres de un día, o registra operaciones en tus proyectos.</div>`;
-  const stkCard=card("Acciones destacadas",`Rankings calculados con los precios reales ingresados en tus seguimientos · frecuencia ${homeStkFreq}`,stkInner,freqSeg);
+    :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
+  const stkCard=card("Acciones destacadas",`Todas las acciones con historial disponible (universo IPSA + tus seguimientos) · frecuencia ${homeStkFreq}`,stkInner,freqSeg);
   const actions=card("Acciones rápidas","",`<div class="home-actions">
     <button class="home-act" data-openprices><span class="ha-i">↻</span><b>Actualizar precios</b><span class="ha-s">Cierres del día · toda la plataforma</span></button>
     <button class="home-act" data-go="sim|constructor"><span class="ha-i">＋</span><b>Armar nueva cartera</b><span class="ha-s">Constructor de portafolio</span></button>
     <button class="home-act" data-go="eval|importar"><span class="ha-i">↥</span><b>Importar acciones</b><span class="ha-s">Analiza tu propio universo</span></button>
     <button class="home-act" data-go="clientes|admin"><span class="ha-i">👥</span><b>Administrar clientes</b><span class="ha-s">Carteras de terceros</span></button>
     <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
-  return hero+tiles+rankCard+stkCard+mvCard+actions;
+  return hero+tiles+adminCard+clientCard+stkCard+mvCard+actions;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
