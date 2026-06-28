@@ -3499,9 +3499,9 @@ function cfgRender(){
   m.querySelectorAll("[data-scale]").forEach(b=>b.onclick=()=>{applyScale((+b.dataset.scale)/100);cfgRender();});
   const _cfp=m.querySelector("#cfgPro");if(_cfp)_cfp.onclick=()=>cfgGo("pro","realtime");
   const _lk=m.querySelector("#cfgLock");if(_lk)_lk.onclick=()=>{cfgClose();authLock();};
-  const _ac=m.querySelector("#cfgAuthChg");if(_ac)_ac.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
+  const _ac=m.querySelector("#cfgAuthChg");if(_ac)_ac.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authInit();};
   const _ao=m.querySelector("#cfgAuthOff");if(_ao)_ao.onclick=()=>{if(confirm("¿Quitar la protección por contraseña?")){AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{sessionStorage.removeItem("inv_sess_v1");localStorage.removeItem("inv_remember_v1");}catch(e){}cfgRender();}};
-  const _an=m.querySelector("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
+  const _an=m.querySelector("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authInit();};
   const bkSync=()=>{if(modulo==="clientes"||(modulo==="inv"&&page==="contabilidad")){try{render();}catch(e){}}};
   const _bkOp=m.querySelector("#cfgBkOp");if(_bkOp)_bkOp.onchange=()=>{const v=_bkOp.value;if(v==="custom"){BROKER.op="custom";}else{Object.assign(BROKER,BROKER_PRESETS[v]);}saveBroker();cfgRender();bkSync();};
   const bkSet=()=>{BROKER.op="custom";BROKER.pct=+(m.querySelector("#cfgBkPct")||{}).value||0;BROKER.min=+(m.querySelector("#cfgBkMin")||{}).value||0;BROKER.max=+(m.querySelector("#cfgBkMax")||{}).value||0;BROKER.iva=!!(m.querySelector("#cfgBkIva")||{}).checked;saveBroker();const su=m.querySelector("#cfgBkSum");if(su)su.textContent=brokerSummary();const op=m.querySelector("#cfgBkOp");if(op)op.value="custom";};
@@ -3926,8 +3926,8 @@ function authRender(){
   </div>`;
   const go=document.getElementById("authGo");if(go)go.onclick=authSubmit;
   ["authUser","authPass","authPass2"].forEach(id=>{const e=document.getElementById(id);if(e)e.onkeydown=ev=>{if(ev.key==="Enter")authSubmit();};});
-  const sk=document.getElementById("authSkip");if(sk)sk.onclick=()=>{AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);authShow(false);};
-  const fg=document.getElementById("authForgot");if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Puedes restablecerlo (se mantienen tus datos) y crear uno nuevo.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer acceso";f.onclick=()=>{if(confirm('¿Restablecer el acceso? Se quitará la contraseña actual (tus proyectos y datos se conservan).')){AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authRender();}};}};
+  const sk=document.getElementById("authSkip");if(sk)sk.onclick=()=>{AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authShow(false);};
+  const fg=document.getElementById("authForgot");if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Puedes restablecerlo (se mantienen tus datos) y crear uno nuevo.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer acceso";f.onclick=()=>{if(confirm('¿Restablecer el acceso? Se quitará la contraseña actual (tus proyectos y datos se conservan).')){AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authRender();}};}};
 }
 async function authSubmit(){
   const u=(document.getElementById("authUser")||{}).value||"",p=(document.getElementById("authPass")||{}).value||"";
@@ -4160,7 +4160,7 @@ function consolidatedSeries(){
     (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
     (p.weeks||[]).forEach(w=>{
       if(w.ipsa!=null&&isFinite(w.ipsa))ipsaMap[w.date]=w.ipsa;
-      const pr=w.prices||{};Object.keys(pr).forEach(t=>{const v=pr[t];if(v==null||!isFinite(v))return;(tick[t]=tick[t]||{})[w.date]=v;});
+      const pr=w.prices||{};Object.keys(pr).forEach(t=>{const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
     });
   });
   return {tick,names,cols,ipsaMap};
@@ -4172,6 +4172,9 @@ function periodKey(dateStr,freq){
 }
 /* reduce un mapa fecha→valor a puntos por período (último de cada período) */
 function resampleMap(map,freq){const dates=Object.keys(map).sort();const byP={};dates.forEach(d=>{byP[periodKey(d,freq)]={d,v:map[d]};});return Object.keys(byP).sort().map(k=>byP[k]);}
+function periodIndex(dateStr,freq){const d=new Date(dateStr+"T00:00:00");if(freq==="mensual")return d.getFullYear()*12+d.getMonth();if(freq==="semanal"){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);return Math.round(t.getTime()/(7*864e5));}return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);}
+/* ¿dos puntos resampleados son de períodos consecutivos? (en diario se toleran fines de semana/feriado) */
+function gapOK(d0,d1,freq){if(freq==="diario"){const g=(new Date(d1+"T00:00:00")-new Date(d0+"T00:00:00"))/864e5;return g>0&&g<=4;}return (periodIndex(d1,freq)-periodIndex(d0,freq))===1;}
 /* métricas por acción a partir del historial real ingresado (no del análisis) */
 function seguimientoStats(freq){
   const C=consolidatedSeries();const PPY=freq==="diario"?252:freq==="semanal"?52:12;
@@ -4180,13 +4183,13 @@ function seguimientoStats(freq){
   const out=[];
   Object.keys(C.tick).forEach(t=>{
     const rs=resampleMap(C.tick[t],freq);if(rs.length<3)return;
-    const vals=rs.map(x=>x.v),rets=[];for(let i=1;i<vals.length;i++)rets.push(vals[i]/vals[i-1]-1);
-    if(!rets.length)return;
+    const vals=rs.map(x=>x.v);
     const total=vals[vals.length-1]/vals[0]-1;
-    const mean=rets.reduce((a,b)=>a+b,0)/rets.length;
-    const sd=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,rets.length-1));
-    const sharpe=sd>0?(mean-rf/PPY)/sd*Math.sqrt(PPY):0;
-    const mret=[],aret=[];for(let i=1;i<rs.length;i++){const k=periodKey(rs[i].d,freq),kp=periodKey(rs[i-1].d,freq),m1=ipsaByP[k],m0=ipsaByP[kp];if(m1!=null&&m0!=null){mret.push(m1/m0-1);aret.push(vals[i]/vals[i-1]-1);}}
+    // solo retornos entre períodos consecutivos (evita que un hueco se cuente como un período y distorsione la anualización)
+    const rets=[];for(let i=1;i<vals.length;i++){if(gapOK(rs[i-1].d,rs[i].d,freq))rets.push(vals[i]/vals[i-1]-1);}
+    let sharpe=null;
+    if(rets.length>=2){const mean=rets.reduce((a,b)=>a+b,0)/rets.length;const sd=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,rets.length-1));sharpe=sd>0?(mean-rf/PPY)/sd*Math.sqrt(PPY):0;}
+    const mret=[],aret=[];for(let i=1;i<rs.length;i++){if(!gapOK(rs[i-1].d,rs[i].d,freq))continue;const k=periodKey(rs[i].d,freq),kp=periodKey(rs[i-1].d,freq),m1=ipsaByP[k],m0=ipsaByP[kp];if(m1!=null&&m0!=null){mret.push(m1/m0-1);aret.push(vals[i]/vals[i-1]-1);}}
     let jensen=null,beta=null;
     if(mret.length>=3){const mm=mret.reduce((a,b)=>a+b,0)/mret.length,ma=aret.reduce((a,b)=>a+b,0)/aret.length;let cov=0,vm=0;for(let i=0;i<mret.length;i++){cov+=(mret[i]-mm)*(aret[i]-ma);vm+=(mret[i]-mm)**2;}beta=vm>0?cov/vm:0;jensen=((ma*PPY)-rf)-beta*((mm*PPY)-rf);}
     out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:total*100,sharpe,jensen:jensen==null?null:jensen*100,beta,n:vals.length,series:vals});
@@ -4200,25 +4203,25 @@ function lastKnownIpsa(C){C=C||consolidatedSeries();const ds=Object.keys(C.ipsaM
 function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;saveProjects();}else{try{localStorage.setItem("pf_projects_v1__"+cid,JSON.stringify(projs));}catch(e){saveWarn();}}}
 /* agrega un punto de valoración (precios de cierre) a TODOS los proyectos con seguimiento */
 function applyPlatformPrices(date,ipsa,priceMap){
-  let nProj=0,nCli=0;
+  let nProj=0,nCli=0,nSkip=0;
   CLIENTS.forEach(c=>{
     const projs=clientProjects(c.id)||[];let touched=false;
     projs.forEach(p=>{
       const ws=p.weeks||[];if(!ws.length)return;
       const last=ws[ws.length-1];
-      if(new Date(date+"T00:00:00")<new Date(last.date+"T00:00:00"))return;
+      if(new Date(date+"T00:00:00")<new Date(last.date+"T00:00:00")){nSkip++;return;}
       const newPrices=Object.assign({},last.prices||{});let any=false;
       (p.holdings||[]).forEach(hd=>{const v=priceMap[hd.t];if(v!=null&&isFinite(v)&&v>0){newPrices[hd.t]=v;any=true;}});
       const ip=(ipsa!=null&&isFinite(ipsa)&&ipsa>0)?ipsa:(last.ipsa||0);
       if(!any&&(ipsa==null||!isFinite(ipsa)))return;
-      if(last.date===date&&!last.ev){last.prices=newPrices;last.ipsa=ip;}
+      if(last.date===date){last.prices=newPrices;last.ipsa=ip;}   // mismo día: actualiza en sitio (evita fechas duplicadas, incluso si fue un día con operación)
       else p.weeks.push({date,ipsa:ip,prices:newPrices});
       touched=true;nProj++;
     });
     if(touched){clientSaveProjects(c.id,projs);nCli++;}
   });
   syncProj();
-  return {nProj,nCli};
+  return {nProj,nCli,nSkip};
 }
 let _ppxState=null;
 function platformPricesOpen(){
@@ -4247,7 +4250,7 @@ function platformPricesRender(){
     if(!Object.keys(pm).length&&ip==null){window.alert("Ingresa al menos un precio o el valor del IPSA.");return;}
     const res=applyPlatformPrices(S.date,ip,pm);
     modalCloseId("ppxBack");
-    window.alert("Precios del "+S.date+" aplicados.\n\n"+res.nProj+" proyecto(s) actualizados en "+res.nCli+" cliente(s).");
+    window.alert("Precios del "+S.date+" aplicados.\n\n"+res.nProj+" proyecto(s) actualizados en "+res.nCli+" cliente(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" proyecto(s) omitidos por tener seguimiento posterior a esa fecha.":""));
     render();
   };
 }
@@ -4291,8 +4294,9 @@ function clientFormRender(){
 function seedExamples(){
   try{
     if(localStorage.getItem("inv_seed_examples_v1"))return;
+    const SRC=(typeof DEMO!=="undefined"&&DEMO.stocks&&DEMO.stocks.length)?DEMO.stocks:STOCKS;
+    if(!SRC||!SRC.length)return;
     localStorage.setItem("inv_seed_examples_v1","1");
-    if(!STOCKS||!STOCKS.length)return;
     const N=90, START="2026-02-02";
     const dates=(function(){const out=[];let d=new Date(START+"T00:00:00");while(out.length<N){const wd=d.getDay();if(wd!==0&&wd!==6)out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}return out;})();
     const walk=(start,n,drift,vol,seed)=>{const out=[];let x=start,s=seed>>>0;const r=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};for(let i=0;i<n;i++){if(i>0){const z=(r()+r()+r()+r()-2);x=x*(1+drift+vol*z);if(x<0.01)x=0.01;}out.push(+x.toFixed(x<100?2:0));}return out;};
@@ -4300,7 +4304,7 @@ function seedExamples(){
     const mret=(MKT&&MKT.ret?MKT.ret:18)/100/252, msig=(MKT&&MKT.sig?MKT.sig:12)/100/Math.sqrt(252);
     const ipsaPath=walk(7600,N,mret,msig,98765);
     const pathFor=st=>{const start=(st.prices&&st.prices.length)?st.prices[Math.max(0,st.prices.length-9)]:1000;const drift=(st.a24&&isFinite(st.a24.ret)?st.a24.ret:8)/100/252;const vol=(st.a24&&isFinite(st.a24.sig)?st.a24.sig:20)/100/Math.sqrt(252);return walk(start,N,drift,vol,hash(st.t));};
-    const pick=(prefer,k)=>{const out=[];prefer.forEach(t=>{const s=STOCKS.find(x=>x.t===t);if(s&&out.indexOf(s)<0)out.push(s);});for(let i=0;out.length<k&&i<STOCKS.length;i++){if(out.indexOf(STOCKS[i])<0)out.push(STOCKS[i]);}return out.slice(0,k);};
+    const pick=(prefer,k)=>{const out=[];prefer.forEach(t=>{const s=SRC.find(x=>x.t===t);if(s&&out.indexOf(s)<0)out.push(s);});for(let i=0;out.length<k&&i<SRC.length;i++){if(out.indexOf(SRC[i])<0)out.push(SRC[i]);}return out.slice(0,k);};
     const ddmmyyyy=s=>{const a=s.split("-");return a[2]+"-"+a[1]+"-"+a[0];};
     function buildProject(pid,name,picks,weights,amount){
       const paths={};picks.forEach(st=>paths[st.t]=pathFor(st));
@@ -4383,7 +4387,7 @@ function viewHome(){
   const stkBlock=(title,sub,arr,valFn,colFn)=>{const rows=arr.slice(0,5).map((s,i)=>`<div class="home-stk"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
     return `<div class="stk-block"><div class="stk-bh"><b>${title}</b><span>${sub}</span></div>${rows||'<div class="note" style="margin:6px 0 0;font-size:11px">Sin datos suficientes</div>'}</div>`;};
   const byRet=[...stats].sort((a,b)=>b.ret-a.ret);
-  const bySharpe=[...stats].sort((a,b)=>b.sharpe-a.sharpe);
+  const bySharpe=stats.filter(s=>s.sharpe!=null).sort((a,b)=>b.sharpe-a.sharpe);
   const byJensen=stats.filter(s=>s.jensen!=null).sort((a,b)=>b.jensen-a.jensen);
   const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div><button class="btn btnu" data-openprices title="Cargar precios de cierre para toda la plataforma">↻ Actualizar precios</button></div>`;
   const stkInner=stats.length?`<div class="stk-cols">
