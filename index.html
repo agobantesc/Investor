@@ -1071,6 +1071,73 @@
   .home-act b{font:800 13.5px var(--font);color:var(--navy);}
   .home-act .ha-s{font-size:11px;color:var(--mut);font-weight:600;}
   @media(max-width:880px){.home-grid2{grid-template-columns:1fr;}}
+  /* podio de proyectos */
+  .home-podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .home-pod{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;text-align:left;padding:.9rem .95rem 1rem;border:1px solid var(--line2);border-radius:14px;background:var(--card2);cursor:pointer;transition:.15s var(--ease);}
+  .home-pod:hover{transform:translateY(-3px);box-shadow:var(--sh-lg);border-color:var(--a-200);}
+  .home-pod.p0{background:linear-gradient(160deg,rgba(212,160,23,.12),var(--card2) 55%);border-color:rgba(212,160,23,.45);}
+  .home-pod.p1{background:linear-gradient(160deg,rgba(120,130,150,.13),var(--card2) 55%);}
+  .home-pod.p2{background:linear-gradient(160deg,rgba(176,110,60,.12),var(--card2) 55%);}
+  .pod-top{display:flex;align-items:center;gap:7px;}
+  .pod-medal{font-size:17px;line-height:1;}
+  .pod-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .pod-cli{font-size:10.5px;font-weight:700;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pod-name{font:800 14px var(--font);color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pod-pct{font:800 27px var(--font);letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.05;}
+  .pod-pct span{font-size:14px;font-weight:800;margin-left:1px;}
+  .pod-spark{height:26px;margin:1px 0 2px;}
+  .pod-spark .mkt-spark{width:100%;height:26px;}
+  .pod-foot{display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums;}
+  @media(max-width:760px){.home-podium{grid-template-columns:1fr;}}
+  /* acciones destacadas por bloques */
+  .home-hdacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .home-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px;}
+  .home-seg button{border:none;background:transparent;color:var(--mut);font:700 11.5px var(--font);padding:.32rem .6rem;border-radius:7px;cursor:pointer;transition:.12s var(--ease);}
+  .home-seg button:hover{color:var(--ink);}
+  .home-seg button.on{background:var(--card);color:var(--accent);box-shadow:var(--sh);}
+  .btnu{padding:.4rem .7rem;font-size:11.5px;}
+  .stk-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .stk-block{border:1px solid var(--line);border-radius:12px;padding:.7rem .75rem;background:var(--card2);}
+  .stk-bh{display:flex;flex-direction:column;margin-bottom:6px;}
+  .stk-bh b{font:800 12.5px var(--font);color:var(--navy);}
+  .stk-bh span{font-size:10px;color:var(--mut);font-weight:600;}
+  .stk-pos{flex:0 0 auto;width:17px;height:17px;border-radius:6px;background:var(--surface);color:var(--mut);font:800 10px var(--font);display:flex;align-items:center;justify-content:center;}
+  .stk-block .home-stk{display:flex;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--line);}
+  .stk-block .home-stk:last-child{border-bottom:none;}
+  .stk-spk{width:48px;height:18px;flex:0 0 auto;opacity:.9;}
+  .stk-spk .mkt-spark{width:48px;height:18px;}
+  .stk-block .rk-name{font-size:12px;}
+  .stk-block .rk-cli{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px;}
+  .stk-block .rk-pct{font-size:12.5px;}
+  @media(max-width:880px){.stk-cols{grid-template-columns:1fr;}}
+  /* modales genéricos (precios plataforma / cliente) */
+  .ui-modal{width:560px;max-width:96vw;}
+  .cfg-x{border:none;background:var(--surface);color:var(--mut);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;flex:0 0 auto;transition:.12s var(--ease);}
+  .cfg-x:hover{background:var(--redbg);color:var(--red);}
+  .ppx-head,.clf-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
+  .ppx-top{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .ppx-f,.clf-f{display:flex;flex-direction:column;gap:5px;}
+  .ppx-f>span,.clf-f>span{font-size:11px;font-weight:700;color:var(--mut);}
+  .ppx-f input,.clf-f input,.ppx-in{width:100%;padding:.55rem .65rem;border:1px solid var(--line2);border-radius:9px;background:var(--card2);color:var(--ink);font:600 13px var(--font);font-variant-numeric:tabular-nums;}
+  .ppx-f input:focus,.clf-f input:focus,.ppx-in:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--a-50);}
+  .ppx-grid{max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:2px;margin:0 -2px;}
+  .ppx-row{display:flex;align-items:center;gap:10px;}
+  .ppx-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .ppx-tk{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .ppx-tk b{font:800 13px var(--font);color:var(--navy);}
+  .ppx-tk span{font-size:10.5px;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ppx-in{flex:0 0 130px;width:130px;text-align:right;}
+  .ppx-foot,.clf-foot{display:flex;justify-content:flex-end;gap:9px;margin-top:16px;}
+  /* nuevo/editar cliente */
+  .clf-mark{width:34px;height:34px;border-radius:10px;flex:0 0 auto;box-shadow:var(--sh);}
+  .clf-f{margin-bottom:14px;}
+  .clf-sws{display:flex;flex-wrap:wrap;gap:8px;}
+  .clf-sw{width:30px;height:30px;border-radius:9px;border:2px solid transparent;cursor:pointer;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.12s var(--ease);box-shadow:var(--sh);}
+  .clf-sw:hover{transform:scale(1.08);}
+  .clf-sw.on{border-color:var(--ink);transform:scale(1.08);}
+  /* recordar sesión */
+  .auth-remember{display:flex;align-items:center;gap:8px;margin:2px 0 13px;font-size:11.5px;color:var(--mut);font-weight:600;cursor:pointer;user-select:none;}
+  .auth-remember input{width:15px;height:15px;accent-color:var(--indigo);cursor:pointer;}
 </style>
 </head>
 <body>
@@ -3072,6 +3139,7 @@ function cpEnsureDOM(){
   document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
     if(cpOpen){cpClosePanel();return;}
     const cfg=document.getElementById("cfgBack");if(cfg&&cfg.classList.contains("open")){if(typeof cfgClose==="function")cfgClose();return;}
+    const ov=document.querySelector(".cfg-back.open");if(ov){ov.classList.remove("open");return;}
     const cm=document.getElementById("clientMenu");if(cm&&cm.classList.contains("open")){cm.classList.remove("open");return;}
   });
 }
@@ -3432,7 +3500,7 @@ function cfgRender(){
   const _cfp=m.querySelector("#cfgPro");if(_cfp)_cfp.onclick=()=>cfgGo("pro","realtime");
   const _lk=m.querySelector("#cfgLock");if(_lk)_lk.onclick=()=>{cfgClose();authLock();};
   const _ac=m.querySelector("#cfgAuthChg");if(_ac)_ac.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
-  const _ao=m.querySelector("#cfgAuthOff");if(_ao)_ao.onclick=()=>{if(confirm("¿Quitar la protección por contraseña?")){AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{sessionStorage.removeItem("inv_sess_v1");}catch(e){}cfgRender();}};
+  const _ao=m.querySelector("#cfgAuthOff");if(_ao)_ao.onclick=()=>{if(confirm("¿Quitar la protección por contraseña?")){AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{sessionStorage.removeItem("inv_sess_v1");localStorage.removeItem("inv_remember_v1");}catch(e){}cfgRender();}};
   const _an=m.querySelector("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);authMode="create";authMsg="";authInit();};
   const bkSync=()=>{if(modulo==="clientes"||(modulo==="inv"&&page==="contabilidad")){try{render();}catch(e){}}};
   const _bkOp=m.querySelector("#cfgBkOp");if(_bkOp)_bkOp.onchange=()=>{const v=_bkOp.value;if(v==="custom"){BROKER.op="custom";}else{Object.assign(BROKER,BROKER_PRESETS[v]);}saveBroker();cfgRender();bkSync();};
@@ -3827,7 +3895,9 @@ let authMode="login", authMsg="";
 function authHashFallback(pw,salt){let h=5381;const s=salt+"|"+pw;for(let i=0;i<s.length;i++){h=(((h<<5)+h)^s.charCodeAt(i))>>>0;}let g=52711;for(let i=s.length-1;i>=0;i--){g=(((g<<5)+g)^s.charCodeAt(i))>>>0;}return h.toString(16).padStart(8,"0")+g.toString(16).padStart(8,"0");}
 async function authHash(pw,salt){try{if(window.crypto&&crypto.subtle){const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+"|"+pw));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");}}catch(e){}return authHashFallback(pw,salt);}
 function authSalt(){let s="";const a="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";for(let i=0;i<16;i++)s+=a[Math.floor((window.crypto&&crypto.getRandomValues?crypto.getRandomValues(new Uint32Array(1))[0]/4294967296:Math.random())*a.length)];return s;}
-function authSessionOk(){try{return AUTH&&AUTH.enabled&&sessionStorage.getItem("inv_sess_v1")===AUTH.user;}catch(e){return false;}}
+function authRemembered(){try{return !!(AUTH&&AUTH.enabled&&localStorage.getItem("inv_remember_v1")===AUTH.user);}catch(e){return false;}}
+function authApplyRemember(){try{const r=(document.getElementById("authRemember")||{}).checked;if(r&&AUTH&&AUTH.user)localStorage.setItem("inv_remember_v1",AUTH.user);else localStorage.removeItem("inv_remember_v1");}catch(e){}}
+function authSessionOk(){try{return !!(AUTH&&AUTH.enabled&&(sessionStorage.getItem("inv_sess_v1")===AUTH.user||authRemembered()));}catch(e){return false;}}
 function authGateEl(){return document.getElementById("authGate");}
 function authShow(show){const g=authGateEl();if(!g)return;g.classList.toggle("open",!!show);try{document.body.style.overflow=show?"hidden":"";}catch(e){}}
 function authInit(){
@@ -3849,6 +3919,7 @@ function authRender(){
     <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
     ${create?`<div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
     ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
+    <label class="auth-remember"><input type="checkbox" id="authRemember" ${(create||authRemembered())?"checked":""}> <span>Mantener sesión iniciada en este equipo</span></label>
     <button class="auth-btn" id="authGo">${create?"Crear acceso y entrar":"Entrar"}</button>
     ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
     <div class="auth-foot">Acceso local · tus datos viven solo en este navegador · simulación educativa, no es asesoría financiera</div>
@@ -3868,15 +3939,15 @@ async function authSubmit(){
     const salt=authSalt(),hash=await authHash(p,salt);
     AUTH={enabled:true,user:u.trim(),salt,hash};lsSet("inv_auth_v1",AUTH);
     try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}
-    authMsg="";authShow(false);
+    authApplyRemember();authMsg="";authShow(false);
   }else{
     if(!AUTH||!AUTH.enabled){authShow(false);return;}
     const hash=await authHash(p,AUTH.salt);
-    if(u.trim()===AUTH.user&&hash===AUTH.hash){try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}authMsg="";authShow(false);}
+    if(u.trim()===AUTH.user&&hash===AUTH.hash){try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}authApplyRemember();authMsg="";authShow(false);}
     else{authMsg="Usuario o contraseña incorrectos.";authRender();}
   }
 }
-function authLock(){try{sessionStorage.removeItem("inv_sess_v1");}catch(e){}authInit();}
+function authLock(){try{sessionStorage.removeItem("inv_sess_v1");localStorage.removeItem("inv_remember_v1");}catch(e){}authInit();}
 
 /* ===== PROYECTOS: análisis + simulaciones + inversiones vinculados ===== */
 function currentAnalysisId(){return (typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId)?String(impActiveId):"demo";}
@@ -3889,7 +3960,7 @@ function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const in
   const L=IM.last,inv=IM.aport,val=L.val,gain=val-inv;
   let fees=0;try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{fees+=brokerFee(x.monto);});}catch(e){}
   const gainNet=gain-fees;
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,nrec:(p.weeks||[]).length};});}
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,nrec:(p.weeks||[]).length,series:IM.series.map(s=>Math.round(s.val))};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* escenario "de construcción" derivado del proyecto (su simulación original) */
 function projDefaultScenario(p){
@@ -3971,7 +4042,7 @@ function attachProyectos(){
   document.querySelectorAll("[data-clirename]").forEach(inp=>inp.onchange=()=>clientRename(inp.dataset.clirename,inp.value));
   document.querySelectorAll("[data-cliswitch]").forEach(b=>b.onclick=()=>clientSwitch(b.dataset.cliswitch));
   document.querySelectorAll("[data-clidel]").forEach(b=>b.onclick=()=>clientDelete(b.dataset.clidel));
-  const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>{const n=window.prompt("Nombre del nuevo cliente:");if(n!==null&&n.trim())clientAdd(n.trim());};
+  const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>clientFormOpen();
   const _gc=document.querySelector("[data-go-clientes]");if(_gc)_gc.onclick=()=>{modulo="clientes";render();};
 }
 /* ===== ADMINISTRADOR DE CLIENTES (panel de gestión) ===== */
@@ -4012,8 +4083,8 @@ function viewClientes(){
 function attachClientes(){
   document.querySelectorAll("[data-cliswitch]").forEach(b=>b.onclick=()=>clientSwitch(b.dataset.cliswitch));
   document.querySelectorAll("[data-clidel]").forEach(b=>b.onclick=()=>clientDelete(b.dataset.clidel));
-  document.querySelectorAll("[data-clirename2]").forEach(b=>b.onclick=()=>{const c=CLIENTS.find(x=>x.id===b.dataset.clirename2);if(!c)return;const n=window.prompt("Nuevo nombre del cliente:",c.name);if(n!==null&&n.trim())clientRename(c.id,n.trim());});
-  const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>{const n=window.prompt("Nombre del nuevo cliente:");if(n!==null&&n.trim())clientAdd(n.trim());};
+  document.querySelectorAll("[data-clirename2]").forEach(b=>b.onclick=()=>{const c=CLIENTS.find(x=>x.id===b.dataset.clirename2);if(!c)return;clientFormOpen(c.id);});
+  const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>clientFormOpen();
   const _gp=document.querySelector("[data-go-proj]");if(_gp)_gp.onclick=()=>{modulo="proyectos";page="hub";render();};
 }
 
@@ -4032,7 +4103,8 @@ function clientLoad(){
   opState={pid:null,side:"buy",tkr:null,qty:"",price:"",date:""};injState={pid:null,rows:[]};
 }
 function clientSwitch(id){if(!id||id===activeClient)return;activeClient=id;try{localStorage.setItem("inv_active_client",id);}catch(e){}clientLoad();modulo="proyectos";page="hub";render();}
-function clientAdd(name){const id="c_"+Date.now();CLIENTS.push({id,name:(name||("Cliente "+(CLIENTS.length+1))).trim(),color:CLIENT_PAL[CLIENTS.length%CLIENT_PAL.length]});saveClients();clientSwitch(id);}
+function clientCreate(name,color){const id="c_"+Date.now();CLIENTS.push({id,name:(name||("Cliente "+(CLIENTS.length+1))).trim(),color:color||CLIENT_PAL[CLIENTS.length%CLIENT_PAL.length]});saveClients();clientSwitch(id);}
+function clientAdd(name){clientCreate(name);}
 function clientRename(id,name){const c=CLIENTS.find(x=>x.id===id);if(c){c.name=(name||"").trim()||c.name;saveClients();render();}}
 function clientDelete(id){
   if(CLIENTS.length<=1){window.alert("Debe quedar al menos un cliente.");return;}
@@ -4079,12 +4151,188 @@ function riskChip(prof){
 }
 function betaTag(b){return b<0.8?"defensivo":b<1?"moderado":b<1.2?"de mercado":"agresivo";}
 
+/* ===================== DATOS CONSOLIDADOS DE SEGUIMIENTO ===================== */
+function allTrackedProjects(){const out=[];CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>out.push({c,p}));});return out;}
+/* histórico de precios por acción + IPSA, fusionando todos los seguimientos de todos los clientes */
+function consolidatedSeries(){
+  const tick={},names={},cols={},ipsaMap={};
+  allTrackedProjects().forEach(({p})=>{
+    (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
+    (p.weeks||[]).forEach(w=>{
+      if(w.ipsa!=null&&isFinite(w.ipsa))ipsaMap[w.date]=w.ipsa;
+      const pr=w.prices||{};Object.keys(pr).forEach(t=>{const v=pr[t];if(v==null||!isFinite(v))return;(tick[t]=tick[t]||{})[w.date]=v;});
+    });
+  });
+  return {tick,names,cols,ipsaMap};
+}
+function periodKey(dateStr,freq){
+  if(freq==="mensual")return (""+dateStr).slice(0,7);
+  if(freq==="semanal"){const d=new Date(dateStr+"T00:00:00");const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const ys=new Date(Date.UTC(t.getUTCFullYear(),0,1));const wk=Math.ceil((((t-ys)/864e5)+1)/7);return t.getUTCFullYear()+"-W"+String(wk).padStart(2,"0");}
+  return ""+dateStr;
+}
+/* reduce un mapa fecha→valor a puntos por período (último de cada período) */
+function resampleMap(map,freq){const dates=Object.keys(map).sort();const byP={};dates.forEach(d=>{byP[periodKey(d,freq)]={d,v:map[d]};});return Object.keys(byP).sort().map(k=>byP[k]);}
+/* métricas por acción a partir del historial real ingresado (no del análisis) */
+function seguimientoStats(freq){
+  const C=consolidatedSeries();const PPY=freq==="diario"?252:freq==="semanal"?52:12;
+  const rf=(typeof RF==="number"&&isFinite(RF)?(RF>1?RF/100:RF):0.055);
+  const ipsaR=resampleMap(C.ipsaMap,freq),ipsaByP={};ipsaR.forEach(x=>ipsaByP[periodKey(x.d,freq)]=x.v);
+  const out=[];
+  Object.keys(C.tick).forEach(t=>{
+    const rs=resampleMap(C.tick[t],freq);if(rs.length<3)return;
+    const vals=rs.map(x=>x.v),rets=[];for(let i=1;i<vals.length;i++)rets.push(vals[i]/vals[i-1]-1);
+    if(!rets.length)return;
+    const total=vals[vals.length-1]/vals[0]-1;
+    const mean=rets.reduce((a,b)=>a+b,0)/rets.length;
+    const sd=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,rets.length-1));
+    const sharpe=sd>0?(mean-rf/PPY)/sd*Math.sqrt(PPY):0;
+    const mret=[],aret=[];for(let i=1;i<rs.length;i++){const k=periodKey(rs[i].d,freq),kp=periodKey(rs[i-1].d,freq),m1=ipsaByP[k],m0=ipsaByP[kp];if(m1!=null&&m0!=null){mret.push(m1/m0-1);aret.push(vals[i]/vals[i-1]-1);}}
+    let jensen=null,beta=null;
+    if(mret.length>=3){const mm=mret.reduce((a,b)=>a+b,0)/mret.length,ma=aret.reduce((a,b)=>a+b,0)/aret.length;let cov=0,vm=0;for(let i=0;i<mret.length;i++){cov+=(mret[i]-mm)*(aret[i]-ma);vm+=(mret[i]-mm)**2;}beta=vm>0?cov/vm:0;jensen=((ma*PPY)-rf)-beta*((mm*PPY)-rf);}
+    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:total*100,sharpe,jensen:jensen==null?null:jensen*100,beta,n:vals.length,series:vals});
+  });
+  return out;
+}
+/* ===================== CARGA DE PRECIOS A NIVEL PLATAFORMA ===================== */
+function allHeldTickers(){const m={};allTrackedProjects().forEach(({p})=>{(p.holdings||[]).forEach(hd=>{if(!m[hd.t])m[hd.t]={t:hd.t,n:hd.n||hd.t,c:hd.c||"#1E5FD1"};});});return Object.keys(m).sort().map(k=>m[k]);}
+function lastKnownPrice(t,C){C=C||consolidatedSeries();const mp=C.tick[t];if(mp){const ds=Object.keys(mp).sort();if(ds.length)return mp[ds[ds.length-1]];}const st=STOCKS.find(x=>x.t===t);return (st&&st.prices&&st.prices.length)?st.prices[st.prices.length-1]:"";}
+function lastKnownIpsa(C){C=C||consolidatedSeries();const ds=Object.keys(C.ipsaMap).sort();return ds.length?C.ipsaMap[ds[ds.length-1]]:(MKT&&MKT.last?MKT.last:8000);}
+function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;saveProjects();}else{try{localStorage.setItem("pf_projects_v1__"+cid,JSON.stringify(projs));}catch(e){saveWarn();}}}
+/* agrega un punto de valoración (precios de cierre) a TODOS los proyectos con seguimiento */
+function applyPlatformPrices(date,ipsa,priceMap){
+  let nProj=0,nCli=0;
+  CLIENTS.forEach(c=>{
+    const projs=clientProjects(c.id)||[];let touched=false;
+    projs.forEach(p=>{
+      const ws=p.weeks||[];if(!ws.length)return;
+      const last=ws[ws.length-1];
+      if(new Date(date+"T00:00:00")<new Date(last.date+"T00:00:00"))return;
+      const newPrices=Object.assign({},last.prices||{});let any=false;
+      (p.holdings||[]).forEach(hd=>{const v=priceMap[hd.t];if(v!=null&&isFinite(v)&&v>0){newPrices[hd.t]=v;any=true;}});
+      const ip=(ipsa!=null&&isFinite(ipsa)&&ipsa>0)?ipsa:(last.ipsa||0);
+      if(!any&&(ipsa==null||!isFinite(ipsa)))return;
+      if(last.date===date&&!last.ev){last.prices=newPrices;last.ipsa=ip;}
+      else p.weeks.push({date,ipsa:ip,prices:newPrices});
+      touched=true;nProj++;
+    });
+    if(touched){clientSaveProjects(c.id,projs);nCli++;}
+  });
+  syncProj();
+  return {nProj,nCli};
+}
+let _ppxState=null;
+function platformPricesOpen(){
+  const C=consolidatedSeries();const held=allHeldTickers();
+  const today=new Date().toISOString().slice(0,10);
+  _ppxState={date:today,ipsa:lastKnownIpsa(C),rows:held.map(h=>({t:h.t,n:h.n,c:h.c,price:lastKnownPrice(h.t,C)}))};
+  platformPricesRender();
+}
+function platformPricesRender(){
+  const S=_ppxState;if(!S)return;
+  const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-ppx="${i}" value="${r.price}" aria-label="Precio ${r.t}"></div>`).join("")
+    :`<div class="note" style="margin:0">No hay acciones con seguimiento todavía. Registra la compra inicial de algún proyecto para poder actualizar precios masivamente.</div>`;
+  const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · toda la plataforma</div><div class="cs">Carga los precios de cierre de un día. Se agregan como nuevo punto de valoración a <b>todos los proyectos de todos los clientes</b> que tengan esas acciones.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
+    <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa}"></label></div>
+    <div class="ppx-grid">${rows}</div>
+    <div class="ppx-foot"><button class="btn" id="ppxCancel">Cancelar</button><button class="btn btn-pri" id="ppxApply">Aplicar a toda la plataforma</button></div>`;
+  const back=modalShell("ppxBack",inner,"Actualizar precios");
+  const sync=()=>{const d=document.getElementById("ppxDate");if(d)S.date=d.value;const ip=document.getElementById("ppxIpsa");if(ip)S.ipsa=parseFloat(ip.value);document.querySelectorAll("[data-ppx]").forEach(e=>{S.rows[+e.dataset.ppx].price=parseFloat(e.value);});};
+  back.querySelector("#ppxX").onclick=()=>modalCloseId("ppxBack");
+  back.querySelector("#ppxCancel").onclick=()=>modalCloseId("ppxBack");
+  back.querySelector("#ppxApply").onclick=()=>{
+    sync();
+    if(!S.date){window.alert("Indica la fecha de cierre.");return;}
+    const pm={};S.rows.forEach(r=>{if(r.price!=null&&isFinite(r.price)&&r.price>0)pm[r.t]=r.price;});
+    const ip=(S.ipsa!=null&&isFinite(S.ipsa)&&S.ipsa>0)?S.ipsa:null;
+    if(!Object.keys(pm).length&&ip==null){window.alert("Ingresa al menos un precio o el valor del IPSA.");return;}
+    const res=applyPlatformPrices(S.date,ip,pm);
+    modalCloseId("ppxBack");
+    window.alert("Precios del "+S.date+" aplicados.\n\n"+res.nProj+" proyecto(s) actualizados en "+res.nCli+" cliente(s).");
+    render();
+  };
+}
+/* ===================== MODALES GENÉRICOS ===================== */
+function modalShell(id,inner,label){
+  let back=document.getElementById(id);
+  if(!back){back=document.createElement("div");back.className="cfg-back";back.id=id;document.body.appendChild(back);back.addEventListener("click",e=>{if(e.target===back)back.classList.remove("open");});}
+  back.innerHTML='<div class="cfg-modal ui-modal" role="dialog" aria-modal="true" aria-label="'+label+'">'+inner+'</div>';
+  back.classList.add("open");return back;
+}
+function modalCloseId(id){const b=document.getElementById(id);if(b)b.classList.remove("open");}
+/* ===================== NUEVO/EDITAR CLIENTE (estilo INVERSOR) ===================== */
+let _clfState=null;
+function clientFormOpen(editId){
+  const ed=editId?CLIENTS.find(c=>c.id===editId):null;
+  _clfState={editId:editId||null,name:ed?ed.name:"",color:ed?(ed.color||CLIENT_PAL[0]):CLIENT_PAL[CLIENTS.length%CLIENT_PAL.length]};
+  clientFormRender();
+}
+function clientFormRender(){
+  const S=_clfState;if(!S)return;const editing=!!S.editId;
+  const sw=CLIENT_PAL.map(c=>`<button class="clf-sw ${c===S.color?"on":""}" data-clf-col="${c}" style="background:${c}" aria-label="Color ${c}">${c===S.color?"✓":""}</button>`).join("");
+  const inner=`<div class="clf-card">
+    <div class="clf-head"><div class="clf-mark" style="background:${S.color}"></div><div><div class="ct">${editing?"Editar cliente":"Nuevo cliente"}</div><div class="cs">${editing?"Actualiza el nombre y el color de identificación.":"Gestiona la cartera de un tercero (familiar, amistad, cliente). Sus datos quedan separados de los tuyos."}</div></div><button class="cfg-x" id="clfX" aria-label="Cerrar">✕</button></div>
+    <label class="clf-f"><span>Nombre del cliente</span><input id="clfName" type="text" maxlength="40" value="${(""+S.name).replace(/"/g,"&quot;")}" placeholder="ej. María José, tu polola, Fondo familiar…"></label>
+    <div class="clf-f"><span>Color de identificación</span><div class="clf-sws">${sw}</div></div>
+    <div class="clf-foot"><button class="btn" id="clfCancel">Cancelar</button><button class="btn btn-pri" id="clfSave">${editing?"Guardar cambios":"Crear cliente"}</button></div>
+  </div>`;
+  const back=modalShell("clfBack",inner,"Cliente");
+  const nameEl=back.querySelector("#clfName");
+  back.querySelectorAll("[data-clf-col]").forEach(b=>b.onclick=()=>{S.name=nameEl.value;S.color=b.dataset.clfCol;clientFormRender();setTimeout(()=>{const n=document.getElementById("clfName");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}},10);});
+  back.querySelector("#clfX").onclick=()=>modalCloseId("clfBack");
+  back.querySelector("#clfCancel").onclick=()=>modalCloseId("clfBack");
+  const save=()=>{const nm=(nameEl.value||"").trim();if(nm.length<1){nameEl.focus();return;}
+    if(editing){const c=CLIENTS.find(x=>x.id===S.editId);if(c){c.name=nm;c.color=S.color;saveClients();}modalCloseId("clfBack");renderClientBar();render();}
+    else{modalCloseId("clfBack");clientCreate(nm,S.color);}
+  };
+  back.querySelector("#clfSave").onclick=save;
+  if(nameEl){nameEl.onkeydown=e=>{if(e.key==="Enter")save();};setTimeout(()=>{try{nameEl.focus();}catch(e){}},60);}
+}
+/* ===================== CLIENTES DE EJEMPLO (datos de demostración) ===================== */
+function seedExamples(){
+  try{
+    if(localStorage.getItem("inv_seed_examples_v1"))return;
+    localStorage.setItem("inv_seed_examples_v1","1");
+    if(!STOCKS||!STOCKS.length)return;
+    const N=90, START="2026-02-02";
+    const dates=(function(){const out=[];let d=new Date(START+"T00:00:00");while(out.length<N){const wd=d.getDay();if(wd!==0&&wd!==6)out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1);}return out;})();
+    const walk=(start,n,drift,vol,seed)=>{const out=[];let x=start,s=seed>>>0;const r=()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};for(let i=0;i<n;i++){if(i>0){const z=(r()+r()+r()+r()-2);x=x*(1+drift+vol*z);if(x<0.01)x=0.01;}out.push(+x.toFixed(x<100?2:0));}return out;};
+    const hash=t=>{let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=(h*16777619)>>>0;}return h;};
+    const mret=(MKT&&MKT.ret?MKT.ret:18)/100/252, msig=(MKT&&MKT.sig?MKT.sig:12)/100/Math.sqrt(252);
+    const ipsaPath=walk(7600,N,mret,msig,98765);
+    const pathFor=st=>{const start=(st.prices&&st.prices.length)?st.prices[Math.max(0,st.prices.length-9)]:1000;const drift=(st.a24&&isFinite(st.a24.ret)?st.a24.ret:8)/100/252;const vol=(st.a24&&isFinite(st.a24.sig)?st.a24.sig:20)/100/Math.sqrt(252);return walk(start,N,drift,vol,hash(st.t));};
+    const pick=(prefer,k)=>{const out=[];prefer.forEach(t=>{const s=STOCKS.find(x=>x.t===t);if(s&&out.indexOf(s)<0)out.push(s);});for(let i=0;out.length<k&&i<STOCKS.length;i++){if(out.indexOf(STOCKS[i])<0)out.push(STOCKS[i]);}return out.slice(0,k);};
+    const ddmmyyyy=s=>{const a=s.split("-");return a[2]+"-"+a[1]+"-"+a[0];};
+    function buildProject(pid,name,picks,weights,amount){
+      const paths={};picks.forEach(st=>paths[st.t]=pathFor(st));
+      const holdings=[],qty={},prices0={};let mtot=0;
+      picks.forEach((st,i)=>{const p0=paths[st.t][0];const q=Math.max(1,Math.floor(amount*weights[i]/p0));qty[st.t]=q;prices0[st.t]=p0;const monto=q*p0;mtot+=monto;holdings.push({t:st.t,n:st.n,s:st.s,c:st.c,b:st.b,w:0,monto});});
+      holdings.forEach(hd=>hd.w=mtot>0?hd.monto/mtot:0);
+      const bp=mtot>0?holdings.reduce((a,hd)=>a+(hd.b||0)*hd.monto,0)/mtot:0;
+      const weeks=[];for(let i=0;i<N;i++){const pr={};picks.forEach(st=>pr[st.t]=paths[st.t][i]);const wk={date:dates[i],ipsa:ipsaPath[i],prices:pr};if(i===0)wk.qty=qty;weeks.push(wk);}
+      return {id:pid,name,date:ddmmyyyy(dates[0]),amount:Math.round(mtot),bp:+bp.toFixed(3),freq:"diario",holdings,weeks,links:{analyses:["demo"],scenarios:[],primary:"demo"}};
+    }
+    const defs=[
+      {id:"c_ex_mjr",name:"María José Rivera",color:"#DB2777",prof:{profile:"moderado",label:"Moderado",cls:"mod",level:3},picks:["FALABELLA","BCI","PARAUCO","SANTANDER"],w:[0.3,0.3,0.25,0.15],amount:4500000},
+      {id:"c_ex_dh",name:"Diego Hernández",color:"#7C3AED",prof:{profile:"riesgoso",label:"Riesgoso",cls:"agr",level:5},picks:["SQM-B","LATAM","ENTEL","CENCOSUD"],w:[0.4,0.3,0.2,0.1],amount:3200000},
+      {id:"c_ex_ffs",name:"Fondo Familiar Soto",color:"#0E8C5E",prof:{profile:"conservador",label:"Conservador",cls:"cons",level:2},picks:["CHILE","SANTANDER","ENELCHILE","COLBUN"],w:[0.3,0.3,0.2,0.2],amount:6800000}
+    ];
+    defs.forEach((d,di)=>{
+      if(CLIENTS.some(c=>c.id===d.id))return;
+      const picks=pick(d.picks,d.picks.length);
+      const proj=buildProject(1700000000000+di,d.name+" · cartera",picks,d.w,d.amount);
+      try{localStorage.setItem("pf_projects_v1__"+d.id,JSON.stringify([proj]));localStorage.setItem("pf_active_v1__"+d.id,JSON.stringify(proj.id));localStorage.setItem("inv_profile_v1__"+d.id,JSON.stringify(d.prof));}catch(e){}
+      CLIENTS.push({id:d.id,name:d.name,color:d.color,example:true});
+    });
+    saveClients();
+  }catch(e){}
+}
 /* ===================== HOME / RESUMEN GENERAL ===================== */
+let homeStkFreq="diario";
 function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gainNet,pct:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gainNet,pct:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[]});}catch(e){}});});
   return {clients,T,projs};
 }
 function viewHome(){
@@ -4103,35 +4351,54 @@ function viewHome(){
     ${tile("Ganancia neta",sg(T.gainNet),"después de comisiones",indigo,T.gainNet>=0?green:red)}
     ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital",indigo,Tpct>=0?green:red)}
     ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}</div>`);
-  // ranking de proyectos más rentables (con seguimiento)
+  // ranking de proyectos más rentables (con seguimiento) — diseño visual
   const ranked=D.projs.filter(p=>p.hasData).sort((a,b)=>b.pct-a.pct);
-  const top=ranked.slice(0,6),maxAbs=Math.max(1,...top.map(p=>Math.abs(p.pct)));
-  const rankRows=top.length?top.map((p,i)=>{const w=Math.min(100,Math.abs(p.pct)/maxAbs*100);
+  const podium=ranked.slice(0,3),rest=ranked.slice(3,8);
+  const maxAbs=Math.max(1,...ranked.slice(0,8).map(p=>Math.abs(p.pct)));
+  const medal=["🥇","🥈","🥉"];
+  const podCards=podium.map((p,i)=>{const pos=p.pct>=0;const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
+    return `<button class="home-pod p${i}" data-gohome="${p.cliId}|${p.pid}">
+      <div class="pod-top"><span class="pod-medal">${medal[i]}</span><span class="pod-dot" style="background:${p.col}"></span><span class="pod-cli">${(""+p.cli).replace(/</g,"&lt;")}</span></div>
+      <div class="pod-name">${(""+p.name).replace(/</g,"&lt;")}</div>
+      <div class="pod-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div>
+      <div class="pod-spark">${spark}</div>
+      <div class="pod-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;}).join("");
+  const restRows=rest.map((p,i)=>{const w=Math.min(100,Math.abs(p.pct)/maxAbs*100),pos=p.pct>=0;
     return `<button class="home-rk" data-gohome="${p.cliId}|${p.pid}">
-      <span class="rk-pos">${i+1}</span><span class="rk-dot" style="background:${p.col}"></span>
+      <span class="rk-pos">${i+4}</span><span class="rk-dot" style="background:${p.col}"></span>
       <span class="rk-body"><span class="rk-name">${(""+p.name).replace(/</g,"&lt;")}</span>
         <span class="rk-cli">${(""+p.cli).replace(/</g,"&lt;")} · ${fmtCLP(p.val)} · β ${(p.beta||0).toFixed(2)}</span>
-        <span class="rk-bar"><i style="width:${w}%;background:${p.pct>=0?green:red}"></i></span></span>
-      <span class="rk-pct" style="color:${p.pct>=0?green:red}">${(p.pct>=0?"+":"")+p.pct.toFixed(2)}%</span></button>`;}).join("")
+        <span class="rk-bar"><i style="width:${w}%;background:${pos?green:red}"></i></span></span>
+      <span class="rk-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}%</span></button>`;}).join("");
+  const rankBody=ranked.length?`<div class="home-podium">${podCards}</div>${restRows?`<div class="home-rklist" style="margin-top:12px">${restRows}</div>`:""}${ranked.length>8?`<div class="note" style="margin:10px 0 0">+${ranked.length-8} proyectos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`
     :'<div class="note" style="margin:0">Aún no tienes proyectos con seguimiento. Arma una cartera en el <b>Constructor</b> y registra su compra inicial para empezar a comparar rentabilidades reales.</div>';
-  const rankCard=card("Proyectos más rentables","Rentabilidad neta de comisiones · compara el desempeño real de tus carteras: invierte montos chicos en distintas combinaciones de acciones y deja que los números muestren cuál funciona mejor",
-    `<div class="home-rklist">${rankRows}</div>${ranked.length>6?`<div class="note" style="margin:10px 0 0">+${ranked.length-6} proyectos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`);
+  const rankCard=card("Proyectos más rentables","Rentabilidad neta de comisiones · el podio compara el desempeño real de tus mejores carteras",rankBody);
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
   const mvRows=movers.length?movers.map(x=>`<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${x.chg>=0?green:red}">${(x.chg>=0?"▲ +":"▼ ")+x.chg.toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k])||""}</div>`).join("")
     :`<div class="note" style="margin:0">${mindBusy?"Cargando indicadores de mercado…":"Cargando indicadores… (también en Mercados)"}</div>`;
   const mvCard=card("Indicadores que se movieron","Mayores variaciones recientes · dólar, euro, cobre, UF (mindicador.cl)",`<div class="home-mvgrid">${mvRows}</div>`);
-  // acciones destacadas (top Sharpe del análisis activo)
-  const topStk=[...STOCKS].sort((a,b)=>(b.a24.sharpe||0)-(a.a24.sharpe||0)).slice(0,5);
-  const stkRows=topStk.map(s=>`<div class="home-stk"><span class="rk-dot" style="background:${s.c}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${s.s} · Sharpe ${(s.a24.sharpe||0).toFixed(2)} · β ${(s.b||0).toFixed(2)}</span></span><span class="rk-pct" style="color:${s.a24.ret>=0?green:red}">${(s.a24.ret>=0?"+":"")+(s.a24.ret||0).toFixed(1)}%</span></div>`).join("");
-  const stkCard=card("Acciones destacadas",`Mejores por Sharpe en tu análisis activo · ${(typeof DATASET!=="undefined"&&DATASET==="import"&&IMP)?"set importado":"IPSA demo"}`,`<div class="home-rklist tight">${stkRows}</div><div style="margin-top:10px"><button class="btn" data-go="eval|comparativa">Ver análisis completo →</button></div>`);
-  const grid2=`<div class="home-grid2">${mvCard}${stkCard}</div>`;
+  // acciones destacadas — rankings desde los precios reales de los seguimientos
+  const stats=seguimientoStats(homeStkFreq);
+  const stkBlock=(title,sub,arr,valFn,colFn)=>{const rows=arr.slice(0,5).map((s,i)=>`<div class="home-stk"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
+    return `<div class="stk-block"><div class="stk-bh"><b>${title}</b><span>${sub}</span></div>${rows||'<div class="note" style="margin:6px 0 0;font-size:11px">Sin datos suficientes</div>'}</div>`;};
+  const byRet=[...stats].sort((a,b)=>b.ret-a.ret);
+  const bySharpe=[...stats].sort((a,b)=>b.sharpe-a.sharpe);
+  const byJensen=stats.filter(s=>s.jensen!=null).sort((a,b)=>b.jensen-a.jensen);
+  const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div><button class="btn btnu" data-openprices title="Cargar precios de cierre para toda la plataforma">↻ Actualizar precios</button></div>`;
+  const stkInner=stats.length?`<div class="stk-cols">
+    ${stkBlock("Por rentabilidad","retorno acumulado",byRet,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red)}
+    ${stkBlock("Por Sharpe","ajustado a riesgo",bySharpe,s=>s.sharpe.toFixed(2),s=>s.sharpe>=0?green:red)}
+    ${stkBlock("Por α de Jensen","sobre/bajo lo exigido",byJensen,s=>(s.jensen>=0?"+":"")+s.jensen.toFixed(1)+"%",s=>s.jensen>=0?green:red)}</div>`
+    :`<div class="note" style="margin:0">Aún no hay suficientes precios en tus seguimientos para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres de un día, o registra operaciones en tus proyectos.</div>`;
+  const stkCard=card("Acciones destacadas",`Rankings calculados con los precios reales ingresados en tus seguimientos · frecuencia ${homeStkFreq}`,stkInner,freqSeg);
   const actions=card("Acciones rápidas","",`<div class="home-actions">
+    <button class="home-act" data-openprices><span class="ha-i">↻</span><b>Actualizar precios</b><span class="ha-s">Cierres del día · toda la plataforma</span></button>
     <button class="home-act" data-go="sim|constructor"><span class="ha-i">＋</span><b>Armar nueva cartera</b><span class="ha-s">Constructor de portafolio</span></button>
     <button class="home-act" data-go="eval|importar"><span class="ha-i">↥</span><b>Importar acciones</b><span class="ha-s">Analiza tu propio universo</span></button>
     <button class="home-act" data-go="clientes|admin"><span class="ha-i">👥</span><b>Administrar clientes</b><span class="ha-s">Carteras de terceros</span></button>
     <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
-  return hero+tiles+rankCard+grid2+actions;
+  return hero+tiles+rankCard+stkCard+mvCard+actions;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
@@ -4139,6 +4406,8 @@ function attachHome(){
     const np=+pid;activeId=(isFinite(np)&&String(np)===pid)?np:pid;try{saveProjects();syncProj();}catch(e){}
     modulo="inv";page="seguimiento";render();});
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
+  document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
+  document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   if(!MIND&&!mindBusy&&typeof mindFetch==="function"){try{mindFetch();}catch(e){}}
 }
 /* topbar switcher */
@@ -4150,7 +4419,7 @@ function renderClientBar(){
   const cm=document.getElementById("clientMenu");
   if(cm){cm.innerHTML=CLIENTS.map(c=>`<button class="cli-item ${c.id===activeClient?"on":""}" data-cliid="${c.id}"><span class="cli-dot" style="background:${c.color||"#1E5FD1"}"></span><span style="flex:1;text-align:left">${(""+c.name).replace(/</g,"&lt;")}</span>${c.id===activeClient?'<span class="cli-chk">✓</span>':""}</button>`).join("")+`<div class="cli-sep"></div><button class="cli-item act" data-cliadd>+ Nuevo cliente</button><button class="cli-item act" data-cligo>⚙ Gestionar clientes</button>`;
     cm.querySelectorAll("[data-cliid]").forEach(b=>b.onclick=()=>{clientMenuClose();clientSwitch(b.dataset.cliid);});
-    const ca=cm.querySelector("[data-cliadd]");if(ca)ca.onclick=()=>{clientMenuClose();const n=window.prompt("Nombre del nuevo cliente (ej. tu polola):");if(n!==null&&n.trim())clientAdd(n.trim());};
+    const ca=cm.querySelector("[data-cliadd]");if(ca)ca.onclick=()=>{clientMenuClose();clientFormOpen();};
     const cg=cm.querySelector("[data-cligo]");if(cg)cg.onclick=()=>{clientMenuClose();modulo="clientes";render();};}
   const cb=document.getElementById("clientBtn");if(cb&&!cb._b){cb._b=1;cb.onclick=e=>{e.stopPropagation();const m=document.getElementById("clientMenu");if(m)m.classList.toggle("open");};}
 }
@@ -4159,6 +4428,7 @@ let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
 function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
 applyScale(uiScale);
 try{document.addEventListener("click",clientMenuClose);}catch(e){}
+try{seedExamples();}catch(e){}
 render();
 authInit();
 </script>
