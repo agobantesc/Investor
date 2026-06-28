@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>INVERSOR 2.0 — Portfolio Intelligence</title>
-<script>try{if(localStorage.getItem('inv_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
+<title>Investor — Inteligencia que genera valor</title>
+<script>try{if(localStorage.getItem('inv_theme')!=='light')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <style>
   :root{
     color-scheme:light;
@@ -16,15 +16,15 @@
     /* Líneas */
     --line:#E3EAF4; --line2:#CDD9EA; --line3:#F0F4FA;
     /* Acento primario + rampa */
-    --accent:#1E5FD1; --accent2:#4F9BEF; --indigo:#1E5FD1;
-    --a-50:#EAF1FD; --a-100:#D4E3FB; --a-200:#A9C6F6; --a-300:#7CA8F0;
-    --a-400:#4F8AEA; --a-500:#1E5FD1; --a-600:#1A4FAE; --a-700:#163F89;
-    /* Acento de datos (cian de marca) */
-    --data:#0E8F86; --data-2:#22D3EE; --data-bg:#E2F5F3;
-    --brand-cyan:#22D3EE; --brand-blue:#3B82F6;
-    --brand-grad:linear-gradient(135deg,#3B82F6 0%,#22D3EE 100%);
+    --accent:#2563EB; --accent2:#5B8DEF; --indigo:#2563EB;
+    --a-50:#EEF3FE; --a-100:#DCE7FD; --a-200:#BACDFA; --a-300:#8DAEF6;
+    --a-400:#588EF0; --a-500:#2563EB; --a-600:#1E50C4; --a-700:#19429E;
+    /* Acento de datos */
+    --data:#0E9E6E; --data-2:#34D399; --data-bg:#E4F6EF;
+    --brand-cyan:#60A5FA; --brand-blue:#2563EB;
+    --brand-grad:linear-gradient(135deg,#3B82F6 0%,#2563EB 100%);
     /* Semánticos */
-    --green:#0B8457; --greenbg:#E2F4EC; --green-line:#9FDCC2;
+    --green:#0E9D6B; --greenbg:#E4F7EF; --green-line:#A7E3C9;
     --red:#CE2F3B; --redbg:#FBE9EA; --red-line:#F0B6BB;
     --amber:#A8700C; --amberbg:#FAF0D9; --amber-line:#EAD09A;
     --violet:#6D54D8; --violet-bg:#EDE9FC;
@@ -34,31 +34,31 @@
     --sh-md:0 1px 2px rgba(14,28,54,.05), 0 8px 22px rgba(14,28,54,.09);
     --sh-lg:0 2px 4px rgba(14,28,54,.06), 0 18px 44px rgba(14,28,54,.14);
     --shL:0 16px 44px rgba(14,28,54,.16);
-    --ring:0 0 0 3px rgba(30,95,209,.20);
+    --ring:0 0 0 3px rgba(37,99,235,.20);
     /* Charts (tematizables vía JS) */
     --chart-grid:#EAF0F8; --chart-axis:#CBD5E6; --chart-zero:#C2CEDF;
     /* Forma */
     --r:14px; --r-lg:16px; --r-sm:9px; --r-xs:6px; --r-pill:999px;
     /* Glass + sidebar + movimiento */
     --glass:rgba(255,255,255,.72);
-    --side-grad:linear-gradient(168deg,#0A1E3D 0%,#123769 62%,#16407A 100%);
+    --side-grad:linear-gradient(168deg,#0A1224 0%,#0F1D3A 60%,#13264A 100%);
     --ease:cubic-bezier(.22,.61,.36,1); --ease-out:cubic-bezier(.16,1,.3,1);
     --font:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
     --mono:'IBM Plex Mono','SFMono-Regular',ui-monospace,'Cascadia Mono',Menlo,monospace;
   }
   :root[data-theme="dark"]{
     color-scheme:dark;
-    --bg:#0A1220; --surface:#0E1828; --card:#121E32; --card2:#16243B;
-    --soft:#16243C; --soft2:#1B2C49;
-    --ink:#E7EEF9; --navy:#F2F6FD; --muted:#93A6C4; --faint:#6B7E9E;
-    --line:#1E2D47; --line2:#2A3C5C; --line3:#172339;
-    --accent:#3D8BFF; --accent2:#5EA3FF; --indigo:#3D8BFF;
-    --a-50:#15233C; --a-100:#1A2E4E; --a-200:#234071; --a-300:#2E558F;
-    --a-400:#3D8BFF; --a-500:#5EA3FF; --a-600:#86BCFF; --a-700:#B4D6FF;
-    --data:#3FD0C8; --data-2:#3FE0F0; --data-bg:#10322F;
-    --brand-cyan:#3FE0F0; --brand-blue:#5C92F2;
-    --brand-grad:linear-gradient(135deg,#5C92F2 0%,#3FE0F0 100%);
-    --green:#34C98A; --greenbg:#0F3327; --green-line:#1F6B4E;
+    --bg:#0A1224; --surface:#0E1A33; --card:#0F1D3A; --card2:#15274A;
+    --soft:#142544; --soft2:#1A2C4D;
+    --ink:#E8EEF8; --navy:#F3F7FD; --muted:#94A3B8; --faint:#647693;
+    --line:#1C2C49; --line2:#283B5E; --line3:#152138;
+    --accent:#3B82F6; --accent2:#60A0FF; --indigo:#3B82F6;
+    --a-50:#15233F; --a-100:#1A2E52; --a-200:#244275; --a-300:#2E5796;
+    --a-400:#3B82F6; --a-500:#5EA0FF; --a-600:#88BCFF; --a-700:#B4D6FF;
+    --data:#34D399; --data-2:#34D399; --data-bg:#0C2E22;
+    --brand-cyan:#60A5FA; --brand-blue:#3B82F6;
+    --brand-grad:linear-gradient(135deg,#3B82F6 0%,#2563EB 100%);
+    --green:#10B981; --greenbg:#0C2E22; --green-line:#1C6B4F;
     --red:#F0606B; --redbg:#3A1A1E; --red-line:#7A2C32;
     --amber:#E0A93C; --amberbg:#352910; --amber-line:#6E561E;
     --violet:#9B86F0; --violet-bg:#1F1A3A;
@@ -70,7 +70,7 @@
     --ring:0 0 0 3px rgba(61,139,255,.30);
     --chart-grid:#1E2D47; --chart-axis:#33486B; --chart-zero:#3C5078;
     --glass:rgba(15,30,56,.66);
-    --side-grad:linear-gradient(168deg,#070E1A 0%,#0C1A30 60%,#102542 100%);
+    --side-grad:linear-gradient(168deg,#070E1C 0%,#0A1530 58%,#0F2042 100%);
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;}
@@ -777,11 +777,9 @@
     box-shadow:inset -1px 0 0 rgba(255,255,255,.05),5px 0 26px rgba(5,14,33,.30);}
   .brand{padding:1.45rem 1.25rem 1.25rem;gap:13px;border-bottom:1px solid rgba(255,255,255,.08);
     background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);}
-  .brand-mark{width:44px;height:44px;border-radius:14px;
-    background:linear-gradient(150deg,rgba(59,130,246,.30),rgba(34,211,238,.10));
-    border:1px solid rgba(127,176,242,.34);
-    box-shadow:0 7px 20px rgba(5,16,40,.55),inset 0 1px 0 rgba(255,255,255,.12);}
-  .beye{font-size:8px;letter-spacing:2.3px;color:#76CFEC;opacity:.95;margin-bottom:6px;font-weight:800;}
+  .brand-mark{width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:none;border:none;border-radius:0;
+    filter:drop-shadow(0 7px 18px rgba(37,99,235,.42));}
+  .beye{font-size:8px;letter-spacing:2.1px;color:#8FA6CE;opacity:.95;margin-bottom:6px;font-weight:800;}
   .bt{font-size:25px;letter-spacing:-.6px;font-weight:850;line-height:1.08;
     background:linear-gradient(176deg,#FFFFFF 0%,#CADFF7 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;}
   .wm-dot{margin-bottom:5px;box-shadow:0 0 0 3px rgba(34,211,238,.22),0 0 11px rgba(34,211,238,.55);}
@@ -888,9 +886,8 @@
     box-shadow:0 34px 90px rgba(3,10,26,.62);padding:2rem 1.9rem 1.55rem;animation:agRise .4s var(--ease-out);}
   @keyframes agRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
   .auth-brand{display:flex;align-items:center;gap:13px;margin-bottom:1.45rem;}
-  .auth-mark{width:54px;height:54px;border-radius:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-    background:linear-gradient(150deg,rgba(59,130,246,.16),rgba(34,211,238,.06));border:1px solid rgba(127,176,242,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.06);}
-  .auth-eye{font-size:8px;letter-spacing:2.2px;color:#3E8FCB;font-weight:800;text-transform:uppercase;margin-bottom:5px;}
+  .auth-mark{width:52px;height:52px;display:flex;align-items:center;justify-content:center;flex-shrink:0;filter:drop-shadow(0 9px 22px rgba(37,99,235,.45));}
+  .auth-eye{font-size:8px;letter-spacing:2.1px;color:var(--accent);font-weight:800;text-transform:uppercase;margin-bottom:5px;}
   .auth-wm{font:850 23px var(--font);letter-spacing:-.5px;color:var(--navy);line-height:1;}
   .auth-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand-grad);margin-left:4px;vertical-align:baseline;}
   .auth-h{font:850 20px var(--font);color:var(--navy);letter-spacing:-.4px;}
@@ -1034,8 +1031,10 @@
   [data-theme="dark"] .risk-chip.agr{background:#3A1A1A;color:#F0A0A0;}
   /* ════════════════ HOME / RESUMEN GENERAL ════════════════ */
   .modbtn.home-btn{margin-bottom:14px;background:linear-gradient(135deg,rgba(56,132,255,.14),rgba(34,211,238,.06));border:1px solid rgba(125,172,247,.22);}
-  .home-hero{position:relative;overflow:hidden;border-radius:var(--r-lg);padding:1.5rem 1.7rem;color:#fff;box-shadow:var(--sh-lg);margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;background:linear-gradient(125deg,#0A1E3D,#1E5FD1);}
-  .home-hero.neg{background:linear-gradient(125deg,#3A1320,#9A2740);}
+  .home-hero{position:relative;overflow:hidden;border-radius:var(--r-lg);padding:1.5rem 1.7rem;color:#fff;box-shadow:var(--sh-lg);margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;background:linear-gradient(120deg,#0A1224 0%,#13316E 52%,#2563EB 100%);}
+  .home-hero.neg{background:linear-gradient(120deg,#0A1224 0%,#3A1726 55%,#9A2740 100%);}
+  .hh-c{flex:1 1 200px;min-width:160px;max-width:380px;align-self:center;opacity:.9;}
+  .hero-spark{width:100%;height:72px;display:block;}
   .home-hero::after{content:"";position:absolute;right:-40px;top:-50px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.15),transparent 65%);}
   .hh-eyebrow{font-size:9.5px;letter-spacing:1.6px;font-weight:800;opacity:.82;text-transform:uppercase;}
   .hh-val{font:800 34px var(--font);letter-spacing:-1px;margin:7px 0 6px;position:relative;font-variant-numeric:tabular-nums;}
@@ -1153,6 +1152,24 @@
   .hg-hi{font:800 19px var(--font);color:var(--navy);letter-spacing:-.3px;}
   .hg-date{font-size:12px;color:var(--mut);font-weight:600;margin-top:2px;}
   .hg-cta{flex:0 0 auto;}
+  /* Home: banner de bienvenida (propuesta de valor) */
+  .home-welcome{position:relative;overflow:hidden;border-radius:var(--r-lg);margin-bottom:16px;padding:1.5rem 1.7rem;color:#fff;
+    background:linear-gradient(115deg,#0A1224 0%,#0F1D3A 42%,#15347A 100%);border:1px solid rgba(96,165,250,.22);box-shadow:var(--sh-lg);}
+  .hw-motif{position:absolute;right:0;top:0;width:55%;height:100%;opacity:.55;pointer-events:none;}
+  .hw-inner{position:relative;z-index:1;}
+  .hw-x{position:absolute;top:12px;right:14px;z-index:2;width:26px;height:26px;border:none;border-radius:8px;background:rgba(255,255,255,.08);color:#cdd9ee;cursor:pointer;font-size:13px;transition:.12s var(--ease);}
+  .hw-x:hover{background:rgba(255,255,255,.16);color:#fff;}
+  .hw-eyebrow{font-size:9.5px;letter-spacing:1.8px;font-weight:800;text-transform:uppercase;color:#7FB0FF;margin-bottom:9px;}
+  .hw-h{font:800 30px var(--font);letter-spacing:-.8px;line-height:1.08;}
+  .hw-h span{color:#5BA0FF;}
+  .hw-sub{font-size:13.5px;color:#C3D2EC;margin-top:7px;font-weight:500;}
+  .hw-feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px;margin-top:18px;}
+  .hw-feat{display:flex;align-items:center;gap:11px;}
+  .hw-fi{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#9DC3FF;background:rgba(96,165,250,.13);border:1px solid rgba(96,165,250,.28);}
+  .hw-ft{display:flex;flex-direction:column;min-width:0;}
+  .hw-ft b{font:800 13px var(--font);color:#fff;}
+  .hw-ft span{font-size:11px;color:#9FB2D4;font-weight:600;}
+  @media(max-width:760px){.hw-h{font-size:24px;}.hw-motif{opacity:.3;}}
   /* Home: noticias */
   .home-grid-news{grid-template-columns:1.5fr 1fr;}
   .home-news{display:flex;flex-direction:column;}
@@ -1174,14 +1191,14 @@
 <div class="auth-gate" id="authGate"></div>
 <div id="app">
   <aside>
-    <div class="brand"><div class="brand-mark"><svg class="logomark" viewBox="0 0 32 32" width="30" height="30" role="img" aria-label="Inversor 2.0"><defs><linearGradient id="lgGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs><path d="M16 3a13 13 0 1 0 11.6 7.1" fill="none" stroke="url(#lgGrad)" stroke-width="3.4" stroke-linecap="round"/><path d="M10.5 19.5 L15 15 L18.5 17.5 L23 11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="11" r="2.4" fill="url(#lgGrad)"/></svg></div><div><div class="beye">PORTFOLIO INTELLIGENCE · 2.0</div><div class="bt">INVERSOR<span class="wm-dot"></span></div></div></div>
+    <div class="brand"><div class="brand-mark"><svg class="logomark" viewBox="0 0 40 40" width="34" height="34" role="img" aria-label="Investor"><defs><linearGradient id="lgGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="3" y="3" width="34" height="34" rx="9.5" fill="url(#lgGrad)"/><rect x="10.6" y="23" width="3.2" height="6" rx="1.3" fill="#fff" opacity=".42"/><rect x="16.4" y="19.5" width="3.2" height="9.5" rx="1.3" fill="#fff" opacity=".6"/><rect x="22.2" y="16" width="3.2" height="13" rx="1.3" fill="#fff" opacity=".8"/><path d="M9.5 22 L17 16.2 L22 19.2 L31 11.4" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.6 11.4 H31 V16.8" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="beye">INTELIGENCIA QUE GENERA VALOR</div><div class="bt">Investor<span class="wm-dot"></span></div></div></div>
     <div class="snav" id="snav"></div>
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
     <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="cli-wrap"><button class="cli-btn" id="clientBtn"><span class="cli-dot"></span><span class="cli-lbl">Cliente</span><span class="cli-name" id="clientName"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="cli-menu" id="clientMenu"></div></div><div class="tnav"><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
-    <div class="footer"><span>INVERSOR 2.0 · SIMULACIÓN EDUCATIVA · ANÁLISIS CUANTITATIVO MULTIFACTOR · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
+    <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
 </div>
 <script>
@@ -2829,7 +2846,7 @@ function proHero(tag,title,sub,kpis){
 function ku(l,v){return `<div><div class="l">${l}</div><div class="v">${v}</div></div>`;}
 
 function viewRealtime(){
-  const hero=proHero("INVERSOR Pro · Roadmap","Precios de mercado en tiempo real","¿Qué tan difícil es conectar precios reales del IPSA (y de EE.UU.) a INVERSOR? Aquí está el plan honesto: la dificultad no es la app, es pasar de un HTML 100% estático a una capa serverless mínima que resuelva CORS y guarde la clave API.",
+  const hero=proHero("Investor Pro · Roadmap","Precios de mercado en tiempo real","¿Qué tan difícil es conectar precios reales del IPSA (y de EE.UU.) a Investor? Aquí está el plan honesto: la dificultad no es la app, es pasar de un HTML 100% estático a una capa serverless mínima que resuelva CORS y guarde la clave API.",
     ku("Dificultad","Media")+ku("MVP (EOD)","~1,5–2 días")+ku("Mejor fuente IPSA","EODHD · EOD")+ku("Real-time barato Chile","Casi inexistente"));
   // mock cotizaciones (usa el último precio del dataset)
   const quotes=STOCKS.slice(0,8).map(s=>{const p=s.prices[s.prices.length-1],d=s.rets[s.rets.length-1];
@@ -2877,11 +2894,11 @@ function viewCopilot(){
   const pfName=pf?pf.name:"tu portafolio";
   const chat=card("Vista previa · copiloto de portafolio","Conversación simulada · así razonaría el agente con tus datos reales",`<div class="chatbox">
     <div class="msg u">¿Está bien diversificada mi cartera y cómo voy contra el IPSA?</div>
-    <div class="msg a"><div class="who"><span class="live-dot"></span>INVERSOR Copilot · Claude</div><div class="toollog">→ get_portfolio() · compute_metrics()</div>Tu cartera <b>"${pfName}"</b> tiene correlación interna media <b>0,40</b> — diversificación razonable, pero <b>BCI, CHILE y SANTANDER</b> son banca (ρ ≈ 0,7 entre sí), así que estás concentrado en un sector. Tu β es <b>1,04</b> y vienes <b>+2,1 pts sobre el IPSA</b> en el período. Para bajar concentración podrías recortar un banco y subir <code>ENELCHILE</code> (defensiva, baja correlación).</div>
+    <div class="msg a"><div class="who"><span class="live-dot"></span>Investor Copilot · Claude</div><div class="toollog">→ get_portfolio() · compute_metrics()</div>Tu cartera <b>"${pfName}"</b> tiene correlación interna media <b>0,40</b> — diversificación razonable, pero <b>BCI, CHILE y SANTANDER</b> son banca (ρ ≈ 0,7 entre sí), así que estás concentrado en un sector. Tu β es <b>1,04</b> y vienes <b>+2,1 pts sobre el IPSA</b> en el período. Para bajar concentración podrías recortar un banco y subir <code>ENELCHILE</code> (defensiva, baja correlación).</div>
     <div class="msg u">¿Y qué dice el modelo multifactor de mis posiciones?</div>
-    <div class="msg a"><div class="who"><span class="live-dot"></span>INVERSOR Copilot · Claude</div><div class="toollog">→ get_factor_exposure()</div>Tu portafolio está <b>sobreponderado en Momentum (+0,6)</b> y <b>Quality (+0,4)</b>, pero <b>subponderado en Value (−0,5)</b>: pagas algo caro por el momentum. <b>PARAUCO</b> es tu mejor mix (momentum + calidad); <b>CHILE</b> aporta poco fuera de su β alto. El E(R) multifactor de la cartera (<b>12,4%</b>) supera al CAPM (<b>11,7%</b>) por tu tilt de calidad.</div>
+    <div class="msg a"><div class="who"><span class="live-dot"></span>Investor Copilot · Claude</div><div class="toollog">→ get_factor_exposure()</div>Tu portafolio está <b>sobreponderado en Momentum (+0,6)</b> y <b>Quality (+0,4)</b>, pero <b>subponderado en Value (−0,5)</b>: pagas algo caro por el momentum. <b>PARAUCO</b> es tu mejor mix (momentum + calidad); <b>CHILE</b> aporta poco fuera de su β alto. El E(R) multifactor de la cartera (<b>12,4%</b>) supera al CAPM (<b>11,7%</b>) por tu tilt de calidad.</div>
     <div class="msg u">Propón un rebalanceo para reducir riesgo manteniendo retorno.</div>
-    <div class="msg a"><div class="who"><span class="live-dot"></span>INVERSOR Copilot · Claude</div>Bajaría <code>CHILE</code> de 16,7% a 10%, subiría <code>ENELCHILE</code> a 12% y <code>COLBUN</code> a 10% (defensivas, value + yield). Eso reduce el β a ~0,93 y la correlación interna a ~0,33, manteniendo el E(R) multifactor cerca de 12%. <span style="color:var(--faint)">Informativo, no es asesoría financiera.</span></div>
+    <div class="msg a"><div class="who"><span class="live-dot"></span>Investor Copilot · Claude</div>Bajaría <code>CHILE</code> de 16,7% a 10%, subiría <code>ENELCHILE</code> a 12% y <code>COLBUN</code> a 10% (defensivas, value + yield). Eso reduce el β a ~0,93 y la correlación interna a ~0,33, manteniendo el E(R) multifactor cerca de 12%. <span style="color:var(--faint)">Informativo, no es asesoría financiera.</span></div>
   </div><div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn btn-pri" data-opencopilot>✨ Abrir copiloto IA</button><span class="note" style="margin:0">Ejemplo arriba. Conéctalo con tu propia clave de Anthropic (se guarda solo en tu navegador) y conversa con tus datos reales.</span></div>`);
   const arch=card("Arquitectura del agente","Mismo proxy serverless que los precios · la clave de Anthropic vive en el backend",`<div class="codeblk"><span class="cm">// el portafolio (localStorage) viaja en el POST; la clave nunca sale del backend</span>
 [ HTML estático ] ──POST /api/chat { mensajes, portafolioJSON }──▶ [ Función serverless ]
@@ -2923,7 +2940,7 @@ let cpKey=lsGet("inv_anthropic_key")||"", cpModel=lsGet("inv_cp_model")||"claude
 let cpMsgs=[]; let cpBusy=false; let cpOpen=false; let cpToolNotes=[];
 const CP_MODELS=[["claude-opus-4-8","Opus 4.8 · profundo"],["claude-sonnet-4-6","Sonnet 4.6 · rápido"],["claude-haiku-4-5","Haiku 4.5 · ágil"]];
 
-const CP_SYSTEM=`Eres el **Agente de Inversiones** de INVERSOR 2.0: un analista cuantitativo senior y estratega de portafolios, especializado en el mercado accionario chileno (IPSA), con formación rigurosa en finanzas cuantitativas y teoría moderna de portafolio.
+const CP_SYSTEM=`Eres el **Agente de Inversiones** de Investor: un analista cuantitativo senior y estratega de portafolios, especializado en el mercado accionario chileno (IPSA), con formación rigurosa en finanzas cuantitativas y teoría moderna de portafolio.
 
 MARCO ANALÍTICO (aplícalo con rigor):
 - Optimización media-varianza de Markowitz, frontera eficiente, diversificación por correlaciones y presupuesto de riesgo.
@@ -3695,7 +3712,7 @@ function cfgRender(){
   m.querySelector("#cfgBkp").onclick=()=>{try{exportBackup();}catch(e){}};
   const rfl=m.querySelector("#cfgRstFile");m.querySelector("#cfgRst").onclick=()=>rfl.click();rfl.onchange=ev=>{if(ev.target.files[0]){importBackup(ev.target.files[0]);cfgClose();}};
   const _ou=m.querySelector("#cfgOilUrl");if(_ou)_ou.onchange=()=>{OIL_URL=(_ou.value||"").trim();try{localStorage.setItem("inv_oil_url",OIL_URL);}catch(e){}if(OIL_URL&&typeof mindFetch==="function")mindFetch();};
-  m.querySelector("#cfgReset").onclick=()=>{if(confirm("¿Borrar TODOS los datos de INVERSOR en este navegador? No se puede deshacer.")){try{localStorage.clear();}catch(e){}location.reload();}};
+  m.querySelector("#cfgReset").onclick=()=>{if(confirm("¿Borrar TODOS los datos de Investor en este navegador? No se puede deshacer.")){try{localStorage.clear();}catch(e){}location.reload();}};
 }
 
 /* ---------------- COPILOTO: perfil + dataset ---------------- */
@@ -4071,7 +4088,7 @@ function genContabReport(){
   .foot{margin-top:26px;font-size:10px;color:#7A8AA0;border-top:1px solid #E8EDF5;padding-top:10px}
   @media print{body{margin:12mm}h2{page-break-after:avoid}tr{page-break-inside:avoid}}</style></head><body>
   <h1>Informe contable consolidado de inversiones</h1>
-  <div class="sub">${PROJECTS.length} proyecto(s) · ${per.length} con operaciones · Emitido: ${fch} · INVERSOR 2.0</div>
+  <div class="sub">${PROJECTS.length} proyecto(s) · ${per.length} con operaciones · Emitido: ${fch} · Investor</div>
   <div class="kpis">
     <div class="kpi"><div class="l">Invertido (compras)</div><div class="v">${clp(T.buy)}</div></div>
     <div class="kpi"><div class="l">Dinero rescatado (ventas)</div><div class="v">${T.sell?clp(T.sell):"—"}</div></div>
@@ -4113,9 +4130,9 @@ function authInit(){
 function authRender(){
   const g=authGateEl();if(!g)return;
   const create=authMode==="create";
-  const logo='<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true"><defs><linearGradient id="agG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs><path d="M16 3a13 13 0 1 0 11.6 7.1" fill="none" stroke="url(#agG)" stroke-width="3.4" stroke-linecap="round"/><path d="M10.5 19.5 L15 15 L18.5 17.5 L23 11" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="23" cy="11" r="2.4" fill="url(#agG)"/></svg>';
+  const logo='<svg viewBox="0 0 40 40" width="52" height="52" aria-hidden="true"><defs><linearGradient id="agG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="2" y="2" width="36" height="36" rx="10.5" fill="url(#agG)"/><rect x="10.6" y="23.5" width="3.4" height="6.5" rx="1.4" fill="#fff" opacity=".42"/><rect x="16.8" y="20" width="3.4" height="10" rx="1.4" fill="#fff" opacity=".6"/><rect x="23" y="16" width="3.4" height="14" rx="1.4" fill="#fff" opacity=".8"/><path d="M10 22.5 L17.5 16.5 L22.5 19.8 L31.5 11.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.8 11.5 H31.5 V17.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   g.innerHTML=`<div class="auth-card">
-    <div class="auth-brand"><div class="auth-mark">${logo}</div><div><div class="auth-eye">PORTFOLIO INTELLIGENCE · 2.0</div><div class="auth-wm">INVERSOR<span class="auth-dot"></span></div></div></div>
+    <div class="auth-brand"><div class="auth-mark">${logo}</div><div><div class="auth-eye">INTELIGENCIA QUE GENERA VALOR</div><div class="auth-wm">Investor<span class="auth-dot"></span></div></div></div>
     <div class="auth-h">${create?"Crea tu acceso":"Bienvenido de vuelta"}</div>
     <div class="auth-sub">${create?"Protege tu plataforma con usuario y contraseña. Se guardan cifrados en este navegador.":"Ingresa para continuar con tu análisis y seguimiento."}</div>
     <div class="auth-f"><label>Usuario</label><input id="authUser" type="text" autocomplete="username" value="${(!create&&AUTH&&AUTH.user)?(""+AUTH.user).replace(/"/g,"&quot;"):""}" placeholder="tu usuario"></div>
@@ -4566,6 +4583,27 @@ function homeData(){
   CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gainNet,pct:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[]});}catch(e){}});});
   return {clients,T,projs};
 }
+/* serie agregada de patrimonio (alineada por la cola) para el sparkline del hero */
+function aggSeries(projs){const withS=(projs||[]).filter(p=>p.series&&p.series.length>1);if(!withS.length)return [];const L=Math.max(...withS.map(p=>p.series.length));const out=new Array(L).fill(0);withS.forEach(p=>{const s=p.series,off=L-s.length;for(let i=0;i<L;i++)out[i]+=(i<off?s[0]:s[i-off]);});return out.map(v=>Math.round(v));}
+function heroSpark(series){if(!series||series.length<2)return "";const w=340,h=72,n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-5-((v-mn)/rg)*(h-14)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");return `<svg class="hero-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="hsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD8FF" stop-opacity=".42"/><stop offset="1" stop-color="#BFD8FF" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#hsg)"/><path d="${d}" fill="none" stroke="#CFE0FF" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;}
+/* banner de bienvenida (propuesta de valor) — descartable */
+function homeWelcome(){
+  try{if(localStorage.getItem("inv_welcome_hide")==="1")return "";}catch(e){}
+  const ic={
+    an:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>',
+    es:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>',
+    co:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
+    de:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13H11l-1 9 8.5-12H12l1-8z"/></svg>'
+  };
+  const feats=[[ic.an,"Análisis avanzado","Datos que importan"],[ic.es,"Estrategias inteligentes","Portafolios optimizados"],[ic.co,"Control y transparencia","Todo en un solo lugar"],[ic.de,"Decisiones con confianza","Inteligencia que genera valor"]];
+  const motif='<svg class="hw-motif" viewBox="0 0 520 240" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><defs><linearGradient id="hwa" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3B82F6" stop-opacity=".55"/><stop offset="1" stop-color="#3B82F6" stop-opacity="0"/></linearGradient></defs><path d="M0 190 L70 175 L120 185 L180 150 L240 162 L300 120 L360 132 L420 80 L480 96 L520 50" fill="none" stroke="#7FB0FF" stroke-width="2.4" stroke-opacity=".7"/><path d="M0 190 L70 175 L120 185 L180 150 L240 162 L300 120 L360 132 L420 80 L480 96 L520 50 L520 240 L0 240 Z" fill="url(#hwa)" opacity=".5"/></svg>';
+  return `<div class="home-welcome"><button class="hw-x" data-welcomehide title="Ocultar">✕</button>${motif}
+    <div class="hw-inner"><div class="hw-eyebrow">Investor · inteligencia que genera valor</div>
+      <div class="hw-h">Tus inversiones. <span>Nuestra inteligencia.</span></div>
+      <div class="hw-sub">Decisiones informadas. Resultados reales.</div>
+      <div class="hw-feats">${feats.map(f=>`<div class="hw-feat"><span class="hw-fi">${f[0]}</span><div class="hw-ft"><b>${f[1]}</b><span>${f[2]}</span></div></div>`).join("")}</div>
+    </div></div>`;
+}
 function homeNewsCard(){
   let body;
   if(NEWS&&NEWS.length){
@@ -4584,10 +4622,12 @@ function viewHome(){
   const _who=(typeof AUTH!=="undefined"&&AUTH&&AUTH.user)?(", "+(""+AUTH.user).replace(/</g,"&lt;")):"";
   const _fecha=_now.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const greetStrip=`<div class="home-greet"><div><div class="hg-hi">${_greet}${_who} 👋</div><div class="hg-date">${_fecha.charAt(0).toUpperCase()+_fecha.slice(1)} · tu panel para empezar el día</div></div><button class="btn btnu hg-cta" data-go="datos|cierre">↻ Cargar cierre del día</button></div>`;
+  const patSeries=aggSeries(D.projs);
   const hero=`<div class="home-hero ${T.gainNet>=0?"pos":"neg"}">
     <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO</div>
       <div class="hh-val">${fmtCLP(T.value)}</div>
       <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}</div></div>
+    ${patSeries.length>1?`<div class="hh-c">${heroSpark(patSeries)}</div>`:""}
     <div class="hh-r"><div class="hh-gain">${sg(T.gainNet)}</div><div class="hh-pct">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
   const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles">
     ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
@@ -4631,7 +4671,7 @@ function viewHome(){
     <button class="home-act" data-go="proyectos|hub"><span class="ha-i">▦</span><b>Mis proyectos</b><span class="ha-s">Carteras, análisis y seguimientos</span></button>
     <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
   const newsCard=homeNewsCard();
-  return greetStrip+hero+tiles+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard+actions;
+  return homeWelcome()+greetStrip+hero+tiles+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard+actions;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
@@ -4642,6 +4682,7 @@ function attachHome(){
   document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-newsretry]").forEach(b=>b.onclick=()=>{try{newsFetch(true);}catch(e){}});
+  const _wx=document.querySelector("[data-welcomehide]");if(_wx)_wx.onclick=()=>{try{localStorage.setItem("inv_welcome_hide","1");}catch(e){}render();};
   if(!MIND&&!mindBusy&&typeof mindFetch==="function"){try{mindFetch();}catch(e){}}
   if(typeof newsFetch==="function"){try{newsFetch();}catch(e){}}
 }
