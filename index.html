@@ -157,14 +157,15 @@
   .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;}
   .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.92rem .9rem .92rem 1rem;position:relative;overflow:hidden;box-shadow:var(--sh);}
   .tile .edge{position:absolute;left:0;top:0;bottom:0;width:3px;}
-  .tile .l{font-size:9.5px;letter-spacing:.5px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:7px;line-height:1.3;}
-  .tile .v{font-size:1.12rem;font-weight:800;line-height:1.16;letter-spacing:-.4px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
-  .tile .s{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.35;}
+  .tile .l{font-size:10.5px;letter-spacing:.4px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:7px;line-height:1.3;}
+  .tile .v{font-size:1.16rem;font-weight:800;line-height:1.16;letter-spacing:-.4px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+  .tile .s{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.35;}
 
   /* table */
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
-  thead th{padding:.7rem .9rem;text-align:left;font-size:9.5px;letter-spacing:.6px;color:var(--muted);font-weight:700;
+  thead th{padding:.72rem .9rem;text-align:left;font-size:10.5px;letter-spacing:.5px;color:var(--muted);font-weight:700;
            text-transform:uppercase;border-bottom:1px solid var(--line2);white-space:nowrap;background:var(--soft);}
+  .ntr{text-transform:none !important;}
   tbody td{padding:.72rem .9rem;border-bottom:1px solid var(--line);}
   tbody tr:last-child td{border-bottom:none;}
   tbody tr:hover{background:var(--soft);}
@@ -355,7 +356,7 @@
   table{border-collapse:separate;border-spacing:0;}
   thead th{position:sticky;top:0;z-index:2;background:var(--soft);color:var(--muted);
     border-bottom:1px solid var(--line2);box-shadow:0 1px 0 var(--line2);}
-  thead th.num,tbody td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  thead th.num,tbody td.num,.tw th.r,.tw td.r{text-align:right;font-variant-numeric:tabular-nums;}
   tbody td{border-bottom:1px solid var(--line);color:var(--ink);}
   tbody tr:nth-child(even) td{background:var(--line3);}
   tbody tr{transition:background .1s ease;}
@@ -1105,16 +1106,16 @@
   .stk-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
   .stk-block{border:1px solid var(--line);border-radius:12px;padding:.7rem .75rem;background:var(--card2);}
   .stk-bh{display:flex;flex-direction:column;margin-bottom:6px;}
-  .stk-bh b{font:800 12.5px var(--font);color:var(--navy);}
-  .stk-bh span{font-size:10px;color:var(--mut);font-weight:600;}
-  .stk-pos{flex:0 0 auto;width:17px;height:17px;border-radius:6px;background:var(--surface);color:var(--mut);font:800 10px var(--font);display:flex;align-items:center;justify-content:center;}
+  .stk-bh b{font:800 13px var(--font);color:var(--navy);}
+  .stk-bh span{font-size:10.5px;color:var(--mut);font-weight:600;}
+  .stk-pos{flex:0 0 auto;width:18px;height:18px;border-radius:6px;background:var(--surface);color:var(--mut);font:800 10.5px var(--font);display:flex;align-items:center;justify-content:center;}
   .stk-block .home-stk{display:flex;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--line);}
   .stk-block .home-stk:last-child{border-bottom:none;}
   .stk-spk{width:48px;height:18px;flex:0 0 auto;opacity:.9;}
   .stk-spk .mkt-spark{width:48px;height:18px;}
-  .stk-block .rk-name{font-size:12px;}
-  .stk-block .rk-cli{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px;}
-  .stk-block .rk-pct{font-size:12.5px;}
+  .stk-block .rk-name{font-size:12.5px;}
+  .stk-block .rk-cli{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;}
+  .stk-block .rk-pct{font-size:13px;}
   @media(max-width:1180px){.stk-cols{grid-template-columns:repeat(2,1fr);}}
   @media(max-width:560px){.stk-cols{grid-template-columns:1fr;}}
   /* modales genéricos (precios plataforma / cliente) */
@@ -1207,10 +1208,10 @@
   .fw-chart{height:58px;}
   .fw-chart .mkt-spark{width:100%;height:58px;}
   .fw-chart .line-spark{height:58px;}
-  .fw-stats{display:flex;gap:20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:11px;}
-  .fw-stat{display:flex;flex-direction:column;gap:2px;}
-  .fw-sl{font-size:9.5px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
-  .fw-sv{font:800 14.5px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;}
+  .fw-stats{display:flex;gap:26px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;}
+  .fw-stat{display:flex;flex-direction:column;gap:3px;}
+  .fw-sl{font-size:10.5px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+  .fw-sv{font:800 17px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.2px;}
   .fw-hint{font-size:11.5px;color:var(--mut);font-weight:600;}
   @media(max-width:760px){.home-fundgrid.n2{grid-template-columns:1fr;}}
   @media(max-width:880px){.home-grid-news{grid-template-columns:1fr;}}
@@ -1530,13 +1531,13 @@ function viewComparativa(){
   const scatter=card("Mapa Riesgo–Retorno","Volatilidad anual (X) vs retorno anual (Y) · 24 meses",svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
   const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
   const rows=byS.map(s=>{const a=s.a24;return `<tr><td>${tk(s)}</td><td>${badge(s.s,s.c)}</td>
-    <td class="tnum" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td>${chip(a.ret)}</td>
-    <td class="tnum">${p0(a.sig)}</td><td class="tnum" style="font-weight:800;color:${a.sharpe>=0?green:red}">${a.sharpe.toFixed(2)}</td>
-    <td>${chip(a.jensen)}</td><td class="tnum" style="color:${muted}">${a.r2.toFixed(2)}</td><td>${chip(a.tot)}</td></tr>`;}).join("");
+    <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(a.ret)}</td>
+    <td class="tnum num">${p0(a.sig)}</td><td class="tnum num" style="font-weight:800;color:${a.sharpe>=0?green:red}">${a.sharpe.toFixed(2)}</td>
+    <td class="num">${chip(a.jensen)}</td><td class="tnum num" style="color:${muted}">${a.r2.toFixed(2)}</td><td class="num">${chip(a.tot)}</td></tr>`;}).join("");
   const mkt=`<tr style="background:var(--soft)"><td style="font-weight:800;color:${indigo}">IPSA</td><td>${badge("mercado",indigo)}</td>
-    <td class="tnum" style="color:${accentT};font-weight:700">1.00</td><td>${chip(MKT.ret)}</td><td class="tnum">${p0(MKT.sig)}</td>
-    <td class="tnum" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td style="color:${muted}">—</td><td class="tnum" style="color:${muted}">1.00</td><td>${chip(MKT.tot)}</td></tr>`;
-  const tbl=card("Comparativa de candidatas","Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA",{html:`<div class="tw"><table><thead><tr>${["Acción","Sector","β","Ret. anual","σ","Sharpe","α Jensen","R²","Total 24m"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
+    <td class="tnum num" style="color:${accentT};font-weight:700">1.00</td><td class="num">${chip(MKT.ret)}</td><td class="tnum num">${p0(MKT.sig)}</td>
+    <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="num">${chip(MKT.tot)}</td></tr>`;
+  const tbl=card("Comparativa de candidatas","Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["R²",1],["Total 24m",1]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
   return marketTiles()+scatter+tbl+corrCard();
 }
 
@@ -1576,9 +1577,9 @@ function viewCAPM(){
   const chart=card("Security Market Line (SML)","Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:330}));
   const byJ=[...STOCKS].sort((a,b)=>b.a24.jensen-a.a24.jensen);
   const rows=byJ.map(s=>{const a=s.a24;const sg=a.jensen>1?"SUBVALORADA":a.jensen<-1?"SOBREVALORADA":"EQUILIBRIO",sc=a.jensen>1?green:a.jensen<-1?red:muted;
-    return `<tr><td>${tk(s)}</td><td class="tnum" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td>
-    <td class="tnum" style="color:${indigo};font-weight:600">${p0(a.er)}</td><td>${chip(a.ret)}</td><td>${chip(a.jensen)}</td><td>${badge(sg,sc)}</td></tr>`;}).join("");
-  const tbl=card("Valoración CAPM","E(R) exigido = Rf + β × prima · α de Jensen = retorno real − exigido",{html:`<div class="tw"><table><thead><tr>${["Acción","β","E(R) CAPM","Retorno real","α Jensen","Señal"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
+    return `<tr><td>${tk(s)}</td><td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td>
+    <td class="tnum num" style="color:${indigo};font-weight:600">${p0(a.er)}</td><td class="num">${chip(a.ret)}</td><td class="num">${chip(a.jensen)}</td><td>${badge(sg,sc)}</td></tr>`;}).join("");
+  const tbl=card("Valoración CAPM","E(R) exigido = Rf + β × prima · α de Jensen = retorno real − exigido",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["β",1],["E(R) CAPM",1],["Retorno real",1],["α Jensen",1],["Señal",0]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
   const note=notecard(`La <b>SML</b> muestra el retorno que el CAPM exige según el β (Rf ${p0(RF)}, prima ${p0(PRIMA)}). Un punto <b>sobre</b> la línea rindió más de lo exigido por su riesgo sistemático (α positivo); <b>bajo</b>, menos. Ojo: la ventana fue un mercado muy alcista, por eso varios retornos reales superan ampliamente lo exigido.`);
   return chart+tbl+note;
 }
@@ -1728,15 +1729,15 @@ function viewComparador(){
   const rows=SCEN.map((s,i)=>{const comp=s.comp.map(c=>`<span class="tag" style="border-color:${c.c}55;color:${c.c}">${c.t} ${c.w}%</span>`).join(" ");
     return `<tr><td><span class="lgdot" style="background:${SCPAL[i%SCPAL.length]}"></span> <b>${s.name}</b></td>
     <td style="max-width:260px;white-space:normal">${comp}</td>
-    <td class="tnum" style="color:${accentT};font-weight:700">${s.m.bp.toFixed(2)}</td>
-    <td class="tnum" style="color:${indigo};font-weight:600">${p0(s.m.erCapm)}</td>
-    <td>${chip(s.m.retH)}</td>
-    <td class="tnum">${p0(s.m.sig)}</td>
-    <td class="tnum" style="font-weight:800;color:${s.m.sharpe>=0?green:red}">${s.m.sharpe.toFixed(2)}</td>
-    <td class="tnum" style="color:${muted}">${s.m.corrAvg.toFixed(2)}</td>
-    <td class="tnum">${fmtCLP(s.amount)}</td>
+    <td class="tnum num" style="color:${accentT};font-weight:700">${s.m.bp.toFixed(2)}</td>
+    <td class="tnum num" style="color:${indigo};font-weight:600">${p0(s.m.erCapm)}</td>
+    <td class="num">${chip(s.m.retH)}</td>
+    <td class="tnum num">${p0(s.m.sig)}</td>
+    <td class="tnum num" style="font-weight:800;color:${s.m.sharpe>=0?green:red}">${s.m.sharpe.toFixed(2)}</td>
+    <td class="tnum num" style="color:${muted}">${s.m.corrAvg.toFixed(2)}</td>
+    <td class="tnum num">${fmtCLP(s.amount)}</td>
     <td style="white-space:nowrap"><button class="btn btn-pri" style="padding:.28rem .55rem" data-applyscen="${s.id}" title="Aplicar como inversión">✓ Invertir</button> <button class="btn" style="padding:.28rem .55rem" data-loadscen="${s.id}" title="Editar en el constructor">✎ Editar</button> <button class="btn" style="padding:.28rem .55rem" data-renscen="${s.id}" title="Renombrar">Aa</button> <button class="btn" style="padding:.28rem .55rem" data-delscen="${s.id}" title="Eliminar">✕</button></td></tr>`;}).join("");
-  const tbl=card("Métricas comparadas","β, retorno exigido (CAPM), retorno histórico, riesgo σ, Sharpe y correlación",{html:`<div class="tw"><table><thead><tr>${["Escenario","Composición","β","E(R) CAPM","Ret. hist.","σ","Sharpe","Corr","Monto",""].map(z=>`<th>${z}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
+  const tbl=card("Métricas comparadas","β, retorno exigido (CAPM), retorno histórico, riesgo σ, Sharpe y correlación",{html:`<div class="tw"><table><thead><tr>${[["Escenario",0],["Composición",0],["β",1],["E(R) CAPM",1],["Ret. hist.",1],["σ",1],["Sharpe",1],["Corr",1],["Monto",1],["",0]].map(([z,n])=>`<th class="${n?'num ':''}ntr">${z}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
   const sx=niceBounds([0,...SCEN.map(s=>s.m.sig),MKT.sig],0.14);sx.min=0;
   const sy=niceBounds([RF,...SCEN.map(s=>s.m.retH),MKT.ret],0.16);
   const pts=SCEN.map((s,i)=>({x:s.m.sig,y:s.m.retH,c:SCPAL[i%SCPAL.length],label:s.name,r:9}));
@@ -3592,7 +3593,7 @@ function datosBase(){
     ${tile("Universo de análisis",active?"Datos del sistema":(DATASET==="demo"?"IPSA demo":"Importado"),active?"activo":"actívalo abajo",indigo,active?green:muted)}</div>`;
   const rows=empty?"":S.rows.map(r=>`<tr><td>${datosTk(r)}</td><td>${r.s||"—"}</td><td class="r">${r.np}</td><td>${r.from} → ${r.to}</td><td class="r">${fmtP(r.last)}</td><td class="r">${r.b!=null?r.b.toFixed(2):"—"}</td><td class="r"><button class="wbtn del" data-ddel="${r.t}" title="Quitar de la base">✕</button></td></tr>`).join("");
   const table=empty?`<div class="note" style="margin:0">Tu base de precios está vacía. Ve a <b>Cargar planilla</b> para subir tus archivos de Investing, o usa <b>Cierre diario</b> para empezar a ingresar precios.</div>`
-    :`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Puntos</th><th>Rango de fechas</th><th class="r">Último</th><th class="r">β</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    :`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Puntos</th><th>Rango de fechas</th><th class="r">Último</th><th class="r ntr">β</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
   const actions=`<div class="datos-acts">
     <button class="btn btn-pri" data-dactivate ${empty?"disabled":""}>Activar como universo de análisis</button>
     <button class="btn" data-dapply ${empty?"disabled":""}>↻ Actualizar carteras con la base</button>
@@ -4692,10 +4693,10 @@ function viewHome(){
     return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
-    const stat=(l,v,c)=>`<div class="fw-stat"><span class="fw-sl">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
-    if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${stat("β",(p.beta||0).toFixed(2))}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
+    const stat=(l,v,c,lc)=>`<div class="fw-stat"><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
+    if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
     const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,58);
-    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${stat("β",(p.beta||0).toFixed(2))}</div></button>`;};
+    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}</div></button>`;};
   const fundsInner=funds.length
     ? (funds.length<=2
       ? `<div class="home-fundgrid n${funds.length}">${funds.map(fundWide).join("")}</div>`
