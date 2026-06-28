@@ -408,6 +408,8 @@
 
   /* ── Microinteracciones ── */
   :where(button,a,input,select,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:var(--ring);}
+  /* contenedores segmentados con overflow:hidden recortarían el outline → inset */
+  .op-side button:focus-visible,.cfg-seg button:focus-visible,.tnav button:focus-visible{outline-offset:-2px;}
   @keyframes riseIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
   .wrap>.card,.wrap>.grid,.wrap>.tiles,.wrap>.mf-grid{animation:riseIn .40s var(--ease-out) both;}
   .wrap>*:nth-child(2){animation-delay:.04s;} .wrap>*:nth-child(3){animation-delay:.08s;}
