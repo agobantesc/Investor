@@ -1185,6 +1185,26 @@
   .news-arr{flex:0 0 auto;color:var(--faint);font-size:12px;margin-top:3px;}
   .home-cart.nodata{opacity:.92;}
   .cart-pct.nd{font:800 14px var(--font);color:var(--mut);}
+  /* fondos: tarjeta ancha (1–2 carteras) */
+  .home-fundgrid{display:grid;gap:13px;}
+  .home-fundgrid.n1{grid-template-columns:1fr;}
+  .home-fundgrid.n2{grid-template-columns:1fr 1fr;}
+  .home-fundwide{display:flex;flex-direction:column;gap:11px;text-align:left;padding:1.05rem 1.2rem 1.1rem;border:1px solid var(--line2);border-radius:14px;background:var(--card2);cursor:pointer;transition:.15s var(--ease);}
+  .home-fundwide:hover{border-color:var(--a-200);box-shadow:var(--sh-lg);transform:translateY(-2px);}
+  .fw-head{display:flex;align-items:center;gap:9px;}
+  .fw-head .rk-dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;}
+  .fw-name{font:800 16px var(--font);color:var(--navy);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .fw-pct{font:800 23px var(--font);font-variant-numeric:tabular-nums;letter-spacing:-.5px;flex:0 0 auto;}
+  .fw-pct span{font-size:13px;margin-left:1px;}
+  .fw-pct.nd{font-size:14px;color:var(--mut);font-weight:700;}
+  .fw-chart{height:58px;}
+  .fw-chart .mkt-spark{width:100%;height:58px;}
+  .fw-stats{display:flex;gap:20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:11px;}
+  .fw-stat{display:flex;flex-direction:column;gap:2px;}
+  .fw-sl{font-size:9.5px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
+  .fw-sv{font:800 14.5px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;}
+  .fw-hint{font-size:11.5px;color:var(--mut);font-weight:600;}
+  @media(max-width:760px){.home-fundgrid.n2{grid-template-columns:1fr;}}
   @media(max-width:880px){.home-grid-news{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -4643,9 +4663,18 @@ function viewHome(){
     if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
     const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
     return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
-  const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · valor, rentabilidad neta y β · haz clic para entrar`,
-    funds.length?`<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`
-    :`<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`);
+  // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
+  const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
+    const stat=(l,v,c)=>`<div class="fw-stat"><span class="fw-sl">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
+    if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${stat("β",(p.beta||0).toFixed(2))}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
+    const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
+    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia neta",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${stat("β",(p.beta||0).toFixed(2))}</div></button>`;};
+  const fundsInner=funds.length
+    ? (funds.length<=2
+      ? `<div class="home-fundgrid n${funds.length}">${funds.map(fundWide).join("")}</div>`
+      : `<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`)
+    : `<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`;
+  const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · valor, rentabilidad neta y β · haz clic para entrar`,fundsInner);
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
   const mvRows=movers.length?movers.map(x=>`<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${x.chg>=0?green:red}">${(x.chg>=0?"▲ +":"▼ ")+x.chg.toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k])||""}</div>`).join("")
@@ -4672,7 +4701,7 @@ function viewHome(){
     <button class="home-act" data-go="proyectos|hub"><span class="ha-i">▦</span><b>Mis proyectos</b><span class="ha-s">Carteras, análisis y seguimientos</span></button>
     <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
   const newsCard=homeNewsCard();
-  return homeWelcome()+greetStrip+hero+tiles+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard+actions;
+  return greetStrip+hero+tiles+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard+actions;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
