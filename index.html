@@ -599,6 +599,11 @@
   .prof-grp-tag{flex:0 0 auto;width:34px;height:34px;border-radius:9px;color:#fff;font:800 12px var(--font);display:flex;align-items:center;justify-content:center;}
   .prof-grp-n{font:800 15px var(--font);color:var(--navy);}
   .prof-grp-s{font-size:11.5px;color:var(--mut);margin-top:2px;line-height:1.4;}
+  /* filas del cuestionario de perfil: pregunta arriba (ancho completo), opciones en grilla pareja abajo */
+  .pqrow{display:block;padding:14px 0;border-bottom:1px dashed var(--line);}
+  .pqrow:last-child{border-bottom:none;padding-bottom:2px;}
+  .pqrow .qtxt{margin-bottom:11px;font-size:13.5px;}
+  .pqrow .qopts{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:9px;}
   .qrow{padding:11px 0;border-bottom:1px dashed var(--line);}
   .qrow:last-child{border-bottom:none;padding-bottom:2px;}
   .qrow .qtxt{margin-bottom:9px;}
@@ -3383,7 +3388,7 @@ function viewPerfil(){
       if(Q.multi){const arr=profAns[Q.id]||[];opts=Q.o.map((o,i)=>`<button class="qopt ${arr.indexOf(i)>=0?"on":""}" data-qmulti="${Q.id}" data-oi="${i}"><span class="qb sq"></span>${o[0]}</button>`).join("");}
       else if(Q.bool){opts=Q.o.map((o)=>`<button class="qopt ${profAns[Q.id]===o[1]?"on":""}" data-qbool="${Q.id}" data-bv="${o[1]}"><span class="qb"></span>${o[0]}</button>`).join("");}
       else{opts=Q.o.map((o)=>`<button class="qopt ${profAns[Q.id]==o[1]?"on":""}" data-qid="${Q.id}" data-score="${o[1]}"><span class="qb"></span>${o[0]}</button>`).join("");}
-      return `<div class="qrow"><div class="qtxt">${Q.q}${Q.multi?' <span class="qhint">· opción múltiple</span>':''}</div><div class="qopts">${opts}</div></div>`;
+      return `<div class="qrow pqrow"><div class="qtxt">${Q.q}${Q.multi?' <span class="qhint">· opción múltiple</span>':''}</div><div class="qopts">${opts}</div></div>`;
     }).join("");
     return `<div class="card"><div class="bd"><div class="prof-grp"><span class="prof-grp-tag" style="background:${d.col}">${d.key}</span><div><div class="prof-grp-n">${d.name}</div><div class="prof-grp-s">${d.sub}</div></div></div>${inner}</div></div>`;
   }).join("");
