@@ -785,7 +785,7 @@
     background:linear-gradient(176deg,#FFFFFF 0%,#CADFF7 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;}
   .wm-dot{margin-bottom:5px;box-shadow:0 0 0 3px rgba(34,211,238,.22),0 0 11px rgba(34,211,238,.55);}
 
-  .snav{padding:1.2rem .72rem .85rem;}
+  .snav{padding:.6rem .72rem .85rem;}
   .sgroup{font-size:8px;letter-spacing:2.5px;color:#5D77A1;padding:.35rem .72rem .6rem;margin-top:.2rem;}
   .modbtn{padding:.74rem .72rem;font-size:13px;font-weight:650;color:#C0D3EB;border-radius:12px;gap:12px;margin-bottom:5px;
     border:1px solid transparent;background:transparent;}
@@ -1031,7 +1031,8 @@
   [data-theme="dark"] .risk-chip.mod{background:#1A2240;color:#A0B4F0;}
   [data-theme="dark"] .risk-chip.agr{background:#3A1A1A;color:#F0A0A0;}
   /* ════════════════ HOME / RESUMEN GENERAL ════════════════ */
-  .modbtn.home-btn{margin-bottom:14px;background:linear-gradient(135deg,rgba(56,132,255,.14),rgba(34,211,238,.06));border:1px solid rgba(125,172,247,.22);}
+  .modbtn.home-btn{position:sticky;top:0;z-index:6;margin-bottom:14px;background:linear-gradient(180deg,#0C1A36,#0A1530);border:1px solid rgba(125,172,247,.26);box-shadow:0 10px 16px -8px rgba(3,9,22,.8);}
+  .modbtn.home-btn.on{background:linear-gradient(135deg,#1B2F5C,#13234A);border-color:rgba(125,172,247,.38);}
   .home-hero{position:relative;overflow:hidden;border-radius:var(--r-lg);padding:1.5rem 1.7rem;color:#fff;box-shadow:var(--sh-lg);margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;background:linear-gradient(120deg,#0A1224 0%,#13316E 52%,#2563EB 100%);}
   .home-hero.neg{background:linear-gradient(120deg,#0A1224 0%,#3A1726 55%,#9A2740 100%);}
   .hh-c{flex:1 1 200px;min-width:160px;max-width:380px;align-self:center;opacity:.9;}
@@ -1091,6 +1092,8 @@
   .cart-pct span{font-size:14px;font-weight:800;margin-left:1px;}
   .cart-spark{height:26px;margin:1px 0 2px;}
   .cart-spark .mkt-spark{width:100%;height:26px;}
+  .line-spark{display:block;width:100%;}
+  .cart-spark .line-spark{height:26px;}
   .cart-foot{display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums;}
   /* acciones destacadas por bloques */
   .home-hdacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -1099,7 +1102,7 @@
   .home-seg button:hover{color:var(--ink);}
   .home-seg button.on{background:var(--card);color:var(--accent);box-shadow:var(--sh);}
   .btnu{padding:.4rem .7rem;font-size:11.5px;}
-  .stk-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .stk-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
   .stk-block{border:1px solid var(--line);border-radius:12px;padding:.7rem .75rem;background:var(--card2);}
   .stk-bh{display:flex;flex-direction:column;margin-bottom:6px;}
   .stk-bh b{font:800 12.5px var(--font);color:var(--navy);}
@@ -1112,7 +1115,8 @@
   .stk-block .rk-name{font-size:12px;}
   .stk-block .rk-cli{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px;}
   .stk-block .rk-pct{font-size:12.5px;}
-  @media(max-width:880px){.stk-cols{grid-template-columns:1fr;}}
+  @media(max-width:1180px){.stk-cols{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:560px){.stk-cols{grid-template-columns:1fr;}}
   /* modales genéricos (precios plataforma / cliente) */
   .ui-modal{width:560px;max-width:96vw;}
   .cfg-x{border:none;background:var(--surface);color:var(--mut);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;flex:0 0 auto;transition:.12s var(--ease);}
@@ -1130,6 +1134,9 @@
   .ppx-tk b{font:800 13px var(--font);color:var(--navy);}
   .ppx-tk span{font-size:10.5px;color:var(--mut);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ppx-in{flex:0 0 130px;width:130px;text-align:right;}
+  .ppx-add{display:flex;gap:8px;margin-top:11px;}
+  .ppx-add input{flex:1;padding:.5rem .65rem;border:1px solid var(--line2);border-radius:9px;background:var(--card2);color:var(--ink);font:600 12.5px var(--font);text-transform:uppercase;}
+  .ppx-add input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--a-50);}
   .ppx-foot,.clf-foot{display:flex;justify-content:flex-end;gap:9px;margin-top:16px;}
   /* nuevo/editar cliente */
   .clf-mark{width:34px;height:34px;border-radius:10px;flex:0 0 auto;box-shadow:var(--sh);}
@@ -1199,6 +1206,7 @@
   .fw-pct.nd{font-size:14px;color:var(--mut);font-weight:700;}
   .fw-chart{height:58px;}
   .fw-chart .mkt-spark{width:100%;height:58px;}
+  .fw-chart .line-spark{height:58px;}
   .fw-stats{display:flex;gap:20px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:11px;}
   .fw-stat{display:flex;flex-direction:column;gap:2px;}
   .fw-sl{font-size:9.5px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
@@ -2590,6 +2598,7 @@ function evalMeta(){
   const act=(page!=="importar")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo análisis</button>':'';
   return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span>'+tag+'<span class="em-spacer"></span>'+act+'</div>';
 }
+let _lastViewKey="";
 function render(){
   renderChrome();
   refreshPalette();
@@ -2610,8 +2619,13 @@ function render(){
   else if(page==="multifactor") h=viewMultifactor();
   else if(page==="importar") h=viewImport();
   if(modulo==="eval") h=evalMeta()+h;
+  const _vk=modulo+"|"+page;
+  const _mnOld=document.getElementById("main");
+  const _keepScroll=(_vk===_lastViewKey);
+  const _prevScroll=(_keepScroll&&_mnOld)?_mnOld.scrollTop:0;
   document.getElementById("main").innerHTML=`<div class="wrap">${h}</div>`;
-  const _mn=document.getElementById("main");if(_mn)_mn.scrollTop=0;
+  const _mn=document.getElementById("main");if(_mn)_mn.scrollTop=_keepScroll?_prevScroll:0;
+  _lastViewKey=_vk;
   if(modulo==="eval"&&page==="detalle"){ document.querySelectorAll(".selb").forEach(b=>b.onclick=()=>{sel=b.dataset.sel;render();}); attachLineHover(); attachPriceHover(); }
   if(modulo==="sim"){ if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
   if(modulo==="inv") attachInv();
@@ -4407,18 +4421,7 @@ function consolidatedSeries(){
     Object.keys(PRICEDB.px).forEach(t=>{names[t]=names[t]||t;Object.keys(PRICEDB.px[t]).forEach(d=>{const v=PRICEDB.px[t][d];if(v>0&&isFinite(v))(tick[t]=tick[t]||{})[d]=v;});});
     Object.keys(PRICEDB.ipsa||{}).forEach(d=>{const v=PRICEDB.ipsa[d];if(v>0&&isFinite(v))ipsaMap[d]=v;});
   }}catch(e){}
-  // fallback: universo demo IPSA reconstruido (mientras la base esté vacía)
-  if(!usedDB)try{
-    const src=(typeof DEMO!=="undefined"&&DEMO.stocks&&DEMO.stocks.length)?DEMO.stocks:STOCKS;
-    const labs=(typeof DATA!=="undefined"&&DATA.labels)?DATA.labels:null;
-    if(src&&labs&&labs.length){
-      const dts=labs.map(labelToDate);
-      src.forEach(s=>{names[s.t]=s.n||s.t;cols[s.t]=s.c||cols[s.t]||"#1E5FD1";
-        if(s.prices&&s.prices.length){const n=Math.min(s.prices.length,dts.length);for(let i=0;i<n;i++){const v=s.prices[i];if(v!=null&&isFinite(v)&&v>0)(tick[s.t]=tick[s.t]||{})[dts[i]]=v;}}});
-      // IPSA absoluto reconstruido desde los retornos de mercado (anclado ~8000 al cierre del histórico)
-      if(MKT&&MKT.rets&&MKT.rets.length){const r=MKT.rets,n=Math.min(r.length,dts.length),lvl=new Array(n);lvl[n-1]=8000;for(let i=n-1;i>0;i--)lvl[i-1]=lvl[i]/(1+(r[i]||0)/100);for(let i=0;i<n;i++)ipsaMap[dts[i]]=+lvl[i].toFixed(2);}
-    }
-  }catch(e){}
+  // (sin fallback sintético: las métricas del Home usan SOLO datos reales — base del sistema + seguimientos)
   // 2) overlay: precios reales ingresados en los seguimientos (añaden fechas recientes / sobrescriben)
   allTrackedProjects().forEach(({p})=>{
     (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||names[hd.t]||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
@@ -4448,15 +4451,16 @@ function seguimientoStats(freq){
   Object.keys(C.tick).forEach(t=>{
     const rs=resampleMap(C.tick[t],freq);if(rs.length<3)return;
     const vals=rs.map(x=>x.v);
-    const total=vals[vals.length-1]/vals[0]-1;
     // solo retornos entre períodos consecutivos (evita que un hueco se cuente como un período y distorsione la anualización)
     const rets=[];for(let i=1;i<vals.length;i++){if(gapOK(rs[i-1].d,rs[i].d,freq))rets.push(vals[i]/vals[i-1]-1);}
+    // rentabilidad del último período (día/semana/mes según filtro) — cambia con la frecuencia elegida
+    const lastRet=rets.length?rets[rets.length-1]:(vals.length>=2?vals[vals.length-1]/vals[vals.length-2]-1:0);
     let sharpe=null;
     if(rets.length>=2){const mean=rets.reduce((a,b)=>a+b,0)/rets.length;const sd=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,rets.length-1));sharpe=sd>0?(mean-rf/PPY)/sd*Math.sqrt(PPY):0;}
     const mret=[],aret=[];for(let i=1;i<rs.length;i++){if(!gapOK(rs[i-1].d,rs[i].d,freq))continue;const k=periodKey(rs[i].d,freq),kp=periodKey(rs[i-1].d,freq),m1=ipsaByP[k],m0=ipsaByP[kp];if(m1!=null&&m0!=null){mret.push(m1/m0-1);aret.push(vals[i]/vals[i-1]-1);}}
     let jensen=null,beta=null;
     if(mret.length>=3){const mm=mret.reduce((a,b)=>a+b,0)/mret.length,ma=aret.reduce((a,b)=>a+b,0)/aret.length;let cov=0,vm=0;for(let i=0;i<mret.length;i++){cov+=(mret[i]-mm)*(aret[i]-ma);vm+=(mret[i]-mm)**2;}beta=vm>0?cov/vm:0;jensen=((ma*PPY)-rf)-beta*((mm*PPY)-rf);}
-    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:total*100,sharpe,jensen:jensen==null?null:jensen*100,beta,n:vals.length,series:vals});
+    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,sharpe,jensen:jensen==null?null:jensen*100,beta,n:vals.length,series:vals});
   });
   return out;
 }
@@ -4490,23 +4494,33 @@ function applyPlatformPrices(date,ipsa,priceMap){
 }
 let _ppxState=null;
 function platformPricesOpen(){
-  const C=consolidatedSeries();const held=allHeldTickers();
+  const C=consolidatedSeries();
+  // universo amplio: acciones del análisis activo + base de precios + las que tienes en cartera (no solo las invertidas)
+  const m={};
+  (STOCKS||[]).forEach(s=>{if(!m[s.t])m[s.t]={t:s.t,n:s.n||s.t,c:s.c||"#1E5FD1"};});
+  pricedbTickers().forEach(t=>{if(!m[t]){const md=PRICEDB.tickers[t]||{};m[t]={t,n:md.n||t,c:md.c||"#1E5FD1"};}});
+  allHeldTickers().forEach(h=>{if(!m[h.t])m[h.t]={t:h.t,n:h.n,c:h.c};});
   const today=new Date().toISOString().slice(0,10);
-  _ppxState={date:today,ipsa:lastKnownIpsa(C),rows:held.map(h=>({t:h.t,n:h.n,c:h.c,price:lastKnownPrice(h.t,C)}))};
+  const rows=Object.keys(m).sort().map(k=>{const h=m[k];return {t:h.t,n:h.n,c:h.c,price:lastKnownPrice(h.t,C)};});
+  _ppxState={date:today,ipsa:lastKnownIpsa(C),rows};
   platformPricesRender();
 }
 function platformPricesRender(){
   const S=_ppxState;if(!S)return;
   const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-ppx="${i}" value="${r.price}" aria-label="Precio ${r.t}"></div>`).join("")
-    :`<div class="note" style="margin:0">No hay acciones con seguimiento todavía. Registra la compra inicial de algún proyecto para poder actualizar precios masivamente.</div>`;
-  const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · toda la plataforma</div><div class="cs">Carga los precios de cierre de un día. Se agregan como nuevo punto de valoración a <b>todos tus proyectos</b> que tengan esas acciones.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
+    :`<div class="note" style="margin:0">Aún no hay acciones cargadas. Agrega una abajo o carga una planilla en el módulo Datos.</div>`;
+  const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · base del sistema</div><div class="cs">Carga los precios de cierre de un día para <b>cualquier acción</b> (las gestiones o no). Las que tengas en cartera actualizan el seguimiento; <b>todas</b> quedan guardadas en la base para análisis y para evaluar cambios de portafolio.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
     <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa}"></label></div>
     <div class="ppx-grid">${rows}</div>
-    <div class="ppx-foot"><button class="btn" id="ppxCancel">Cancelar</button><button class="btn btn-pri" id="ppxApply">Aplicar a toda la plataforma</button></div>`;
+    <div class="ppx-add"><input id="ppxAddT" type="text" placeholder="Agregar otra acción (ej. CMPC)" maxlength="14" autocomplete="off"><button class="btn btnu" id="ppxAddBtn">+ Agregar acción</button></div>
+    <div class="ppx-foot"><button class="btn" id="ppxCancel">Cancelar</button><button class="btn btn-pri" id="ppxApply">Guardar precios</button></div>`;
   const back=modalShell("ppxBack",inner,"Actualizar precios");
   const sync=()=>{const d=document.getElementById("ppxDate");if(d)S.date=d.value;const ip=document.getElementById("ppxIpsa");if(ip)S.ipsa=parseFloat(ip.value);document.querySelectorAll("[data-ppx]").forEach(e=>{S.rows[+e.dataset.ppx].price=parseFloat(e.value);});};
   back.querySelector("#ppxX").onclick=()=>modalCloseId("ppxBack");
   back.querySelector("#ppxCancel").onclick=()=>modalCloseId("ppxBack");
+  const addT=()=>{const el=document.getElementById("ppxAddT");if(!el)return;const t=(el.value||"").trim().toUpperCase();if(!t)return;if(S.rows.some(r=>r.t===t)){el.value="";return;}sync();const st=(STOCKS||[]).find(s=>s.t===t)||{};S.rows.push({t,n:st.n||t,c:st.c||"#2563EB",price:""});platformPricesRender();};
+  const _ab=back.querySelector("#ppxAddBtn");if(_ab)_ab.onclick=addT;
+  const _at=back.querySelector("#ppxAddT");if(_at)_at.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();addT();}};
   back.querySelector("#ppxApply").onclick=()=>{
     sync();
     if(!S.date){window.alert("Indica la fecha de cierre.");return;}
@@ -4515,7 +4529,7 @@ function platformPricesRender(){
     if(!Object.keys(pm).length&&ip==null){window.alert("Ingresa al menos un precio o el valor del IPSA.");return;}
     const res=applyPlatformPrices(S.date,ip,pm);
     modalCloseId("ppxBack");
-    window.alert("Precios del "+S.date+" aplicados.\n\n"+res.nProj+" proyecto(s) actualizados con esos precios de cierre."+(res.nSkip>0?"\n\n"+res.nSkip+" proyecto(s) omitidos por tener seguimiento posterior a esa fecha.":""));
+    window.alert("Precios del "+S.date+" guardados en la base ("+Object.keys(pm).length+" acción(es)).\n\n"+res.nProj+" cartera(s) con seguimiento actualizado(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior a esa fecha.":""));
     render();
   };
 }
@@ -4601,12 +4615,14 @@ function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gainNet,pct:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[]});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[]});}catch(e){}});});
   return {clients,T,projs};
 }
 /* serie agregada de patrimonio (alineada por la cola) para el sparkline del hero */
 function aggSeries(projs){const withS=(projs||[]).filter(p=>p.series&&p.series.length>1);if(!withS.length)return [];const L=Math.max(...withS.map(p=>p.series.length));const out=new Array(L).fill(0);withS.forEach(p=>{const s=p.series,off=L-s.length;for(let i=0;i<L;i++)out[i]+=(i<off?s[0]:s[i-off]);});return out.map(v=>Math.round(v));}
-function heroSpark(series){if(!series||series.length<2)return "";const w=340,h=72,n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-5-((v-mn)/rg)*(h-14)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");return `<svg class="hero-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="hsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD8FF" stop-opacity=".42"/><stop offset="1" stop-color="#BFD8FF" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#hsg)"/><path d="${d}" fill="none" stroke="#CFE0FF" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;}
+function heroSpark(series){if(!series||series.length<2)return "";const w=340,h=72,n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-5-((v-mn)/rg)*(h-14)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");return `<svg class="hero-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="hsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD8FF" stop-opacity=".42"/><stop offset="1" stop-color="#BFD8FF" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#hsg)"/><path d="${d}" fill="none" stroke="#CFE0FF" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
+/* sparkline limpio para tarjetas (stroke no se deforma al estirar) */
+function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
 function homeWelcome(){
   try{if(localStorage.getItem("inv_welcome_hide")==="1")return "";}catch(e){}
@@ -4661,20 +4677,20 @@ function viewHome(){
   const funds=D.projs.slice().sort((a,b)=>(b.val||0)-(a.val||0));
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
     if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
-    const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
+    const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,40);
     return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
     const stat=(l,v,c)=>`<div class="fw-stat"><span class="fw-sl">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
     if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${stat("β",(p.beta||0).toFixed(2))}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
-    const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
-    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia neta",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${stat("β",(p.beta||0).toFixed(2))}</div></button>`;};
+    const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,58);
+    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${stat("β",(p.beta||0).toFixed(2))}</div></button>`;};
   const fundsInner=funds.length
     ? (funds.length<=2
       ? `<div class="home-fundgrid n${funds.length}">${funds.map(fundWide).join("")}</div>`
       : `<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`)
     : `<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`;
-  const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · valor, rentabilidad neta y β · haz clic para entrar`,fundsInner);
+  const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · valor, rentabilidad bruta y β · haz clic para entrar`,fundsInner);
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
   const mvRows=movers.length?movers.map(x=>`<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${x.chg>=0?green:red}">${(x.chg>=0?"▲ +":"▼ ")+x.chg.toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k])||""}</div>`).join("")
@@ -4684,16 +4700,19 @@ function viewHome(){
   const stats=seguimientoStats(homeStkFreq);
   const stkBlock=(title,sub,arr,valFn,colFn)=>{const rows=arr.slice(0,5).map((s,i)=>`<div class="home-stk"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
     return `<div class="stk-block"><div class="stk-bh"><b>${title}</b><span>${sub}</span></div>${rows||'<div class="note" style="margin:6px 0 0;font-size:11px">Sin datos suficientes</div>'}</div>`;};
+  const perWord=homeStkFreq==="diario"?"último día":homeStkFreq==="semanal"?"última semana":"último mes";
   const byRet=[...stats].sort((a,b)=>b.ret-a.ret);
+  const byWorst=[...stats].sort((a,b)=>a.ret-b.ret);
   const bySharpe=stats.filter(s=>s.sharpe!=null).sort((a,b)=>b.sharpe-a.sharpe);
   const byJensen=stats.filter(s=>s.jensen!=null).sort((a,b)=>b.jensen-a.jensen);
   const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div><button class="btn btnu" data-openprices title="Cargar precios de cierre para toda la plataforma">↻ Actualizar precios</button></div>`;
   const stkInner=stats.length?`<div class="stk-cols">
-    ${stkBlock("Por rentabilidad","retorno acumulado",byRet,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red)}
+    ${stkBlock("Mejor rentabilidad","retorno del "+perWord,byRet,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red)}
+    ${stkBlock("Peor rentabilidad","retorno del "+perWord,byWorst,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red)}
     ${stkBlock("Por Sharpe","ajustado a riesgo",bySharpe,s=>s.sharpe.toFixed(2),s=>s.sharpe>=0?green:red)}
     ${stkBlock("Por α de Jensen","sobre/bajo lo exigido",byJensen,s=>(s.jensen>=0?"+":"")+s.jensen.toFixed(1)+"%",s=>s.jensen>=0?green:red)}</div>`
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
-  const stkCard=card("Acciones destacadas",`Todas las acciones con historial disponible (universo IPSA + tus seguimientos) · frecuencia ${homeStkFreq}`,stkInner,freqSeg);
+  const stkCard=card("Acciones destacadas",`Mejores y peores acciones por retorno del ${perWord}, Sharpe y α de Jensen · solo datos reales (base del sistema + tus seguimientos)`,stkInner,freqSeg);
   const actions=card("Acciones rápidas","",`<div class="home-actions">
     <button class="home-act" data-openprices><span class="ha-i">↻</span><b>Actualizar precios</b><span class="ha-s">Cierres del día · toda la plataforma</span></button>
     <button class="home-act" data-go="sim|constructor"><span class="ha-i">＋</span><b>Armar nueva cartera</b><span class="ha-s">Constructor de portafolio</span></button>
