@@ -1071,24 +1071,27 @@
   .home-act b{font:800 13.5px var(--font);color:var(--navy);}
   .home-act .ha-s{font-size:11px;color:var(--mut);font-weight:600;}
   @media(max-width:880px){.home-grid2{grid-template-columns:1fr;}}
-  /* podio de proyectos */
-  .home-podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-  .home-pod{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;text-align:left;padding:.9rem .95rem 1rem;border:1px solid var(--line2);border-radius:14px;background:var(--card2);cursor:pointer;transition:.15s var(--ease);}
-  .home-pod:hover{transform:translateY(-3px);box-shadow:var(--sh-lg);border-color:var(--a-200);}
-  .home-pod.p0{background:linear-gradient(160deg,rgba(212,160,23,.12),var(--card2) 55%);border-color:rgba(212,160,23,.45);}
-  .home-pod.p1{background:linear-gradient(160deg,rgba(120,130,150,.13),var(--card2) 55%);}
-  .home-pod.p2{background:linear-gradient(160deg,rgba(176,110,60,.12),var(--card2) 55%);}
-  .pod-top{display:flex;align-items:center;gap:7px;}
-  .pod-medal{font-size:17px;line-height:1;}
-  .pod-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
-  .pod-cli{font-size:10.5px;font-weight:700;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .pod-name{font:800 14px var(--font);color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .pod-pct{font:800 27px var(--font);letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.05;}
-  .pod-pct span{font-size:14px;font-weight:800;margin-left:1px;}
-  .pod-spark{height:26px;margin:1px 0 2px;}
-  .pod-spark .mkt-spark{width:100%;height:26px;}
-  .pod-foot{display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums;}
-  @media(max-width:760px){.home-podium{grid-template-columns:1fr;}}
+  /* carteras más rentables — tarjetas estándar (tuyas + clientes en igualdad) */
+  .home-cartgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;}
+  .home-cart{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;text-align:left;padding:.85rem .9rem .95rem;border:1px solid var(--line2);border-radius:14px;background:var(--card2);cursor:pointer;transition:.15s var(--ease);}
+  .home-cart:hover{transform:translateY(-3px);box-shadow:var(--sh-lg);border-color:var(--a-200);}
+  .home-cart.rk0{background:linear-gradient(160deg,rgba(212,160,23,.12),var(--card2) 55%);border-color:rgba(212,160,23,.42);}
+  .home-cart.rk1{background:linear-gradient(160deg,rgba(120,130,150,.13),var(--card2) 55%);}
+  .home-cart.rk2{background:linear-gradient(160deg,rgba(176,110,60,.12),var(--card2) 55%);}
+  .home-cart.mine{box-shadow:inset 3px 0 0 var(--accent);}
+  .home-cart.mine:hover{box-shadow:inset 3px 0 0 var(--accent),var(--sh-lg);}
+  .cart-h{display:flex;align-items:center;gap:7px;min-width:0;}
+  .cart-medal{font-size:16px;line-height:1;flex:0 0 auto;}
+  .cart-num{flex:0 0 auto;width:19px;height:19px;border-radius:6px;background:var(--surface);color:var(--mut);font:800 11px var(--font);display:flex;align-items:center;justify-content:center;}
+  .cart-own{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .cart-own .rk-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .cart-own.me{color:var(--accent);background:var(--a-50);padding:2px 8px;border-radius:20px;}
+  .cart-name{font:800 14px var(--font);color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cart-pct{font:800 26px var(--font);letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1.05;}
+  .cart-pct span{font-size:14px;font-weight:800;margin-left:1px;}
+  .cart-spark{height:26px;margin:1px 0 2px;}
+  .cart-spark .mkt-spark{width:100%;height:26px;}
+  .cart-foot{display:flex;justify-content:space-between;font-size:10.5px;font-weight:700;color:var(--mut);font-variant-numeric:tabular-nums;}
   /* acciones destacadas por bloques */
   .home-hdacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .home-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px;}
@@ -4355,28 +4358,23 @@ function viewHome(){
     ${tile("Ganancia neta",sg(T.gainNet),"después de comisiones",indigo,T.gainNet>=0?green:red)}
     ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital",indigo,Tpct>=0?green:red)}
     ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}</div>`);
-  // ranking de proyectos más rentables (con seguimiento) — diseño visual
+  // ranking de carteras más rentables (con seguimiento) — TODAS con formato estándar: tuyas y de clientes en igualdad
   const ranked=D.projs.filter(p=>p.hasData).sort((a,b)=>b.pct-a.pct);
-  const podium=ranked.slice(0,3),rest=ranked.slice(3,8);
-  const maxAbs=Math.max(1,...ranked.slice(0,8).map(p=>Math.abs(p.pct)));
   const medal=["🥇","🥈","🥉"];
-  const podCards=podium.map((p,i)=>{const pos=p.pct>=0;const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
-    return `<button class="home-pod p${i}" data-gohome="${p.cliId}|${p.pid}">
-      <div class="pod-top"><span class="pod-medal">${medal[i]}</span><span class="pod-dot" style="background:${p.col}"></span><span class="pod-cli">${(""+p.cli).replace(/</g,"&lt;")}</span></div>
-      <div class="pod-name">${(""+p.name).replace(/</g,"&lt;")}</div>
-      <div class="pod-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div>
-      <div class="pod-spark">${spark}</div>
-      <div class="pod-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;}).join("");
-  const restRows=rest.map((p,i)=>{const w=Math.min(100,Math.abs(p.pct)/maxAbs*100),pos=p.pct>=0;
-    return `<button class="home-rk" data-gohome="${p.cliId}|${p.pid}">
-      <span class="rk-pos">${i+4}</span><span class="rk-dot" style="background:${p.col}"></span>
-      <span class="rk-body"><span class="rk-name">${(""+p.name).replace(/</g,"&lt;")}</span>
-        <span class="rk-cli">${(""+p.cli).replace(/</g,"&lt;")} · ${fmtCLP(p.val)} · β ${(p.beta||0).toFixed(2)}</span>
-        <span class="rk-bar"><i style="width:${w}%;background:${pos?green:red}"></i></span></span>
-      <span class="rk-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}%</span></button>`;}).join("");
-  const rankBody=ranked.length?`<div class="home-podium">${podCards}</div>${restRows?`<div class="home-rklist" style="margin-top:12px">${restRows}</div>`:""}${ranked.length>8?`<div class="note" style="margin:10px 0 0">+${ranked.length-8} proyectos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`
-    :'<div class="note" style="margin:0">Aún no tienes proyectos con seguimiento. Arma una cartera en el <b>Constructor</b> y registra su compra inicial para empezar a comparar rentabilidades reales.</div>';
-  const rankCard=card("Proyectos más rentables","Rentabilidad neta de comisiones · el podio compara el desempeño real de tus mejores carteras",rankBody);
+  const top=ranked.slice(0,9);
+  const cartCards=top.map((p,i)=>{const pos=p.pct>=0;const spark=mindSparkSVG(p.series&&p.series.length>1?p.series:[1,1]);
+    const mine=p.cliId==="c_me";
+    const badge=i<3?`<span class="cart-medal">${medal[i]}</span>`:`<span class="cart-num">${i+1}</span>`;
+    const owner=mine?`<span class="cart-own me">★ Tuya · modelo</span>`:`<span class="cart-own"><span class="rk-dot" style="background:${p.col}"></span>${(""+p.cli).replace(/</g,"&lt;")}</span>`;
+    return `<button class="home-cart ${i<3?"rk"+i:""} ${mine?"mine":""}" data-gohome="${p.cliId}|${p.pid}">
+      <div class="cart-h">${badge}${owner}</div>
+      <div class="cart-name">${(""+p.name).replace(/</g,"&lt;")}</div>
+      <div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div>
+      <div class="cart-spark">${spark}</div>
+      <div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;}).join("");
+  const rankBody=ranked.length?`<div class="home-cartgrid">${cartCards}</div>${ranked.length>9?`<div class="note" style="margin:11px 0 0">+${ranked.length-9} carteras más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todas →</a></div>`:""}`
+    :'<div class="note" style="margin:0">Aún no tienes carteras con seguimiento. Arma una en el <b>Constructor</b> y registra su compra inicial para empezar a comparar rentabilidades reales.</div>';
+  const rankCard=card("Proyectos más rentables","Rentabilidad neta de comisiones · todas las carteras —tuyas y de tus clientes— compiten en igualdad; las marcadas <b>★ Tuya · modelo</b> sirven de referencia replicable",rankBody);
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
   const mvRows=movers.length?movers.map(x=>`<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${x.chg>=0?green:red}">${(x.chg>=0?"▲ +":"▼ ")+x.chg.toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k])||""}</div>`).join("")
