@@ -1454,7 +1454,7 @@ function saveWarn(){if(_saveWarned)return;_saveWarned=true;try{window.alert("⚠
 function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));return true;}catch(e){saveWarn();return false;}}
 (function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Administración",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
 let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Administración",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Administración",color:"#1E5FD1"}];}})();
-(function(){try{const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}}catch(e){}})();
+(function(){try{if(localStorage.getItem("inv_mig_admin_v1"))return;localStorage.setItem("inv_mig_admin_v1","1");const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}}catch(e){}})();
 const CLIENT_PAL=["#1E5FD1","#0E8C5E","#DB2777","#7C3AED","#D9730D","#0891B2","#CA8A04","#CE2F3B"];
 function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));return true;}catch(e){saveWarn();return false;}}
 function activeClientObj(){return CLIENTS.find(x=>x.id===activeClient)||CLIENTS[0];}
@@ -3885,9 +3885,11 @@ function analysisName(id){const a=analysisList().find(x=>x.id===String(id));retu
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
 function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const inv0=p.amount||0;
-  if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,hasData:false,beta:p.bp||0,nrec:(p.weeks||[]).length};
+  if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,gainNet:0,gainNetPct:0,fees:0,hasData:false,beta:p.bp||0,nrec:(p.weeks||[]).length};
   const L=IM.last,inv=IM.aport,val=L.val,gain=val-inv;
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,twr:L.ret*100,hasData:true,beta:p.bp||0,nrec:(p.weeks||[]).length};});}
+  let fees=0;try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{fees+=brokerFee(x.monto);});}catch(e){}
+  const gainNet=gain-fees;
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,nrec:(p.weeks||[]).length};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* escenario "de construcción" derivado del proyecto (su simulación original) */
 function projDefaultScenario(p){
@@ -4082,7 +4084,7 @@ function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gainNet,pct:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData});}catch(e){}});});
   return {clients,T,projs};
 }
 function viewHome(){
@@ -4112,7 +4114,7 @@ function viewHome(){
         <span class="rk-bar"><i style="width:${w}%;background:${p.pct>=0?green:red}"></i></span></span>
       <span class="rk-pct" style="color:${p.pct>=0?green:red}">${(p.pct>=0?"+":"")+p.pct.toFixed(2)}%</span></button>`;}).join("")
     :'<div class="note" style="margin:0">Aún no tienes proyectos con seguimiento. Arma una cartera en el <b>Constructor</b> y registra su compra inicial para empezar a comparar rentabilidades reales.</div>';
-  const rankCard=card("Proyectos más rentables","Compara el desempeño real de tus carteras: invierte montos chicos en distintas combinaciones de acciones y deja que los números muestren cuál funciona mejor",
+  const rankCard=card("Proyectos más rentables","Rentabilidad neta de comisiones · compara el desempeño real de tus carteras: invierte montos chicos en distintas combinaciones de acciones y deja que los números muestren cuál funciona mejor",
     `<div class="home-rklist">${rankRows}</div>${ranked.length>6?`<div class="note" style="margin:10px 0 0">+${ranked.length-6} proyectos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`);
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
