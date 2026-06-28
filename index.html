@@ -171,6 +171,31 @@
   .ctxtab{padding:.42rem .8rem;border:1px solid var(--line2);border-radius:9px;background:var(--card2);color:var(--mut);font:700 12px var(--font);cursor:pointer;transition:all .12s ease;white-space:nowrap;}
   .ctxtab:hover{border-color:var(--accent);color:var(--accent);}
   .ctxtab.on{background:linear-gradient(180deg,var(--a-400),var(--accent));border-color:transparent;color:#fff;box-shadow:0 2px 9px rgba(30,95,209,.26);}
+  /* crear análisis */
+  .ca-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:end;}
+  .ca-f{display:flex;flex-direction:column;gap:7px;}
+  .ca-f>span{font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:var(--mut);}
+  .ca-f input{padding:.55rem .7rem;border:1px solid var(--line2);border-radius:9px;background:var(--card2);color:var(--ink);font:600 13px var(--font);}
+  .ca-f input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--a-50);}
+  .ca-stk{margin-top:17px;}
+  .ca-stk-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+  .ca-stk-h b{font:800 13px var(--font);color:var(--navy);}
+  .ca-stk-h span{font-size:11.5px;color:var(--mut);font-weight:600;}
+  .ca-stk-h a{color:var(--accent);cursor:pointer;font-weight:700;}
+  .ca-grid{display:flex;flex-wrap:wrap;gap:8px;}
+  .ca-chip{display:inline-flex;align-items:center;gap:7px;padding:.42rem .7rem;border:1px solid var(--line2);border-radius:9px;background:var(--card2);color:var(--ink);font:700 12.5px var(--font);cursor:pointer;transition:all .12s ease;}
+  .ca-chip:hover{border-color:var(--accent);}
+  .ca-chip.on{border-color:transparent;background:linear-gradient(180deg,var(--a-400),var(--accent));color:#fff;box-shadow:0 2px 9px rgba(30,95,209,.24);}
+  .ca-chip .rk-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .ca-chip-n{font-size:10px;opacity:.65;font-weight:700;}
+  .ca-foot{display:flex;gap:13px;align-items:center;flex-wrap:wrap;margin-top:17px;}
+  .ca-savedlist{display:flex;flex-direction:column;gap:9px;}
+  .ca-saved{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:.7rem .85rem;border:1px solid var(--line);border-radius:11px;background:var(--card2);}
+  .ca-saved.on{border-color:var(--accent);background:var(--a-50);}
+  .ca-saved-l b{font:800 13px var(--font);color:var(--navy);display:block;}
+  .ca-saved-l span{font-size:11px;color:var(--mut);}
+  .ca-saved-r{display:flex;align-items:center;gap:9px;flex:0 0 auto;}
+  .ca-badge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);background:var(--a-50);border:1px solid var(--a-200);border-radius:7px;padding:.22rem .5rem;}
   tbody td{padding:.72rem .9rem;border-bottom:1px solid var(--line);}
   tbody tr:last-child td{border-bottom:none;}
   tbody tr:hover{background:var(--soft);}
@@ -1401,7 +1426,7 @@ function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div 
 const MODS={
   inicio:{label:"Inicio",tabs:[{id:"home",label:"Resumen general",n:"1"}]},
   datos:{label:"Datos",tabs:[{id:"base",label:"Base de precios",n:"1"},{id:"cargar",label:"Cargar planilla",n:"2"},{id:"cierre",label:"Cierre diario",n:"3"}]},
-  eval:{label:"Análisis",tabs:[{id:"comparativa",label:"Comparativa",n:"1"},{id:"detalle",label:"Detalle por acción",n:"2"},{id:"capm",label:"CAPM / SML",n:"3"},{id:"multifactor",label:"Multifactor",n:"4"},{id:"importar",label:"Importar acciones",n:"5"}]},
+  eval:{label:"Análisis",tabs:[{id:"crear",label:"Crear análisis",n:"1"},{id:"comparativa",label:"Comparativa",n:"2"},{id:"detalle",label:"Detalle por acción",n:"3"},{id:"capm",label:"CAPM / SML",n:"4"},{id:"multifactor",label:"Multifactor",n:"5"}]},
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
   clientes:{label:"Clientes",tabs:[{id:"admin",label:"Administrador de clientes",n:"1"}]},
@@ -2609,7 +2634,7 @@ function evalMeta(){
   const per=DATA.perYear===252?"días":DATA.perYear===52?"semanas":"meses";
   const isImp=(typeof DATASET!=="undefined"&&DATASET==="import");
   const tag=isImp?'<span class="em-tag imp">Set importado</span>':'<span class="em-tag">Set demo · IPSA</span>';
-  const act=(page!=="importar")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo análisis</button>':'';
+  const act=(page!=="crear")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Crear análisis</button>':'';
   return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span>'+tag+'<span class="em-spacer"></span>'+act+'</div>';
 }
 let _lastViewKey="";
@@ -2631,8 +2656,8 @@ function render(){
   else if(page==="detalle") h=viewDetalle();
   else if(page==="capm") h=viewCAPM();
   else if(page==="multifactor") h=viewMultifactor();
-  else if(page==="importar") h=viewImport();
-  if(modulo==="eval") h=evalMeta()+h;
+  else if(page==="crear") h=viewCrear();
+  if(modulo==="eval"&&page!=="crear") h=evalMeta()+h;
   const _vk=modulo+"|"+page;
   const _mnOld=document.getElementById("main");
   const _keepScroll=(_vk===_lastViewKey);
@@ -2644,14 +2669,14 @@ function render(){
   if(modulo==="sim"){ if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
   if(modulo==="inv") attachInv();
   if(modulo==="eval"&&page==="multifactor") attachMultifactor();
-  if(modulo==="eval"&&page==="importar") attachImport();
+  if(modulo==="eval"&&page==="crear") attachCrear();
   if(modulo==="perfil") attachPerfil();
   if(modulo==="mercados") attachMercados();
   if(modulo==="proyectos") attachProyectos();
   if(modulo==="clientes") attachClientes();
   if(modulo==="inicio") attachHome();
   if(modulo==="datos") attachDatos();
-  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="importar";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};}
+  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};}
   attachScatterAll();
 }
 
@@ -3553,12 +3578,17 @@ function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];s
 function pricedbSummary(){const out=[];pricedbTickers().forEach(t=>{const ds=Object.keys(PRICEDB.px[t]).sort();if(!ds.length)return;const m=PRICEDB.tickers[t]||{};out.push({t,n:m.n||t,s:m.s||"",c:m.c||"#1E5FD1",b:m.b,np:ds.length,from:ds[0],to:ds[ds.length-1],last:PRICEDB.px[t][ds[ds.length-1]]});});
   out.sort((a,b)=>a.t<b.t?-1:1);const id=Object.keys(PRICEDB.ipsa||{});return {rows:out,ipsaN:id.length,ipsaFrom:id.length?id.sort()[0]:null,ipsaTo:id.length?id.sort()[id.length-1]:null};}
 /* deriva un dataset de análisis (IMP) desde la base, resampleado a la frecuencia pedida (reutiliza impStats/impBetaCorr) */
-function pricedbToIMP(freq){
+function pricedbToIMP(freq,opts){
+  opts=opts||{};
   freq=freq||"mensual";const PY={diario:252,semanal:52,mensual:12}[freq]||12;
-  const tickers=pricedbTickers();if(!tickers.length||!Object.keys(PRICEDB.ipsa||{}).length)return null;
+  let tickers=pricedbTickers();
+  if(opts.tickers&&opts.tickers.length)tickers=tickers.filter(t=>opts.tickers.indexOf(t)>=0);
+  if(!tickers.length||!Object.keys(PRICEDB.ipsa||{}).length)return null;
   const rs=m=>{const o={};Object.keys(m).sort().forEach(d=>{o[periodKey(d,freq)]=m[d];});return o;};
   const ipsaP=rs(PRICEDB.ipsa),tickP={};tickers.forEach(t=>tickP[t]=rs(PRICEDB.px[t]));
   let periods=Object.keys(ipsaP).sort().filter(pk=>tickers.some(t=>tickP[t][pk]!=null));
+  // ventana: limita a los últimos N períodos (N+1 precios para N retornos)
+  if(opts.lastN&&opts.lastN>0&&periods.length>opts.lastN+1)periods=periods.slice(periods.length-(opts.lastN+1));
   if(periods.length<4)return null;
   const benchPrices=periods.map(pk=>ipsaP[pk]);if(benchPrices.some(v=>!isFinite(v)||v<=0))return null;
   const bs=impStats(benchPrices,PY),rf=(typeof RF==="number"&&isFinite(RF)?RF:5.5),benchRet=bs.retAnn*100,prima=benchRet-rf;
@@ -3666,6 +3696,57 @@ function attachDatos(){
   const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
 }
 function impDownloadTemplate(){const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B\n2025-01-31;6500;52000;5800;38000\n2025-02-28;6610;53400;6010;36500\n2025-03-31;6720;55100;5950;40200\n2025-04-30;6680;54200;6230;39100\n2025-05-31;6810;56800;6480;42500\n2025-06-30;6905;57500;6390;41000\n";const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
+/* ===================== CREAR ANÁLISIS (parametrizado desde la base del sistema) ===================== */
+let caState=null;
+function caEnsure(){const ts=pricedbTickers();if(!caState){caState={name:"",freq:(pricedbFreq||"mensual"),lastN:0,sel:{}};ts.forEach(t=>caState.sel[t]=true);}else{ts.forEach(t=>{if(caState.sel[t]===undefined)caState.sel[t]=true;});}}
+function caUnit(f){return f==="diario"?"días":f==="semanal"?"semanas":"meses";}
+function viewCrear(){
+  caEnsure();const S=caState,empty=pricedbEmpty(),ts=pricedbTickers(),rows=pricedbSummary().rows;
+  const selCount=ts.filter(t=>S.sel[t]).length;
+  let form;
+  if(empty){
+    form=`<div class="note" style="margin:0">Tu <b>base de precios</b> está vacía. Ve al módulo <b>Datos</b> para cargar planillas de Investing o cierres diarios; con esos datos podrás crear análisis parametrizados.<div style="margin-top:11px"><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
+  }else{
+    const seg=`<div class="home-seg" role="group" aria-label="Periodicidad">${["diario","semanal","mensual"].map(f=>`<button data-cafreq="${f}" class="${S.freq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
+    const chips=rows.map(r=>`<button class="ca-chip ${S.sel[r.t]?"on":""}" data-catk="${r.t}"><span class="rk-dot" style="background:${r.c}"></span>${r.t}<span class="ca-chip-n">${r.np}</span></button>`).join("");
+    form=`<div class="ca-form">
+      <label class="ca-f"><span>Nombre del análisis</span><input id="caName" type="text" maxlength="44" placeholder="ej. IPSA · últimos 12 meses" value="${(""+S.name).replace(/"/g,"&quot;")}"></label>
+      <div class="ca-f"><span>Periodicidad</span>${seg}</div>
+      <label class="ca-f ca-f-n"><span>Ventana · últimos ${caUnit(S.freq)} (0 = todo el historial)</span><input id="caN" type="number" min="0" step="1" inputmode="numeric" value="${S.lastN||0}"></label>
+    </div>
+    <div class="ca-stk"><div class="ca-stk-h"><b>Acciones del análisis</b><span>${selCount} de ${ts.length} seleccionadas · <a data-caall>todas</a> · <a data-canone>ninguna</a></span></div>
+      <div class="ca-grid">${chips}</div></div>
+    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${selCount<2?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${selCount<2?"Elige al menos 2 acciones":selCount+" acciones · IPSA como benchmark · se requieren ~4 períodos"}</span></div>`;
+  }
+  const create=card("Crear análisis","Arma un análisis a tu medida desde la base del sistema: periodicidad, ventana de tiempo y qué acciones incluir",form);
+  const list=analysisList(),cur=currentAnalysisId();
+  const savedRows=list.map(a=>{const on=String(a.id)===String(cur),canDel=a.kind==="import";
+    const meta=a.kind==="demo"?"IPSA · demo (14 acciones)":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones");
+    return `<div class="ca-saved ${on?"on":""}"><div class="ca-saved-l"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span>${meta}</span></div><div class="ca-saved-r">${on?'<span class="ca-badge">Activo</span>':`<button class="btn btnu" data-caact="${a.id}">Activar</button>`}${canDel?`<button class="wbtn del" data-cadel="${a.id}" title="Eliminar análisis">✕</button>`:""}</div></div>`;}).join("");
+  const saved=card("Análisis guardados","El análisis activo alimenta Comparativa, Detalle, CAPM, Multifactor y el Constructor de portafolio",`<div class="ca-savedlist">${savedRows}</div>`);
+  return create+saved;
+}
+function attachCrear(){
+  const grab=()=>{const n=document.getElementById("caName");if(n)caState.name=n.value;const q=document.getElementById("caN");if(q)caState.lastN=Math.max(0,parseInt(q.value,10)||0);};
+  document.querySelectorAll("[data-cafreq]").forEach(b=>b.onclick=()=>{grab();caState.freq=b.dataset.cafreq;render();});
+  document.querySelectorAll("[data-catk]").forEach(b=>b.onclick=()=>{grab();caState.sel[b.dataset.catk]=!caState.sel[b.dataset.catk];render();});
+  const _all=document.querySelector("[data-caall]");if(_all)_all.onclick=()=>{grab();pricedbTickers().forEach(t=>caState.sel[t]=true);render();};
+  const _none=document.querySelector("[data-canone]");if(_none)_none.onclick=()=>{grab();pricedbTickers().forEach(t=>caState.sel[t]=false);render();};
+  const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};
+  const c=document.getElementById("caCreate");if(c)c.onclick=()=>{
+    grab();const tickers=pricedbTickers().filter(t=>caState.sel[t]);
+    if(tickers.length<2){window.alert("Elige al menos 2 acciones para el análisis.");return;}
+    const imp=pricedbToIMP(caState.freq,{tickers,lastN:caState.lastN});
+    if(!imp){window.alert("No hay suficiente historial para esas acciones/ventana. Se necesitan ~4 períodos con IPSA y precios; amplía la ventana o carga más datos en el módulo Datos.");return;}
+    const id="s"+Date.now()+Math.floor(Math.random()*1000);
+    const nm=(caState.name||"").trim()||("Análisis "+caState.freq+(caState.lastN?(" · últimos "+caState.lastN+" "+caUnit(caState.freq)):" · todo")+" · "+tickers.length+" acc.");
+    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,tickers}});
+    lsSet("inv_impsets_v1",IMPSETS);impsetActivate(id);
+    caState.name="";modulo="eval";page="comparativa";render();
+  };
+  document.querySelectorAll("[data-caact]").forEach(b=>b.onclick=()=>{if(activateAnalysis(b.dataset.caact))render();});
+  document.querySelectorAll("[data-cadel]").forEach(b=>b.onclick=()=>{const s=(IMPSETS||[]).find(x=>String(x.id)===String(b.dataset.cadel));if(confirm('¿Eliminar el análisis "'+(s?s.name:"")+'"? No se puede deshacer.'))impsetDelete(b.dataset.cadel);});
+}
 function viewImport(){
   const tmpl=card("Importar acciones para analizar","Carga muchas acciones candidatas, córreles el análisis completo — CAPM, riesgo-retorno, SML, correlaciones — y decide antes de armar tu portafolio",
     `<div class="note" style="margin:0 0 12px">Dos formas de cargar:<br>• <b>Archivos de Investing.com</b> (uno por acción) — tal como los descargas (columnas Date, Price, Open…). Sube <b>varios a la vez</b>; el ticker se toma del nombre del archivo.<br>• <b>Un archivo combinado</b> (CSV/Excel): una columna por acción + una de índice.<br>Elige la <b>periodicidad</b> que descargaste (diario/semanal/mensual). Para β correcto, incluye también el <b>índice</b> (ej. IPSA) como un archivo más; si no, se usa un índice promedio de tus acciones.</div>
@@ -4306,7 +4387,7 @@ function viewProyectos(){
   const aRows=analysisList().map(a=>{const act=currentAnalysisId()===a.id;
     return `<div class="prj-srow ${act?"on":""}"><span class="prj-dot ${a.kind}"></span><div style="flex:1;min-width:0"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${a.kind==="demo"?"demo":"importado"} · ${a.n} acciones</span></div>${act?'<span class="badge pos">ACTIVO</span>':`<button class="btn" data-aact="${a.id}">Activar</button>`}${a.kind==="import"?`<button class="prj-del" data-aren="${a.id}" title="Renombrar análisis">✎</button><button class="prj-del" data-adel="${a.id}" title="Eliminar análisis">🗑</button>`:""}</div>`;}).join("");
   const anCard=card("Análisis","Sets de acciones para tu análisis (demo IPSA + importados) · actívalos o elimínalos",
-    `<div class="prj-srlist">${aRows}</div><div style="margin-top:11px"><button class="btn btn-pri" data-pgoto2="eval|importar">+ Nuevo análisis (importar)</button></div>`);
+    `<div class="prj-srlist">${aRows}</div><div style="margin-top:11px"><button class="btn btn-pri" data-pgoto2="eval|crear">+ Crear análisis</button></div>`);
   // Simulaciones
   const scRows=(SCEN||[]).length?(SCEN.map(sc=>`<div class="prj-srow"><span class="prj-dot sim"></span><div style="flex:1;min-width:0"><b>${(""+sc.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${sc.comp.length} acciones · β ${sc.m.bp.toFixed(2)} · Sharpe ${sc.m.sharpe.toFixed(2)} · ${fmtCLP(sc.amount||0)}</span></div><button class="btn" data-scload="${sc.id}">Cargar</button><button class="prj-del" data-scren="${sc.id}" title="Renombrar simulación">✎</button><button class="prj-del" data-scdel="${sc.id}" title="Eliminar simulación">🗑</button></div>`).join("")):'<div class="note" style="margin:0">Sin simulaciones guardadas. Guarda escenarios en Simulación → Constructor.</div>';
   const scCard=card("Simulaciones (escenarios)","Carteras simuladas y guardadas · cárgalas al Constructor o elimínalas",`<div class="prj-srlist">${scRows}</div>`);
@@ -4762,7 +4843,7 @@ function viewHome(){
   const actions=card("Acciones rápidas","",`<div class="home-actions">
     <button class="home-act" data-openprices><span class="ha-i">↻</span><b>Actualizar precios</b><span class="ha-s">Cierres del día · toda la plataforma</span></button>
     <button class="home-act" data-go="sim|constructor"><span class="ha-i">＋</span><b>Armar nueva cartera</b><span class="ha-s">Constructor de portafolio</span></button>
-    <button class="home-act" data-go="eval|importar"><span class="ha-i">↥</span><b>Importar acciones</b><span class="ha-s">Analiza tu propio universo</span></button>
+    <button class="home-act" data-go="eval|crear"><span class="ha-i">＋</span><b>Crear análisis</b><span class="ha-s">Parametriza tu propio análisis</span></button>
     <button class="home-act" data-go="proyectos|hub"><span class="ha-i">▦</span><b>Mis proyectos</b><span class="ha-s">Carteras, análisis y seguimientos</span></button>
     <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
   const newsCard=homeNewsCard();
