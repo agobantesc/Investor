@@ -2991,7 +2991,12 @@ CÓMO TRABAJAS:
 - Para proponer o comparar carteras concretas, usa evaluate_portfolio (pesos ~100) y razona sobre β, E(R) CAPM, E(R) multifactor, σ, Sharpe, correlación media y exposición factorial; cuantifica el trade-off riesgo-retorno.
 - Razona como analista senior: hipótesis → evidencia con datos → conclusión accionable. Entrega la recomendación y su justificación cuantitativa, y alinéala al perfil de riesgo del usuario.
 - Indica dónde ejecutar en la plataforma: Análisis (estudiar acciones), Simulación → Constructor (armar/optimizar cartera), Inversión → Operar (comprar/vender, inyectar capital) y Proyectos (gestionar y comparar).
-- Español de Chile, tono profesional, preciso y directo. Usa **negritas** para lo clave, cifras concretas y, cuando aporte, listas o tablas.`;
+- Español de Chile, tono profesional, preciso y directo. Usa **negritas** para lo clave, cifras concretas y, cuando aporte, listas o tablas.
+
+ESTILO DE RESPUESTA (impórtante — sé eficiente):
+- Por defecto responde BREVE y al grano: 2 a 5 frases o una lista corta. No repitas la pregunta, no agregues preámbulos ni cierres de relleno, no enumeres todo lo que podrías hacer.
+- Reserva las respuestas largas y el análisis detallado SOLO cuando el usuario pida explícitamente un "análisis", una comparación, una recomendación de cartera o un informe. En ese caso sí despliega el razonamiento completo con datos.
+- Para preguntas simples (un dato, un precio, una métrica, una duda puntual), responde en una o dos frases tras llamar la herramienta necesaria. Calidad sobre cantidad.`;
 
 /* ---- helpers de datos ---- */
 function cpStyleOf(t){const z=MF.z[t],o=[];if(z.value>0.5)o.push("Value");else if(z.value<-0.5)o.push("Growth");const s=stk(t);if(s.b<0.85&&z.lowvol>0)o.push("Defensiva");else if(s.b>1.1)o.push("Agresiva");if(z.quality>0.5)o.push("Alta calidad");if(z.yield>0.6)o.push("Alto dividendo");if(z.momentum>0.7)o.push("Momentum");return o.join(", ")||"Blend";}
@@ -3167,8 +3172,11 @@ function cpRenderFoot(){
 
 /* ---- loop agéntico ---- */
 function cpTools(){const t=COPILOT_TOOLS.slice();if(t.length)t[t.length-1]=Object.assign({},t[t.length-1],{cache_control:{type:"ephemeral"}});return t;}
+/* render acotado durante el streaming: re-pinta como máximo cada ~70ms (revela más pausado y usa muchos menos recursos que re-renderizar en cada token) */
+let _cpRenderQueued=false;
+function cpRenderBodyThrottled(){if(_cpRenderQueued)return;_cpRenderQueued=true;setTimeout(()=>{_cpRenderQueued=false;cpRenderBody();},70);}
 async function cpStreamOnce(){
-  const body={model:cpModel,max_tokens:2048,system:[{type:"text",text:cpSystemPrompt(),cache_control:{type:"ephemeral"}}],tools:cpTools(),messages:cpApiMessages(),stream:true};
+  const body={model:cpModel,max_tokens:1600,system:[{type:"text",text:cpSystemPrompt(),cache_control:{type:"ephemeral"}}],tools:cpTools(),messages:cpApiMessages(),stream:true};
   let res;
   try{res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{
     "content-type":"application/json","x-api-key":cpKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});}
@@ -3185,8 +3193,8 @@ async function cpStreamOnce(){
       if(!line.startsWith("data:"))continue;
       const pl=line.slice(5).trim();if(!pl||pl==="[DONE]")continue;
       let ev;try{ev=JSON.parse(pl);}catch(e){continue;}
-      if(ev.type==="content_block_start"){const cb=ev.content_block;content[ev.index]=cb.type==="tool_use"?{type:"tool_use",id:cb.id,name:cb.name,input:{},_j:""}:{type:"text",text:""};cpRenderBody();}
-      else if(ev.type==="content_block_delta"){const b=content[ev.index];if(!b)continue;if(ev.delta.type==="text_delta"){b.text+=ev.delta.text;cpRenderBody();}else if(ev.delta.type==="input_json_delta"){b._j=(b._j||"")+ev.delta.partial_json;}}
+      if(ev.type==="content_block_start"){const cb=ev.content_block;content[ev.index]=cb.type==="tool_use"?{type:"tool_use",id:cb.id,name:cb.name,input:{},_j:""}:{type:"text",text:""};cpRenderBodyThrottled();}
+      else if(ev.type==="content_block_delta"){const b=content[ev.index];if(!b)continue;if(ev.delta.type==="text_delta"){b.text+=ev.delta.text;cpRenderBodyThrottled();}else if(ev.delta.type==="input_json_delta"){b._j=(b._j||"")+ev.delta.partial_json;}}
       else if(ev.type==="content_block_stop"){const b=content[ev.index];if(b&&b.type==="tool_use"){try{b.input=b._j?JSON.parse(b._j):{};}catch(e){b.input={};}delete b._j;}}
       else if(ev.type==="message_delta"){if(ev.delta&&ev.delta.stop_reason)stopReason=ev.delta.stop_reason;}
       else if(ev.type==="error"){return {error:(ev.error&&ev.error.message)||"Error de streaming."};}
@@ -4157,11 +4165,13 @@ async function authHash(pw,salt){try{if(window.crypto&&crypto.subtle){const buf=
 function authSalt(){let s="";const a="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";for(let i=0;i<16;i++)s+=a[Math.floor((window.crypto&&crypto.getRandomValues?crypto.getRandomValues(new Uint32Array(1))[0]/4294967296:Math.random())*a.length)];return s;}
 function authRemembered(){try{return !!(AUTH&&AUTH.enabled&&localStorage.getItem("inv_remember_v1")===AUTH.user);}catch(e){return false;}}
 function authApplyRemember(){try{const r=(document.getElementById("authRemember")||{}).checked;if(r&&AUTH&&AUTH.user)localStorage.setItem("inv_remember_v1",AUTH.user);else localStorage.removeItem("inv_remember_v1");}catch(e){}}
-function authSessionOk(){try{return !!(AUTH&&AUTH.enabled&&(sessionStorage.getItem("inv_sess_v1")===AUTH.user||authRemembered()));}catch(e){return false;}}
+/* la sesión solo dura mientras la pestaña esté abierta; al volver a entrar a Investor se pide la contraseña (sin recordar) */
+function authSessionOk(){try{return !!(AUTH&&AUTH.enabled&&sessionStorage.getItem("inv_sess_v1")===AUTH.user);}catch(e){return false;}}
 function authGateEl(){return document.getElementById("authGate");}
 function authShow(show){const g=authGateEl();if(!g)return;g.classList.toggle("open",!!show);try{document.body.style.overflow=show?"hidden":"";}catch(e){}}
 function authInit(){
   AUTH=lsGet("inv_auth_v1");
+  try{localStorage.removeItem("inv_remember_v1");}catch(e){}   // ya no se recuerda la contraseña: siempre se pide al entrar
   if(!AUTH){authMode="create";authRender();authShow(true);return;}
   if(!AUTH.enabled){authShow(false);return;}
   if(authSessionOk()){authShow(false);return;}
@@ -4179,7 +4189,6 @@ function authRender(){
     <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
     ${create?`<div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
     ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
-    <label class="auth-remember"><input type="checkbox" id="authRemember" ${(create||authRemembered())?"checked":""}> <span>Recordar contraseña en este equipo (no la pedirá al volver)</span></label>
     <button class="auth-btn" id="authGo">${create?"Crear acceso y entrar":"Entrar"}</button>
     ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
     <div class="auth-foot">Acceso local · tus datos viven solo en este navegador · simulación educativa, no es asesoría financiera</div>
@@ -4199,11 +4208,11 @@ async function authSubmit(){
     const salt=authSalt(),hash=await authHash(p,salt);
     AUTH={enabled:true,user:u.trim(),salt,hash};lsSet("inv_auth_v1",AUTH);
     try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}
-    authApplyRemember();authMsg="";authShow(false);
+    authMsg="";authShow(false);
   }else{
     if(!AUTH||!AUTH.enabled){authShow(false);return;}
     const hash=await authHash(p,AUTH.salt);
-    if(u.trim()===AUTH.user&&hash===AUTH.hash){try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}authApplyRemember();authMsg="";authShow(false);}
+    if(u.trim()===AUTH.user&&hash===AUTH.hash){try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}authMsg="";authShow(false);}
     else{authMsg="Usuario o contraseña incorrectos.";authRender();}
   }
 }
