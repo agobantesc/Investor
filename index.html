@@ -1032,6 +1032,45 @@
   [data-theme="dark"] .risk-chip.cons{background:#10311F;color:#7AD6A8;}
   [data-theme="dark"] .risk-chip.mod{background:#1A2240;color:#A0B4F0;}
   [data-theme="dark"] .risk-chip.agr{background:#3A1A1A;color:#F0A0A0;}
+  /* ════════════════ HOME / RESUMEN GENERAL ════════════════ */
+  .modbtn.home-btn{margin-bottom:14px;background:linear-gradient(135deg,rgba(56,132,255,.14),rgba(34,211,238,.06));border:1px solid rgba(125,172,247,.22);}
+  .home-hero{position:relative;overflow:hidden;border-radius:var(--r-lg);padding:1.5rem 1.7rem;color:#fff;box-shadow:var(--sh-lg);margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;background:linear-gradient(125deg,#0A1E3D,#1E5FD1);}
+  .home-hero.neg{background:linear-gradient(125deg,#3A1320,#9A2740);}
+  .home-hero::after{content:"";position:absolute;right:-40px;top:-50px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.15),transparent 65%);}
+  .hh-eyebrow{font-size:9.5px;letter-spacing:1.6px;font-weight:800;opacity:.82;text-transform:uppercase;}
+  .hh-val{font:800 34px var(--font);letter-spacing:-1px;margin:7px 0 6px;position:relative;font-variant-numeric:tabular-nums;}
+  .hh-sub{font-size:12px;opacity:.9;position:relative;}
+  .hh-r{text-align:right;position:relative;}
+  .hh-gain{font:800 22px var(--font);font-variant-numeric:tabular-nums;}
+  .hh-pct{font:800 15px var(--font);opacity:.95;}.hh-pct span{display:block;font-size:10px;font-weight:700;opacity:.78;letter-spacing:.3px;margin-top:2px;}
+  .home-rklist{display:flex;flex-direction:column;gap:8px;}
+  .home-rk{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:.6rem .7rem;border:1px solid var(--line);border-radius:11px;background:var(--card2);cursor:pointer;transition:.13s var(--ease);}
+  .home-rk:hover{border-color:var(--a-200);background:var(--a-50);transform:translateX(2px);}
+  .rk-pos{flex:0 0 auto;width:22px;height:22px;border-radius:7px;background:var(--surface);color:var(--mut);font:800 12px var(--font);display:flex;align-items:center;justify-content:center;}
+  .home-rk:first-child .rk-pos{background:var(--brand-grad);color:#06231F;}
+  .rk-dot{flex:0 0 auto;width:11px;height:11px;border-radius:50%;}
+  .rk-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .rk-name{font:800 13.5px var(--font);color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rk-cli{font-size:10.5px;color:var(--mut);font-weight:600;}
+  .rk-bar{height:5px;border-radius:4px;background:var(--surface);overflow:hidden;margin-top:2px;}
+  .rk-bar i{display:block;height:100%;border-radius:4px;}
+  .rk-pct{flex:0 0 auto;font:800 15px var(--font);font-variant-numeric:tabular-nums;}
+  .home-rklist.tight .home-stk{display:flex;align-items:center;gap:11px;padding:.5rem .55rem;border-bottom:1px solid var(--line);}
+  .home-stk:last-child{border-bottom:none;}
+  .home-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .home-mvgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .home-mv{border:1px solid var(--line);border-radius:11px;padding:.65rem .75rem;background:var(--card2);}
+  .mv-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .mv-name{font:800 11.5px var(--font);color:var(--navy);}
+  .mv-chg{font:800 12px var(--font);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .mv-val{font:800 17px var(--font);color:var(--ink);margin:3px 0 5px;font-variant-numeric:tabular-nums;}
+  .home-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+  .home-act{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:.85rem .95rem;border:1px solid var(--line2);border-radius:12px;background:var(--card2);cursor:pointer;text-align:left;transition:.14s var(--ease);}
+  .home-act:hover{border-color:var(--accent);background:var(--a-50);transform:translateY(-2px);box-shadow:var(--sh);}
+  .home-act .ha-i{font-size:18px;color:var(--accent);margin-bottom:4px;}
+  .home-act b{font:800 13.5px var(--font);color:var(--navy);}
+  .home-act .ha-s{font-size:11px;color:var(--mut);font-weight:600;}
+  @media(max-width:880px){.home-grid2{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -1059,7 +1098,7 @@ const DATA = {"window": "jun-2024 a may-2026", "n": 23, "labels": ["jul-24", "ag
 // ===== PARÁMETROS =====
 let RF=DATA.rf, PRIMA=DATA.prima, ERM=DATA.erm;
 let STOCKS=DATA.stocks, MKT=DATA.market, CORR=DATA.corr, TICK=DATA.tickers;
-let modulo="eval", page="comparativa", sel=STOCKS[0].t;
+let modulo="inicio", page="home", sel=STOCKS[0].t;
 let invStkSel=null;
 
 // ===== FORMATO =====
@@ -1204,6 +1243,7 @@ function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div 
 
 // ===== NAV =====
 const MODS={
+  inicio:{label:"Inicio",tabs:[{id:"home",label:"Resumen general",n:"1"}]},
   eval:{label:"Análisis",tabs:[{id:"comparativa",label:"Comparativa",n:"1"},{id:"detalle",label:"Detalle por acción",n:"2"},{id:"capm",label:"CAPM / SML",n:"3"},{id:"multifactor",label:"Multifactor",n:"4"},{id:"importar",label:"Importar acciones",n:"5"}]},
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
@@ -1214,6 +1254,7 @@ const MODS={
   pro:{label:"Pro · Roadmap",tabs:[{id:"realtime",label:"Datos en tiempo real",n:"1"},{id:"copilot",label:"Copiloto IA",n:"2"}]},
 };
 const ICO={
+ inicio:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
  eval:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg>',
  sim:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>',
  inv:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7"/><path d="M3 12h18"/></svg>',
@@ -1224,7 +1265,8 @@ const ICO={
  clientes:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
 };
 function renderChrome(){
-  let nav=`<div class="sgroup">Módulos</div>`;
+  let nav=`<button class="modbtn home-btn ${modulo==='inicio'?'on':''}" data-mod="inicio"><span class="mi">${ICO.inicio}</span>Inicio</button>`;
+  nav+=`<div class="sgroup">Módulos</div>`;
   ["eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
@@ -1410,8 +1452,9 @@ function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v)
 let _saveWarned=false;
 function saveWarn(){if(_saveWarned)return;_saveWarned=true;try{window.alert("⚠ No se pudo guardar en este navegador. El almacenamiento está lleno o el navegador está en modo privado / con cookies bloqueadas. Tus cambios podrían perderse al recargar.\n\nExporta un respaldo desde Configuración → Datos → Respaldar.");}catch(e){}}
 function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));return true;}catch(e){saveWarn();return false;}}
-(function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
-let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Mi cartera",color:"#1E5FD1"}];}})();
+(function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Administración",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
+let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Administración",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Administración",color:"#1E5FD1"}];}})();
+(function(){try{const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}}catch(e){}})();
 const CLIENT_PAL=["#1E5FD1","#0E8C5E","#DB2777","#7C3AED","#D9730D","#0891B2","#CA8A04","#CE2F3B"];
 function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));return true;}catch(e){saveWarn();return false;}}
 function activeClientObj(){return CLIENTS.find(x=>x.id===activeClient)||CLIENTS[0];}
@@ -1456,7 +1499,7 @@ function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{
 }catch(err){alert("No se pudo leer el respaldo: "+err.message);}};rd.readAsText(file);}
 let PF=null,WEEKS=[];
 function curProj(){return PROJECTS.find(p=>p.id===activeId)||null;}
-function syncProj(){PF=curProj();WEEKS=PF?PF.weeks:[];}
+function syncProj(){PF=curProj();WEEKS=PF?PF.weeks:[];if(PF){["bp","erCapm","sig","sharpe","corrAvg"].forEach(k=>{if(typeof PF[k]!=="number"||!isFinite(PF[k]))PF[k]=0;});}}
 function saveProjects(){lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);}
 syncProj();
 let SCEN=lsGet("pf_scenarios_v1")||[],scenEditId=null;
@@ -1527,7 +1570,7 @@ function updateScenario(){
   page="comparador";render();
 }
 function renameScenario(id){
-  const sc=SCEN.find(s=>s.id===id);if(!sc)return;
+  const sc=SCEN.find(s=>String(s.id)===String(id));if(!sc)return;
   const nm=window.prompt("Nuevo nombre del escenario:",sc.name);
   if(nm===null)return;sc.name=(nm||sc.name).trim()||sc.name;lsSet("pf_scenarios_v1",SCEN);render();
 }
@@ -2051,7 +2094,7 @@ function viewInvActive(){
   const _b0=WEEKS[0];
   const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;const bp=per.reduce((a,x)=>a+(x.m/tot)*x.hd.b,0);return {per,tot,bp};})():null;
   const chips=(_real?_real.per.map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
-  const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${_real.bp.toFixed(2)} · σ ${PF.sig.toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)} · E(R) CAPM ${PF.erCapm.toFixed(2)}% · σ ${PF.sig.toFixed(1)}%`;
+  const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(_real.bp||0).toFixed(2)} · σ ${(PF.sig||0).toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`;
   const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
   const compraMode=isFirst||editIdx===0;
@@ -2415,7 +2458,8 @@ function render(){
   refreshPalette();
   window.__sgN=0;
   let h="";
-  if(modulo==="inv") h=(page==="operar"?viewOperar():page==="contabilidad"?viewContab():viewInv());
+  if(modulo==="inicio") h=viewHome();
+  else if(modulo==="inv") h=(page==="operar"?viewOperar():page==="contabilidad"?viewContab():viewInv());
   else if(modulo==="pro") h=viewPro();
   else if(modulo==="mercados") h=viewMercados();
   else if(modulo==="proyectos") h=viewProyectos();
@@ -2439,6 +2483,7 @@ function render(){
   if(modulo==="mercados") attachMercados();
   if(modulo==="proyectos") attachProyectos();
   if(modulo==="clientes") attachClientes();
+  if(modulo==="inicio") attachHome();
   if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="importar";render();};}
   attachScatterAll();
 }
@@ -3688,7 +3733,6 @@ function viewContab(){
   const tiles=`<div class="tiles">
     ${tile("Invertido (compras)",fmtCLP(T.buy),"capital total comprado",indigo,ink)}
     ${tile("Dinero rescatado (ventas)",T.sell?fmtCLP(T.sell):"—","efectivo recibido por ventas",indigo,ink)}
-    ${tile("Capital aún invertido",fmtCLP(T.costOpen),"costo de posiciones abiertas",indigo,ink)}
     ${tile("Valor actual total",fmtCLP(T.val),"posiciones abiertas a hoy",indigo,accentT)}
     ${tile("Comisiones pagadas",T.fees?fmtCLP(T.fees):"$0",T.feesIva>0?("incluye IVA "+fmtCLP(T.feesIva)):"sin IVA",indigo,red)}
     ${tile("Ganancia realizada",(T.real>=0?"+":"")+fmtCLP(T.real),"por ventas (costo prom.)",indigo,T.real>=0?green:red)}
@@ -3760,7 +3804,6 @@ function genContabReport(){
   <div class="kpis">
     <div class="kpi"><div class="l">Invertido (compras)</div><div class="v">${clp(T.buy)}</div></div>
     <div class="kpi"><div class="l">Dinero rescatado (ventas)</div><div class="v">${T.sell?clp(T.sell):"—"}</div></div>
-    <div class="kpi"><div class="l">Capital aún invertido</div><div class="v">${clp(T.costOpen)}</div></div>
     <div class="kpi"><div class="l">Valor actual total</div><div class="v">${clp(T.val)}</div></div>
     <div class="kpi"><div class="l">Ganancia realizada</div><div class="v" style="color:${T.real>=0?'#0E8C5E':'#C0392B'}">${sgn(T.real)}</div></div>
     <div class="kpi"><div class="l">Ganancia no realizada</div><div class="v" style="color:${T.unreal>=0?'#0E8C5E':'#C0392B'}">${sgn(T.unreal)}</div></div>
@@ -3881,7 +3924,7 @@ function viewProyectos(){
     const aChips=L.analyses.length?L.analyses.map(id=>{const isP=String(id)===String(prim),act=currentAnalysisId()===String(id);return `<span class="prj-chip an ${isP?"primary":""} ${act?"active":""}"><button class="prj-star" data-primary="${p.id}|${id}" title="${isP?"Análisis vigente del proyecto":"Marcar como vigente"}">${isP?"★":"☆"}</button><button class="prj-go" data-actanalysis="${id}" title="Activar este análisis">${analysisName(id)}</button><button class="prj-x" data-unlink="${p.id}|analysis|${id}">✕</button></span>`;}).join(""):'<span class="prj-none">— sin análisis —</span>';
     const sChips=L.scenarios.length?L.scenarios.map(id=>`<span class="prj-chip sc">${scenName(id)}<button class="prj-x" data-unlink="${p.id}|scenario|${id}">✕</button></span>`).join(""):'<span class="prj-none">— sin simulaciones —</span>';
     return `<div class="prj-card ${active?"on":""}">
-      <div class="prj-head"><div style="flex:1;min-width:0"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}"><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${p.date||"—"}</div></div>
+      <div class="prj-head"><div style="flex:1;min-width:0"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}" title="Haz clic para editar el nombre del proyecto" aria-label="Nombre del proyecto"><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${p.date||"—"}</div></div>
         ${active?'<span class="badge pos">ACTIVO</span>':`<button class="btn prj-act" data-pact="${p.id}">Activar</button>`}<button class="prj-del" data-pdel="${p.id}" title="Eliminar proyecto">🗑</button></div>
       <div class="prj-metrics">
         <div class="prj-m"><span class="l">Invertido</span><b>${fmtCLP(s.invested)}</b></div>
@@ -3899,11 +3942,11 @@ function viewProyectos(){
   const projCard=PROJECTS.length?`<div class="prj-list">${cards}</div>`:"";
   // Análisis guardados
   const aRows=analysisList().map(a=>{const act=currentAnalysisId()===a.id;
-    return `<div class="prj-srow ${act?"on":""}"><span class="prj-dot ${a.kind}"></span><div style="flex:1;min-width:0"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${a.kind==="demo"?"demo":"importado"} · ${a.n} acciones</span></div>${act?'<span class="badge pos">ACTIVO</span>':`<button class="btn" data-aact="${a.id}">Activar</button>`}${a.kind==="import"?`<button class="prj-del" data-adel="${a.id}" title="Eliminar análisis">🗑</button>`:""}</div>`;}).join("");
+    return `<div class="prj-srow ${act?"on":""}"><span class="prj-dot ${a.kind}"></span><div style="flex:1;min-width:0"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${a.kind==="demo"?"demo":"importado"} · ${a.n} acciones</span></div>${act?'<span class="badge pos">ACTIVO</span>':`<button class="btn" data-aact="${a.id}">Activar</button>`}${a.kind==="import"?`<button class="prj-del" data-aren="${a.id}" title="Renombrar análisis">✎</button><button class="prj-del" data-adel="${a.id}" title="Eliminar análisis">🗑</button>`:""}</div>`;}).join("");
   const anCard=card("Análisis","Sets de acciones para tu análisis (demo IPSA + importados) · actívalos o elimínalos",
     `<div class="prj-srlist">${aRows}</div><div style="margin-top:11px"><button class="btn btn-pri" data-pgoto2="eval|importar">+ Nuevo análisis (importar)</button></div>`);
   // Simulaciones
-  const scRows=(SCEN||[]).length?(SCEN.map(sc=>`<div class="prj-srow"><span class="prj-dot sim"></span><div style="flex:1;min-width:0"><b>${(""+sc.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${sc.comp.length} acciones · β ${sc.m.bp.toFixed(2)} · Sharpe ${sc.m.sharpe.toFixed(2)} · ${fmtCLP(sc.amount||0)}</span></div><button class="btn" data-scload="${sc.id}">Cargar</button><button class="prj-del" data-scdel="${sc.id}" title="Eliminar simulación">🗑</button></div>`).join("")):'<div class="note" style="margin:0">Sin simulaciones guardadas. Guarda escenarios en Simulación → Constructor.</div>';
+  const scRows=(SCEN||[]).length?(SCEN.map(sc=>`<div class="prj-srow"><span class="prj-dot sim"></span><div style="flex:1;min-width:0"><b>${(""+sc.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${sc.comp.length} acciones · β ${sc.m.bp.toFixed(2)} · Sharpe ${sc.m.sharpe.toFixed(2)} · ${fmtCLP(sc.amount||0)}</span></div><button class="btn" data-scload="${sc.id}">Cargar</button><button class="prj-del" data-scren="${sc.id}" title="Renombrar simulación">✎</button><button class="prj-del" data-scdel="${sc.id}" title="Eliminar simulación">🗑</button></div>`).join("")):'<div class="note" style="margin:0">Sin simulaciones guardadas. Guarda escenarios en Simulación → Constructor.</div>';
   const scCard=card("Simulaciones (escenarios)","Carteras simuladas y guardadas · cárgalas al Constructor o elimínalas",`<div class="prj-srlist">${scRows}</div>`);
   return cliBanner+head+projCard+anCard+scCard;
 }
@@ -3919,6 +3962,8 @@ function attachProyectos(){
   document.querySelectorAll("[data-pgoto2]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.pgoto2.split("|");modulo=m;page=pg;render();});
   document.querySelectorAll("[data-aact]").forEach(b=>b.onclick=()=>{const id=b.dataset.aact;if(id==="demo")applyDataset("demo");else if(typeof impsetActivate==="function")impsetActivate(id);});
   document.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{const id=b.dataset.adel;const a=analysisList().find(x=>x.id===id);if(a&&confirm('¿Eliminar el análisis "'+a.name+'"?'))impsetDelete(id);});
+  document.querySelectorAll("[data-aren]").forEach(b=>b.onclick=()=>{const id=b.dataset.aren;const a=analysisList().find(x=>x.id===id);const nm=window.prompt("Nuevo nombre del análisis:",a?a.name:"");if(nm!==null&&nm.trim()){impsetRename(id,nm.trim());render();}});
+  document.querySelectorAll("[data-scren]").forEach(b=>b.onclick=()=>renameScenario(b.dataset.scren));
   document.querySelectorAll("[data-scload]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scload);if(sc){scenEditId=null;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;modulo="sim";page="constructor";render();}});
   document.querySelectorAll("[data-scdel]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scdel);if(sc&&confirm('¿Eliminar la simulación "'+sc.name+'"?')){SCEN=SCEN.filter(x=>String(x.id)!==b.dataset.scdel);lsSet("pf_scenarios_v1",SCEN);render();}});
   document.querySelectorAll("[data-clirename]").forEach(inp=>inp.onchange=()=>clientRename(inp.dataset.clirename,inp.value));
@@ -4031,6 +4076,69 @@ function riskChip(prof){
   return `<span class="risk-chip ${cls}">${(""+prof.label).replace(/</g,"&lt;")}${lvl}</span>`;
 }
 function betaTag(b){return b<0.8?"defensivo":b<1?"moderado":b<1.2?"de mercado":"agresivo";}
+
+/* ===================== HOME / RESUMEN GENERAL ===================== */
+function homeData(){
+  const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
+  const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
+  const projs=[];
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData});}catch(e){}});});
+  return {clients,T,projs};
+}
+function viewHome(){
+  syncProj();
+  const D=homeData(),T=D.T,Tpct=T.aportado>0?T.gainNet/T.aportado*100:0;
+  const sg=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
+  const hero=`<div class="home-hero ${T.gainNet>=0?"pos":"neg"}">
+    <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO</div>
+      <div class="hh-val">${fmtCLP(T.value)}</div>
+      <div class="hh-sub">${CLIENTS.length} cliente${CLIENTS.length!==1?"s":""} · ${T.nproj} proyecto${T.nproj!==1?"s":""} · capital aportado ${fmtCLP(T.aportado)}</div></div>
+    <div class="hh-r"><div class="hh-gain">${sg(T.gainNet)}</div><div class="hh-pct">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
+  const tiles=card("Resumen consolidado","Todas tus carteras y clientes en una sola vista · neto de comisiones",`<div class="tiles">
+    ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
+    ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
+    ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
+    ${tile("Ganancia neta",sg(T.gainNet),"después de comisiones",indigo,T.gainNet>=0?green:red)}
+    ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital",indigo,Tpct>=0?green:red)}
+    ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}</div>`);
+  // ranking de proyectos más rentables (con seguimiento)
+  const ranked=D.projs.filter(p=>p.hasData).sort((a,b)=>b.pct-a.pct);
+  const top=ranked.slice(0,6),maxAbs=Math.max(1,...top.map(p=>Math.abs(p.pct)));
+  const rankRows=top.length?top.map((p,i)=>{const w=Math.min(100,Math.abs(p.pct)/maxAbs*100);
+    return `<button class="home-rk" data-gohome="${p.cliId}|${p.pid}">
+      <span class="rk-pos">${i+1}</span><span class="rk-dot" style="background:${p.col}"></span>
+      <span class="rk-body"><span class="rk-name">${(""+p.name).replace(/</g,"&lt;")}</span>
+        <span class="rk-cli">${(""+p.cli).replace(/</g,"&lt;")} · ${fmtCLP(p.val)} · β ${(p.beta||0).toFixed(2)}</span>
+        <span class="rk-bar"><i style="width:${w}%;background:${p.pct>=0?green:red}"></i></span></span>
+      <span class="rk-pct" style="color:${p.pct>=0?green:red}">${(p.pct>=0?"+":"")+p.pct.toFixed(2)}%</span></button>`;}).join("")
+    :'<div class="note" style="margin:0">Aún no tienes proyectos con seguimiento. Arma una cartera en el <b>Constructor</b> y registra su compra inicial para empezar a comparar rentabilidades reales.</div>';
+  const rankCard=card("Proyectos más rentables","Compara el desempeño real de tus carteras: invierte montos chicos en distintas combinaciones de acciones y deja que los números muestren cuál funciona mejor",
+    `<div class="home-rklist">${rankRows}</div>${ranked.length>6?`<div class="note" style="margin:10px 0 0">+${ranked.length-6} proyectos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`);
+  // indicadores que se movieron
+  const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
+  const mvRows=movers.length?movers.map(x=>`<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${x.chg>=0?green:red}">${(x.chg>=0?"▲ +":"▼ ")+x.chg.toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k])||""}</div>`).join("")
+    :`<div class="note" style="margin:0">${mindBusy?"Cargando indicadores de mercado…":"Cargando indicadores… (también en Mercados)"}</div>`;
+  const mvCard=card("Indicadores que se movieron","Mayores variaciones recientes · dólar, euro, cobre, UF (mindicador.cl)",`<div class="home-mvgrid">${mvRows}</div>`);
+  // acciones destacadas (top Sharpe del análisis activo)
+  const topStk=[...STOCKS].sort((a,b)=>(b.a24.sharpe||0)-(a.a24.sharpe||0)).slice(0,5);
+  const stkRows=topStk.map(s=>`<div class="home-stk"><span class="rk-dot" style="background:${s.c}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${s.s} · Sharpe ${(s.a24.sharpe||0).toFixed(2)} · β ${(s.b||0).toFixed(2)}</span></span><span class="rk-pct" style="color:${s.a24.ret>=0?green:red}">${(s.a24.ret>=0?"+":"")+(s.a24.ret||0).toFixed(1)}%</span></div>`).join("");
+  const stkCard=card("Acciones destacadas",`Mejores por Sharpe en tu análisis activo · ${(typeof DATASET!=="undefined"&&DATASET==="import"&&IMP)?"set importado":"IPSA demo"}`,`<div class="home-rklist tight">${stkRows}</div><div style="margin-top:10px"><button class="btn" data-go="eval|comparativa">Ver análisis completo →</button></div>`);
+  const grid2=`<div class="home-grid2">${mvCard}${stkCard}</div>`;
+  const actions=card("Acciones rápidas","",`<div class="home-actions">
+    <button class="home-act" data-go="sim|constructor"><span class="ha-i">＋</span><b>Armar nueva cartera</b><span class="ha-s">Constructor de portafolio</span></button>
+    <button class="home-act" data-go="eval|importar"><span class="ha-i">↥</span><b>Importar acciones</b><span class="ha-s">Analiza tu propio universo</span></button>
+    <button class="home-act" data-go="clientes|admin"><span class="ha-i">👥</span><b>Administrar clientes</b><span class="ha-s">Carteras de terceros</span></button>
+    <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
+  return hero+tiles+rankCard+grid2+actions;
+}
+function attachHome(){
+  document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
+    try{if(cid!==activeClient){activeClient=cid;localStorage.setItem("inv_active_client",cid);if(typeof clientLoad==="function")clientLoad();}}catch(e){}
+    const np=+pid;activeId=(isFinite(np)&&String(np)===pid)?np:pid;try{saveProjects();syncProj();}catch(e){}
+    modulo="inv";page="seguimiento";render();});
+  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
+  if(!MIND&&!mindBusy&&typeof mindFetch==="function"){try{mindFetch();}catch(e){}}
+}
 /* topbar switcher */
 function clientMenuClose(){const m=document.getElementById("clientMenu");if(m)m.classList.remove("open");}
 function renderClientBar(){
