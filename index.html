@@ -3698,7 +3698,7 @@ function dropDateData(date){if(!date)return {nBase:0,nProj:0};let nBase=0,nProj=
   const ix=PRICEDB.idx||{};Object.keys(ix).forEach(k=>{if(ix[k][date]!=null){delete ix[k][date];nBase++;}});
   savePriceDB();
   (CLIENTS||[]).forEach(c=>{const projs=clientProjects(c.id)||[];let touched=false;projs.forEach(p=>{const ws=p.weeks||[];
-    const keep=ws.filter(w=>{if(w.date!==date)return true;if(w.qty&&Object.keys(w.qty).length)return true;nProj++;return false;});
+    const keep=ws.filter(w=>{if(w.date!==date)return true;if(w.qty&&Object.keys(w.qty).length)return true;if(w.ev)return true;nProj++;return false;});   // conserva compra y operaciones
     if(keep.length!==ws.length){p.weeks=keep;touched=true;}});if(touched)clientSaveProjects(c.id,projs);});
   syncProj();return {nBase,nProj};
 }
@@ -3826,10 +3826,11 @@ function systemClean(){
   let kept=0;
   try{
     try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de limpiar sistema");}catch(e){}
-    // 1) deja en cada cartera SOLO la compra inicial (semana con qty); los cierres se reconstruyen al cargar planillas
+    // 1) deja en cada cartera la compra inicial (qty) y las OPERACIONES de compra/venta/inyección (w.ev);
+    //    solo se borran los cierres de seguimiento, que se reconstruyen al cargar planillas
     (PROJECTS||[]).forEach(p=>{if(!p)return;kept++;
-      const ws=p.weeks||[];const purchases=ws.filter(w=>w.qty&&Object.keys(w.qty).length);
-      p.weeks=purchases.length?purchases:(ws.length?[ws[0]]:[]);
+      const ws=p.weeks||[];const keepW=ws.filter(w=>(w.qty&&Object.keys(w.qty).length)||w.ev);
+      p.weeks=keepW.length?keepW:(ws.length?[ws[0]]:[]);
       const L=p.links;if(L){L.scenarios=[];L.analyses=(L.analyses||[]).filter(a=>a==="demo"||a==="datos");if(!L.analyses.length)L.analyses=["demo"];if(L.primary&&L.primary!=="demo"&&L.primary!=="datos")L.primary="demo";}});
     // 2) base de precios: vaciar (seeded queda en true para que el demo no se re-siembre) y re-ingerir solo las compras conservadas
     PRICEDB={tickers:{},px:{},ipsa:{},idx:{},seeded:true};savePriceDB();
@@ -3918,8 +3919,8 @@ function attachDatos(){
   const bkr=document.querySelector("[data-bkrestore]");if(bkr)bkr.onclick=()=>autobkRestore();
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
   const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
-    if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVA: la COMPRA INICIAL de cada cartera (acciones y montos).\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Todos los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
-    const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera solo la compra inicial y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
+    if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
+    const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera la compra inicial y sus operaciones, y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
     if(typed==null||typed.trim().toUpperCase()!=="LIMPIAR"){window.alert("Cancelado. No se eliminó nada.");return;}
     const k=systemClean();page="base";render();window.alert("Listo. Se conservó la compra inicial de "+k+" cartera(s).\n\nAhora carga tus planillas (mensual/semanal/diario, acciones e índices) en “Cargar planilla” y pulsa ACTUALIZAR SISTEMA.");};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
