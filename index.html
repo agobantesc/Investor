@@ -196,6 +196,17 @@
   .ca-saved-l span{font-size:11px;color:var(--mut);}
   .ca-saved-r{display:flex;align-items:center;gap:9px;flex:0 0 auto;}
   .ca-badge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--accent);background:var(--a-50);border:1px solid var(--a-200);border-radius:7px;padding:.22rem .5rem;}
+  .ca-bench-none{font-size:12px;color:var(--mut);font-weight:600;padding:.4rem 0;}
+  /* IPSA card (Home) */
+  .ipsa-row{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;}
+  .ipsa-now{display:flex;flex-direction:column;gap:2px;}
+  .ipsa-val{font:800 27px var(--font);color:var(--navy);letter-spacing:-.6px;font-variant-numeric:tabular-nums;}
+  .ipsa-val small{font-size:13px;color:var(--mut);font-weight:700;margin-left:5px;letter-spacing:0;}
+  .ipsa-pts{font-size:11px;color:var(--mut);font-weight:600;}
+  .ipsa-cells{display:flex;gap:10px;flex-wrap:wrap;}
+  .ipsa-cell{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:86px;padding:.55rem .85rem;border:1px solid var(--line);border-radius:11px;background:var(--card2);}
+  .ipsa-cl{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);}
+  .ipsa-cv{font:800 17px var(--font);font-variant-numeric:tabular-nums;}
   tbody td{padding:.72rem .9rem;border-bottom:1px solid var(--line);}
   tbody tr:last-child td{border-bottom:none;}
   tbody tr:hover{background:var(--soft);}
@@ -3563,11 +3574,16 @@ function pricedbUpsertDay(date,ipsa,priceMap){
   Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;(PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);});
   savePriceDB();
 }
+/* índices/benchmarks disponibles en la base: IPSA vive en PRICEDB.ipsa; otros (IGPA, …) en PRICEDB.idx */
+function pdIndexOf(n,benchName){if(/igpa/i.test(n))return "IGPA";if(/^ipsa$/i.test(""+n)||/ipsa|índice|indice|index|bench/i.test(""+n)||(benchName&&n===benchName))return "IPSA";return null;}
+function pricedbIdxAll(){const o={};if(PRICEDB.ipsa&&Object.keys(PRICEDB.ipsa).length)o.IPSA=PRICEDB.ipsa;const ix=PRICEDB.idx||{};Object.keys(ix).forEach(k=>{if(ix[k]&&Object.keys(ix[k]).length)o[k]=ix[k];});return o;}
+function pricedbIndexNames(){return Object.keys(pricedbIdxAll());}
+function pricedbIdxMap(name){if(!name||name==="IPSA")return PRICEDB.ipsa||{};return (PRICEDB.idx&&PRICEDB.idx[name])||{};}
 /* carga masiva: fusiona series parseadas (formato impFiles: {name,src,dates,closes}) en la base */
 function pricedbMergeFiles(files,benchName){
-  let added=0,tk=0;const isB=n=>/^ipsa$|ipsa|índice|indice|index|bench/i.test(n)||(benchName&&n===benchName);
-  (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];
-    if(isB(f.name)){for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(d&&isFinite(v)&&v>0){PRICEDB.ipsa[d]=v;added++;}}return;}
+  let added=0,tk=0;
+  (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];const nm=pdIndexOf(f.name,benchName);
+    if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(d&&isFinite(v)&&v>0){tgt[d]=v;added++;}}return;}
     const t=f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);
     for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(d&&isFinite(v)&&v>0){PRICEDB.px[t][d]=v;added++;}}
   });
@@ -3581,11 +3597,12 @@ function pricedbSummary(){const out=[];pricedbTickers().forEach(t=>{const ds=Obj
 function pricedbToIMP(freq,opts){
   opts=opts||{};
   freq=freq||"mensual";const PY={diario:252,semanal:52,mensual:12}[freq]||12;
+  const benchName=opts.bench||"IPSA",benchMap=pricedbIdxMap(benchName);
   let tickers=pricedbTickers();
   if(opts.tickers&&opts.tickers.length)tickers=tickers.filter(t=>opts.tickers.indexOf(t)>=0);
-  if(!tickers.length||!Object.keys(PRICEDB.ipsa||{}).length)return null;
+  if(!tickers.length||!Object.keys(benchMap).length)return null;
   const rs=m=>{const o={};Object.keys(m).sort().forEach(d=>{o[periodKey(d,freq)]=m[d];});return o;};
-  const ipsaP=rs(PRICEDB.ipsa),tickP={};tickers.forEach(t=>tickP[t]=rs(PRICEDB.px[t]));
+  const ipsaP=rs(benchMap),tickP={};tickers.forEach(t=>tickP[t]=rs(PRICEDB.px[t]));
   let periods=Object.keys(ipsaP).sort().filter(pk=>tickers.some(t=>tickP[t][pk]!=null));
   // ventana: limita a los últimos N períodos (N+1 precios para N retornos)
   if(opts.lastN&&opts.lastN>0&&periods.length>opts.lastN+1)periods=periods.slice(periods.length-(opts.lastN+1));
@@ -3600,7 +3617,7 @@ function pricedbToIMP(freq,opts){
   if(assets.length<1)return null;
   const N=assets.length,corr=[];for(let i=0;i<N;i++){corr[i]=[];for(let j=0;j<N;j++)corr[i][j]=i===j?1:impBetaCorr(assets[i].rets.map(x=>x/100),assets[j].rets.map(x=>x/100)).corr;}
   return {freq,rf,prima,perYear:PY,window:periods[0]+" a "+periods[periods.length-1]+" · base del sistema ("+freq+")",n:periods.length-1,labels:periods.slice(1),
-    bench:{name:"IPSA",prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-rf)/(bs.sigAnn*100):0},assets,corr,dropped};
+    bench:{name:benchName,prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-rf)/(bs.sigAnn*100):0},assets,corr,dropped};
 }
 /* activa la base como universo de análisis/simulación (vía la maquinaria de import) */
 function pricedbActivateAnalysis(freq){freq=freq||pricedbFreq;pricedbFreq=freq;lsSet("inv_pricedb_freq",freq);
@@ -3698,7 +3715,8 @@ function attachDatos(){
 function impDownloadTemplate(){const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B\n2025-01-31;6500;52000;5800;38000\n2025-02-28;6610;53400;6010;36500\n2025-03-31;6720;55100;5950;40200\n2025-04-30;6680;54200;6230;39100\n2025-05-31;6810;56800;6480;42500\n2025-06-30;6905;57500;6390;41000\n";const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
 /* ===================== CREAR ANÁLISIS (parametrizado desde la base del sistema) ===================== */
 let caState=null;
-function caEnsure(){const ts=pricedbTickers();if(!caState){caState={name:"",freq:(pricedbFreq||"mensual"),lastN:0,sel:{}};ts.forEach(t=>caState.sel[t]=true);}else{ts.forEach(t=>{if(caState.sel[t]===undefined)caState.sel[t]=true;});}}
+function caEnsure(){const ts=pricedbTickers();if(!caState){caState={name:"",freq:(pricedbFreq||"mensual"),lastN:0,bench:"IPSA",sel:{}};ts.forEach(t=>caState.sel[t]=true);}else{ts.forEach(t=>{if(caState.sel[t]===undefined)caState.sel[t]=true;});}
+  const idxs=pricedbIndexNames();if(!caState.bench||idxs.indexOf(caState.bench)<0)caState.bench=idxs[0]||"IPSA";}
 function caUnit(f){return f==="diario"?"días":f==="semanal"?"semanas":"meses";}
 function viewCrear(){
   caEnsure();const S=caState,empty=pricedbEmpty(),ts=pricedbTickers(),rows=pricedbSummary().rows;
@@ -3708,15 +3726,19 @@ function viewCrear(){
     form=`<div class="note" style="margin:0">Tu <b>base de precios</b> está vacía. Ve al módulo <b>Datos</b> para cargar planillas de Investing o cierres diarios; con esos datos podrás crear análisis parametrizados.<div style="margin-top:11px"><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
   }else{
     const seg=`<div class="home-seg" role="group" aria-label="Periodicidad">${["diario","semanal","mensual"].map(f=>`<button data-cafreq="${f}" class="${S.freq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
+    const idxs=pricedbIndexNames();
+    const benchSel=idxs.length?`<div class="home-seg" role="group" aria-label="Índice de referencia">${idxs.map(ix=>`<button data-cabench="${ix}" class="${S.bench===ix?"on":""}">${ix}</button>`).join("")}</div>`:`<div class="ca-bench-none">No hay índice en la base · carga el IPSA (o IGPA) en <b>Datos</b></div>`;
     const chips=rows.map(r=>`<button class="ca-chip ${S.sel[r.t]?"on":""}" data-catk="${r.t}"><span class="rk-dot" style="background:${r.c}"></span>${r.t}<span class="ca-chip-n">${r.np}</span></button>`).join("");
     form=`<div class="ca-form">
       <label class="ca-f"><span>Nombre del análisis</span><input id="caName" type="text" maxlength="44" placeholder="ej. IPSA · últimos 12 meses" value="${(""+S.name).replace(/"/g,"&quot;")}"></label>
       <div class="ca-f"><span>Periodicidad</span>${seg}</div>
       <label class="ca-f ca-f-n"><span>Ventana · últimos ${caUnit(S.freq)} (0 = todo el historial)</span><input id="caN" type="number" min="0" step="1" inputmode="numeric" value="${S.lastN||0}"></label>
+      <div class="ca-f"><span>Índice de referencia (benchmark)</span>${benchSel}</div>
     </div>
+    <div class="note" style="margin:10px 0 0;font-size:11.5px">El <b>benchmark</b> es el índice contra el que se calcula la β y el α de Jensen. La regresión usa <b>un</b> índice; si quieres comparar contra IPSA <i>y</i> IGPA, crea un análisis con cada uno.</div>
     <div class="ca-stk"><div class="ca-stk-h"><b>Acciones del análisis</b><span>${selCount} de ${ts.length} seleccionadas · <a data-caall>todas</a> · <a data-canone>ninguna</a></span></div>
       <div class="ca-grid">${chips}</div></div>
-    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${selCount<2?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${selCount<2?"Elige al menos 2 acciones":selCount+" acciones · IPSA como benchmark · se requieren ~4 períodos"}</span></div>`;
+    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${(selCount<2||!idxs.length)?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia en la base":selCount<2?"Elige al menos 2 acciones":selCount+" acciones · benchmark "+S.bench+" · se requieren ~4 períodos"}</span></div>`;
   }
   const create=card("Crear análisis","Arma un análisis a tu medida desde la base del sistema: periodicidad, ventana de tiempo y qué acciones incluir",form);
   const list=analysisList(),cur=currentAnalysisId();
@@ -3729,6 +3751,7 @@ function viewCrear(){
 function attachCrear(){
   const grab=()=>{const n=document.getElementById("caName");if(n)caState.name=n.value;const q=document.getElementById("caN");if(q)caState.lastN=Math.max(0,parseInt(q.value,10)||0);};
   document.querySelectorAll("[data-cafreq]").forEach(b=>b.onclick=()=>{grab();caState.freq=b.dataset.cafreq;render();});
+  document.querySelectorAll("[data-cabench]").forEach(b=>b.onclick=()=>{grab();caState.bench=b.dataset.cabench;render();});
   document.querySelectorAll("[data-catk]").forEach(b=>b.onclick=()=>{grab();caState.sel[b.dataset.catk]=!caState.sel[b.dataset.catk];render();});
   const _all=document.querySelector("[data-caall]");if(_all)_all.onclick=()=>{grab();pricedbTickers().forEach(t=>caState.sel[t]=true);render();};
   const _none=document.querySelector("[data-canone]");if(_none)_none.onclick=()=>{grab();pricedbTickers().forEach(t=>caState.sel[t]=false);render();};
@@ -3736,11 +3759,12 @@ function attachCrear(){
   const c=document.getElementById("caCreate");if(c)c.onclick=()=>{
     grab();const tickers=pricedbTickers().filter(t=>caState.sel[t]);
     if(tickers.length<2){window.alert("Elige al menos 2 acciones para el análisis.");return;}
-    const imp=pricedbToIMP(caState.freq,{tickers,lastN:caState.lastN});
-    if(!imp){window.alert("No hay suficiente historial para esas acciones/ventana. Se necesitan ~4 períodos con IPSA y precios; amplía la ventana o carga más datos en el módulo Datos.");return;}
+    if(!pricedbIndexNames().length){window.alert("Falta el índice de referencia (IPSA o IGPA) en la base. Cárgalo en el módulo Datos.");return;}
+    const imp=pricedbToIMP(caState.freq,{tickers,lastN:caState.lastN,bench:caState.bench});
+    if(!imp){window.alert("No hay suficiente historial para esas acciones/ventana con el benchmark "+caState.bench+". Se necesitan ~4 períodos con el índice y los precios; amplía la ventana o carga más datos en el módulo Datos.");return;}
     const id="s"+Date.now()+Math.floor(Math.random()*1000);
-    const nm=(caState.name||"").trim()||("Análisis "+caState.freq+(caState.lastN?(" · últimos "+caState.lastN+" "+caUnit(caState.freq)):" · todo")+" · "+tickers.length+" acc.");
-    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,tickers}});
+    const nm=(caState.name||"").trim()||("Análisis "+caState.freq+(caState.lastN?(" · últimos "+caState.lastN+" "+caUnit(caState.freq)):" · todo")+" · "+caState.bench+" · "+tickers.length+" acc.");
+    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,bench:caState.bench,tickers}});
     lsSet("inv_impsets_v1",IMPSETS);impsetActivate(id);
     caState.name="";modulo="eval";page="comparativa";render();
   };
@@ -4746,6 +4770,14 @@ function homeData(){
 function aggSeries(projs){const withS=(projs||[]).filter(p=>p.series&&p.series.length>1);if(!withS.length)return [];const L=Math.max(...withS.map(p=>p.series.length));const out=new Array(L).fill(0);withS.forEach(p=>{const s=p.series,off=L-s.length;for(let i=0;i<L;i++)out[i]+=(i<off?s[0]:s[i-off]);});return out.map(v=>Math.round(v));}
 function heroSpark(series){if(!series||series.length<2)return "";const w=340,h=72,n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-5-((v-mn)/rg)*(h-14)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");return `<svg class="hero-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="hsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFD8FF" stop-opacity=".42"/><stop offset="1" stop-color="#BFD8FF" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#hsg)"/><path d="${d}" fill="none" stroke="#CFE0FF" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* sparkline limpio para tarjetas (stroke no se deforma al estirar) */
+/* IPSA (u otro índice) del último día/semana/mes desde la base — null por período si no hay dato consecutivo */
+function ipsaSnapshot(name){
+  const C=consolidatedSeries();let map=(name&&name!=="IPSA")?pricedbIdxMap(name):(C.ipsaMap||{});
+  if(name&&name!=="IPSA"&&(!map||!Object.keys(map).length))map=C.ipsaMap||{};
+  const ds=Object.keys(map||{}).sort();if(!ds.length)return null;
+  const per=f=>{const rs=resampleMap(map,f);if(rs.length<2)return null;const a=rs[rs.length-2],b=rs[rs.length-1];if(a.v<=0||!gapOK(a.d,b.d,f))return null;return (b.v/a.v-1)*100;};
+  return {name:name||"IPSA",last:map[ds[ds.length-1]],lastDate:ds[ds.length-1],dia:per("diario"),semana:per("semanal"),mes:per("mensual")};
+}
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
 function homeWelcome(){
@@ -4798,6 +4830,14 @@ function viewHome(){
     ${tile("Ganancia neta",sg(T.gainNet),"después de comisiones",indigo,T.gainNet>=0?green:red)}
     ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital",indigo,Tpct>=0?green:red)}
     ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}</div>`);
+  // IPSA del último día / semana / mes (desde la base del sistema)
+  const _ips=ipsaSnapshot("IPSA");
+  const ipsaCard=(()=>{
+    if(!_ips)return "";
+    const cell=(lbl,r)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";return `<div class="ipsa-cell"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
+    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_ips.lastDate}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia)}${cell("Semana",_ips.semana)}${cell("Mes",_ips.mes)}</div></div>`;
+    return card("IPSA · índice de referencia","Variación del último día, semana y mes · según los cierres cargados en tu base (— si falta el dato del período)",body);
+  })();
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
   const funds=D.projs.slice().sort((a,b)=>(b.val||0)-(a.val||0));
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
@@ -4847,7 +4887,7 @@ function viewHome(){
     <button class="home-act" data-go="proyectos|hub"><span class="ha-i">▦</span><b>Mis proyectos</b><span class="ha-s">Carteras, análisis y seguimientos</span></button>
     <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
   const newsCard=homeNewsCard();
-  return greetStrip+hero+tiles+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard+actions;
+  return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard+actions;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
