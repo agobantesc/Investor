@@ -3221,7 +3221,7 @@ function cpRenderFoot(){
 function cpTools(){const t=COPILOT_TOOLS.slice();if(t.length)t[t.length-1]=Object.assign({},t[t.length-1],{cache_control:{type:"ephemeral"}});return t;}
 /* render acotado durante el streaming: re-pinta como máximo cada ~70ms (revela más pausado y usa muchos menos recursos que re-renderizar en cada token) */
 let _cpRenderQueued=false;
-function cpRenderBodyThrottled(){if(_cpRenderQueued)return;_cpRenderQueued=true;setTimeout(()=>{_cpRenderQueued=false;cpRenderBody();},70);}
+function cpRenderBodyThrottled(){if(_cpRenderQueued)return;_cpRenderQueued=true;setTimeout(()=>{_cpRenderQueued=false;cpRenderBody();},135);}
 async function cpStreamOnce(){
   const body={model:cpModel,max_tokens:1600,system:[{type:"text",text:cpSystemPrompt(),cache_control:{type:"ephemeral"}}],tools:cpTools(),messages:cpApiMessages(),stream:true};
   let res;
