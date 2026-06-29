@@ -3826,21 +3826,21 @@ function systemClean(){
   let kept=0;
   try{
     try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de limpiar sistema");}catch(e){}
-    // 1) base de precios: vaciar (mantener flag seeded para que el demo no se re-siembre solo)
-    //    y re-ingerir SOLO los cierres de tus carteras, para que la base siga reflejándolas
+    // 1) deja en cada cartera SOLO la compra inicial (semana con qty); los cierres se reconstruyen al cargar planillas
+    (PROJECTS||[]).forEach(p=>{if(!p)return;kept++;
+      const ws=p.weeks||[];const purchases=ws.filter(w=>w.qty&&Object.keys(w.qty).length);
+      p.weeks=purchases.length?purchases:(ws.length?[ws[0]]:[]);
+      const L=p.links;if(L){L.scenarios=[];L.analyses=(L.analyses||[]).filter(a=>a==="demo"||a==="datos");if(!L.analyses.length)L.analyses=["demo"];if(L.primary&&L.primary!=="demo"&&L.primary!=="datos")L.primary="demo";}});
+    // 2) base de precios: vaciar (seeded queda en true para que el demo no se re-siembre) y re-ingerir solo las compras conservadas
     PRICEDB={tickers:{},px:{},ipsa:{},idx:{},seeded:true};savePriceDB();
     try{pricedbIngestProjects();}catch(e){}
-    // 2) análisis guardados + datos importados (recreables tras la carga)
+    // 3) análisis guardados + datos importados (recreables tras cargar planillas)
     IMPSETS=[];lsSet("inv_impsets_v1",IMPSETS);
     IMP=null;impActiveId=null;impFiles=[];impMsg="";
     lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);
     if(typeof DATASET!=="undefined"&&DATASET==="import"){applyDataset("demo");}
-    // 3) simulaciones y comparación de escenarios
+    // 4) simulaciones y comparación de escenarios
     SCEN=[];lsSet("pf_scenarios_v1",SCEN);scenEditId=null;
-    // 4) soltar referencias colgantes a escenarios/análisis borrados (NO toca compra ni cierres)
-    (PROJECTS||[]).forEach(p=>{if(!p)return;kept++;const L=p.links;if(L){L.scenarios=[];
-      L.analyses=(L.analyses||[]).filter(a=>a==="demo"||a==="datos");if(!L.analyses.length)L.analyses=["demo"];
-      if(L.primary&&L.primary!=="demo"&&L.primary!=="datos")L.primary="demo";}});
     saveProjects();
   }catch(e){}
   return kept;
@@ -3854,14 +3854,13 @@ function datosBase(){
     ${tile("Acciones en la base",empty?"—":String(S.rows.length),"con historial cargado",indigo,ink)}
     ${tile("Cobertura IPSA",S.ipsaN?(S.ipsaN+" fechas"):"—",S.ipsaFrom?(S.ipsaFrom+" → "+S.ipsaTo):"sin IPSA aún",indigo,ink)}
     ${tile("Última actualización",PRICEDB.updated||"—","de la base",indigo,ink)}
-    ${tile("Universo de análisis",active?"Datos del sistema":(DATASET==="demo"?"IPSA demo":"Importado"),active?"activo":"actívalo abajo",indigo,active?green:muted)}</div>`;
+    ${tile("Alimenta el sistema",empty?"—":"Home · análisis · seguimientos","desde los datos cargados",indigo,empty?muted:green)}</div>`;
   const rows=empty?"":S.rows.map(r=>`<tr><td>${datosTk(r)}</td><td>${r.s||"—"}</td><td class="r">${r.np}</td><td>${r.from} → ${r.to}</td><td class="r">${fmtP(r.last)}</td><td class="r">${r.b!=null?r.b.toFixed(2):"—"}</td><td class="r"><button class="wbtn del" data-ddel="${r.t}" title="Quitar de la base">✕</button></td></tr>`).join("");
   const table=empty?`<div class="note" style="margin:0">Tu base de precios está vacía. Ve a <b>Cargar planilla</b> para subir tus archivos de Investing, o usa <b>Cierre diario</b> para empezar a ingresar precios.</div>`
     :`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Puntos</th><th>Rango de fechas</th><th class="r">Último</th><th class="r ntr">β</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
   const actions=`<div class="datos-acts">
-    <button class="btn btn-pri" data-dactivate ${empty?"disabled":""}>Activar como universo de análisis</button>
-    <button class="btn" data-dapply ${empty?"disabled":""}>↻ Actualizar carteras con la base</button>
-    <button class="btn" data-dgo="cargar">+ Cargar planilla</button>
+    <button class="btn btn-pri" data-dgo="cargar">+ Cargar planilla</button>
+    <button class="btn" data-dapply ${empty?"disabled":""}>↻ ACTUALIZAR SISTEMA</button>
     <button class="btn" data-dgo="cierre">Cierre diario</button>
     <span class="datos-freq"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span></div>`;
   const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
@@ -3877,10 +3876,9 @@ function datosBase(){
     <span class="genl" style="margin:0">última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b></span></div>`;
   const lastDate=(function(){const ds=pricedbAllDates();return ds.length?ds[ds.length-1]:lastTradingDay();})();
   const danger=`<div class="datos-clean" style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">
-    <button class="btn" data-dweekend>🗓️ Quitar datos de fin de semana</button>
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:3px 6px"><button class="btn" data-ddaydel>Quitar este día</button></span>
     <button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema</button>
-    <span class="genl" style="margin:0;flex-basis:100%">Quita sáb/dom (la bolsa no opera) o un día específico · Limpiar vacía base/análisis/escenarios y <b>conserva</b> tus carteras</span></div>`;
+    <span class="genl" style="margin:0;flex-basis:100%">Quitar un día puntual · Limpiar deja solo la <b>compra inicial</b> de cada cartera y vacía la base/análisis/escenarios (cargas planillas y se reconstruye todo)</span></div>`;
   const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+backup+danger);
   const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
   return intro+tbl;
@@ -3913,19 +3911,17 @@ function datosCierre(){
 function attachDatos(){
   document.querySelectorAll("[data-dgo]").forEach(b=>b.onclick=()=>{page=b.dataset.dgo;render();});
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
-  const da=document.querySelector("[data-dactivate]");if(da)da.onclick=()=>{if(pricedbActivateAnalysis(pricedbFreq))window.alert("Listo. El análisis y las simulaciones ahora usan tu base de precios ("+pricedbFreq+").");};
-  const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();render();window.alert("Seguimientos actualizados con la base.\n\n"+r.nPts+" punto(s) agregados/actualizados en "+r.nProj+" cartera(s).");};
+  const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);}catch(e){}render();window.alert("Sistema actualizado con los datos cargados.\n\nSeguimientos: "+r.nPts+" punto(s) en "+r.nProj+" cartera(s). El Home, los análisis y los rankings ya reflejan la base.");};
   const bkon=document.querySelector("[data-bkon]");if(bkon)bkon.onchange=()=>{AUTOBK.on=bkon.checked;autobkSave();};
   const bkd=document.querySelector("[data-bkdays]");if(bkd)bkd.onchange=()=>{AUTOBK.days=+bkd.value||7;autobkSave();};
   const bknow=document.querySelector("[data-bknow]");if(bknow)bknow.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");render();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
   const bkr=document.querySelector("[data-bkrestore]");if(bkr)bkr.onclick=()=>autobkRestore();
-  const dwe=document.querySelector("[data-dweekend]");if(dwe)dwe.onclick=()=>{if(!confirm("Quitar de la base y de las carteras los datos en días no hábiles (sábados y domingos), que la bolsa no opera.\n\nSe conservan tus compras iniciales. ¿Continuar?"))return;const r=dropNonTradingData();render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) de fin de semana de las carteras.");};
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
   const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
-    if(!confirm('Limpiar el sistema para una nueva carga.\n\n✓ SE CONSERVAN intactas tus carteras: la compra inicial y todos los cierres diarios.\n\n✕ SE ELIMINAN (los puedes recrear tras cargar los datos):\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
-    const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto vaciará la base de precios, los análisis, las simulaciones y los escenarios. Tus carteras (compra + cierres) se conservan.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
+    if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVA: la COMPRA INICIAL de cada cartera (acciones y montos).\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Todos los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
+    const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera solo la compra inicial y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
     if(typed==null||typed.trim().toUpperCase()!=="LIMPIAR"){window.alert("Cancelado. No se eliminó nada.");return;}
-    const k=systemClean();page="base";render();window.alert("Sistema limpio. Se conservaron "+k+" cartera(s) con sus compras y cierres.\n\nLa base quedó lista para tu carga masiva (los cierres de tus carteras ya están incorporados).");};
+    const k=systemClean();page="base";render();window.alert("Listo. Se conservó la compra inicial de "+k+" cartera(s).\n\nAhora carga tus planillas (mensual/semanal/diario, acciones e índices) en “Cargar planilla” y pulsa ACTUALIZAR SISTEMA.");};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
     if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
     if(!confirm('⚠ Doble chequeo de seguridad\n\nVas a ELIMINAR definitivamente '+t+' ('+np+' precio[s]) de la base. Esta acción no se puede deshacer.\n\n¿Eliminar '+t+'?'))return;
