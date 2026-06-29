@@ -3809,33 +3809,62 @@ function pricedbIngestProjects(){
 }
 /* población automática de la base (una vez por cliente): cierres de proyectos + universo demo */
 function pricedbAutoSeed(){try{if(PRICEDB&&PRICEDB.seeded)return;pricedbIngestProjects();pricedbSeedDemo();PRICEDB.seeded=true;savePriceDB();}catch(e){}}
-/* deriva un dataset de análisis (IMP) desde la base, resampleado a la frecuencia pedida (reutiliza impStats/impBetaCorr) */
-function pricedbToIMP(freq,opts){
+/* núcleo del análisis: resamplea a la frecuencia y halla la corrida CONSECUTIVA más reciente
+   donde el benchmark y TODOS los tickers pedidos tienen dato (datos vigentes, alineados y a la cadencia correcta) */
+function pricedbAnalysisCore(freq,opts){
   opts=opts||{};
-  freq=freq||"mensual";const PY={diario:252,semanal:52,mensual:12}[freq]||12;
+  const PY={diario:252,semanal:52,mensual:12}[freq]||12;
   const src=opts.source||null,pxAll=src?(src.tick||{}):PRICEDB.px;
   const benchName=opts.bench||"IPSA";
   const benchMap=src?(benchName==="IPSA"?(src.ipsaMap||{}):pricedbIdxMap(benchName)):pricedbIdxMap(benchName);
   let tickers=Object.keys(pxAll||{});
   if(opts.tickers&&opts.tickers.length)tickers=tickers.filter(t=>opts.tickers.indexOf(t)>=0);
-  if(!tickers.length||!Object.keys(benchMap).length)return null;
-  const rs=m=>{const o={};Object.keys(m||{}).sort().forEach(d=>{o[periodKey(d,freq)]=m[d];});return o;};
-  const ipsaP=rs(benchMap),tickP={};tickers.forEach(t=>tickP[t]=rs(pxAll[t]||{}));
-  let periods=Object.keys(ipsaP).sort().filter(pk=>tickers.some(t=>tickP[t][pk]!=null));
-  // ventana: limita a los últimos N períodos (N+1 precios para N retornos)
-  if(opts.lastN&&opts.lastN>0&&periods.length>opts.lastN+1)periods=periods.slice(periods.length-(opts.lastN+1));
-  if(periods.length<4)return null;
-  const benchPrices=periods.map(pk=>ipsaP[pk]);if(benchPrices.some(v=>!isFinite(v)||v<=0))return null;
+  const rs=m=>{const o={};Object.keys(m||{}).sort().forEach(d=>{const v=+m[d];if(v>0&&isFinite(v))o[periodKey(d,freq)]={d,v};});return o;};
+  const ipsaR=rs(benchMap),tickR={};tickers.forEach(t=>tickR[t]=rs(pxAll[t]||{}));
+  const bk=Object.keys(ipsaR).sort((a,b)=>ipsaR[a].d<ipsaR[b].d?-1:1);
+  // corrida consecutiva MÁS RECIENTE de una lista de claves (consecutividad real a la frecuencia, vía gapOK sobre las fechas)
+  const recentRun=keys=>{if(!keys.length)return [];let r=[keys[keys.length-1]];for(let i=keys.length-2;i>=0;i--){if(gapOK(ipsaR[keys[i]].d,ipsaR[keys[i+1]].d,freq))r.unshift(keys[i]);else break;}return r;};
+  // períodos donde el bench y TODOS los tickers tienen dato → corrida común reciente
+  const inter=tickers.length?bk.filter(pk=>tickers.every(t=>tickR[t][pk]!=null)):[];
+  const common=recentRun(inter);
+  // cobertura reciente por ticker (cuántos períodos consecutivos al final tiene cada uno junto al bench)
+  const perTicker={};tickers.forEach(t=>{perTicker[t]=recentRun(bk.filter(pk=>tickR[t][pk]!=null)).length;});
+  return {PY,ipsaR,tickR,tickers,benchName,benchHasData:bk.length>0,common,perTicker,
+    from:common.length?ipsaR[common[0]].d:null,to:common.length?ipsaR[common[common.length-1]].d:null};
+}
+/* deriva el dataset de análisis (IMP) desde la corrida consecutiva común, con la ventana pedida */
+function pricedbToIMP(freq,opts){
+  freq=freq||"mensual";opts=opts||{};
+  const core=pricedbAnalysisCore(freq,opts);
+  if(!core.benchHasData||!core.tickers.length)return null;
+  let run=core.common;
+  if(opts.lastN&&opts.lastN>0&&run.length>opts.lastN+1)run=run.slice(run.length-(opts.lastN+1));
+  if(run.length<4)return null;
+  const {PY,ipsaR,tickR,benchName}=core,src=opts.source||null;
+  const benchPrices=run.map(k=>ipsaR[k].v);
   const bs=impStats(benchPrices,PY),rf=(typeof RF==="number"&&isFinite(RF)?RF:5.5),benchRet=bs.retAnn*100,prima=benchRet-rf;
-  const assets=[],dropped=[];let ci=0;
-  tickers.forEach(t=>{const arr=periods.map(pk=>tickP[t][pk]);if(arr.some(v=>v==null||!isFinite(v)||v<=0)){dropped.push(t);return;}
+  const assets=[];let ci=0;
+  core.tickers.forEach(t=>{const arr=run.map(k=>tickR[t][k].v);
     const st=impStats(arr,PY),bc=impBetaCorr(st.rets,bs.rets),retAnn=st.retAnn*100,er=rf+bc.beta*prima,jensen=retAnn-er,alphaR=(st.mean-bc.beta*bs.mean)*PY*100,sharpe=st.sigAnn>0?(retAnn-rf)/(st.sigAnn*100):0;
     const meta=src?{n:(src.names&&src.names[t])||t,s:"sistema",c:(src.cols&&src.cols[t])}:(PRICEDB.tickers[t]||{});
     assets.push({t,n:meta.n||t,s:meta.s||"sistema",c:meta.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci++%IMP_PAL.length]:"#1E5FD1"),b:bc.beta,rets:st.rets.map(r=>r*100),prices:arr,a24:{ret:retAnn,sig:st.sigAnn*100,r2:bc.r2,corr:bc.corr,jensen,alphaR,sharpe,er,tot:st.total*100}});});
   if(assets.length<1)return null;
   const N=assets.length,corr=[];for(let i=0;i<N;i++){corr[i]=[];for(let j=0;j<N;j++)corr[i][j]=i===j?1:impBetaCorr(assets[i].rets.map(x=>x/100),assets[j].rets.map(x=>x/100)).corr;}
-  return {freq,rf,prima,perYear:PY,window:periods[0]+" a "+periods[periods.length-1]+" · base del sistema ("+freq+")",n:periods.length-1,labels:periods.slice(1),
-    bench:{name:benchName,prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-rf)/(bs.sigAnn*100):0},assets,corr,dropped};
+  const fromD=ipsaR[run[0]].d,toD=ipsaR[run[run.length-1]].d;
+  return {freq,rf,prima,perYear:PY,window:fromD+" a "+toD+" · base del sistema ("+freq+")",n:run.length-1,labels:run.slice(1),
+    bench:{name:benchName,prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-rf)/(bs.sigAnn*100):0},assets,corr,dropped:[]};
+}
+/* REGLA 3 · disponibilidad: ¿alcanza la ventana pedida (a la frecuencia) con datos vigentes de TODAS las acciones? */
+function pricedbCheckAnalysis(freq,opts){
+  freq=freq||"mensual";opts=opts||{};
+  const core=pricedbAnalysisCore(freq,opts);
+  const unit=freq==="diario"?"días":freq==="semanal"?"semanas":"meses";
+  if(!core.benchHasData)return {ok:false,unit,reason:"No hay datos del índice ("+(opts.bench||"IPSA")+") a la frecuencia "+freq+". Carga el índice o cambia la frecuencia."};
+  if(!core.tickers.length)return {ok:false,unit,reason:"No hay acciones seleccionadas."};
+  const availPts=core.common.length,availRet=Math.max(0,availPts-1);
+  const needPts=(opts.lastN&&opts.lastN>0)?(opts.lastN+1):4;
+  const limiting=core.tickers.filter(t=>core.perTicker[t]<needPts).map(t=>({t,n:Math.max(0,core.perTicker[t]-1)})).sort((a,b)=>a.n-b.n);
+  return {ok:availPts>=needPts&&availPts>=4,unit,availPts,availRet,needRet:(opts.lastN&&opts.lastN>0)?opts.lastN:null,from:core.from,to:core.to,limiting,perTicker:core.perTicker};
 }
 /* activa la base como universo de análisis/simulación (vía la maquinaria de import) */
 function pricedbActivateAnalysis(freq){freq=freq||pricedbFreq;pricedbFreq=freq;lsSet("inv_pricedb_freq",freq);
@@ -4009,6 +4038,13 @@ function viewCrear(){
     const seg=`<div class="home-seg" role="group" aria-label="Periodicidad">${["diario","semanal","mensual"].map(f=>`<button data-cafreq="${f}" class="${S.freq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
     const benchSel=idxs.length?`<div class="home-seg" role="group" aria-label="Índice de referencia">${idxs.map(ix=>`<button data-cabench="${ix}" class="${S.bench===ix?"on":""}">${ix}</button>`).join("")}</div>`:`<div class="ca-bench-none">No hay índice (IPSA) en la base · cárgalo en <b>Datos</b></div>`;
     const chips=rows.map(r=>`<button class="ca-chip ${S.sel[r.t]?"on":""}" data-catk="${r.t}"><span class="rk-dot" style="background:${r.c}"></span>${r.t}<span class="ca-chip-n">${r.np}</span></button>`).join("");
+    // REGLA 3 · disponibilidad en vivo: comprueba si la ventana pedida alcanza con datos vigentes de TODAS las acciones
+    const _selTk=ts.filter(t=>S.sel[t]);let _avOk=true,_avHint="";
+    if(selCount>=2&&idxs.length){const _chk=pricedbCheckAnalysis(S.freq,{tickers:_selTk,lastN:S.lastN||0,bench:S.bench,source:C});_avOk=_chk.ok;
+      const _dd=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7):"";
+      if(_chk.ok)_avHint=" · ✓ "+_chk.availRet+" "+_chk.unit+" disponibles"+(_chk.from?(" ("+_dd(_chk.from)+"→"+_dd(_chk.to)+")"):"");
+      else if(_chk.reason)_avHint=" · ⚠ "+_chk.reason;
+      else _avHint=" · ⚠ solo "+_chk.availRet+" "+_chk.unit+" con datos de todas"+(S.lastN?(" (pediste "+S.lastN+")"):"")+(_chk.limiting&&_chk.limiting.length?(" · limitan: "+_chk.limiting.slice(0,3).map(x=>x.t).join(", ")):"");}
     form=`<div class="ca-form">
       <label class="ca-f"><span>Nombre del análisis</span><input id="caName" type="text" maxlength="44" placeholder="ej. IPSA · últimos 12 meses" value="${(""+S.name).replace(/"/g,"&quot;")}"></label>
       <div class="ca-f"><span>Periodicidad</span>${seg}</div>
@@ -4018,7 +4054,7 @@ function viewCrear(){
     <div class="note" style="margin:10px 0 0;font-size:11.5px">El <b>benchmark</b> es el índice contra el que se calcula la β y el α de Jensen. La regresión usa <b>un</b> índice; si quieres comparar contra IPSA <i>y</i> IGPA, crea un análisis con cada uno.</div>
     <div class="ca-stk"><div class="ca-stk-h"><b>Acciones del análisis</b><span>${selCount} de ${ts.length} seleccionadas · <a data-caall>todas</a> · <a data-canone>ninguna</a></span></div>
       <div class="ca-grid">${chips}</div></div>
-    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${(selCount<2||!idxs.length)?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia (IPSA) en la base":selCount<2?"Elige al menos 2 acciones":selCount+" acciones · benchmark "+S.bench+" · se requieren ~4 períodos"}</span></div>`;
+    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${(selCount<2||!idxs.length||!_avOk)?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia (IPSA) en la base":selCount<2?"Elige al menos 2 acciones":(selCount+" acciones · "+S.bench+_avHint)}</span></div>`;
   }
   const create=card("Crear análisis","Arma un análisis a tu medida con los datos del sistema (base de Datos + cierres de tus carteras): periodicidad, ventana de tiempo y qué acciones incluir",form);
   const list=analysisList(),cur=currentAnalysisId();
@@ -4042,8 +4078,19 @@ function attachCrear(){
     grab();const Csrc=consolidatedSeries();const tickers=Object.keys(Csrc.tick||{}).filter(t=>caState.sel[t]);
     if(tickers.length<2){window.alert("Elige al menos 2 acciones para el análisis.");return;}
     if(!caIndexNames(Csrc,"sistema").length){window.alert("Falta el índice de referencia (IPSA) en la base. Cárgalo en el módulo Datos.");return;}
+    const chk=pricedbCheckAnalysis(caState.freq,{tickers,lastN:caState.lastN,bench:caState.bench,source:Csrc});
+    if(!chk.ok){
+      let msg="No se puede crear el análisis "+caState.freq+" como lo pediste.\n\n";
+      if(chk.reason){msg+=chk.reason;}
+      else{
+        msg+="Solo hay "+chk.availRet+" "+chk.unit+" consecutivos con datos de TODAS las acciones elegidas"+(chk.from?(" ("+chk.from+" a "+chk.to+")"):"")+(chk.needRet?(", y pediste "+chk.needRet+" "+chk.unit+"."):" (mínimo 4 puntos).");
+        if(chk.limiting&&chk.limiting.length)msg+="\n\nAcciones con menos historial "+chk.unit+": "+chk.limiting.slice(0,6).map(x=>x.t+" ("+x.n+")").join(", ")+".";
+        msg+="\n\nReduce la ventana, cambia la frecuencia o quita esas acciones.";
+      }
+      window.alert(msg);return;
+    }
     const imp=pricedbToIMP(caState.freq,{tickers,lastN:caState.lastN,bench:caState.bench,source:Csrc});
-    if(!imp){window.alert("No hay suficiente historial para esas acciones/ventana con el benchmark "+caState.bench+". Se necesitan ~4 períodos con el índice y los precios; amplía la ventana o cambia de frecuencia.");return;}
+    if(!imp){window.alert("No se pudo construir el análisis con los datos disponibles. Prueba otra frecuencia o ventana.");return;}
     const id="s"+Date.now()+Math.floor(Math.random()*1000);
     const nm=(caState.name||"").trim()||("Análisis "+caState.freq+(caState.lastN?(" · últimos "+caState.lastN+" "+caUnit(caState.freq)):" · todo")+" · "+caState.bench+" · "+tickers.length+" acc.");
     IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,bench:caState.bench,tickers}});
@@ -4881,19 +4928,12 @@ function seguimientoStats(freq){
   const C=consolidatedSeries();const PPY=freq==="diario"?252:freq==="semanal"?52:12;
   const rf=(typeof RF==="number"&&isFinite(RF)?(RF>1?RF/100:RF):0.055);
   const ipsaR=resampleMap(C.ipsaMap,freq),ipsaByP={};ipsaR.forEach(x=>ipsaByP[periodKey(x.d,freq)]=x.v);
-  // frontera reciente del sistema para esta frecuencia: rankeamos acciones cuyo último dato esté DENTRO de una ventana reciente
-  // (así una acción con solo el histórico mensual del análisis NO aparece en "última semana/día", pero una carga/cierre que
-  //  adelanta UNA acción un día no esconde al resto que cerró el día anterior — fechas raggedas entre fuentes)
-  let latestIdx=-Infinity;
-  Object.keys(C.tick).forEach(t=>{Object.keys(C.tick[t]).forEach(d=>{const pi=periodIndex(d,freq);if(pi>latestIdx)latestIdx=pi;});});
-  const REC_GATE={diario:5,semanal:0,mensual:0}[freq]||0;   // diario tolera días raggedos; semanal/mensual exige el período ACTUAL (sin "sin info" rezagado)
+  // REGLA 2: cada acción muestra su ÚLTIMO registro disponible a esta frecuencia (con su fecha), no se exige que sea el más reciente del sistema.
+  // Solo se requiere que el último tramo sea entre períodos CONSECUTIVOS (retorno real a la cadencia elegida); una acción solo-mensual no aparece en diario porque no tiene dos días consecutivos.
   const out=[];
   Object.keys(C.tick).forEach(t=>{
     const rs=resampleMap(C.tick[t],freq);if(rs.length<2)return;
-    // recencia: el último dato de la acción debe estar dentro de la ventana reciente del sistema (no exactamente el último período)
-    if(latestIdx-periodIndex(rs[rs.length-1].d,freq)>REC_GATE)return;
-    // y el último tramo debe ser entre períodos consecutivos (sin huecos) para que el retorno del período sea real
-    if(!gapOK(rs[rs.length-2].d,rs[rs.length-1].d,freq))return;
+    if(!gapOK(rs[rs.length-2].d,rs[rs.length-1].d,freq))return;   // el retorno mostrado es un movimiento real entre dos períodos consecutivos
     const vals=rs.map(x=>x.v);
     // solo retornos entre períodos consecutivos (evita que un hueco se cuente como un período y distorsione la anualización)
     const rets=[];for(let i=1;i<vals.length;i++){if(gapOK(rs[i-1].d,rs[i].d,freq))rets.push(vals[i]/vals[i-1]-1);}
@@ -4904,7 +4944,7 @@ function seguimientoStats(freq){
     const mret=[],aret=[];for(let i=1;i<rs.length;i++){if(!gapOK(rs[i-1].d,rs[i].d,freq))continue;const k=periodKey(rs[i].d,freq),kp=periodKey(rs[i-1].d,freq),m1=ipsaByP[k],m0=ipsaByP[kp];if(m1!=null&&m0!=null){mret.push(m1/m0-1);aret.push(vals[i]/vals[i-1]-1);}}
     let jensen=null,beta=null;
     if(mret.length>=3){const mm=mret.reduce((a,b)=>a+b,0)/mret.length,ma=aret.reduce((a,b)=>a+b,0)/aret.length;let cov=0,vm=0;for(let i=0;i<mret.length;i++){cov+=(mret[i]-mm)*(aret[i]-ma);vm+=(mret[i]-mm)**2;}beta=vm>0?cov/vm:0;jensen=((ma*PPY)-rf)-beta*((mm*PPY)-rf);}
-    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,sharpe,jensen:jensen==null?null:jensen*100,beta,n:vals.length,series:vals});
+    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,sharpe,jensen:jensen==null?null:jensen*100,beta,n:vals.length,series:vals,lastDate:rs[rs.length-1].d});
   });
   return out;
 }
@@ -5160,7 +5200,8 @@ function viewHome(){
   const mvCard=card("Indicadores que se movieron","Mayores variaciones recientes · dólar, euro, cobre, UF (mindicador.cl)",`<div class="home-mvgrid">${mvRows}</div>`);
   // acciones destacadas — rankings desde los precios reales de los seguimientos
   const stats=seguimientoStats(homeStkFreq);
-  const stkBlock=(title,sub,arr,valFn,colFn)=>{const rows=arr.slice(0,5).map((s,i)=>`<div class="home-stk"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
+  const _rkD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(2,4):"";
+  const stkBlock=(title,sub,arr,valFn,colFn)=>{const rows=arr.slice(0,5).map((s,i)=>`<div class="home-stk"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}${s.lastDate?' · al '+_rkD(s.lastDate):''}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
     return `<div class="stk-block"><div class="stk-bh"><b>${title}</b><span>${sub}</span></div>${rows||'<div class="note" style="margin:6px 0 0;font-size:11px">Sin datos suficientes</div>'}</div>`;};
   const perWord=homeStkFreq==="diario"?"último día":homeStkFreq==="semanal"?"última semana":"último mes";
   const perPhrase=homeStkFreq==="semanal"?"de la última semana":"del "+perWord;
