@@ -2187,12 +2187,13 @@ function genPDF(){
 
 // ===== INVERSIÓN (bloqueado) =====
 function applyScenario(id){const sc=SCEN.find(s=>s.id===id);if(!sc)return;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;applyInvestment(sc.name);}
-function applyInvestment(defName){
+function applyInvestment(defName,skipPrompt){
   const M=simMetrics();
   if(!M.ws.length){alert("Selecciona acciones y define sus pesos antes de aplicar la inversión.");return;}
-  if(!simState.amount||simState.amount<=0){alert("Ingresa el monto a invertir en el Constructor.");return;}
-  const nm=window.prompt("Nombre del proyecto de inversión:",defName||("Proyecto "+(PROJECTS.length+1)));
-  if(nm===null)return;
+  if(!simState.amount||simState.amount<=0){alert("Ingresa el monto a invertir.");return;}
+  let nm;
+  if(skipPrompt){nm=defName;}
+  else{nm=window.prompt("Nombre del proyecto de inversión:",defName||("Proyecto "+(PROJECTS.length+1)));if(nm===null)return;}
   const proj={id:Date.now(),name:(nm||("Proyecto "+(PROJECTS.length+1))).trim(),date:new Date().toLocaleDateString("es-CL"),amount:simState.amount,bp:M.bp,erCapm:M.erCapm,sig:M.sig,sharpe:M.sharpe,corrAvg:M.corrAvg,
       freq:"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings:M.ws.map(x=>({t:x.s.t,n:x.s.n,s:x.s.s,c:x.s.c,b:x.s.b,w:x.w,monto:simState.amount*x.w})),weeks:[],links:{analyses:[currentAnalysisId()],scenarios:[],primary:currentAnalysisId()}};
   try{const _sc=projDefaultScenario(proj);if(_sc){_sc.m.retH=M.retH;SCEN.push(_sc);proj.links.scenarios=[_sc.id];lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
@@ -2303,6 +2304,37 @@ function invMetrics(){
 }
 
 const FREQ={diario:{u:"día",uc:"Día",us:"días",adj:"diario",cap:"Diario",det:"el día",per:"del día",pf:"D"},semanal:{u:"semana",uc:"Semana",us:"semanas",adj:"semanal",cap:"Semanal",det:"la semana",per:"de la semana",pf:"S"},mensual:{u:"mes",uc:"Mes",us:"meses",adj:"mensual",cap:"Mensual",det:"el mes",per:"del mes",pf:"M"}};
+let invNew=null;   // estado del formulario "Realizar nueva inversión" (directo, sin pasar por Simulación)
+/* detalle ampliado de la inversión del proyecto seleccionado (composición de la compra inicial) */
+function invDetailCard(){
+  const b0=WEEKS[0],hasQty=!!(b0&&b0.qty);
+  const rows=PF.holdings.map(hd=>{
+    const q=hasQty?(b0.qty[hd.t]||0):null;
+    const pc=(b0&&b0.prices&&b0.prices[hd.t]!=null)?b0.prices[hd.t]:null;
+    const monto=(q!=null&&pc!=null)?q*pc:(hd.monto||0);
+    return {hd,q,pc,monto};
+  });
+  const tot=rows.reduce((a,r)=>a+r.monto,0)||1;
+  const body=`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r ntr">β</th>${hasQty?'<th class="r">Acciones</th><th class="r">Precio compra</th>':''}<th class="r">Monto</th><th class="r">Peso</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td><b style="color:${r.hd.c}">${r.hd.t}</b> <span style="color:var(--muted);font-size:11px">${(""+(r.hd.n||r.hd.t)).replace(/</g,"&lt;")}</span></td><td>${r.hd.s||"—"}</td><td class="r">${r.hd.b!=null?r.hd.b.toFixed(2):"—"}</td>${hasQty?`<td class="r">${r.q!=null?r.q.toLocaleString("es-CL"):"—"}</td><td class="r">${r.pc!=null?fmtP(r.pc):"—"}</td>`:''}<td class="r" style="font-weight:700">${fmtCLP(r.monto)}</td><td class="r">${(r.monto/tot*100).toFixed(1)}%</td></tr>`).join("")+
+    `<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td></td>${hasQty?'<td></td><td></td>':''}<td class="r">${fmtCLP(tot)}</td><td class="r">100%</td></tr></tbody></table></div>`;
+  return card("Detalle de la inversión",`Composición de <b>${(""+PF.name).replace(/</g,"&lt;")}</b> · aplicada el ${PF.date} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`,{html:body,flush:true});
+}
+/* formulario de inversión directa: elige acciones + monto y crea el proyecto (sin construir en Simulación) */
+function invNewForm(){
+  const S=invNew,stks=(STOCKS||[]);
+  const nsel=Object.keys(S.sel).filter(t=>S.sel[t]).length;
+  const chips=stks.map(s=>`<button class="ca-chip ${S.sel[s.t]?"on":""}" data-invtk="${s.t}"><span class="rk-dot" style="background:${s.c}"></span>${s.t}</button>`).join("");
+  return card("Realizar nueva inversión","Elige las acciones y el monto · se reparte en partes iguales y luego registras la compra real (precios y cantidades).",
+    `<div class="ca-form">
+      <label class="ca-f"><span>Nombre de la inversión</span><input id="invNewName" type="text" maxlength="44" value="${(""+(S.name||"")).replace(/"/g,"&quot;")}" placeholder="ej. Cartera junio 2026"></label>
+      <label class="ca-f ca-f-n"><span>Monto a invertir (CLP)</span><input id="invNewAmt" type="number" min="0" step="any" value="${S.amount||""}" placeholder="ej. 2000000"></label>
+    </div>
+    <div class="ca-stk"><div class="ca-stk-h"><b>Acciones de la inversión</b><span>${nsel} seleccionada(s) · <a data-invall>todas</a> · <a data-invnone>ninguna</a></span></div>
+      <div class="ca-grid">${chips||'<div class="note" style="margin:0">No hay acciones en el universo activo. Carga datos o un análisis primero.</div>'}</div></div>
+    <div class="ca-foot"><button class="btn btn-pri" id="invNewCreate" ${(nsel<1||!(S.amount>0))?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear inversión y registrar compra</button> <button class="btn" id="invNewCancel">Cancelar</button>
+      <span class="note" style="margin:0">${nsel<1?"Elige al menos 1 acción":!(S.amount>0)?"Define el monto a invertir":(nsel+" acción(es) · "+fmtCLP(S.amount)+" · ~"+(100/nsel).toFixed(1)+"% c/u")}</span></div>`);
+}
 function viewInv(){
   syncProj();
   if(!PROJECTS.length) return `<div class="locked"><div class="lbadge"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
@@ -2421,12 +2453,11 @@ function viewInvActive(){
   const deltaCard=b0q.qty?card("Inversión inicial: real vs objetivo","Acciones compradas y monto real por acción frente al objetivo de la simulación",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">Objetivo</th><th class="r">Real</th><th class="r">Δ</th></tr></thead><tbody>`+PF.holdings.map(hd=>{const q=b0q.qty[hd.t]||0,p=b0q.prices[hd.t]||0,real=q*p,obj=PF.amount*hd.w,d=real-obj;return `<tr><td>${tk(hd)}</td><td class="r">${q.toLocaleString("es-CL")}</td><td class="r">${fmtP(p)}</td><td class="r">${fmtCLP(obj)}</td><td class="r" style="font-weight:700">${fmtCLP(real)}</td><td class="r" style="color:${Math.abs(d)<1?muted:(d>=0?green:red)}">${(d>=0?"+":"−")+fmtCLP(Math.abs(d))}</td></tr>`;}).join("")+`<tr style="background:var(--soft);font-weight:800"><td>Total invertido</td><td></td><td></td><td class="r">${fmtCLP(PF.amount)}</td><td class="r">${fmtCLP(IM.series[0].val)}</td><td class="r" style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</td></tr></tbody></table><div class="note" style="margin-top:11px">Por el precio entero de las acciones, invertiste <b>${fmtCLP(IM.series[0].val)}</b> vs el objetivo de <b>${fmtCLP(PF.amount)}</b> → delta <b style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</b> (${((IM.series[0].val-PF.amount)/PF.amount*100).toFixed(1)}%). El seguimiento usa las acciones y montos realmente comprados.</div></div>`,flush:true}):"";
   if(histPg) return projbar+summary+invTools+tbl;
   if(!seg){
-    // los cierres diarios se registran SOLO en Datos; aquí solo la compra inicial o editar un registro
+    if(invNew) return projbar+invNewForm();
     if(isFirst||editing) return projbar+summary+freqBar+form;
-    const goDatos=card("Cierres diarios · se registran en Datos","Para tener una sola fuente de datos, los precios de cierre ya no se ingresan dentro del proyecto: se cargan en el módulo <b>Datos</b> y se aplican automáticamente a esta y a todas tus carteras.",
-      `<div class="note" style="margin:0 0 12px">Tu compra inicial ya está registrada. Para actualizar el seguimiento usa <b>Datos → Cierre diario</b> (un día) o <b>Cargar planilla</b> (varios días de una vez). Para corregir o eliminar un registro puntual, ve a la pestaña <b>Historial</b>.</div>
-       <div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" data-godatos="cierre">Ir a Cierre diario →</button><button class="btn" data-godatos="cargar">Cargar planilla</button><button class="btn" data-godatos="base">Ver la base del sistema</button></div>`);
-    return projbar+summary+goDatos;
+    const newBtn=card("Realizar nueva inversión","¿Quieres invertir en otra cartera? Hazlo directo aquí: eliges acciones y monto, sin tener que armarla antes en Simulación.",
+      `<div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="invNewOpen">➕ Realizar nueva inversión</button><button class="btn" id="invGoSim">🔬 …o construirla en Simulación</button></div>`);
+    return projbar+summary+invDetailCard()+newBtn;
   }
   return projbar+invTools+hero+summary+valChart+psTbl+allocCard+stkChart+evoChart+ipsaTiles+verdict+capmKp+capmChart+capmNote+riskCard+qualityCard;
 }
@@ -2647,6 +2678,21 @@ function attachInv(){
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;if(window.confirm("¿Eliminar este registro diario?")){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;saveProjects();render();}});
   document.querySelectorAll("[data-godatos]").forEach(b=>b.onclick=()=>{modulo="datos";page=b.dataset.godatos;render();});
+  // realizar nueva inversión (directo)
+  const _ino=document.getElementById("invNewOpen");if(_ino)_ino.onclick=()=>{invNew={name:"",amount:"",sel:{}};render();};
+  const _igs=document.getElementById("invGoSim");if(_igs)_igs.onclick=()=>{modulo="sim";page="constructor";render();};
+  const invGrab=()=>{if(!invNew)return;const n=document.getElementById("invNewName");if(n)invNew.name=n.value;const a=document.getElementById("invNewAmt");if(a)invNew.amount=parseFloat(a.value)||0;};
+  document.querySelectorAll("[data-invtk]").forEach(b=>b.onclick=()=>{invGrab();invNew.sel[b.dataset.invtk]=!invNew.sel[b.dataset.invtk];render();});
+  const _iva=document.querySelector("[data-invall]");if(_iva)_iva.onclick=()=>{invGrab();(STOCKS||[]).forEach(s=>invNew.sel[s.t]=true);render();};
+  const _ivn=document.querySelector("[data-invnone]");if(_ivn)_ivn.onclick=()=>{invGrab();invNew.sel={};render();};
+  const _ivc=document.getElementById("invNewCancel");if(_ivc)_ivc.onclick=()=>{invNew=null;render();};
+  const _ivcr=document.getElementById("invNewCreate");if(_ivcr)_ivcr.onclick=()=>{invGrab();
+    const tickers=Object.keys(invNew.sel).filter(t=>invNew.sel[t]);
+    if(tickers.length<1){window.alert("Elige al menos 1 acción.");return;}
+    if(!(invNew.amount>0)){window.alert("Ingresa el monto a invertir.");return;}
+    simState.sel={};tickers.forEach(t=>simState.sel[t]=+(100/tickers.length).toFixed(4));simState.amount=invNew.amount;
+    const name=(""+(invNew.name||"")).trim()||("Inversión "+((PROJECTS||[]).length+1));
+    invNew=null;applyInvestment(name,true);};
   document.querySelectorAll("[data-projsel]").forEach(b=>b.onclick=()=>{activeId=+b.dataset.projsel;editIdx=null;saveProjects();render();});
   const ce=document.getElementById("canceledit");if(ce)ce.onclick=()=>{editIdx=null;render();};
   attachMultiHover("invval");attachMultiHover("invevo");attachMultiHover("invstk");attachMultiHover("invcapm");
