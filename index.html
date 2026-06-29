@@ -2632,6 +2632,7 @@ function attachInv(){
     const ipEl=document.getElementById("wipsa"),ipsa=ipEl?parseFloat(ipEl.value):NaN;
     const dEl=document.getElementById("wdate"),date=dEl&&dEl.value?dEl.value:new Date().toISOString().slice(0,10);
     if(!ok||!ipsa||ipsa<=0){alert(compraMode?"Ingresa el precio de compra y la cantidad de acciones de cada papel, y el IPSA, con números válidos.":"Ingresa todos los precios de cierre y el valor del IPSA con números válidos.");return;}
+    if(!weekendGuard(date))return;
     const rec={date,prices,ipsa};if(qty)rec.qty=qty;
     if(editIdx!=null){WEEKS[editIdx]=rec;editIdx=null;}else{WEEKS.push(rec);}
     saveProjects();render();
@@ -3664,6 +3665,35 @@ let PRICEDB=(function(){const d=lsGet("inv_pricedb_v1");return (d&&d.px)?d:{tick
 let pricedbFreq=lsGet("inv_pricedb_freq")||"mensual";
 function savePriceDB(){PRICEDB.updated=new Date().toISOString().slice(0,10);return lsSet("inv_pricedb_v1",PRICEDB);}
 function pricedbEmpty(){return !PRICEDB||!PRICEDB.px||!Object.keys(PRICEDB.px).length;}
+/* la bolsa (IPSA) opera lun–vie: un cierre en sáb/dom es un dato inválido */
+function isTradingDay(d){if(!d)return true;const wd=new Date(d+"T00:00:00").getDay();return wd!==0&&wd!==6;}
+function lastTradingDay(){const d=new Date();while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+function weekendGuard(date){return isTradingDay(date)||window.confirm("La bolsa no opera fines de semana ("+date+" es "+(new Date(date+"T00:00:00").getDay()===0?"domingo":"sábado")+"). ¿Registrar el cierre de todas formas?");}
+/* limpia datos en días no hábiles (fin de semana) de la base y de las carteras; conserva las compras */
+function dropNonTradingData(){
+  let nBase=0,nProj=0;
+  try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de limpiar fin de semana");}catch(e){}
+  Object.keys(PRICEDB.px||{}).forEach(t=>{Object.keys(PRICEDB.px[t]).forEach(d=>{if(!isTradingDay(d)){delete PRICEDB.px[t][d];nBase++;}});});
+  Object.keys(PRICEDB.ipsa||{}).forEach(d=>{if(!isTradingDay(d)){delete PRICEDB.ipsa[d];nBase++;}});
+  const ix=PRICEDB.idx||{};Object.keys(ix).forEach(k=>Object.keys(ix[k]).forEach(d=>{if(!isTradingDay(d)){delete ix[k][d];nBase++;}}));
+  savePriceDB();
+  (CLIENTS||[]).forEach(c=>{const projs=clientProjects(c.id)||[];let touched=false;projs.forEach(p=>{const ws=p.weeks||[];
+    const keep=ws.filter(w=>{if(isTradingDay(w.date))return true;if(w.qty&&Object.keys(w.qty).length)return true;nProj++;return false;});   // conserva la compra (semana con qty)
+    if(keep.length!==ws.length){p.weeks=keep;touched=true;}});if(touched)clientSaveProjects(c.id,projs);});
+  syncProj();return {nBase,nProj};
+}
+/* quita TODOS los datos de una fecha exacta (base + carteras); conserva la compra inicial si cae ese día */
+function dropDateData(date){if(!date)return {nBase:0,nProj:0};let nBase=0,nProj=0;
+  try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de quitar el día "+date);}catch(e){}
+  Object.keys(PRICEDB.px||{}).forEach(t=>{if(PRICEDB.px[t][date]!=null){delete PRICEDB.px[t][date];nBase++;}});
+  if(PRICEDB.ipsa&&PRICEDB.ipsa[date]!=null){delete PRICEDB.ipsa[date];nBase++;}
+  const ix=PRICEDB.idx||{};Object.keys(ix).forEach(k=>{if(ix[k][date]!=null){delete ix[k][date];nBase++;}});
+  savePriceDB();
+  (CLIENTS||[]).forEach(c=>{const projs=clientProjects(c.id)||[];let touched=false;projs.forEach(p=>{const ws=p.weeks||[];
+    const keep=ws.filter(w=>{if(w.date!==date)return true;if(w.qty&&Object.keys(w.qty).length)return true;nProj++;return false;});
+    if(keep.length!==ws.length){p.weeks=keep;touched=true;}});if(touched)clientSaveProjects(c.id,projs);});
+  syncProj();return {nBase,nProj};
+}
 function pricedbTickers(){return Object.keys(PRICEDB.px||{});}
 function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s[d]=1);Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>s[d]=1));return Object.keys(s).sort();}
 /* último valor ≤ D en un mapa fecha→valor (sus claves ya ordenadas) */
@@ -3836,7 +3866,12 @@ function datosBase(){
     <button class="btn" data-bknow>⬇ Descargar respaldo ahora</button>
     <button class="btn" data-bkrestore>↩ Restaurar copia interna</button>
     <span class="genl" style="margin:0">última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b></span></div>`;
-  const danger=`<div class="datos-clean" style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)"><button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema para nueva carga</button><span class="genl" style="margin:0">Vacía base, análisis, simulaciones y escenarios · <b>conserva</b> tus carteras (compra + cierres diarios)</span></div>`;
+  const lastDate=(function(){const ds=pricedbAllDates();return ds.length?ds[ds.length-1]:lastTradingDay();})();
+  const danger=`<div class="datos-clean" style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">
+    <button class="btn" data-dweekend>🗓️ Quitar datos de fin de semana</button>
+    <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:3px 6px"><button class="btn" data-ddaydel>Quitar este día</button></span>
+    <button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema</button>
+    <span class="genl" style="margin:0;flex-basis:100%">Quita sáb/dom (la bolsa no opera) o un día específico · Limpiar vacía base/análisis/escenarios y <b>conserva</b> tus carteras</span></div>`;
   const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+backup+danger);
   const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
   return intro+tbl;
@@ -3858,7 +3893,7 @@ function datosCargar(){
 function datosCierre(){
   const C=consolidatedSeries(),tickers=pricedbTickers(),held=allHeldTickers().map(h=>h.t);
   const all=[...new Set([...tickers,...held])].sort();
-  const today=new Date().toISOString().slice(0,10);
+  const today=lastTradingDay();   // si hoy es fin de semana, propone el último día hábil (la bolsa no opera sáb/dom)
   const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="${(last!=null&&last!=="")?last:""}" aria-label="Precio ${t}"></div>`;}).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones. Carga una planilla en <b>Cargar planilla</b> o registra una compra en Inversión.</div>`;
   const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="${lastKnownIpsa(C)}"></label></div>
@@ -3875,6 +3910,8 @@ function attachDatos(){
   const bkd=document.querySelector("[data-bkdays]");if(bkd)bkd.onchange=()=>{AUTOBK.days=+bkd.value||7;autobkSave();};
   const bknow=document.querySelector("[data-bknow]");if(bknow)bknow.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");render();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
   const bkr=document.querySelector("[data-bkrestore]");if(bkr)bkr.onclick=()=>autobkRestore();
+  const dwe=document.querySelector("[data-dweekend]");if(dwe)dwe.onclick=()=>{if(!confirm("Quitar de la base y de las carteras los datos en días no hábiles (sábados y domingos), que la bolsa no opera.\n\nSe conservan tus compras iniciales. ¿Continuar?"))return;const r=dropNonTradingData();render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) de fin de semana de las carteras.");};
+  const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
   const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
     if(!confirm('Limpiar el sistema para una nueva carga.\n\n✓ SE CONSERVAN intactas tus carteras: la compra inicial y todos los cierres diarios.\n\n✕ SE ELIMINAN (los puedes recrear tras cargar los datos):\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
     const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto vaciará la base de precios, los análisis, las simulaciones y los escenarios. Tus carteras (compra + cierres) se conservan.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
@@ -3892,7 +3929,7 @@ function attachDatos(){
   const dcl=document.querySelector("[data-dclear]");if(dcl)dcl.onclick=()=>{impFiles=[];impMsg="";render();};
   const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) en "+r.tk+" acción(es).\n\nSeguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
   const dtm=document.querySelector("[data-dtmpl]");if(dtm)dtm.onclick=()=>impDownloadTemplate();
-  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
+  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}if(!weekendGuard(date))return;const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
 }
 function impDownloadTemplate(){const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B\n2025-01-31;6500;52000;5800;38000\n2025-02-28;6610;53400;6010;36500\n2025-03-31;6720;55100;5950;40200\n2025-04-30;6680;54200;6230;39100\n2025-05-31;6810;56800;6480;42500\n2025-06-30;6905;57500;6390;41000\n";const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
 /* ===================== CREAR ANÁLISIS (parametrizado desde la base del sistema) ===================== */
@@ -4849,7 +4886,7 @@ function platformPricesOpen(){
   (STOCKS||[]).forEach(s=>{if(!m[s.t])m[s.t]={t:s.t,n:s.n||s.t,c:s.c||"#1E5FD1"};});
   pricedbTickers().forEach(t=>{if(!m[t]){const md=PRICEDB.tickers[t]||{};m[t]={t,n:md.n||t,c:md.c||"#1E5FD1"};}});
   allHeldTickers().forEach(h=>{if(!m[h.t])m[h.t]={t:h.t,n:h.n,c:h.c};});
-  const today=new Date().toISOString().slice(0,10);
+  const today=lastTradingDay();   // fin de semana → último día hábil
   const rows=Object.keys(m).sort().map(k=>{const h=m[k];return {t:h.t,n:h.n,c:h.c,price:lastKnownPrice(h.t,C)};});
   _ppxState={date:today,ipsa:lastKnownIpsa(C),rows};
   platformPricesRender();
@@ -4876,6 +4913,7 @@ function platformPricesRender(){
     const pm={};S.rows.forEach(r=>{if(r.price!=null&&isFinite(r.price)&&r.price>0)pm[r.t]=r.price;});
     const ip=(S.ipsa!=null&&isFinite(S.ipsa)&&S.ipsa>0)?S.ipsa:null;
     if(!Object.keys(pm).length&&ip==null){window.alert("Ingresa al menos un precio o el valor del IPSA.");return;}
+    if(!weekendGuard(S.date))return;
     const res=applyPlatformPrices(S.date,ip,pm);
     modalCloseId("ppxBack");
     window.alert("Precios del "+S.date+" guardados en la base ("+Object.keys(pm).length+" acción(es)).\n\n"+res.nProj+" cartera(s) con seguimiento actualizado(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior a esa fecha.":""));
