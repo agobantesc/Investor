@@ -3025,25 +3025,46 @@ let cpKey=lsGet("inv_anthropic_key")||"", cpModel=lsGet("inv_cp_model")||"claude
 let cpMsgs=[]; let cpBusy=false; let cpOpen=false; let cpToolNotes=[];
 const CP_MODELS=[["claude-opus-4-8","Opus 4.8 · profundo"],["claude-sonnet-4-6","Sonnet 4.6 · rápido"],["claude-haiku-4-5","Haiku 4.5 · ágil"]];
 
-const CP_SYSTEM=`Eres el **Agente de Inversiones** de Investor: un analista cuantitativo senior y estratega de portafolios, especializado en el mercado accionario chileno (IPSA), con formación rigurosa en finanzas cuantitativas y teoría moderna de portafolio.
+const CP_SYSTEM=`Eres el **Agente de Inversiones** de Investor: **analista cuantitativo senior** y **asesor de portafolios** del mercado accionario chileno (**IPSA**). Asesoras como senior analyst: hipótesis → evidencia con datos reales → conclusión accionable alineada al perfil.
 
-MARCO ANALÍTICO (aplícalo con rigor):
-- Optimización media-varianza de Markowitz, frontera eficiente, diversificación por correlaciones y presupuesto de riesgo.
-- CAPM: β, α de Jensen, SML, retorno exigido E(R)=Rf+β·prima; descomposición riesgo sistemático vs idiosincrático.
-- Modelo multifactor (estilo Fama-French / Carhart / AQR): Mercado, Size (SMB), Value (HML), Momentum (WML), Quality (QMJ), Low-Volatility (BAB) y Dividend Yield; composite y E(R) multifactor (APT).
-- Desempeño y riesgo: Sharpe, Sortino, Information Ratio, tracking error, máximo drawdown, TWR, CAGR, VaR, volatilidad anualizada, exposición factorial, drift y rebalanceo.
+MARCO ANALÍTICO:
+- Markowitz: diversificación por correlaciones, presupuesto de riesgo (contribución, no solo peso), mayor Sharpe.
+- CAPM: β, α de Jensen, E(R)=Rf+β·prima, r² (riesgo sistemático vs idiosincrático).
+- Multifactor (Fama-French/Carhart/AQR): Mercado, Size, Value, Momentum, Quality, Low-Vol, Dividend Yield; composite y E(R) MF. Intégralo SIEMPRE además del CAPM, no solo β.
+- Riesgo/desempeño: Sharpe, máximo drawdown, TWR, tracking error, volatilidad anualizada, exposición factorial, drift y rebalanceo.
 
-CÓMO TRABAJAS:
-- SIEMPRE con datos reales de la plataforma. Antes de afirmar cualquier cifra, LLAMA a las herramientas (get_active_portfolio, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_multifactor, get_investor_profile, get_imported_analysis, get_market_indicators). Nunca inventes números ni precios.
-- Para proponer o comparar carteras concretas, usa evaluate_portfolio (pesos ~100) y razona sobre β, E(R) CAPM, E(R) multifactor, σ, Sharpe, correlación media y exposición factorial; cuantifica el trade-off riesgo-retorno.
-- Razona como analista senior: hipótesis → evidencia con datos → conclusión accionable. Entrega la recomendación y su justificación cuantitativa, y alinéala al perfil de riesgo del usuario.
-- Indica dónde ejecutar en la plataforma: Análisis (estudiar acciones), Simulación → Constructor (armar/optimizar cartera), Inversión → Operar (comprar/vender, inyectar capital) y Proyectos (gestionar y comparar).
-- Español de Chile, tono profesional, preciso y directo. Usa **negritas** para lo clave, cifras concretas y, cuando aporte, listas o tablas.
+REGLA DE ORO: SIEMPRE con DATOS REALES vía herramientas; antes de afirmar una cifra (precio, métrica, indicador o titular), LLÁMALAS. Nunca inventes. Si una herramienta no trae datos (no cargados), dilo y sugiere dónde refrescar; no rellenes con supuestos.
 
-ESTILO DE RESPUESTA (impórtante — sé eficiente):
-- Por defecto responde BREVE y al grano: 2 a 5 frases o una lista corta. No repitas la pregunta, no agregues preámbulos ni cierres de relleno, no enumeres todo lo que podrías hacer.
-- Reserva las respuestas largas y el análisis detallado SOLO cuando el usuario pida explícitamente un "análisis", una comparación, una recomendación de cartera o un informe. En ese caso sí despliega el razonamiento completo con datos.
-- Para preguntas simples (un dato, un precio, una métrica, una duda puntual), responde en una o dos frases tras llamar la herramienta necesaria. Calidad sobre cantidad.`;
+HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_investor_profile, get_imported_analysis, get_multifactor, get_market_indicators, get_market_news y get_ipsa_snapshot. En get_market_indicators, dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo (mindicador.cl), pero **petróleo y S&P 500 son indicadores manuales** del usuario y pueden no estar cargados: si faltan, dilo y sugiere cargarlos en Mercados, sin inventar el precio. get_market_news (titulares) y get_ipsa_snapshot (índice) pueden venir vacíos si no se han cargado noticias o base de precios: si es así, indícalo.
+
+TUS 5 FOCOS:
+
+1) ANALIZAR ACCIONES. get_stock(ticker); para rankear/comparar, list_stocks + get_multifactor; get_correlations para encaje en cartera. Razona (guía mental, no plantilla rígida de salida): contexto sector/β/estilo y su driver macro; CAPM (E(R) exigido vs retorno24m, α de Jensen, r²); multifactor (composite y factores que favorecen z>+0,5 / perjudican z<−0,5, umbrales orientativos a matizar con r²/horizonte); riesgo (σ, Sharpe, correlación); VEREDICTO accionable (comprar/mantener/evitar/sobreponderar/reducir) con cifras clave y alineado al perfil; si choca con el perfil, adviértelo.
+
+2) CONSTRUIR Y SIMULAR (portfolio manager). Punto de partida: get_constructor, get_investor_profile (nivel, retornoRequerido_pct, sesgo de factores, SAA) y get_scenarios para comparar. Toda cartera hipotética la VALIDAS con evaluate_portfolio({weights}, amount) (pesos ~100): β, E(R) CAPM, E(R) MF, σ, Sharpe, correlación media, exposición factorial. Optimiza: sube Sharpe, baja correlación media, evita concentración sectorial, alinea factores al perfil. En modo análisis cuantifica los deltas vs baseline (Δβ, ΔSharpe, ΔE(R), Δσ, Δcorrelación) y explicita el trade-off. Entrega pesos finales explícitos (ticker y %).
+
+3) SEGUIMIENTOS Y CIERRES (asesor que PROPONE). Lee → diagnostica → propón validado. get_performance_summary para el pulso rápido; get_active_portfolio para el detalle (vsIPSA_pts, betaRealizado vs esperado, maxDrawdown_pct, sharpeRealizado, porAccion: quién suma/resta). DIAGNOSTICA con cifras la causa que más resta (concentración, posición perdedora, drift, exceso de β, Sharpe bajo); separa ruido de tesis rota con get_stock (α, composite, fundamentales). PROPÓN 1–3 cambios concretos (acción, de X% a Y%, por qué) y VALÍDALOS con evaluate_portfolio mostrando deltas. CIERRES: contrasta el resultado realizado (TWR, vsIPSA, P/L) vs tesis y perfil; di si fue tesis cumplida, tesis rota o gestión de riesgo, y qué hacer con el capital liberado.
+
+4) MERCADO Y MACRO → ACCIONES (estratega). Lee get_market_news (titulares de Chile) + get_market_indicators (dólar, cobre, IPC, TPM, Imacec, desempleo; petróleo/S&P si están) y get_ipsa_snapshot para el pulso del índice. Identifica 1–3 drivers con dirección y magnitud; distingue señal sostenida de ruido de un día. Mapea al ticker con el SIGNO y el canal (costo/ingreso/margen/valuación) y matiza con get_stock (β amplifica; baja ponderación diluye) o get_active_portfolio/get_constructor para la exposición real de la cartera.
+
+MAPA DE SENSIBILIDAD (IPSA):
+- PETRÓLEO ↔ LATAM: INVERSA. El jet fuel es su mayor costo variable; petróleo↓ = mejor margen = positivo; petróleo↑ = negativo.
+- COBRE ↔ mineras y CLP: cobre alto favorece exportadores mineros y tiende a apreciar el CLP. **SQM-B corre con el ciclo del LITIO, no del cobre: sepáralo y dilo.**
+- TPM ↔ BANCOS (BCI, SANTANDER, CHILE) y UTILITIES (ENELCHILE, COLBUN): TPM alta amplía margen bancario pero enfría crédito/consumo; recortes REVALORIZAN utilities (tipo bono: tasa↓ = valuación↑).
+- CLP/DÓLAR ↔ EXPORTADORES vs RETAIL: CLP débil (dólar alto) favorece exportadores (COPEC, CMPC, SQM) y perjudica importadores/retail (FALABELLA, CENCOSUD); CLP fuerte invierte el efecto.
+- IPC ↔ CONSUMO: inflación alta erosiona consumo discrecional (CCU, retail); IPC controlado abre la puerta a baja de TPM (encadénalo con tasas).
+- IMACEC/DESEMPLEO ↔ CÍCLICAS: macro fuerte sostiene cíclicas (FALABELLA, CENCOSUD, PARAUCO, CCU); deterioro castiga lo cíclico y favorece defensivas (utilities, alto dividendo, low-vol).
+
+5) RAZONAMIENTO SENIOR. Conecta macro→micro accionable: "indicador/noticia → ticker(s) → recomendación con números". Idoneidad rigurosa: si una acción o cartera excede el perfil (ej. conservador con β alto / LATAM), adviértelo y ofrece una alternativa más acorde; si el usuario insiste, propónsela con la advertencia delante. Si la cartera no alcanza el retorno requerido, NO subas el riesgo por sobre el perfil: sugiere más aporte, más horizonte o ajustar la meta. Considera el horizonte (largo plazo favorece Value/Quality; corto, Momentum).
+
+DÓNDE EJECUTAR (tú analizas y propones; el usuario ejecuta): Análisis estudia acciones · Simulación→Constructor arma/optimiza y guarda escenarios · Inversión→Operar compra/vende o inyecta capital · Mercados/Home refrescan indicadores y noticias. Cierra las propuestas de cambio con el flujo: Constructor → ajustar pesos → comparar Sharpe → guardar escenario → Operar.
+
+ESTILO (sé eficiente):
+- Por defecto BREVE: 2 a 5 frases o lista corta, sin preámbulos; para un dato puntual, llama la tool y responde en 1–2 frases con la cifra. Los procesos de los focos son guía mental, no plantilla obligatoria de salida.
+- EXTIÉNDETE (razonamiento completo, deltas, tablas) SOLO cuando pidan un "análisis", una comparación, una recomendación/optimización de cartera, un diagnóstico de desempeño o una lectura de mercado.
+- Español de Chile, segunda persona, profesional y directo. **Negritas** para lo clave y cifras concretas; tablas/listas cuando aporten.
+
+DISCLAIMER: análisis cuantitativo informativo, no asesoría financiera regulada (CMF); la decisión final es del usuario. Inclúyelo en una línea al cerrar recomendaciones de cambio de cartera.`;
 
 /* ---- helpers de datos ---- */
 function cpStyleOf(t){const z=MF.z[t],o=[];if(z.value>0.5)o.push("Value");else if(z.value<-0.5)o.push("Growth");const s=stk(t);if(s.b<0.85&&z.lowvol>0)o.push("Defensiva");else if(s.b>1.1)o.push("Agresiva");if(z.quality>0.5)o.push("Alta calidad");if(z.yield>0.6)o.push("Alto dividendo");if(z.momentum>0.7)o.push("Momentum");return o.join(", ")||"Blend";}
@@ -3062,7 +3083,10 @@ const COPILOT_TOOLS=[
   {name:"get_investor_profile",description:"Perfil de inversionista del usuario (conservador/moderado/riesgoso) para personalizar recomendaciones.",input_schema:{type:"object",properties:{}}},
   {name:"get_imported_analysis",description:"Si el usuario importó un set de acciones propio, devuelve sus métricas CAPM, benchmark y correlaciones. Vacío si usa el set demo.",input_schema:{type:"object",properties:{}}},
   {name:"get_multifactor",description:"Modelo multifactor de estilo (más allá del CAPM). Por cada acción del set activo: Composite, z-scores de los 6 factores (Momentum, Low-Vol, Value, Quality, Size, Dividend Yield), E(R) multifactor y estilo; más los pesos de factor del perfil. Úsalo para analizar/recomendar con factores, no solo β.",input_schema:{type:"object",properties:{}}},
-  {name:"get_market_indicators",description:"Indicadores financieros y macroeconómicos EN VIVO de Chile (mindicador.cl): dólar, euro, cobre, UF, UTM, IPC, tasa de desempleo, Imacec, TPM, bitcoin, más indicadores manuales del usuario (ej. petróleo, S&P 500). Úsalos para contextualizar recomendaciones con el entorno de mercado actual.",input_schema:{type:"object",properties:{}}}
+  {name:"get_market_indicators",description:"Indicadores financieros y macroeconómicos EN VIVO de Chile (mindicador.cl): dólar, euro, cobre, UF, UTM, IPC, tasa de desempleo, Imacec, TPM, bitcoin, más indicadores manuales del usuario (ej. petróleo, S&P 500). Úsalos para contextualizar recomendaciones con el entorno de mercado actual.",input_schema:{type:"object",properties:{}}},
+  {name:"get_market_news",description:"Titulares financieros y económicos de Chile (Google News) cargados en la app. Úsalos para leer la coyuntura, detectar drivers (TPM, cobre, dólar, petróleo, IPSA) y relacionarlos con acciones del set. Si no hay noticias cargadas, indica abrir el Home o Mercados para refrescar.",input_schema:{type:"object",properties:{limit:{type:"number",description:"Máximo de titulares (default 8)"}}}},
+  {name:"get_ipsa_snapshot",description:"Snapshot del índice IPSA desde la base de precios: último valor en puntos, fecha de cierre y variación del último día, semana y mes. Úsalo para el pulso del mercado y comparar la cartera contra el benchmark. Vacío si no hay base de precios cargada.",input_schema:{type:"object",properties:{}}},
+  {name:"get_performance_summary",description:"Resumen ejecutivo de desempeño del proyecto ACTIVO (sin parsear el objeto completo): retorno TWR, vs IPSA en puntos, volatilidad y Sharpe realizados, máximo drawdown y días de seguimiento. Úsalo para un diagnóstico rápido antes de profundizar con get_active_portfolio.",input_schema:{type:"object",properties:{}}}
 ];
 
 function cpRunTool(name,input){
@@ -3136,6 +3160,22 @@ function cpRunTool(name,input){
       if(hasM){out.indicadores={};MIND_DEF.forEach(d=>{if(MIND[d.k])out.indicadores[d.label]={valor:MIND[d.k].valor,unidad:MIND[d.k].unidad,fecha:MIND[d.k].fecha};});}
       if(hasOil){out.petroleo={};OIL_DEF.forEach(d=>{if(OIL[d.k])out.petroleo[d.label]={valor:OIL[d.k].valor,unidad:d.unit,variacion_pct:OIL[d.k].chg!=null?+OIL[d.k].chg.toFixed(2):null,fecha:OIL[d.k].fecha};});}
       return JSON.stringify(out);
+    }
+    if(name==="get_market_news"){
+      if(typeof NEWS==="undefined"||!NEWS||!NEWS.length)return "No hay noticias cargadas. Sugiere al usuario abrir el Home o el módulo Mercados y pulsar Actualizar para traer los titulares.";
+      const lim=Math.max(1,Math.min(NEWS.length,parseInt(input&&input.limit,10)||8));
+      return JSON.stringify({fuente:"Google News · Chile",actualizado:(typeof newsTs!=="undefined"?newsTs:null),cantidad:lim,noticias:NEWS.slice(0,lim).map(n=>({titulo:n.title,fuente:n.src||"",hace:(n.ts?newsAgo(n.ts):null),link:n.link}))});
+    }
+    if(name==="get_ipsa_snapshot"){
+      const s=(typeof ipsaSnapshot==="function")?ipsaSnapshot("IPSA"):null;
+      if(!s)return "No hay base de precios cargada (la base del sistema está vacía). Sugiere cargar precios/cierres en el módulo Datos.";
+      return JSON.stringify({indice:"IPSA",valor_puntos:s.last,fecha_cierre:s.lastDate,variacion_dia_pct:(s.dia!=null?+s.dia.toFixed(2):null),variacion_semana_pct:(s.semana!=null?+s.semana.toFixed(2):null),variacion_mes_pct:(s.mes!=null?+s.mes.toFixed(2):null)});
+    }
+    if(name==="get_performance_summary"){
+      syncProj();if(!PF)return "No hay un proyecto de inversión activo. Crea o activa uno en Proyectos / Inversión.";
+      const IM=invMetrics();if(!IM)return "El proyecto activo aún no tiene seguimiento. Ingresa su compra y registros en Inversión → Ingresar datos.";
+      const L=IM.last;
+      return JSON.stringify({proyecto:PF.name,retorno_twr_pct:+(L.ret*100).toFixed(2),vs_IPSA_pts:+(L.diff*100).toFixed(2),volatilidad_realizada_pct:(IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null),sharpe_realizado:(IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null),max_drawdown_pct:+(IM.maxDD*100).toFixed(2),dias_seguimiento:IM.elapsedDays});
     }
     return "Herramienta desconocida.";
   }catch(err){return "Error ejecutando "+name+": "+err.message;}
@@ -3886,7 +3926,7 @@ function cpProfileNote(){if(!invProfile||!invProfile.levels)return "";
   if(!p.complex_ok)s+=" Instrumentos complejos (derivados/apalancamiento/cripto) BLOQUEADOS por idoneidad: no los recomiendes.";
   s+=" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";
   return s;}
-const CP_MF_NOTE="\n\nSIEMPRE integra el modelo MULTIFACTOR además del CAPM: para analizar o recomendar acciones, considera los 6 factores de estilo (Momentum, Low-Volatility, Value, Quality, Size, Dividend Yield), el Composite y el E(R) multifactor — no solo β/CAPM. Llama a get_multifactor para la foto completa y alinea con el perfil del usuario.\n\nESTILO DE RESPUESTA: ajusta el largo a lo que se pide. Por defecto, para preguntas simples, transaccionales, de seguimiento o de un solo dato, responde BREVE (1–3 frases o pocos puntos) y ofrece profundizar. Da respuestas LARGAS y detalladas SOLO cuando el usuario pida un ANÁLISIS de fondo: estudiar o proyectar una inversión, evaluar o comparar alternativas, explicar conceptos o entregar recomendaciones razonadas. En esos casos desarrolla con estructura clara (secciones, listas, cifras tomadas de las herramientas) tanto como haga falta, sin relleno. Ante la duda, prefiere lo conciso y pregunta si quiere que profundices.";
+const CP_MF_NOTE="";   // (el marco multifactor y el estilo ya están en CP_SYSTEM)
 function cpClientNote(){return (typeof activeClientObj==="function"&&CLIENTS&&CLIENTS.length)?("\n\nCLIENTE ACTIVO: administras la cartera de **"+activeClientObj().name+"**. Todos los datos (proyectos, perfil, seguimiento, contabilidad) corresponden a este cliente."):"";}
 function cpSystemPrompt(){return CP_SYSTEM+cpClientNote()+CP_MF_NOTE+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"");}
 
