@@ -4786,15 +4786,17 @@ function seguimientoStats(freq){
   const C=consolidatedSeries();const PPY=freq==="diario"?252:freq==="semanal"?52:12;
   const rf=(typeof RF==="number"&&isFinite(RF)?(RF>1?RF/100:RF):0.055);
   const ipsaR=resampleMap(C.ipsaMap,freq),ipsaByP={};ipsaR.forEach(x=>ipsaByP[periodKey(x.d,freq)]=x.v);
-  // período más reciente del sistema para esta frecuencia: solo rankeamos acciones con datos en ese período
-  // (así, p.ej., una acción que solo tiene el histórico mensual del análisis NO aparece en "última semana/día")
+  // frontera reciente del sistema para esta frecuencia: rankeamos acciones cuyo último dato esté DENTRO de una ventana reciente
+  // (así una acción con solo el histórico mensual del análisis NO aparece en "última semana/día", pero una carga/cierre que
+  //  adelanta UNA acción un día no esconde al resto que cerró el día anterior — fechas raggedas entre fuentes)
   let latestIdx=-Infinity;
   Object.keys(C.tick).forEach(t=>{Object.keys(C.tick[t]).forEach(d=>{const pi=periodIndex(d,freq);if(pi>latestIdx)latestIdx=pi;});});
+  const REC_GATE={diario:5,semanal:1,mensual:1}[freq]||1;   // diario: días; semanal/mensual: períodos
   const out=[];
   Object.keys(C.tick).forEach(t=>{
     const rs=resampleMap(C.tick[t],freq);if(rs.length<2)return;
-    // recencia: el último dato de la acción debe pertenecer al período más reciente del sistema
-    if(periodIndex(rs[rs.length-1].d,freq)!==latestIdx)return;
+    // recencia: el último dato de la acción debe estar dentro de la ventana reciente del sistema (no exactamente el último período)
+    if(latestIdx-periodIndex(rs[rs.length-1].d,freq)>REC_GATE)return;
     // y el último tramo debe ser entre períodos consecutivos (sin huecos) para que el retorno del período sea real
     if(!gapOK(rs[rs.length-2].d,rs[rs.length-1].d,freq))return;
     const vals=rs.map(x=>x.v);
