@@ -1152,7 +1152,7 @@
   .home-seg button:hover{color:var(--ink);}
   .home-seg button.on{background:var(--card);color:var(--accent);box-shadow:var(--sh);}
   .btnu{padding:.4rem .7rem;font-size:11.5px;}
-  .stk-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .stk-cols{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
   .stk-block{border:1px solid var(--line);border-radius:12px;padding:.7rem .75rem;background:var(--card2);}
   .stk-bh{display:flex;flex-direction:column;margin-bottom:6px;}
   .stk-bh b{font:800 13px var(--font);color:var(--navy);}
@@ -1160,12 +1160,12 @@
   .stk-pos{flex:0 0 auto;width:18px;height:18px;border-radius:6px;background:var(--surface);color:var(--mut);font:800 10.5px var(--font);display:flex;align-items:center;justify-content:center;}
   .stk-block .home-stk{display:flex;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--line);}
   .stk-block .home-stk:last-child{border-bottom:none;}
-  .stk-spk{width:48px;height:18px;flex:0 0 auto;opacity:.9;}
-  .stk-spk .mkt-spark{width:48px;height:18px;}
+  .stk-spk{width:66px;height:20px;flex:0 0 auto;opacity:.9;}
+  .stk-spk .mkt-spark{width:66px;height:20px;}
   .stk-block .rk-name{font-size:12.5px;}
-  .stk-block .rk-cli{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;}
+  .stk-block .rk-cli{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:none;}
   .stk-block .rk-pct{font-size:13px;}
-  @media(max-width:1180px){.stk-cols{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:760px){.stk-cols{grid-template-columns:1fr;}}
   @media(max-width:560px){.stk-cols{grid-template-columns:1fr;}}
   /* modales genéricos (precios plataforma / cliente) */
   .ui-modal{width:560px;max-width:96vw;}
@@ -4691,11 +4691,14 @@ function analysisName(id){const a=analysisList().find(x=>x.id===String(id));retu
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
 function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const inv0=p.amount||0;
-  if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,gainNet:0,gainNetPct:0,fees:0,hasData:false,beta:p.bp||0,nrec:(p.weeks||[]).length};
+  if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,gainNet:0,gainNetPct:0,fees:0,hasData:false,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:null,nrec:(p.weeks||[]).length};
   const L=IM.last,inv=IM.aport,val=L.val,gain=val-inv;
   let fees=0;try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{fees+=brokerFee(x.monto);});}catch(e){}
   const gainNet=gain-fees;
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,nrec:(p.weeks||[]).length,series:IM.series.map(s=>Math.round(s.val))};});}
+  // α de Jensen REALIZADO (no anualizado, sobre el período transcurrido): retorno real − el exigido por CAPM para la β de la cartera.
+  // Va en línea con "Rentab. %" (ambos acumulados a la fecha), así no se infla anualizando un seguimiento corto.
+  const reqRet=Math.pow(1+(p.erCapm||0)/100,IM.elapsedYrs||0)-1, alphaReal=L.ret-reqRet;
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:IM.series.map(s=>Math.round(s.val))};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* escenario "de construcción" derivado del proyecto (su simulación original) */
 function projDefaultScenario(p){
@@ -4740,6 +4743,8 @@ function viewProyectos(){
         <div class="prj-m"><span class="l">Rentab. $</span><b style="color:${s.gain>=0?green:red}">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</b></div>
         <div class="prj-m"><span class="l">Rentab. %</span><b style="color:${s.gainPct>=0?green:red}">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</b></div>
         <div class="prj-m"><span class="l">β cartera</span><b style="color:${accentT}">${(s.beta||0).toFixed(2)}</b></div>
+        <div class="prj-m" title="α de Jensen realizado: retorno real menos el exigido por CAPM para la β de la cartera (acumulado a la fecha, no anualizado)"><span class="l">α de Jensen</span><b style="color:${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0)?green:red):'var(--navy)'}">${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0?"+":"")+(s.alphaReal*100).toFixed(2)+"%"):"—"}</b></div>
+        <div class="prj-m" title="Sharpe modelado de la cartera (retorno esperado por unidad de riesgo, según su construcción CAPM/Markowitz)"><span class="l">Sharpe</span><b style="color:${accentT}">${(s.sharpe||0).toFixed(2)}</b></div>
       </div>
       <div class="prj-links">
         <div class="prj-lrow"><span class="prj-llbl">Análisis</span><div class="prj-chips">${aChips}</div><select class="prj-add" data-addlink="${p.id}|analysis"><option value="">+ vincular análisis…</option>${aOpts}</select></div>
@@ -4935,11 +4940,11 @@ function periodIndex(dateStr,freq){const d=new Date(dateStr+"T00:00:00");if(freq
 function gapOK(d0,d1,freq){if(freq==="diario"){const g=(new Date(d1+"T00:00:00")-new Date(d0+"T00:00:00"))/864e5;return g>0&&g<=4;}return (periodIndex(d1,freq)-periodIndex(d0,freq))===1;}
 /* métricas por acción a partir del historial real ingresado (no del análisis) */
 function seguimientoStats(freq){
-  const C=consolidatedSeries();const PPY=freq==="diario"?252:freq==="semanal"?52:12;
-  const rf=(typeof RF==="number"&&isFinite(RF)?(RF>1?RF/100:RF):0.055);
-  const ipsaR=resampleMap(C.ipsaMap,freq),ipsaByP={};ipsaR.forEach(x=>ipsaByP[periodKey(x.d,freq)]=x.v);
+  const C=consolidatedSeries();
   // REGLA 2: cada acción muestra su ÚLTIMO registro disponible a esta frecuencia (con su fecha), no se exige que sea el más reciente del sistema.
   // Solo se requiere que el último tramo sea entre períodos CONSECUTIVOS (retorno real a la cadencia elegida); una acción solo-mensual no aparece en diario porque no tiene dos días consecutivos.
+  // Nota: Sharpe y α de Jensen NO se calculan aquí. Son métricas anualizadas de horizonte largo y anualizar la
+  // ventana corta del toggle (pocos días/semanas) las dispara; el Sharpe y el α de cada cartera se ven en Proyectos.
   const out=[];
   Object.keys(C.tick).forEach(t=>{
     const rs=dropTrailingFlat(resampleMap(C.tick[t],freq));if(rs.length<2)return;   // ignora arrastres finales (carry-forward): usa el último movimiento real
@@ -4949,12 +4954,7 @@ function seguimientoStats(freq){
     const rets=[];for(let i=1;i<vals.length;i++){if(gapOK(rs[i-1].d,rs[i].d,freq))rets.push(vals[i]/vals[i-1]-1);}
     // rentabilidad del último período (día/semana/mes según filtro) — el último tramo siempre es consecutivo (gapOK arriba)
     const lastRet=rets[rets.length-1];
-    let sharpe=null;
-    if(rets.length>=2){const mean=rets.reduce((a,b)=>a+b,0)/rets.length;const sd=Math.sqrt(rets.reduce((a,b)=>a+(b-mean)**2,0)/Math.max(1,rets.length-1));sharpe=sd>0?(mean-rf/PPY)/sd*Math.sqrt(PPY):0;}
-    const mret=[],aret=[];for(let i=1;i<rs.length;i++){if(!gapOK(rs[i-1].d,rs[i].d,freq))continue;const k=periodKey(rs[i].d,freq),kp=periodKey(rs[i-1].d,freq),m1=ipsaByP[k],m0=ipsaByP[kp];if(m1!=null&&m0!=null){mret.push(m1/m0-1);aret.push(vals[i]/vals[i-1]-1);}}
-    let jensen=null,beta=null;
-    if(mret.length>=3){const mm=mret.reduce((a,b)=>a+b,0)/mret.length,ma=aret.reduce((a,b)=>a+b,0)/aret.length;let cov=0,vm=0;for(let i=0;i<mret.length;i++){cov+=(mret[i]-mm)*(aret[i]-ma);vm+=(mret[i]-mm)**2;}beta=vm>0?cov/vm:0;jensen=((ma*PPY)-rf)-beta*((mm*PPY)-rf);}
-    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,sharpe,jensen:jensen==null?null:jensen*100,beta,n:vals.length,series:vals,lastDate:rs[rs.length-1].d});
+    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,n:vals.length,series:vals,lastDate:rs[rs.length-1].d});
   });
   return out;
 }
@@ -5212,23 +5212,22 @@ function viewHome(){
   // acciones destacadas — rankings desde los precios reales de los seguimientos
   const stats=seguimientoStats(homeStkFreq);
   const _rkD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(2,4):"";
-  const stkBlock=(title,sub,arr,valFn,colFn)=>{const rows=arr.slice(0,5).map((s,i)=>`<div class="home-stk"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}${s.lastDate?' · al '+_rkD(s.lastDate):''}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
+  const stkBlock=(title,sub,arr,valFn,colFn,startRank)=>{const rows=arr.map((s,i)=>`<div class="home-stk"><span class="stk-pos">${(startRank||1)+i}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}${s.lastDate?' · al '+_rkD(s.lastDate):''}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
     return `<div class="stk-block"><div class="stk-bh"><b>${title}</b><span>${sub}</span></div>${rows||'<div class="note" style="margin:6px 0 0;font-size:11px">Sin datos suficientes</div>'}</div>`;};
   const perWord=homeStkFreq==="diario"?"último día":homeStkFreq==="semanal"?"última semana":"último mes";
   const perPhrase=homeStkFreq==="semanal"?"de la última semana":"del "+perWord;
-  const perPhrase2=homeStkFreq==="semanal"?"en la última semana":"en el "+perWord;
   const byRet=[...stats].sort((a,b)=>b.ret-a.ret);
   const byWorst=[...stats].sort((a,b)=>a.ret-b.ret);
-  const bySharpe=stats.filter(s=>s.sharpe!=null).sort((a,b)=>b.sharpe-a.sharpe);
-  const byJensen=stats.filter(s=>s.jensen!=null).sort((a,b)=>b.jensen-a.jensen);
+  // partimos las acciones en la mitad por rentabilidad: la mejor mitad a la izquierda, la peor a la derecha
+  // (sin duplicar y mostrando hasta MAXBLK en cada columna); el toggle diario/semanal/mensual cambia el período.
+  const MAXBLK=9, half=Math.ceil(stats.length/2), bestN=Math.min(MAXBLK,half), worstN=Math.min(MAXBLK,stats.length-bestN);
+  const bestArr=byRet.slice(0,bestN), worstArr=byWorst.slice(0,worstN);
   const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div><button class="btn btnu" data-openprices title="Cargar precios de cierre para toda la plataforma">↻ Actualizar precios</button></div>`;
   const stkInner=stats.length?`<div class="stk-cols">
-    ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,byRet,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red)}
-    ${stkBlock("Peor rentabilidad","retorno "+perPhrase,byWorst,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red)}
-    ${stkBlock("Por Sharpe","ajustado a riesgo",bySharpe,s=>s.sharpe.toFixed(2),s=>s.sharpe>=0?green:red)}
-    ${stkBlock("Por α de Jensen","sobre/bajo lo exigido",byJensen,s=>(s.jensen>=0?"+":"")+s.jensen.toFixed(1)+"%",s=>s.jensen>=0?green:red)}</div>`
+    ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,bestArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red,1)}
+    ${stkBlock("Peor rentabilidad","retorno "+perPhrase,worstArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red,1)}</div>`
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
-  const stkCard=card("Acciones destacadas",`Mejores y peores por retorno ${perPhrase}, Sharpe y α de Jensen · último dato disponible de cada acción (con su fecha) · no usa el histórico del análisis`,stkInner,freqSeg);
+  const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} · cada acción con su último dato disponible (y su fecha) · usa <b>↻ Actualizar precios</b> para cargar cierres · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
   return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
