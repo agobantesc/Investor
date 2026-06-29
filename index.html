@@ -3721,6 +3721,30 @@ function pricedbApplyToProjects(){
 }
 /* ===================== MÓDULO DATOS (vista) ===================== */
 function datosTk(r){return `<b style="color:${r.c||"#1E5FD1"}">${r.t}</b> <span style="color:var(--muted);font-size:11px">${(""+(r.n||r.t)).replace(/</g,"&lt;")}</span>`;}
+/* limpieza para nueva carga: vacía base de precios, análisis, simulaciones y escenarios;
+   CONSERVA intactos los proyectos (compra + cierres diarios). Devuelve nº de carteras conservadas. */
+function systemClean(){
+  let kept=0;
+  try{
+    // 1) base de precios: vaciar (mantener flag seeded para que el demo no se re-siembre solo)
+    //    y re-ingerir SOLO los cierres de tus carteras, para que la base siga reflejándolas
+    PRICEDB={tickers:{},px:{},ipsa:{},idx:{},seeded:true};savePriceDB();
+    try{pricedbIngestProjects();}catch(e){}
+    // 2) análisis guardados + datos importados (recreables tras la carga)
+    IMPSETS=[];lsSet("inv_impsets_v1",IMPSETS);
+    IMP=null;impActiveId=null;impFiles=[];impMsg="";
+    lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);
+    if(typeof DATASET!=="undefined"&&DATASET==="import"){applyDataset("demo");}
+    // 3) simulaciones y comparación de escenarios
+    SCEN=[];lsSet("pf_scenarios_v1",SCEN);scenEditId=null;
+    // 4) soltar referencias colgantes a escenarios/análisis borrados (NO toca compra ni cierres)
+    (PROJECTS||[]).forEach(p=>{if(!p)return;kept++;const L=p.links;if(L){L.scenarios=[];
+      L.analyses=(L.analyses||[]).filter(a=>a==="demo"||a==="datos");if(!L.analyses.length)L.analyses=["demo"];
+      if(L.primary&&L.primary!=="demo"&&L.primary!=="datos")L.primary="demo";}});
+    saveProjects();
+  }catch(e){}
+  return kept;
+}
 function viewDatos(){const pg=page||"base";if(pg==="cargar")return datosCargar();if(pg==="cierre")return datosCierre();return datosBase();}
 function datosBase(){
   const S=pricedbSummary(),empty=pricedbEmpty();
@@ -3740,7 +3764,8 @@ function datosBase(){
     <button class="btn" data-dgo="cargar">+ Cargar planilla</button>
     <button class="btn" data-dgo="cierre">Cierre diario</button>
     <span class="datos-freq"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span></div>`;
-  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions);
+  const danger=`<div class="datos-clean" style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)"><button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema para nueva carga</button><span class="genl" style="margin:0">Vacía base, análisis, simulaciones y escenarios · <b>conserva</b> tus carteras (compra + cierres diarios)</span></div>`;
+  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+danger);
   const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
   return intro+tbl;
 }
@@ -3774,6 +3799,7 @@ function attachDatos(){
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
   const da=document.querySelector("[data-dactivate]");if(da)da.onclick=()=>{if(pricedbActivateAnalysis(pricedbFreq))window.alert("Listo. El análisis y las simulaciones ahora usan tu base de precios ("+pricedbFreq+").");};
   const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();render();window.alert("Seguimientos actualizados con la base.\n\n"+r.nPts+" punto(s) agregados/actualizados en "+r.nProj+" cartera(s).");};
+  const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{if(confirm('Limpiar el sistema para una nueva carga.\n\n✓ SE CONSERVAN intactas tus carteras: la compra inicial y todos los cierres diarios.\n\n✕ SE ELIMINAN (los puedes recrear tras cargar los datos):\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?')){const k=systemClean();page="base";render();window.alert("Sistema limpio. Se conservaron "+k+" cartera(s) con sus compras y cierres.\n\nLa base quedó lista para tu carga masiva (los cierres de tus carteras ya están incorporados).");}};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{if(confirm('¿Quitar '+b.dataset.ddel+' de la base de precios? (no afecta tus carteras ya registradas)')){pricedbDeleteTicker(b.dataset.ddel);render();}});
   const fi=document.getElementById("dFile"),pick=document.querySelector("[data-dpick]");
   if(pick&&fi){pick.onclick=e=>{if(e.target!==fi)fi.click();};fi.onchange=()=>{if(fi.files&&fi.files.length)impOnFiles(fi.files);};
