@@ -3830,9 +3830,10 @@ function pricedbAnalysisCore(freq,opts){
   // períodos donde el bench y TODOS los tickers tienen dato → corrida común reciente
   const inter=tickers.length?bk.filter(pk=>tickers.every(t=>tickR[t][pk]!=null)):[];
   const common=recentRun(inter);
-  // cobertura reciente por ticker (cuántos períodos consecutivos al final tiene cada uno junto al bench)
-  const perTicker={};tickers.forEach(t=>{perTicker[t]=recentRun(bk.filter(pk=>tickR[t][pk]!=null)).length;});
-  return {PY,ipsaR,tickR,tickers,benchName,benchHasData:bk.length>0,common,perTicker,
+  // cobertura reciente por ticker (cuántos períodos consecutivos al final tiene) y su último período con dato (para detectar rezagadas)
+  const perTicker={},tickLast={};tickers.forEach(t=>{const ks=bk.filter(pk=>tickR[t][pk]!=null);perTicker[t]=recentRun(ks).length;tickLast[t]=ks.length?ipsaR[ks[ks.length-1]].d:null;});
+  const dts=tickers.map(t=>tickLast[t]).filter(Boolean).sort();const groupLatest=dts.length?dts[dts.length-1]:null;
+  return {PY,ipsaR,tickR,tickers,benchName,benchHasData:bk.length>0,common,perTicker,tickLast,groupLatest,
     from:common.length?ipsaR[common[0]].d:null,to:common.length?ipsaR[common[common.length-1]].d:null};
 }
 /* deriva el dataset de análisis (IMP) desde la corrida consecutiva común, con la ventana pedida */
@@ -3867,7 +3868,9 @@ function pricedbCheckAnalysis(freq,opts){
   const availPts=core.common.length,availRet=Math.max(0,availPts-1);
   const needPts=(opts.lastN&&opts.lastN>0)?(opts.lastN+1):4;
   const limiting=core.tickers.filter(t=>core.perTicker[t]<needPts).map(t=>({t,n:Math.max(0,core.perTicker[t]-1)})).sort((a,b)=>a.n-b.n);
-  return {ok:availPts>=needPts&&availPts>=4,unit,availPts,availRet,needRet:(opts.lastN&&opts.lastN>0)?opts.lastN:null,from:core.from,to:core.to,limiting,perTicker:core.perTicker};
+  // rezagadas: acciones cuyo último período es ANTERIOR al más reciente del grupo (no tienen el período más nuevo → recortan la ventana común)
+  const lagging=core.tickers.filter(t=>core.tickLast[t]&&core.groupLatest&&core.tickLast[t]<core.groupLatest).map(t=>({t,last:core.tickLast[t]})).sort((a,b)=>a.last<b.last?-1:1);
+  return {ok:availPts>=needPts&&availPts>=4,unit,availPts,availRet,needRet:(opts.lastN&&opts.lastN>0)?opts.lastN:null,from:core.from,to:core.to,limiting,lagging,groupLatest:core.groupLatest,perTicker:core.perTicker};
 }
 /* activa la base como universo de análisis/simulación (vía la maquinaria de import) */
 function pricedbActivateAnalysis(freq){freq=freq||pricedbFreq;pricedbFreq=freq;lsSet("inv_pricedb_freq",freq);
@@ -4045,7 +4048,8 @@ function viewCrear(){
     const _selTk=ts.filter(t=>S.sel[t]);let _avOk=true,_avHint="";
     if(selCount>=2&&idxs.length){const _chk=pricedbCheckAnalysis(S.freq,{tickers:_selTk,lastN:S.lastN||0,bench:S.bench,source:C});_avOk=_chk.ok;
       const _dd=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7):"";
-      if(_chk.ok)_avHint=" · ✓ "+_chk.availRet+" "+_chk.unit+" disponibles"+(_chk.from?(" ("+_dd(_chk.from)+"→"+_dd(_chk.to)+")"):"");
+      if(_chk.ok){_avHint=" · ✓ "+_chk.availRet+" "+_chk.unit+" disponibles"+(_chk.from?(" ("+_dd(_chk.from)+"→"+_dd(_chk.to)+")"):"");
+        if(_chk.lagging&&_chk.lagging.length)_avHint+=" · ⚠ "+_chk.lagging.slice(0,3).map(x=>x.t).join(", ")+" sin el período más reciente (todas se alinean hasta "+_dd(_chk.to)+")";}
       else if(_chk.reason)_avHint=" · ⚠ "+_chk.reason;
       else _avHint=" · ⚠ solo "+_chk.availRet+" "+_chk.unit+" con datos de todas"+(S.lastN?(" (pediste "+S.lastN+")"):"")+(_chk.limiting&&_chk.limiting.length?(" · limitan: "+_chk.limiting.slice(0,3).map(x=>x.t).join(", ")):"");}
     form=`<div class="ca-form">
