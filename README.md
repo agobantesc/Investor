@@ -28,7 +28,7 @@ Abre `index.html` en cualquier navegador moderno (doble clic o arrástralo). No 
 - **Escala de interfaz:** en **Configuración** puedes fijar la escala (80 % por defecto, 80/90/100/110 %) — equivale al zoom del navegador y se recuerda, sin tener que ajustarlo a mano.
 - **Tema claro / oscuro:** botón ◐ en la barra superior (se recuerda entre sesiones).
 - **Configuración (⚙):** botón junto al de tema (perfil, apariencia + escala, copiloto, datos, roadmap y reinicio). Abre un panel central con tu **perfil**, **apariencia** (tema), **copiloto IA** (estado de la clave y modelo), **datos** (set de análisis activo demo/importado y respaldo/restauración) y **plataforma** (reinicio total). Centraliza los ajustes sin salir del módulo en que estés.
-- `inversor-v1-original.html` se conserva como referencia de la versión anterior.
+- `investor-v1-original.html` se conserva como referencia de la versión anterior.
 
 ---
 
@@ -162,7 +162,7 @@ Toda la funcionalidad anterior se mantiene intacta:
 
 ```
 index.html                  · Investor (aplicación completa, single-file)
-inversor-v1-original.html   · versión anterior (referencia)
+investor-v1-original.html   · versión anterior (referencia)
 README.md                   · este documento
 ```
 
