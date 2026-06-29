@@ -291,7 +291,7 @@
   .wbtn:hover{border-color:var(--indigo);color:var(--indigo);}
   .wbtn.del:hover{border-color:var(--red);color:var(--red);}
 
-  /* ════════════════ INVERSOR 2.0 · SISTEMA DE DISEÑO ════════════════ */
+  /* ════════════════ Investor · SISTEMA DE DISEÑO ════════════════ */
   body{background:var(--bg);color:var(--ink);
     font-feature-settings:"cv05" 1,"ss01" 1,"zero" 1;text-rendering:optimizeLegibility;}
   .tnum,table td,table th,.tile .v,.kv,.hstat .v,.metric-hero,.amtwrap input,.winp,.pinp{
@@ -1654,7 +1654,7 @@ function exportBackup(){try{
     broker:JSON.parse(localStorage.getItem("inv_broker_v1")||"null"),
     ui_scale:localStorage.getItem("inv_ui_scale"),
     clients};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="respaldo_inversor_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="respaldo_investor_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
 }catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}}
 function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{
   const j=JSON.parse(ev.target.result);
@@ -2432,7 +2432,7 @@ function viewOperar(){
   if(!injState.rows.length){injState.rows=PF.holdings.map(hd=>({t:hd.t,qty:"",price:(lastW.prices[hd.t]!=null?lastW.prices[hd.t]:(((STOCKS.find(s=>s.t===hd.t)||{}).prices||[]).slice(-1)[0]||""))}));}
   let injTotal=0;
   const injRows=injState.rows.map((r,i)=>{const q=parseFloat(r.qty),p=parseFloat(r.price),m=(q>0&&p>0)?q*p:0;injTotal+=m;return `<div class="inj-row"><select data-injt="${i}">${STOCKS.map(s=>`<option value="${s.t}" ${s.t===r.t?"selected":""}>${s.t} · ${s.n}</option>`).join("")}</select><input type="number" step="any" data-injq="${i}" value="${r.qty}" placeholder="Cantidad"><input type="number" step="any" data-injp="${i}" value="${r.price}" placeholder="Precio"><span class="inj-monto">${m>0?fmtCLP(m):"—"}</span><button class="inj-rm" data-injrm="${i}" title="Quitar fila">✕</button></div>`;}).join("");
-  const injBody=`<div class="inj-head"><span>Acción</span><span>Cantidad</span><span>Precio (CLP)</span><span>Monto</span><span></span></div><div class="inj-list">${injRows||'<div class="note" style="margin:0">Agrega las acciones que compraste con el aporte.</div>'}</div><div style="margin-top:11px"><button class="btn" id="injadd">+ Agregar acción</button></div><div class="inj-foot"><div class="op-amt">Total a inyectar: <b>${injTotal>0?fmtCLP(injTotal):"—"}</b></div><button class="btn btn-pri" id="doinject">✓ Registrar compras del aporte</button></div><div class="note" style="margin-top:11px">Indica <b>acción, cantidad y precio</b> de cada compra; INVERSOR calcula el monto por acción, suma el capital aportado y recalcula el valor de la cartera y el drift. El aporte <b>no</b> cuenta como rentabilidad.</div>`;
+  const injBody=`<div class="inj-head"><span>Acción</span><span>Cantidad</span><span>Precio (CLP)</span><span>Monto</span><span></span></div><div class="inj-list">${injRows||'<div class="note" style="margin:0">Agrega las acciones que compraste con el aporte.</div>'}</div><div style="margin-top:11px"><button class="btn" id="injadd">+ Agregar acción</button></div><div class="inj-foot"><div class="op-amt">Total a inyectar: <b>${injTotal>0?fmtCLP(injTotal):"—"}</b></div><button class="btn btn-pri" id="doinject">✓ Registrar compras del aporte</button></div><div class="note" style="margin-top:11px">Indica <b>acción, cantidad y precio</b> de cada compra; Investor calcula el monto por acción, suma el capital aportado y recalcula el valor de la cartera y el drift. El aporte <b>no</b> cuenta como rentabilidad.</div>`;
   const injCard=card("Inyectar capital nuevo","Registra las compras del aporte por acción, cantidad y precio — sin porcentajes objetivo.",injBody);
   return projbar+summary+opCard+injCard;
 }
@@ -2681,7 +2681,7 @@ function render(){
 }
 
 /* ===================================================================== */
-/* ============ INVERSOR 2.0 · MOTOR MULTIFACTOR + PRO ================== */
+/* ============ Investor · MOTOR MULTIFACTOR + PRO ================== */
 /* ===================================================================== */
 
 /* Dataset fundamental representativo/ilustrativo (NO auditado) para las 14
@@ -2961,7 +2961,7 @@ function viewRealtime(){
 }
 
 function viewCopilot(){
-  const hero=proHero("INVERSOR Pro · Roadmap","Copiloto de IA para invertir y analizar","Un agente que lee tu portafolio, explica tus métricas, compara escenarios y sugiere rebalanceos. Técnicamente es más fácil que los precios en vivo: la API de Claude es limpia y el patrón de tool use para leer tu JSON es directo. Y ya está integrado: actívalo con tu propia clave de Anthropic (modo BYOK — se guarda solo en tu navegador y llama directo a la API) usando el botón flotante ✨ de abajo a la derecha.",
+  const hero=proHero("Investor Pro · Roadmap","Copiloto de IA para invertir y analizar","Un agente que lee tu portafolio, explica tus métricas, compara escenarios y sugiere rebalanceos. Técnicamente es más fácil que los precios en vivo: la API de Claude es limpia y el patrón de tool use para leer tu JSON es directo. Y ya está integrado: actívalo con tu propia clave de Anthropic (modo BYOK — se guarda solo en tu navegador y llama directo a la API) usando el botón flotante ✨ de abajo a la derecha.",
     ku("Estado","✓ Disponible (BYOK)")+ku("Modelo base","Claude Opus 4.8")+ku("Costo / turno","~1–3 ¢")+ku("Backend","No requiere"));
   // chat mock
   const pf=(typeof PROJECTS!=="undefined"&&PROJECTS.length)?PROJECTS[0]:null;
@@ -3008,7 +3008,7 @@ function toggleTheme(){const d=document.documentElement,dark=d.getAttribute("dat
 (function bindTheme(){var b=document.getElementById("themebtn");if(b){b.onclick=toggleTheme;updateThemeBtn();}})();
 
 /* ===================================================================== */
-/* ============ INVERSOR COPILOT · agente IA (BYOK) ===================== */
+/* ============ Investor COPILOT · agente IA (BYOK) ===================== */
 /* ===================================================================== */
 let cpKey=lsGet("inv_anthropic_key")||"", cpModel=lsGet("inv_cp_model")||"claude-opus-4-8";
 let cpMsgs=[]; let cpBusy=false; let cpOpen=false; let cpToolNotes=[];
@@ -3813,7 +3813,7 @@ function cfgRender(){
   const prof=(invProfile&&invProfile.levels)?`<b>${invProfile.label}</b> · nivel ${invProfile.level}/5`:(invProfile?"Reevaluar (cuestionario actualizado)":"Sin evaluar");
   const keyOk=cpKey?'<span class="cfg-pill ok">Configurada</span>':'<span class="cfg-pill no">No configurada</span>';
   const ds=DATASET==="import"&&IMP?`Importado (${IMP.assets.length} acciones)`:"Demo · IPSA";
-  m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes generales de INVERSOR 2.0</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
+  m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes generales de Investor</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Perfil de inversionista</div><div class="cfg-row"><div class="cfg-k">${prof}<div class="cfg-sub">Personaliza el copiloto y el asistente</div></div><button class="btn btn-pri" id="cfgProf">${invProfile?"Ver / reevaluar":"Hacer evaluación"}</button></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Apariencia</div><div class="cfg-row"><div class="cfg-k">Tema</div><div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Escala de interfaz<div class="cfg-sub">Tamaño general, como el zoom del navegador</div></div><div class="cfg-seg">${[80,90,100,110].map(s=>'<button class="'+(Math.round(uiScale*100)===s?"on":"")+'" data-scale="'+s+'">'+s+'%</button>').join("")}</div></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Copiloto IA</div><div class="cfg-row"><div class="cfg-k">Clave de Anthropic ${keyOk}</div><button class="btn" id="cfgKey">${cpKey?"Gestionar":"Configurar"}</button></div><div class="cfg-row"><div class="cfg-k">Modelo</div><select id="cfgModel" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select></div></div>
@@ -3828,7 +3828,7 @@ function cfgRender(){
       <div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). Se descuentan en la Contabilidad y en el Administrador de clientes.</div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Datos</div><div class="cfg-row"><div class="cfg-k">Set de análisis activo<div class="cfg-sub">${ds}</div></div>${IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Importa en Análisis → Importar</span>'}</div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Respaldo de tu seguimiento<div class="cfg-sub">Exporta/restaura todo como archivo JSON</div></div><div style="display:flex;gap:7px"><button class="btn" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Fuente de petróleo (URL JSON)<div class="cfg-sub">Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.</div></div><input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="flex:1 1 230px;min-width:200px;padding:.45rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 11.5px var(--font);color:var(--ink)"></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Acceso</div><div class="cfg-row"><div class="cfg-k">${(AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña"}<div class="cfg-sub">Pantalla de inicio de sesión local en este navegador</div></div><div style="display:flex;gap:7px;flex-wrap:wrap">${(AUTH&&AUTH.enabled)?('<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'):'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>'}</div></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Pro · Roadmap<div class="cfg-sub">Precios en vivo, arquitectura y próximos pasos</div></div><button class="btn" id="cfgPro">Ver roadmap →</button></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">INVERSOR 2.0 · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
+    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Pro · Roadmap<div class="cfg-sub">Precios en vivo, arquitectura y próximos pasos</div></div><button class="btn" id="cfgPro">Ver roadmap →</button></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">Investor · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
     <input type="file" id="cfgRstFile" accept="application/json,.json" style="display:none">`;
   m.querySelector("#cfgX").onclick=cfgClose;
   m.querySelector("#cfgProf").onclick=()=>{profEdit=false;cfgGo("perfil","perfil");};
@@ -4254,7 +4254,7 @@ function genContabReport(){
   <h2>Resumen por proyecto</h2>
   <table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th></tr></thead><tbody>${projTable}</tbody></table>
   ${perProjBlocks}
-  <div class="foot">Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> (IVA incluido) se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación; el <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). El <b>resultado realizado por venta</b> es la base relevante para el mayor valor del ejercicio; su tratamiento tributario en Chile puede diferir (corrección monetaria, régimen, fechas de adquisición y eventual exención por presencia bursátil — art. 107 LIR). Consúltalo con tu contador. Documento de respaldo generado por INVERSOR 2.0.</div>
+  <div class="foot">Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> (IVA incluido) se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación; el <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). El <b>resultado realizado por venta</b> es la base relevante para el mayor valor del ejercicio; su tratamiento tributario en Chile puede diferir (corrección monetaria, régimen, fechas de adquisición y eventual exención por presencia bursátil — art. 107 LIR). Consúltalo con tu contador. Documento de respaldo generado por Investor.</div>
   <script>setTimeout(function(){window.print();},350);<\/script></body></html>`;
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
 }
@@ -4665,7 +4665,7 @@ function modalShell(id,inner,label){
   back.classList.add("open");return back;
 }
 function modalCloseId(id){const b=document.getElementById(id);if(b)b.classList.remove("open");}
-/* ===================== NUEVO/EDITAR CLIENTE (estilo INVERSOR) ===================== */
+/* ===================== NUEVO/EDITAR CLIENTE (estilo Investor) ===================== */
 let _clfState=null;
 function clientFormOpen(editId){
   const ed=editId?CLIENTS.find(c=>c.id===editId):null;
