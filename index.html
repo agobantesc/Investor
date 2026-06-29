@@ -3748,7 +3748,8 @@ function pricedbIngestProjects(){
   try{let n=0;(PROJECTS||[]).forEach(p=>{(p.weeks||[]).forEach(w=>{
     if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&PRICEDB.ipsa[w.date]==null){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}
     const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // el precio de una compra/venta es contabilidad, no un cierre
-    const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
+    const fresh=w.fresh;   // no copiar a la base los precios arrastrados (carry-forward); solo los cierres reales de ese día
+    const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
   });});if(n)savePriceDB();return n;}catch(e){return 0;}
 }
 /* población automática de la base (una vez por cliente): cierres de proyectos + universo demo */
@@ -4803,7 +4804,8 @@ function consolidatedSeries(){
     (p.weeks||[]).forEach(w=>{
       if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0)ipsaMap[w.date]=w.ipsa;
       const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // precio de la operación: es contabilidad, no un cierre → no mezclar en la serie de precios
-      const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
+      const fresh=w.fresh;   // si el cierre marcó qué tickers son REALES de ese día, ignora los arrastrados (carry-forward) para no generar retornos 0% espurios
+      const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
     });
   });
   return {tick,names,cols,ipsaMap};
@@ -4828,7 +4830,7 @@ function seguimientoStats(freq){
   //  adelanta UNA acción un día no esconde al resto que cerró el día anterior — fechas raggedas entre fuentes)
   let latestIdx=-Infinity;
   Object.keys(C.tick).forEach(t=>{Object.keys(C.tick[t]).forEach(d=>{const pi=periodIndex(d,freq);if(pi>latestIdx)latestIdx=pi;});});
-  const REC_GATE={diario:5,semanal:1,mensual:1}[freq]||1;   // diario: días; semanal/mensual: períodos
+  const REC_GATE={diario:5,semanal:0,mensual:0}[freq]||0;   // diario tolera días raggedos; semanal/mensual exige el período ACTUAL (sin "sin info" rezagado)
   const out=[];
   Object.keys(C.tick).forEach(t=>{
     const rs=resampleMap(C.tick[t],freq);if(rs.length<2)return;
@@ -4865,12 +4867,12 @@ function applyPlatformPrices(date,ipsa,priceMap){
       const ws=p.weeks||[];if(!ws.length)return;
       const last=ws[ws.length-1];
       if(new Date(date+"T00:00:00")<new Date(last.date+"T00:00:00")){nSkip++;return;}
-      const newPrices=Object.assign({},last.prices||{});let any=false;
-      (p.holdings||[]).forEach(hd=>{const v=priceMap[hd.t];if(v!=null&&isFinite(v)&&v>0){newPrices[hd.t]=v;any=true;}});
+      const newPrices=Object.assign({},last.prices||{});let any=false;const freshT=[];
+      (p.holdings||[]).forEach(hd=>{const v=priceMap[hd.t];if(v!=null&&isFinite(v)&&v>0){newPrices[hd.t]=v;any=true;freshT.push(hd.t);}});   // freshT = cierres REALES de hoy (no los arrastrados)
       if(!any)return;   // solo proyectos que tienen alguna de las acciones cargadas
       const ip=(ipsa!=null&&isFinite(ipsa)&&ipsa>0)?ipsa:(last.ipsa||0);
-      if(last.date===date){last.prices=newPrices;last.ipsa=ip;}   // mismo día: actualiza en sitio (evita fechas duplicadas, incluso si fue un día con operación)
-      else p.weeks.push({date,ipsa:ip,prices:newPrices});
+      if(last.date===date){last.prices=newPrices;last.ipsa=ip;last.fresh=[...new Set([...(last.fresh||[]),...freshT])];}   // mismo día: actualiza en sitio
+      else p.weeks.push({date,ipsa:ip,prices:newPrices,fresh:freshT});
       touched=true;nProj++;
     });
     if(touched){clientSaveProjects(c.id,projs);nCli++;}
