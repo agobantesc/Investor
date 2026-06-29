@@ -1658,31 +1658,61 @@ let PROJECTS=lsGet("pf_projects_v1")||[],activeId=lsGet("pf_active_v1")||null,ed
 const RECOVERED_PROJECT={"id":1749700000000,"name":"Inversión inicial","date":"01-06-2026","amount":2500000,"bp":1.04,"erCapm":11.72,"sig":13.4,"sharpe":0.9,"corrAvg":0.4,"freq":"diario","origSim":{"sel":{"FALABELLA":16.666666666666668,"SANTANDER":16.666666666666668,"BCI":16.666666666666668,"PARAUCO":16.666666666666668,"LATAM":16.666666666666668,"SQM-B":16.666666666666668},"amount":2500000},"holdings":[{"t":"FALABELLA","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SANTANDER","w":0.16666666666666666,"monto":416666.6666666667},{"t":"BCI","w":0.16666666666666666,"monto":416666.6666666667},{"t":"PARAUCO","w":0.16666666666666666,"monto":416666.6666666667},{"t":"LATAM","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SQM-B","w":0.16666666666666666,"monto":416666.6666666667}],"weeks":[{"date":"2026-06-01","prices":{"FALABELLA":5760,"SANTANDER":70.47,"BCI":59722,"PARAUCO":3787.6,"LATAM":23.07,"SQM-B":74600},"ipsa":8000,"qty":{"FALABELLA":71,"SANTANDER":5882,"BCI":6,"PARAUCO":109,"LATAM":17930,"SQM-B":5}},{"date":"2026-06-01","prices":{"FALABELLA":5725.5538,"SANTANDER":69.9827,"BCI":59209.8167,"PARAUCO":3752.7733,"LATAM":22.8483,"SQM-B":73635.2423},"ipsa":7996},{"date":"2026-06-02","prices":{"FALABELLA":5640.3141,"SANTANDER":68.8764,"BCI":58176.829,"PARAUCO":3685.0052,"LATAM":22.4263,"SQM-B":72032.1862},"ipsa":7878.4},{"date":"2026-06-03","prices":{"FALABELLA":5608.7831,"SANTANDER":68.4278,"BCI":57702.1603,"PARAUCO":3652.6679,"LATAM":22.2203,"SQM-B":71129.5678},"ipsa":7796},{"date":"2026-06-04","prices":{"FALABELLA":5579.3743,"SANTANDER":68.0063,"BCI":57252.1325,"PARAUCO":3621.9332,"LATAM":22.0241,"SQM-B":70263.2587},"ipsa":7753.6},{"date":"2026-06-05","prices":{"FALABELLA":5595.8647,"SANTANDER":68.1449,"BCI":57274.6115,"PARAUCO":3621.1138,"LATAM":22.01,"SQM-B":69980.0492},"ipsa":7730.4},{"date":"2026-06-08","prices":{"FALABELLA":5545.3901,"SANTANDER":67.4689,"BCI":56613.7331,"PARAUCO":3577.1212,"LATAM":21.7335,"SQM-B":68866.2254},"ipsa":7645.6},{"date":"2026-06-09","prices":{"FALABELLA":5781.1202,"SANTANDER":70.2735,"BCI":58871.1283,"PARAUCO":3717.4631,"LATAM":22.5768,"SQM-B":71294.5181},"ipsa":7904},{"date":"2026-06-10","prices":{"FALABELLA":5769.8091,"SANTANDER":70.0732,"BCI":58608.1946,"PARAUCO":3698.5856,"LATAM":22.4529,"SQM-B":70660.7566},"ipsa":7866.4},{"date":"2026-06-11","prices":{"FALABELLA":5970,"SANTANDER":72.44,"BCI":60490,"PARAUCO":3815,"LATAM":23.15,"SQM-B":72605},"ipsa":8082.4}]};
 (function(){try{if(!lsGet("pf_recovered_v1")&&(!PROJECTS||!PROJECTS.length)){const rp=JSON.parse(JSON.stringify(RECOVERED_PROJECT));rp.holdings=rp.holdings.map(hd=>{const s=stk(hd.t);return s?{t:hd.t,n:s.n,s:s.s,c:s.c,b:s.b,w:hd.w,monto:hd.monto}:hd;});PROJECTS=[rp];activeId=rp.id;lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);lsSet("pf_recovered_v1",1);}}catch(e){}})();
 (function(){try{var FLAG="pf_realclose_20260618";if(lsGet(FLAG))return;var WK=[{"date":"2026-06-01","prices":{"FALABELLA":5760,"SANTANDER":70.47,"BCI":59722,"PARAUCO":3787.6,"LATAM":23.07,"SQM-B":74600},"ipsa":10626.41,"qty":{"FALABELLA":71,"SANTANDER":5882,"BCI":6,"PARAUCO":109,"LATAM":17930,"SQM-B":5}},{"date":"2026-06-02","prices":{"FALABELLA":5565,"SANTANDER":69.01,"BCI":57050,"PARAUCO":3765,"LATAM":22.6,"SQM-B":71930},"ipsa":10469.18},{"date":"2026-06-03","prices":{"FALABELLA":5450,"SANTANDER":68.1,"BCI":58399,"PARAUCO":3729.9,"LATAM":22.29,"SQM-B":71000},"ipsa":10359.94},{"date":"2026-06-04","prices":{"FALABELLA":5574,"SANTANDER":68.11,"BCI":56508,"PARAUCO":3649.9,"LATAM":22.26,"SQM-B":69655},"ipsa":10304.04},{"date":"2026-06-05","prices":{"FALABELLA":5511,"SANTANDER":68.7,"BCI":56508,"PARAUCO":3699.9,"LATAM":22.12,"SQM-B":69340},"ipsa":10273.09},{"date":"2026-06-08","prices":{"FALABELLA":5580,"SANTANDER":68.5,"BCI":55610,"PARAUCO":3634.1,"LATAM":21.81,"SQM-B":66850},"ipsa":10160.61},{"date":"2026-06-09","prices":{"FALABELLA":5740,"SANTANDER":72.1,"BCI":59100,"PARAUCO":3729.9,"LATAM":22.61,"SQM-B":69065},"ipsa":10501.02},{"date":"2026-06-10","prices":{"FALABELLA":5854,"SANTANDER":71.7,"BCI":59007,"PARAUCO":3779.9,"LATAM":21.7,"SQM-B":68000},"ipsa":10453.45},{"date":"2026-06-11","prices":{"FALABELLA":5970,"SANTANDER":72.44,"BCI":60490,"PARAUCO":3815,"LATAM":23.15,"SQM-B":72605},"ipsa":10740.7},{"date":"2026-06-12","prices":{"FALABELLA":5950,"SANTANDER":73.6,"BCI":61299,"PARAUCO":3775.2,"LATAM":23.94,"SQM-B":75500},"ipsa":10921.15},{"date":"2026-06-15","prices":{"FALABELLA":5970,"SANTANDER":73.99,"BCI":59800,"PARAUCO":3703.4,"LATAM":24.6,"SQM-B":74150},"ipsa":10878.98},{"date":"2026-06-16","prices":{"FALABELLA":6094,"SANTANDER":74,"BCI":60060,"PARAUCO":3840,"LATAM":24.49,"SQM-B":73899},"ipsa":10903.59},{"date":"2026-06-17","prices":{"FALABELLA":6052,"SANTANDER":72.71,"BCI":58600,"PARAUCO":3800,"LATAM":24.28,"SQM-B":74050},"ipsa":10805.99},{"date":"2026-06-18","prices":{"FALABELLA":6099,"SANTANDER":73.7,"BCI":59000,"PARAUCO":3816.5,"LATAM":25.12,"SQM-B":71950},"ipsa":10836.99}];var ps=PROJECTS||[];var tgt=ps.find(function(p){return p&&p.name==="Inversión inicial";})||ps[0];if(tgt){tgt.weeks=WK;tgt.freq=tgt.freq||"diario";lsSet("pf_projects_v1",PROJECTS);if(activeId==null){activeId=tgt.id;lsSet("pf_active_v1",activeId);}}lsSet(FLAG,1);}catch(e){}})();
-function exportBackup(){try{
+/* arma el objeto de respaldo (todos los clientes y sus datos) sin descargarlo */
+function backupPayload(){
   const clients={};(CLIENTS||[]).forEach(c=>{const o={};Object.keys(CLIENT_KEYS).forEach(k=>{const raw=localStorage.getItem(k+"__"+c.id);o[k]=raw!=null?JSON.parse(raw):null;});clients[c.id]=o;});
-  const data={_app:"portfolio-dashboard",_v:2,_date:new Date().toISOString(),
+  return {_app:"portfolio-dashboard",_v:2,_date:new Date().toISOString(),
     clients_registry:JSON.parse(localStorage.getItem("inv_clients_v1")||"null"),
     active_client:localStorage.getItem("inv_active_client"),
     broker:JSON.parse(localStorage.getItem("inv_broker_v1")||"null"),
     ui_scale:localStorage.getItem("inv_ui_scale"),
     clients};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="respaldo_investor_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}}
+}
+function downloadBackup(data,fname){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=fname||("respaldo_investor_"+new Date().toISOString().slice(0,10)+".json");document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
+function exportBackup(){try{downloadBackup(backupPayload());}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}}
+/* restaura desde un payload _v>=2 (archivo o copia interna). Devuelve true si quedó aplicado. */
+function restoreFromPayload(j){try{
+  if(!j||!j.clients)return false;
+  if(j.clients_registry)localStorage.setItem("inv_clients_v1",JSON.stringify(j.clients_registry));
+  if(j.active_client)localStorage.setItem("inv_active_client",j.active_client);
+  if(j.broker)localStorage.setItem("inv_broker_v1",JSON.stringify(j.broker));else localStorage.removeItem("inv_broker_v1");
+  if(j.ui_scale!=null)localStorage.setItem("inv_ui_scale",j.ui_scale);
+  Object.keys(j.clients).forEach(id=>{const o=j.clients[id]||{};Object.keys(CLIENT_KEYS).forEach(k=>{const v=o[k];if(v==null)localStorage.removeItem(k+"__"+id);else localStorage.setItem(k+"__"+id,JSON.stringify(v));});});
+  CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1"))||CLIENTS;}catch(e){return CLIENTS;}})();
+  activeClient=localStorage.getItem("inv_active_client")||((CLIENTS[0]||{}).id)||"c_me";
+  try{BROKER=JSON.parse(localStorage.getItem("inv_broker_v1"))||BROKER;}catch(e){}
+  if(typeof clientLoad==="function")clientLoad();else syncProj();
+  return true;
+}catch(e){return false;}}
+/* ===== AUTO-RESPALDO PERIÓDICO ===== copia interna (red de seguridad ante borrados) + descarga periódica fuera del navegador */
+let AUTOBK=lsGet("inv_autobk_v1")||{on:true,days:7,lastDL:null};
+function autobkSave(){lsSet("inv_autobk_v1",AUTOBK);}
+function autobkDaysSince(iso){if(!iso)return 1e9;const t=new Date(iso).getTime();return isFinite(t)?(Date.now()-t)/864e5:1e9;}
+function autobkSnapshot(reason){try{const p=backupPayload();localStorage.setItem("inv_autobk_snap",JSON.stringify({date:p._date,reason:reason||"periódico",data:p}));return true;}catch(e){return false;}}
+function autobkSnapInfo(){try{const s=JSON.parse(localStorage.getItem("inv_autobk_snap")||"null");return s?{date:s.date,reason:s.reason}:null;}catch(e){return null;}}
+function autobkRestore(){let s;try{s=JSON.parse(localStorage.getItem("inv_autobk_snap")||"null");}catch(e){}
+  if(!s||!s.data){window.alert("Aún no hay una copia interna disponible.");return;}
+  const when=(""+(s.date||"")).slice(0,16).replace("T"," ");
+  if(!window.confirm("Restaurar la copia interna automática del "+when+" reemplazará los datos actuales de TODOS los clientes.\n\n(Es la red de seguridad ante borrados accidentales dentro de la app.)\n\n¿Continuar?"))return;
+  if(restoreFromPayload(s.data)){window.alert("Copia interna restaurada ("+when+").");render();}else{window.alert("No se pudo restaurar la copia interna.");}}
+function autobkTick(){try{
+  // 1) copia interna si la última tiene más de 1 día (no toca el archivo descargado)
+  const info=autobkSnapInfo();if(!info||autobkDaysSince(info.date)>=1)autobkSnapshot("periódico");
+  // 2) descarga periódica fuera del navegador (única protección real ante borrar el navegador / cambiar de equipo)
+  if(AUTOBK.on&&autobkDaysSince(AUTOBK.lastDL)>=(AUTOBK.days||7)){
+    const d=Math.floor(autobkDaysSince(AUTOBK.lastDL));
+    const msg=AUTOBK.lastDL?("🛡️ Respaldo automático de Investor\n\nHan pasado "+d+" día(s) desde tu última descarga de respaldo.\n¿Descargar ahora tu copia de seguridad como archivo en tu equipo?"):("🛡️ Respaldo automático de Investor\n\nTus datos viven solo en este navegador. Para no perderlos si se borra el caché o cambias de equipo, conviene guardar una copia como archivo.\n\n¿Descargar ahora tu primer respaldo?");
+    if(window.confirm(msg)){try{downloadBackup(backupPayload());}catch(e){}}
+    AUTOBK.lastDL=new Date().toISOString();autobkSave();   // se aceptó o se pospuso: en ambos casos no insistir hasta el próximo intervalo
+  }
+}catch(e){}}
 function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{
   const j=JSON.parse(ev.target.result);
   if(j&&j._v>=2&&j.clients){
     const n=Object.keys(j.clients).length;
     if(!window.confirm("Restaurar reemplazará TODOS tus clientes y sus datos (carteras, perfiles, importaciones, operador) por los del respaldo: "+n+" cliente(s). ¿Continuar?"))return;
-    try{if(j.clients_registry)localStorage.setItem("inv_clients_v1",JSON.stringify(j.clients_registry));
-      if(j.active_client)localStorage.setItem("inv_active_client",j.active_client);
-      if(j.broker)localStorage.setItem("inv_broker_v1",JSON.stringify(j.broker));else localStorage.removeItem("inv_broker_v1");
-      if(j.ui_scale!=null)localStorage.setItem("inv_ui_scale",j.ui_scale);
-      Object.keys(j.clients).forEach(id=>{const o=j.clients[id]||{};Object.keys(CLIENT_KEYS).forEach(k=>{const v=o[k];if(v==null)localStorage.removeItem(k+"__"+id);else localStorage.setItem(k+"__"+id,JSON.stringify(v));});});
-    }catch(e){saveWarn();return;}
-    CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1"))||CLIENTS;}catch(e){return CLIENTS;}})();
-    activeClient=localStorage.getItem("inv_active_client")||((CLIENTS[0]||{}).id)||"c_me";
-    try{BROKER=JSON.parse(localStorage.getItem("inv_broker_v1"))||BROKER;}catch(e){}
-    if(typeof clientLoad==="function")clientLoad();else syncProj();
+    try{autobkSnapshot("antes de restaurar");}catch(e){}
+    if(!restoreFromPayload(j)){saveWarn();return;}
     window.alert("Respaldo restaurado: "+n+" cliente(s).");render();return;
   }
   const d=j.data||j;if(!d.pf_projects_v1||!Array.isArray(d.pf_projects_v1)){alert("El archivo no parece un respaldo válido.");return;}
@@ -3726,6 +3756,7 @@ function datosTk(r){return `<b style="color:${r.c||"#1E5FD1"}">${r.t}</b> <span 
 function systemClean(){
   let kept=0;
   try{
+    try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de limpiar sistema");}catch(e){}
     // 1) base de precios: vaciar (mantener flag seeded para que el demo no se re-siembre solo)
     //    y re-ingerir SOLO los cierres de tus carteras, para que la base siga reflejándolas
     PRICEDB={tickers:{},px:{},ipsa:{},idx:{},seeded:true};savePriceDB();
@@ -3764,8 +3795,19 @@ function datosBase(){
     <button class="btn" data-dgo="cargar">+ Cargar planilla</button>
     <button class="btn" data-dgo="cierre">Cierre diario</button>
     <span class="datos-freq"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span></div>`;
+  const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
+  const bkLast=(AUTOBK&&AUTOBK.lastDL)?(""+AUTOBK.lastDL).slice(0,10):"nunca";
+  const bkSnap=bkInfo?((""+bkInfo.date).slice(0,16).replace("T"," ")):"—";
+  const daysOpts=[7,14,30].map(d=>`<option value="${d}" ${(AUTOBK&&AUTOBK.days===d)?"selected":""}>cada ${d} días</option>`).join("");
+  const backup=`<div class="datos-bk" style="display:flex;gap:11px 14px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">
+    <span class="genl" style="margin:0;font-weight:600">🛡️ Respaldo automático</span>
+    <label style="display:inline-flex;gap:6px;align-items:center;font-size:12px;cursor:pointer"><input type="checkbox" data-bkon ${(AUTOBK&&AUTOBK.on)?"checked":""}> activado</label>
+    <select data-bkdays class="genl" style="margin:0;padding:3px 6px">${daysOpts}</select>
+    <button class="btn" data-bknow>⬇ Descargar respaldo ahora</button>
+    <button class="btn" data-bkrestore>↩ Restaurar copia interna</button>
+    <span class="genl" style="margin:0">última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b></span></div>`;
   const danger=`<div class="datos-clean" style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)"><button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema para nueva carga</button><span class="genl" style="margin:0">Vacía base, análisis, simulaciones y escenarios · <b>conserva</b> tus carteras (compra + cierres diarios)</span></div>`;
-  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+danger);
+  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+backup+danger);
   const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
   return intro+tbl;
 }
@@ -3799,6 +3841,10 @@ function attachDatos(){
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
   const da=document.querySelector("[data-dactivate]");if(da)da.onclick=()=>{if(pricedbActivateAnalysis(pricedbFreq))window.alert("Listo. El análisis y las simulaciones ahora usan tu base de precios ("+pricedbFreq+").");};
   const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();render();window.alert("Seguimientos actualizados con la base.\n\n"+r.nPts+" punto(s) agregados/actualizados en "+r.nProj+" cartera(s).");};
+  const bkon=document.querySelector("[data-bkon]");if(bkon)bkon.onchange=()=>{AUTOBK.on=bkon.checked;autobkSave();};
+  const bkd=document.querySelector("[data-bkdays]");if(bkd)bkd.onchange=()=>{AUTOBK.days=+bkd.value||7;autobkSave();};
+  const bknow=document.querySelector("[data-bknow]");if(bknow)bknow.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");render();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
+  const bkr=document.querySelector("[data-bkrestore]");if(bkr)bkr.onclick=()=>autobkRestore();
   const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
     if(!confirm('Limpiar el sistema para una nueva carga.\n\n✓ SE CONSERVAN intactas tus carteras: la compra inicial y todos los cierres diarios.\n\n✕ SE ELIMINAN (los puedes recrear tras cargar los datos):\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
     const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto vaciará la base de precios, los análisis, las simulaciones y los escenarios. Tus carteras (compra + cierres) se conservan.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
@@ -3807,6 +3853,7 @@ function attachDatos(){
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
     if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
     if(!confirm('⚠ Doble chequeo de seguridad\n\nVas a ELIMINAR definitivamente '+t+' ('+np+' precio[s]) de la base. Esta acción no se puede deshacer.\n\n¿Eliminar '+t+'?'))return;
+    try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de quitar "+t);}catch(e){}
     pricedbDeleteTicker(t);render();});
   const fi=document.getElementById("dFile"),pick=document.querySelector("[data-dpick]");
   if(pick&&fi){pick.onclick=e=>{if(e.target!==fi)fi.click();};fi.onchange=()=>{if(fi.files&&fi.files.length)impOnFiles(fi.files);};
@@ -4640,6 +4687,7 @@ function clientDelete(id){
   const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nVas a eliminar definitivamente a "'+c.name+'" y todos sus datos. Para confirmar, escribe su nombre exacto:');
   if(typed==null)return;
   if(typed.trim()!==(c.name||"").trim()){window.alert("El nombre no coincide. No se eliminó nada.");return;}
+  try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de eliminar cliente");}catch(e){}
   Object.keys(CLIENT_KEYS).forEach(k=>{try{localStorage.removeItem(k+"__"+id);}catch(e){}});
   CLIENTS=CLIENTS.filter(x=>x.id!==id);saveClients();
   if(activeClient===id){activeClient=CLIENTS[0].id;try{localStorage.setItem("inv_active_client",activeClient);}catch(e){}clientLoad();}
@@ -5068,6 +5116,7 @@ function removeExampleClients(){try{
 try{removeExampleClients();}catch(e){}
 try{pricedbAutoSeed();}catch(e){}
 render();
+try{autobkTick();}catch(e){}
 authInit();
 </script>
 </body>
