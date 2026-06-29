@@ -3799,8 +3799,15 @@ function attachDatos(){
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
   const da=document.querySelector("[data-dactivate]");if(da)da.onclick=()=>{if(pricedbActivateAnalysis(pricedbFreq))window.alert("Listo. El análisis y las simulaciones ahora usan tu base de precios ("+pricedbFreq+").");};
   const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();render();window.alert("Seguimientos actualizados con la base.\n\n"+r.nPts+" punto(s) agregados/actualizados en "+r.nProj+" cartera(s).");};
-  const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{if(confirm('Limpiar el sistema para una nueva carga.\n\n✓ SE CONSERVAN intactas tus carteras: la compra inicial y todos los cierres diarios.\n\n✕ SE ELIMINAN (los puedes recrear tras cargar los datos):\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?')){const k=systemClean();page="base";render();window.alert("Sistema limpio. Se conservaron "+k+" cartera(s) con sus compras y cierres.\n\nLa base quedó lista para tu carga masiva (los cierres de tus carteras ya están incorporados).");}};
-  document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{if(confirm('¿Quitar '+b.dataset.ddel+' de la base de precios? (no afecta tus carteras ya registradas)')){pricedbDeleteTicker(b.dataset.ddel);render();}});
+  const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
+    if(!confirm('Limpiar el sistema para una nueva carga.\n\n✓ SE CONSERVAN intactas tus carteras: la compra inicial y todos los cierres diarios.\n\n✕ SE ELIMINAN (los puedes recrear tras cargar los datos):\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
+    const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto vaciará la base de precios, los análisis, las simulaciones y los escenarios. Tus carteras (compra + cierres) se conservan.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
+    if(typed==null||typed.trim().toUpperCase()!=="LIMPIAR"){window.alert("Cancelado. No se eliminó nada.");return;}
+    const k=systemClean();page="base";render();window.alert("Sistema limpio. Se conservaron "+k+" cartera(s) con sus compras y cierres.\n\nLa base quedó lista para tu carga masiva (los cierres de tus carteras ya están incorporados).");};
+  document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
+    if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
+    if(!confirm('⚠ Doble chequeo de seguridad\n\nVas a ELIMINAR definitivamente '+t+' ('+np+' precio[s]) de la base. Esta acción no se puede deshacer.\n\n¿Eliminar '+t+'?'))return;
+    pricedbDeleteTicker(t);render();});
   const fi=document.getElementById("dFile"),pick=document.querySelector("[data-dpick]");
   if(pick&&fi){pick.onclick=e=>{if(e.target!==fi)fi.click();};fi.onchange=()=>{if(fi.files&&fi.files.length)impOnFiles(fi.files);};
     const dz=document.getElementById("dDrop");if(dz){dz.ondragover=e=>{e.preventDefault();dz.classList.add("over");};dz.ondragleave=()=>dz.classList.remove("over");dz.ondrop=e=>{e.preventDefault();dz.classList.remove("over");if(e.dataTransfer.files.length)impOnFiles(e.dataTransfer.files);};}}
@@ -4630,6 +4637,9 @@ function clientDelete(id){
   if(CLIENTS.length<=1){window.alert("Debe quedar al menos un cliente.");return;}
   const c=CLIENTS.find(x=>x.id===id);if(!c)return;
   if(!window.confirm('¿Eliminar al cliente "'+c.name+'" y TODOS sus datos (proyectos, análisis, simulaciones, perfil)? No se puede deshacer.'))return;
+  const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nVas a eliminar definitivamente a "'+c.name+'" y todos sus datos. Para confirmar, escribe su nombre exacto:');
+  if(typed==null)return;
+  if(typed.trim()!==(c.name||"").trim()){window.alert("El nombre no coincide. No se eliminó nada.");return;}
   Object.keys(CLIENT_KEYS).forEach(k=>{try{localStorage.removeItem(k+"__"+id);}catch(e){}});
   CLIENTS=CLIENTS.filter(x=>x.id!==id);saveClients();
   if(activeClient===id){activeClient=CLIENTS[0].id;try{localStorage.setItem("inv_active_client",activeClient);}catch(e){}clientLoad();}
