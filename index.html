@@ -535,13 +535,13 @@
 
 
   /* ════════════════ COPILOTO IA (BYOK) ════════════════ */
-  .cp-fab{position:fixed;right:22px;bottom:22px;z-index:300;display:flex;align-items:center;gap:10px;
-    padding:.7rem .95rem .7rem .8rem;border-radius:var(--r-pill);border:none;cursor:pointer;color:#fff;
-    background:linear-gradient(135deg,#1E5FD1,#22D3EE);box-shadow:0 8px 26px rgba(30,95,209,.42),inset 0 1px 0 rgba(255,255,255,.25);
-    font:800 13px var(--font);transition:transform .16s var(--ease),box-shadow .16s;}
-  .cp-fab:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(30,95,209,.5);}
+  .cp-fab{position:fixed;right:16px;bottom:16px;z-index:300;display:flex;align-items:center;gap:7px;
+    padding:.42rem .68rem .42rem .5rem;border-radius:var(--r-pill);border:none;cursor:pointer;color:#fff;opacity:.92;
+    background:linear-gradient(135deg,#1E5FD1,#22D3EE);box-shadow:0 6px 18px rgba(30,95,209,.34),inset 0 1px 0 rgba(255,255,255,.25);
+    font:800 11.5px var(--font);transition:transform .16s var(--ease),box-shadow .16s,opacity .16s;}
+  .cp-fab:hover{transform:translateY(-2px);opacity:1;box-shadow:0 12px 30px rgba(30,95,209,.48);}
   .cp-fab:active{transform:translateY(0);}
-  .cp-fab .spark{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;position:relative;}
+  .cp-fab .spark{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;position:relative;}
   .cp-fab .spark::after{content:"";position:absolute;inset:-4px;border-radius:50%;background:#22D3EE;opacity:.35;animation:livePulse 2.2s var(--ease-out) infinite;}
   .cp-fab.hide{display:none;}
 
@@ -1767,6 +1767,14 @@ function pMetrics(sel){
   const corrAvg=cc>0?cs/cc:0;
   return {ws,bp,erCapm,erM,erW,retH,sig,wavgSig,sharpe,corrI,corrAvg};
 }
+/* ejecuta fn con el universo CANÓNICO del IPSA (DATA: 14 acciones con β, retornos y matriz de correlación),
+   independiente del análisis activo. Lo usa la inversión libre: puedes invertir en cualquier acción del IPSA
+   sin importar qué análisis esté seleccionado. Restaura los globales al terminar. */
+function withCanonicalUniverse(fn){
+  const sv={STOCKS,MKT,CORR,TICK,RF,PRIMA};
+  try{STOCKS=DATA.stocks;MKT=DATA.market;CORR=DATA.corr;TICK=DATA.tickers;RF=DATA.rf;PRIMA=DATA.prima;return fn();}
+  finally{STOCKS=sv.STOCKS;MKT=sv.MKT;CORR=sv.CORR;TICK=sv.TICK;RF=sv.RF;PRIMA=sv.PRIMA;}
+}
 function saveScenario(){
   const M=simMetrics();
   if(!M.ws.length){window.alert("Selecciona al menos una acción para guardar el escenario.");return;}
@@ -2187,8 +2195,8 @@ function genPDF(){
 
 // ===== INVERSIÓN (bloqueado) =====
 function applyScenario(id){const sc=SCEN.find(s=>s.id===id);if(!sc)return;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;applyInvestment(sc.name);}
-function applyInvestment(defName,skipPrompt){
-  const M=simMetrics();
+function applyInvestment(defName,skipPrompt,canonical){
+  const M=canonical?withCanonicalUniverse(simMetrics):simMetrics();
   if(!M.ws.length){alert("Selecciona acciones y define sus pesos antes de aplicar la inversión.");return;}
   if(!simState.amount||simState.amount<=0){alert("Ingresa el monto a invertir.");return;}
   let nm;
@@ -2322,10 +2330,10 @@ function invDetailCard(){
 }
 /* formulario de inversión directa: elige acciones + monto y crea el proyecto (sin construir en Simulación) */
 function invNewForm(){
-  const S=invNew,stks=(STOCKS||[]);
+  const S=invNew,stks=(DATA.stocks||[]);   // universo LIBRE: todas las acciones del IPSA, sin importar el análisis activo
   const nsel=Object.keys(S.sel).filter(t=>S.sel[t]).length;
   const chips=stks.map(s=>`<button class="ca-chip ${S.sel[s.t]?"on":""}" data-invtk="${s.t}"><span class="rk-dot" style="background:${s.c}"></span>${s.t}</button>`).join("");
-  return card("Realizar nueva inversión","Elige las acciones y el monto · se reparte en partes iguales y luego registras la compra real (precios y cantidades).",
+  return card("Realizar nueva inversión","Elige libremente las acciones del IPSA y el monto (independiente del análisis activo) · se reparte en partes iguales y luego registras la compra real (precios y cantidades).",
     `<div class="ca-form">
       <label class="ca-f"><span>Nombre de la inversión</span><input id="invNewName" type="text" maxlength="44" value="${(""+(S.name||"")).replace(/"/g,"&quot;")}" placeholder="ej. Cartera junio 2026"></label>
       <label class="ca-f ca-f-n"><span>Monto a invertir (CLP)</span><input id="invNewAmt" type="number" min="0" step="any" value="${S.amount||""}" placeholder="ej. 2000000"></label>
@@ -2683,7 +2691,7 @@ function attachInv(){
   const _igs=document.getElementById("invGoSim");if(_igs)_igs.onclick=()=>{modulo="sim";page="constructor";render();};
   const invGrab=()=>{if(!invNew)return;const n=document.getElementById("invNewName");if(n)invNew.name=n.value;const a=document.getElementById("invNewAmt");if(a)invNew.amount=parseFloat(a.value)||0;};
   document.querySelectorAll("[data-invtk]").forEach(b=>b.onclick=()=>{invGrab();invNew.sel[b.dataset.invtk]=!invNew.sel[b.dataset.invtk];render();});
-  const _iva=document.querySelector("[data-invall]");if(_iva)_iva.onclick=()=>{invGrab();(STOCKS||[]).forEach(s=>invNew.sel[s.t]=true);render();};
+  const _iva=document.querySelector("[data-invall]");if(_iva)_iva.onclick=()=>{invGrab();(DATA.stocks||[]).forEach(s=>invNew.sel[s.t]=true);render();};
   const _ivn=document.querySelector("[data-invnone]");if(_ivn)_ivn.onclick=()=>{invGrab();invNew.sel={};render();};
   const _ivc=document.getElementById("invNewCancel");if(_ivc)_ivc.onclick=()=>{invNew=null;render();};
   const _ivcr=document.getElementById("invNewCreate");if(_ivcr)_ivcr.onclick=()=>{invGrab();
@@ -2692,7 +2700,7 @@ function attachInv(){
     if(!(invNew.amount>0)){window.alert("Ingresa el monto a invertir.");return;}
     simState.sel={};tickers.forEach(t=>simState.sel[t]=+(100/tickers.length).toFixed(4));simState.amount=invNew.amount;
     const name=(""+(invNew.name||"")).trim()||("Inversión "+((PROJECTS||[]).length+1));
-    invNew=null;applyInvestment(name,true);};
+    invNew=null;applyInvestment(name,true,true);};   // canonical=true: métricas contra el universo IPSA completo
   document.querySelectorAll("[data-projsel]").forEach(b=>b.onclick=()=>{activeId=+b.dataset.projsel;editIdx=null;saveProjects();render();});
   const ce=document.getElementById("canceledit");if(ce)ce.onclick=()=>{editIdx=null;render();};
   attachMultiHover("invval");attachMultiHover("invevo");attachMultiHover("invstk");attachMultiHover("invcapm");
@@ -3752,6 +3760,27 @@ function dropDateData(date){if(!date)return {nBase:0,nProj:0};let nBase=0,nProj=
     if(keep.length!==ws.length){p.weeks=keep;touched=true;}});if(touched)clientSaveProjects(c.id,projs);});
   syncProj();return {nBase,nProj};
 }
+/* SANEAMIENTO de la base — asegura fidelidad según las reglas del sistema:
+   1) elimina días no hábiles (la bolsa IPSA opera lun–vie; un cierre en sáb/dom es inválido)
+   2) elimina ARRASTRES finales (carry-forward): puntos al final de una serie cuyo valor repite EXACTO al anterior.
+      Un cierre real no repite idéntico al decimal — es un precio copiado, no un cierre nuevo — y ensucia el
+      "último dato disponible" (REGLA 2) y los retornos del último período. Solo se tocan los puntos del FINAL.
+   Idempotente. Devuelve {nWk, nCF, ipsaTo}. */
+function pricedbSanitize(){
+  let nWk=0,nCF=0;
+  const stripCF=(map)=>{if(!map)return;const ds=Object.keys(map).sort();let i=ds.length-1;while(i>=1&&map[ds[i]]===map[ds[i-1]]){delete map[ds[i]];nCF++;i--;}};
+  // 1) fin de semana / días no hábiles
+  Object.keys(PRICEDB.ipsa||{}).forEach(d=>{if(!isTradingDay(d)){delete PRICEDB.ipsa[d];nWk++;}});
+  Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>{if(!isTradingDay(d)){delete PRICEDB.px[t][d];nWk++;}}));
+  const ix=PRICEDB.idx||{};Object.keys(ix).forEach(k=>Object.keys(ix[k]).forEach(d=>{if(!isTradingDay(d)){delete ix[k][d];nWk++;}}));
+  // 2) arrastres finales en cada serie
+  stripCF(PRICEDB.ipsa);
+  Object.keys(PRICEDB.px||{}).forEach(t=>stripCF(PRICEDB.px[t]));
+  Object.keys(ix).forEach(k=>stripCF(ix[k]));
+  if(nWk||nCF)savePriceDB();
+  const id=Object.keys(PRICEDB.ipsa||{}).sort();
+  return {nWk,nCF,ipsaTo:id.length?id[id.length-1]:null};
+}
 function pricedbTickers(){return Object.keys(PRICEDB.px||{});}
 function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s[d]=1);Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>s[d]=1));return Object.keys(s).sort();}
 /* último valor ≤ D en un mapa fecha→valor (sus claves ya ordenadas) */
@@ -3804,7 +3833,7 @@ function pricedbSeedDemo(){
 /* guarda en la base los CIERRES de los proyectos (no las operaciones); idempotente, no pisa lo existente */
 function pricedbIngestProjects(){
   try{let n=0;(PROJECTS||[]).forEach(p=>{(p.weeks||[]).forEach(w=>{
-    if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&PRICEDB.ipsa[w.date]==null){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}
+    if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false&&PRICEDB.ipsa[w.date]==null){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}   // no ingiere IPSA arrastrado a la base
     const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // el precio de una compra/venta es contabilidad, no un cierre
     const fresh=w.fresh;   // no copiar a la base los precios arrastrados (carry-forward); solo los cierres reales de ese día
     const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
@@ -3959,9 +3988,10 @@ function datosBase(){
     <span class="genl" style="margin:0">última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b></span></div>`;
   const lastDate=(function(){const ds=pricedbAllDates();return ds.length?ds[ds.length-1]:lastTradingDay();})();
   const danger=`<div class="datos-clean" style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">
+    <button class="btn" data-dfix>🔧 Reparar base</button>
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:3px 6px"><button class="btn" data-ddaydel>Quitar este día</button></span>
     <button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema</button>
-    <span class="genl" style="margin:0;flex-basis:100%">Quitar un día puntual · Limpiar deja solo la <b>compra inicial</b> de cada cartera y vacía la base/análisis/escenarios (cargas planillas y se reconstruye todo)</span></div>`;
+    <span class="genl" style="margin:0;flex-basis:100%"><b>Reparar</b> quita fines de semana y arrastres (precios copiados sin cierre real) · <b>Quitar un día</b> elimina una fecha puntual · <b>Limpiar</b> deja solo la <b>compra inicial</b> de cada cartera y vacía la base/análisis/escenarios. El último dato de la base es <b>${lastDate}</b>.</span></div>`;
   const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+backup+danger);
   const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
   return intro+tbl;
@@ -4000,6 +4030,7 @@ function attachDatos(){
   const bknow=document.querySelector("[data-bknow]");if(bknow)bknow.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");render();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
   const bkr=document.querySelector("[data-bkrestore]");if(bkr)bkr.onclick=()=>autobkRestore();
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
+  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF)?("Base reparada.\n\n• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia: sin fines de semana ni arrastres. Último dato: "+(r.ipsaTo||"—")+"."));};
   const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
     if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
     const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera la compra inicial y sus operaciones, y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
@@ -4282,11 +4313,11 @@ function mindFmt(v,dec,unit){
 function mindChange(k){const s=MINDH[k];if(!s||s.length<2)return null;const a=s[0],b=s[s.length-1];if(!a)return null;return (b/a-1)*100;}
 function mindDate(f){if(!f)return "";const d=(""+f).slice(0,10).split("-");return d.length===3?(d[2]+"-"+d[1]+"-"+d[0]):f;}
 function mindAgo(){if(!mindTs)return "";const ms=Date.now()-new Date(mindTs).getTime();const m=Math.round(ms/60000);if(m<1)return "recién";if(m<60)return "hace "+m+" min";const h=Math.round(m/60);if(h<24)return "hace "+h+" h";return "hace "+Math.round(h/24)+" d";}
-function mindSparkSVG(series){
+function mindSparkSVG(series,colOverride){
   if(!series||series.length<2)return "";
   const w=104,h=26,n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;
   const pts=series.map((v,i)=>[(i/(n-1))*w,h-2-((v-mn)/rg)*(h-4)]);
-  const up=series[n-1]>=series[0],col=up?"var(--green)":"var(--red)";
+  const up=series[n-1]>=series[0],col=colOverride||(up?"var(--green)":"var(--red)");   // colOverride: alinea el color de la curva con el signo del retorno mostrado
   const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");
   const gid="sp"+Math.abs((series[0]*1000|0)+series.length);
   return `<svg class="mkt-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".22"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
@@ -4839,6 +4870,7 @@ function clientLoad(){
   try{ if(IMP&&lsGet("inv_dataset_active")==="import"){setActive(impToActive());DATASET="import";} else {setActive(DEMO);DATASET="demo";} }
   catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
   try{pricedbAutoSeed();}catch(e){}   // base poblada (demo + cierres) una vez por cliente
+  try{pricedbSanitize();}catch(e){}   // auto-saneo en cada carga: sin fines de semana ni arrastres (fidelidad de la base)
   try{analysisMigrateDatos();}catch(e){}
   syncProj();
   simState.sel={};if(invProfile)simState.profile=invProfile.profile;
@@ -4917,7 +4949,7 @@ function consolidatedSeries(){
   allTrackedProjects().forEach(({p})=>{
     (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||names[hd.t]||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
     (p.weeks||[]).forEach(w=>{
-      if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0)ipsaMap[w.date]=w.ipsa;
+      if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false)ipsaMap[w.date]=w.ipsa;   // no superpone IPSA arrastrado (cierre sin valor real del índice)
       const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // precio de la operación: es contabilidad, no un cierre → no mezclar en la serie de precios
       const fresh=w.fresh;   // si el cierre marcó qué tickers son REALES de ese día, ignora los arrastrados (carry-forward) para no generar retornos 0% espurios
       const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
@@ -4976,9 +5008,10 @@ function applyPlatformPrices(date,ipsa,priceMap){
       const newPrices=Object.assign({},last.prices||{});let any=false;const freshT=[];
       (p.holdings||[]).forEach(hd=>{const v=priceMap[hd.t];if(v!=null&&isFinite(v)&&v>0){newPrices[hd.t]=v;any=true;freshT.push(hd.t);}});   // freshT = cierres REALES de hoy (no los arrastrados)
       if(!any)return;   // solo proyectos que tienen alguna de las acciones cargadas
-      const ip=(ipsa!=null&&isFinite(ipsa)&&ipsa>0)?ipsa:(last.ipsa||0);
-      if(last.date===date){last.prices=newPrices;last.ipsa=ip;last.fresh=[...new Set([...(last.fresh||[]),...freshT])];}   // mismo día: actualiza en sitio
-      else p.weeks.push({date,ipsa:ip,prices:newPrices,fresh:freshT});
+      const ipsaFresh=(ipsa!=null&&isFinite(ipsa)&&ipsa>0);   // ¿el IPSA es un cierre REAL de hoy? (si no, se arrastra el anterior y NO debe contaminar la serie del índice)
+      const ip=ipsaFresh?ipsa:(last.ipsa||0);
+      if(last.date===date){last.prices=newPrices;last.ipsa=ip;last.fresh=[...new Set([...(last.fresh||[]),...freshT])];if(ipsaFresh)last.ipsaFresh=true;}   // mismo día: actualiza en sitio
+      else p.weeks.push({date,ipsa:ip,prices:newPrices,fresh:freshT,ipsaFresh:ipsaFresh});
       touched=true;nProj++;
     });
     if(touched){clientSaveProjects(c.id,projs);nCli++;}
@@ -5212,7 +5245,7 @@ function viewHome(){
   // acciones destacadas — rankings desde los precios reales de los seguimientos
   const stats=seguimientoStats(homeStkFreq);
   const _rkD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(2,4):"";
-  const stkBlock=(title,sub,arr,valFn,colFn,startRank)=>{const rows=arr.map((s,i)=>`<div class="home-stk"><span class="stk-pos">${(startRank||1)+i}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}${s.lastDate?' · al '+_rkD(s.lastDate):''}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1])}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
+  const stkBlock=(title,sub,arr,valFn,colFn,startRank)=>{const rows=arr.map((s,i)=>`<div class="home-stk"><span class="stk-pos">${(startRank||1)+i}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}${s.lastDate?' · al '+_rkD(s.lastDate):''}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1],colFn(s))}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
     return `<div class="stk-block"><div class="stk-bh"><b>${title}</b><span>${sub}</span></div>${rows||'<div class="note" style="margin:6px 0 0;font-size:11px">Sin datos suficientes</div>'}</div>`;};
   const perWord=homeStkFreq==="diario"?"último día":homeStkFreq==="semanal"?"última semana":"último mes";
   const perPhrase=homeStkFreq==="semanal"?"de la última semana":"del "+perWord;
