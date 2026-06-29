@@ -1444,7 +1444,7 @@ const MODS={
   clientes:{label:"Clientes",tabs:[{id:"admin",label:"Administrador de clientes",n:"1"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
   perfil:{label:"Perfil",tabs:[{id:"perfil",label:"Perfil de inversionista",n:"1"}]},
-  inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Ingresar datos",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"},{id:"contabilidad",label:"Contabilidad",n:"5"}]},
+  inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Invertir",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"},{id:"contabilidad",label:"Contabilidad",n:"5"}]},
   pro:{label:"Pro · Roadmap",tabs:[{id:"realtime",label:"Datos en tiempo real",n:"1"},{id:"copilot",label:"Copiloto IA",n:"2"}]},
 };
 const ICO={
@@ -2320,7 +2320,7 @@ function viewInvActive(){
   const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;const bp=per.reduce((a,x)=>a+(x.m/tot)*x.hd.b,0);return {per,tot,bp};})():null;
   const chips=(_real?_real.per.map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
   const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(_real.bp||0).toFixed(2)} · σ ${(PF.sig||0).toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`;
-  const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
+  const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resettrack">🧪 Reiniciar seguimiento</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
   const compraMode=isFirst||editIdx===0;
   const pv=t=>ed?(ed.prices[t]||""):"";
@@ -2647,6 +2647,7 @@ function attachInv(){
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;if(window.confirm("¿Eliminar este registro diario?")){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;saveProjects();render();}});
   document.querySelectorAll("[data-godatos]").forEach(b=>b.onclick=()=>{modulo="datos";page=b.dataset.godatos;render();});
+  const rt=document.getElementById("resettrack");if(rt)rt.onclick=()=>{if(!PF)return;if(!confirm('Reiniciar el seguimiento de "'+PF.name+'".\n\n✓ Se conserva la COMPRA inicial (acciones y montos).\n✕ Se borran todos los cierres diarios de esta cartera (y los de la base que solo use esta cartera).\n\nLuego cargas planillas en Datos y pulsas ACTUALIZAR SISTEMA para reconstruir el seguimiento. ¿Continuar?'))return;const n=projResetTracking();page="ingreso";render();window.alert("Seguimiento reiniciado: quedó solo la compra inicial"+(n?(" · "+n+" precio(s) de cierre quitados de la base"):"")+".\n\nAhora carga tus planillas en Datos y pulsa ACTUALIZAR SISTEMA.");};
   document.querySelectorAll("[data-projsel]").forEach(b=>b.onclick=()=>{activeId=+b.dataset.projsel;editIdx=null;saveProjects();render();});
   const ce=document.getElementById("canceledit");if(ce)ce.onclick=()=>{editIdx=null;render();};
   attachMultiHover("invval");attachMultiHover("invevo");attachMultiHover("invstk");attachMultiHover("invcapm");
@@ -3844,6 +3845,24 @@ function systemClean(){
     saveProjects();
   }catch(e){}
   return kept;
+}
+/* deja en la cartera ACTIVA solo la compra inicial y borra sus cierres de seguimiento (cartera + base),
+   sin que vuelvan a reconstruirse desde datos viejos; pensado para probar la carga masiva desde cero */
+function projResetTracking(){
+  if(!PF)return 0;
+  try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reiniciar seguimiento");}catch(e){}
+  const ws=PF.weeks||[];
+  const purchases=ws.filter(w=>w.qty&&Object.keys(w.qty).length);
+  const keep=purchases.length?purchases:(ws.length?[ws[0]]:[]);
+  const keepDates=new Set(keep.map(w=>w.date));
+  const dropDates=ws.filter(w=>!keepDates.has(w.date)).map(w=>w.date);
+  // no borres de la base lo que comparten OTRAS carteras (mismo ticker+fecha)
+  const shared={};allTrackedProjects().forEach(({p})=>{if(p===PF)return;(p.weeks||[]).forEach(w=>{(p.holdings||[]).forEach(h=>{shared[h.t+"@"+w.date]=1;});});});
+  const held=(PF.holdings||[]).map(h=>h.t);let nBase=0;
+  held.forEach(t=>{if(!PRICEDB.px[t])return;dropDates.forEach(d=>{if(keepDates.has(d)||shared[t+"@"+d])return;if(PRICEDB.px[t][d]!=null){delete PRICEDB.px[t][d];nBase++;}});});
+  savePriceDB();
+  PF.weeks=keep;saveProjects();syncProj();
+  return nBase;
 }
 function viewDatos(){const pg=page||"base";if(pg==="cargar")return datosCargar();if(pg==="cierre")return datosCierre();return datosBase();}
 function datosBase(){
