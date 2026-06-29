@@ -3677,7 +3677,10 @@ async function impOnFiles(list){
   if(impFiles.length){const ip=impFiles.find(s=>/ipsa|índice|indice|index|bench/i.test(s.name));impBench=ip?ip.name:"__avg__";}
   render();
 }
-function impStats(prices,perYear){const rets=[];for(let i=1;i<prices.length;i++)rets.push(prices[i]/prices[i-1]-1);const m=rets.length,mean=m?rets.reduce((a,b)=>a+b,0)/m:0;const v=m>1?rets.reduce((a,b)=>a+(b-mean)**2,0)/(m-1):0,sd=Math.sqrt(v);const total=prices[prices.length-1]/prices[0]-1,years=m/perYear,retAnn=years>0?Math.pow(1+total,1/years)-1:0;return {rets,mean,sd,total,retAnn,sigAnn:sd*Math.sqrt(perYear)};}
+function impStats(prices,perYear){const rets=[];for(let i=1;i<prices.length;i++)rets.push(prices[i]/prices[i-1]-1);const m=rets.length,mean=m?rets.reduce((a,b)=>a+b,0)/m:0;const v=m>1?rets.reduce((a,b)=>a+(b-mean)**2,0)/(m-1):0,sd=Math.sqrt(v);const total=prices[prices.length-1]/prices[0]-1;
+  // E(R) anualizada por media aritmética (estándar CAPM): estable; NO compuesta geométrica del total, que explota en ventanas cortas (p.ej. 20 días → ^13)
+  const retAnn=mean*perYear;
+  return {rets,mean,sd,total,retAnn,sigAnn:sd*Math.sqrt(perYear)};}
 function impBetaCorr(ra,rm){const n=Math.min(ra.length,rm.length);if(!n)return {beta:0,corr:0,r2:0};let ma=0,mm=0;for(let i=0;i<n;i++){ma+=ra[i];mm+=rm[i];}ma/=n;mm/=n;let cov=0,vm=0,va=0;for(let i=0;i<n;i++){cov+=(ra[i]-ma)*(rm[i]-mm);vm+=(rm[i]-mm)**2;va+=(ra[i]-ma)**2;}const beta=vm>0?cov/vm:0,corr=(vm>0&&va>0)?cov/Math.sqrt(vm*va):0;return {beta,corr,r2:corr*corr};}
 let IMPSETS=lsGet("inv_impsets_v1")||[], impActiveId=lsGet("inv_imp_active_id")||null, impRfAuto=true, impRfTried=false;
 function autoRf(){return (typeof MIND!=="undefined"&&MIND&&MIND.tpm&&isFinite(MIND.tpm.valor))?+MIND.tpm.valor:null;}
@@ -3978,9 +3981,9 @@ function datosCierre(){
   const C=consolidatedSeries(),tickers=pricedbTickers(),held=allHeldTickers().map(h=>h.t);
   const all=[...new Set([...tickers,...held])].sort();
   const today=lastTradingDay();   // si hoy es fin de semana, propone el último día hábil (la bolsa no opera sáb/dom)
-  const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="${(last!=null&&last!=="")?last:""}" aria-label="Precio ${t}"></div>`;}).join("")
+  const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="" placeholder="${(last!=null&&last!=="")?('último '+last):'precio'}" aria-label="Precio ${t}"></div>`;}).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones. Carga una planilla en <b>Cargar planilla</b> o registra una compra en Inversión.</div>`;
-  const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="${lastKnownIpsa(C)}"></label></div>
+  const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="" placeholder="último ${lastKnownIpsa(C)}"></label></div>
     <div class="ppx-grid" style="max-height:52vh">${rows}</div>
     <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:14px"><button class="btn" data-dgo="base">← Volver a la base</button><button class="btn btn-pri" data-dcapply>Guardar cierre y actualizar carteras</button></div>`;
   return card("Cierre diario","Ingresa los precios de cierre del día. Se guardan en la base y se aplican a todos los proyectos que tengan esas acciones. Si te atrasaste varios días, mejor carga la planilla completa en “Cargar planilla”.",body);
@@ -4985,16 +4988,16 @@ function platformPricesOpen(){
   pricedbTickers().forEach(t=>{if(!m[t]){const md=PRICEDB.tickers[t]||{};m[t]={t,n:md.n||t,c:md.c||"#1E5FD1"};}});
   allHeldTickers().forEach(h=>{if(!m[h.t])m[h.t]={t:h.t,n:h.n,c:h.c};});
   const today=lastTradingDay();   // fin de semana → último día hábil
-  const rows=Object.keys(m).sort().map(k=>{const h=m[k];return {t:h.t,n:h.n,c:h.c,price:lastKnownPrice(h.t,C)};});
-  _ppxState={date:today,ipsa:lastKnownIpsa(C),rows};
+  const rows=Object.keys(m).sort().map(k=>{const h=m[k];return {t:h.t,n:h.n,c:h.c,price:"",last:lastKnownPrice(h.t,C)};});   // price vacío: el usuario ingresa solo los cierres reales (sin arrastre 0%)
+  _ppxState={date:today,ipsa:"",ipsaLast:lastKnownIpsa(C),rows};
   platformPricesRender();
 }
 function platformPricesRender(){
   const S=_ppxState;if(!S)return;
-  const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-ppx="${i}" value="${r.price}" aria-label="Precio ${r.t}"></div>`).join("")
+  const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-ppx="${i}" value="${r.price||''}" placeholder="${(r.last!=null&&r.last!=="")?('último '+r.last):'precio'}" aria-label="Precio ${r.t}"></div>`).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones cargadas. Agrega una abajo o carga una planilla en el módulo Datos.</div>`;
   const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · base del sistema</div><div class="cs">Carga los precios de cierre de un día para <b>cualquier acción</b> (las gestiones o no). Las que tengas en cartera actualizan el seguimiento; <b>todas</b> quedan guardadas en la base para análisis y para evaluar cambios de portafolio.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
-    <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa}"></label></div>
+    <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa||''}" placeholder="${S.ipsaLast?('último '+S.ipsaLast):'puntos IPSA'}"></label></div>
     <div class="ppx-grid">${rows}</div>
     <div class="ppx-add"><input id="ppxAddT" type="text" placeholder="Agregar otra acción (ej. CMPC)" maxlength="14" autocomplete="off"><button class="btn btnu" id="ppxAddBtn">+ Agregar acción</button></div>
     <div class="ppx-foot"><button class="btn" id="ppxCancel">Cancelar</button><button class="btn btn-pri" id="ppxApply">Guardar precios</button></div>`;
@@ -5217,15 +5220,9 @@ function viewHome(){
     ${stkBlock("Por Sharpe","ajustado a riesgo",bySharpe,s=>s.sharpe.toFixed(2),s=>s.sharpe>=0?green:red)}
     ${stkBlock("Por α de Jensen","sobre/bajo lo exigido",byJensen,s=>(s.jensen>=0?"+":"")+s.jensen.toFixed(1)+"%",s=>s.jensen>=0?green:red)}</div>`
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
-  const stkCard=card("Acciones destacadas",`Mejores y peores por retorno ${perPhrase}, Sharpe y α de Jensen · solo acciones con cierres reales ${perPhrase2} (no usa el histórico del análisis)`,stkInner,freqSeg);
-  const actions=card("Acciones rápidas","",`<div class="home-actions">
-    <button class="home-act" data-openprices><span class="ha-i">↻</span><b>Actualizar precios</b><span class="ha-s">Cierres del día · toda la plataforma</span></button>
-    <button class="home-act" data-go="sim|constructor"><span class="ha-i">＋</span><b>Armar nueva cartera</b><span class="ha-s">Constructor de portafolio</span></button>
-    <button class="home-act" data-go="eval|crear"><span class="ha-i">＋</span><b>Crear análisis</b><span class="ha-s">Parametriza tu propio análisis</span></button>
-    <button class="home-act" data-go="proyectos|hub"><span class="ha-i">▦</span><b>Mis proyectos</b><span class="ha-s">Carteras, análisis y seguimientos</span></button>
-    <button class="home-act" data-opencopilot><span class="ha-i">✦</span><b>Agente de inversiones</b><span class="ha-s">Tu analista cuantitativo</span></button></div>`);
+  const stkCard=card("Acciones destacadas",`Mejores y peores por retorno ${perPhrase}, Sharpe y α de Jensen · último dato disponible de cada acción (con su fecha) · no usa el histórico del análisis`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
-  return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard+actions;
+  return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
