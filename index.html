@@ -2420,7 +2420,14 @@ function viewInvActive(){
   const b0q=WEEKS[0];
   const deltaCard=b0q.qty?card("Inversión inicial: real vs objetivo","Acciones compradas y monto real por acción frente al objetivo de la simulación",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">Objetivo</th><th class="r">Real</th><th class="r">Δ</th></tr></thead><tbody>`+PF.holdings.map(hd=>{const q=b0q.qty[hd.t]||0,p=b0q.prices[hd.t]||0,real=q*p,obj=PF.amount*hd.w,d=real-obj;return `<tr><td>${tk(hd)}</td><td class="r">${q.toLocaleString("es-CL")}</td><td class="r">${fmtP(p)}</td><td class="r">${fmtCLP(obj)}</td><td class="r" style="font-weight:700">${fmtCLP(real)}</td><td class="r" style="color:${Math.abs(d)<1?muted:(d>=0?green:red)}">${(d>=0?"+":"−")+fmtCLP(Math.abs(d))}</td></tr>`;}).join("")+`<tr style="background:var(--soft);font-weight:800"><td>Total invertido</td><td></td><td></td><td class="r">${fmtCLP(PF.amount)}</td><td class="r">${fmtCLP(IM.series[0].val)}</td><td class="r" style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</td></tr></tbody></table><div class="note" style="margin-top:11px">Por el precio entero de las acciones, invertiste <b>${fmtCLP(IM.series[0].val)}</b> vs el objetivo de <b>${fmtCLP(PF.amount)}</b> → delta <b style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</b> (${((IM.series[0].val-PF.amount)/PF.amount*100).toFixed(1)}%). El seguimiento usa las acciones y montos realmente comprados.</div></div>`,flush:true}):"";
   if(histPg) return projbar+summary+invTools+tbl;
-  if(!seg) return projbar+summary+freqBar+form;
+  if(!seg){
+    // los cierres diarios se registran SOLO en Datos; aquí solo la compra inicial o editar un registro
+    if(isFirst||editing) return projbar+summary+freqBar+form;
+    const goDatos=card("Cierres diarios · se registran en Datos","Para tener una sola fuente de datos, los precios de cierre ya no se ingresan dentro del proyecto: se cargan en el módulo <b>Datos</b> y se aplican automáticamente a esta y a todas tus carteras.",
+      `<div class="note" style="margin:0 0 12px">Tu compra inicial ya está registrada. Para actualizar el seguimiento usa <b>Datos → Cierre diario</b> (un día) o <b>Cargar planilla</b> (varios días de una vez). Para corregir o eliminar un registro puntual, ve a la pestaña <b>Historial</b>.</div>
+       <div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" data-godatos="cierre">Ir a Cierre diario →</button><button class="btn" data-godatos="cargar">Cargar planilla</button><button class="btn" data-godatos="base">Ver la base del sistema</button></div>`);
+    return projbar+summary+goDatos;
+  }
   return projbar+invTools+hero+summary+valChart+psTbl+allocCard+stkChart+evoChart+ipsaTiles+verdict+capmKp+capmChart+capmNote+riskCard+qualityCard;
 }
 
@@ -2639,6 +2646,7 @@ function attachInv(){
   };
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
   document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;if(window.confirm("¿Eliminar este registro diario?")){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;saveProjects();render();}});
+  document.querySelectorAll("[data-godatos]").forEach(b=>b.onclick=()=>{modulo="datos";page=b.dataset.godatos;render();});
   document.querySelectorAll("[data-projsel]").forEach(b=>b.onclick=()=>{activeId=+b.dataset.projsel;editIdx=null;saveProjects();render();});
   const ce=document.getElementById("canceledit");if(ce)ce.onclick=()=>{editIdx=null;render();};
   attachMultiHover("invval");attachMultiHover("invevo");attachMultiHover("invstk");attachMultiHover("invcapm");
