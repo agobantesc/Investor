@@ -4923,6 +4923,9 @@ function periodKey(dateStr,freq){
 }
 /* reduce un mapa fecha→valor a puntos por período (último de cada período) */
 function resampleMap(map,freq){const dates=Object.keys(map).sort();const byP={};dates.forEach(d=>{byP[periodKey(d,freq)]={d,v:map[d]};});return Object.keys(byP).sort().map(k=>byP[k]);}
+/* quita del FINAL los puntos cuyo valor repite EXACTAMENTE al anterior: son arrastres (carry-forward),
+   no cierres reales (un precio/índice real no repite idéntico al decimal). Deja el último movimiento real. */
+function dropTrailingFlat(rs){let a=rs;while(a.length>=2&&a[a.length-1].v===a[a.length-2].v)a=a.slice(0,-1);return a;}
 function periodIndex(dateStr,freq){const d=new Date(dateStr+"T00:00:00");if(freq==="mensual")return d.getFullYear()*12+d.getMonth();if(freq==="semanal"){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);return Math.round(t.getTime()/(7*864e5));}return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);}
 /* ¿dos puntos resampleados son de períodos consecutivos? (en diario se toleran fines de semana/feriado) */
 function gapOK(d0,d1,freq){if(freq==="diario"){const g=(new Date(d1+"T00:00:00")-new Date(d0+"T00:00:00"))/864e5;return g>0&&g<=4;}return (periodIndex(d1,freq)-periodIndex(d0,freq))===1;}
@@ -4935,7 +4938,7 @@ function seguimientoStats(freq){
   // Solo se requiere que el último tramo sea entre períodos CONSECUTIVOS (retorno real a la cadencia elegida); una acción solo-mensual no aparece en diario porque no tiene dos días consecutivos.
   const out=[];
   Object.keys(C.tick).forEach(t=>{
-    const rs=resampleMap(C.tick[t],freq);if(rs.length<2)return;
+    const rs=dropTrailingFlat(resampleMap(C.tick[t],freq));if(rs.length<2)return;   // ignora arrastres finales (carry-forward): usa el último movimiento real
     if(!gapOK(rs[rs.length-2].d,rs[rs.length-1].d,freq))return;   // el retorno mostrado es un movimiento real entre dos períodos consecutivos
     const vals=rs.map(x=>x.v);
     // solo retornos entre períodos consecutivos (evita que un hueco se cuente como un período y distorsione la anualización)
@@ -5114,9 +5117,10 @@ function heroSpark(series){if(!series||series.length<2)return "";const w=340,h=7
 function ipsaSnapshot(name){
   const C=consolidatedSeries();let map=(name&&name!=="IPSA")?pricedbIdxMap(name):(C.ipsaMap||{});
   if(name&&name!=="IPSA"&&(!map||!Object.keys(map).length))map=C.ipsaMap||{};
-  const ds=Object.keys(map||{}).sort();if(!ds.length)return null;
-  const per=f=>{const rs=resampleMap(map,f);if(rs.length<2)return null;const a=rs[rs.length-2],b=rs[rs.length-1];if(a.v<=0||!gapOK(a.d,b.d,f))return null;return (b.v/a.v-1)*100;};
-  return {name:name||"IPSA",last:map[ds[ds.length-1]],lastDate:ds[ds.length-1],dia:per("diario"),semana:per("semanal"),mes:per("mensual")};
+  if(!Object.keys(map||{}).length)return null;
+  const per=f=>{const rs=dropTrailingFlat(resampleMap(map,f));if(rs.length<2)return null;const a=rs[rs.length-2],b=rs[rs.length-1];if(a.v<=0||!gapOK(a.d,b.d,f))return null;return (b.v/a.v-1)*100;};
+  const rsD=dropTrailingFlat(resampleMap(map,"diario"));const lp=rsD.length?rsD[rsD.length-1]:null;if(!lp)return null;   // último valor REAL del índice (ignora arrastres finales)
+  return {name:name||"IPSA",last:lp.v,lastDate:lp.d,dia:per("diario"),semana:per("semanal"),mes:per("mensual")};
 }
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
