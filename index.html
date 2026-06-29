@@ -2202,8 +2202,11 @@ function applyInvestment(defName,skipPrompt,canonical){
   let nm;
   if(skipPrompt){nm=defName;}
   else{nm=window.prompt("Nombre del proyecto de inversión:",defName||("Proyecto "+(PROJECTS.length+1)));if(nm===null)return;}
-  const proj={id:Date.now(),name:(nm||("Proyecto "+(PROJECTS.length+1))).trim(),date:new Date().toLocaleDateString("es-CL"),amount:simState.amount,bp:M.bp,erCapm:M.erCapm,sig:M.sig,sharpe:M.sharpe,corrAvg:M.corrAvg,
-      freq:"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings:M.ws.map(x=>({t:x.s.t,n:x.s.n,s:x.s.s,c:x.s.c,b:x.s.b,w:x.w,monto:simState.amount*x.w})),weeks:[],links:{analyses:[currentAnalysisId()],scenarios:[],primary:currentAnalysisId()}};
+  // inversión LIBRE (canonical): siempre IPSA como benchmark (análisis "demo" = IPSA), sin heredar un análisis importado con otro índice
+  const anId=canonical?"demo":currentAnalysisId();
+  const benchName=canonical?"IPSA":((typeof DATASET!=="undefined"&&DATASET==="import"&&typeof IMP!=="undefined"&&IMP&&IMP.bench)?IMP.bench.name:"IPSA");
+  const proj={id:Date.now(),name:(nm||("Proyecto "+(PROJECTS.length+1))).trim(),date:new Date().toLocaleDateString("es-CL"),amount:simState.amount,bp:M.bp,erCapm:M.erCapm,sig:M.sig,sharpe:M.sharpe,corrAvg:M.corrAvg,bench:benchName,
+      freq:"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings:M.ws.map(x=>({t:x.s.t,n:x.s.n,s:x.s.s,c:x.s.c,b:x.s.b,w:x.w,monto:simState.amount*x.w})),weeks:[],links:{analyses:[anId],scenarios:[],primary:anId}};
   try{const _sc=projDefaultScenario(proj);if(_sc){_sc.m.retH=M.retH;SCEN.push(_sc);proj.links.scenarios=[_sc.id];lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
   PROJECTS.push(proj);activeId=proj.id;editIdx=null;saveProjects();syncProj();
   modulo="inv";page="ingreso";render();
