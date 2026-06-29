@@ -1695,7 +1695,7 @@ function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{
 let PF=null,WEEKS=[];
 function curProj(){return PROJECTS.find(p=>p.id===activeId)||null;}
 function syncProj(){PF=curProj();WEEKS=PF?PF.weeks:[];if(PF){["bp","erCapm","sig","sharpe","corrAvg"].forEach(k=>{if(typeof PF[k]!=="number"||!isFinite(PF[k]))PF[k]=0;});}}
-function saveProjects(){lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);}
+function saveProjects(){lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);try{if(typeof pricedbIngestProjects==="function")pricedbIngestProjects();}catch(e){}}
 syncProj();
 let SCEN=lsGet("pf_scenarios_v1")||[],scenEditId=null;
 /* backfill: el análisis (demo) y la simulación (construcción) por defecto pasan a ser parte de cada proyecto que no los tenga vinculados */
@@ -3636,6 +3636,33 @@ function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];s
 /* resumen para la vista: por ticker -> n puntos, rango, último precio */
 function pricedbSummary(){const out=[];pricedbTickers().forEach(t=>{const ds=Object.keys(PRICEDB.px[t]).sort();if(!ds.length)return;const m=PRICEDB.tickers[t]||{};out.push({t,n:m.n||t,s:m.s||"",c:m.c||"#1E5FD1",b:m.b,np:ds.length,from:ds[0],to:ds[ds.length-1],last:PRICEDB.px[t][ds[ds.length-1]]});});
   out.sort((a,b)=>a.t<b.t?-1:1);const id=Object.keys(PRICEDB.ipsa||{});return {rows:out,ipsaN:id.length,ipsaFrom:id.length?id.sort()[0]:null,ipsaTo:id.length?id.sort()[id.length-1]:null};}
+/* copia el universo demo IPSA (14 acciones × 23 meses + IPSA) a la base, sin pisar datos ya cargados */
+function pricedbSeedDemo(){
+  try{
+    const labs=(typeof DATA!=="undefined"&&DATA.labels)?DATA.labels:null;if(!labs||!labs.length)return 0;
+    const dts=labs.map(labelToDate);let n=0;
+    (DATA.stocks||[]).forEach(s=>{const pr=s.prices||[];if(!pr.length)return;
+      PRICEDB.px[s.t]=PRICEDB.px[s.t]||{};
+      if(!PRICEDB.tickers[s.t])PRICEDB.tickers[s.t]={n:s.n||s.t,s:s.s||"",c:s.c||"#1E5FD1",b:s.b};
+      const m=Math.min(pr.length,dts.length),off=pr.length-m;for(let i=0;i<m;i++){const v=pr[off+i];if(v>0&&isFinite(v)&&PRICEDB.px[s.t][dts[i]]==null){PRICEDB.px[s.t][dts[i]]=+v;n++;}}});
+    // IPSA reconstruido desde los retornos del mercado; ancla el último valor del demo al IPSA más antiguo de los proyectos para que conecten en escala
+    const mk=(typeof MKT!=="undefined"&&MKT&&MKT.rets&&MKT.rets.length)?MKT.rets:((DATA.market&&DATA.market.rets)||null);
+    if(mk&&mk.length){let anchor=8000;try{const im=consolidatedSeries().ipsaMap||{},pd=Object.keys(im).sort();if(pd.length)anchor=im[pd[0]];}catch(e){}
+      const m=Math.min(mk.length,dts.length),lvl=new Array(m);lvl[m-1]=anchor;for(let i=m-1;i>0;i--)lvl[i-1]=lvl[i]/(1+(mk[i]||0)/100);
+      for(let i=0;i<m;i++){if(PRICEDB.ipsa[dts[i]]==null){PRICEDB.ipsa[dts[i]]=+lvl[i].toFixed(2);n++;}}}
+    if(n)savePriceDB();return n;
+  }catch(e){return 0;}
+}
+/* guarda en la base los CIERRES de los proyectos (no las operaciones); idempotente, no pisa lo existente */
+function pricedbIngestProjects(){
+  try{let n=0;(PROJECTS||[]).forEach(p=>{(p.weeks||[]).forEach(w=>{
+    if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&PRICEDB.ipsa[w.date]==null){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}
+    const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // el precio de una compra/venta es contabilidad, no un cierre
+    const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
+  });});if(n)savePriceDB();return n;}catch(e){return 0;}
+}
+/* población automática de la base (una vez por cliente): cierres de proyectos + universo demo */
+function pricedbAutoSeed(){try{if(PRICEDB&&PRICEDB.seeded)return;pricedbIngestProjects();pricedbSeedDemo();PRICEDB.seeded=true;savePriceDB();}catch(e){}}
 /* deriva un dataset de análisis (IMP) desde la base, resampleado a la frecuencia pedida (reutiliza impStats/impBetaCorr) */
 function pricedbToIMP(freq,opts){
   opts=opts||{};
@@ -3779,34 +3806,25 @@ function caSourceSeries(srcKey){return srcKey==="activo"?activeUniverseSeries():
 function caIndexNames(C,srcKey){const out=[];if(C&&C.ipsaMap&&Object.keys(C.ipsaMap).length)out.push("IPSA");if(srcKey!=="activo"){const ix=(typeof PRICEDB!=="undefined"&&PRICEDB.idx)||{};Object.keys(ix).forEach(k=>{if(k!=="IPSA"&&ix[k]&&Object.keys(ix[k]).length)out.push(k);});}return out;}
 function caRows(C){return Object.keys(C.tick||{}).sort().map(t=>({t,n:(C.names&&C.names[t])||t,c:(C.cols&&C.cols[t])||"#1E5FD1",np:Object.keys(C.tick[t]).length}));}
 function caEnsure(){
-  if(!caState)caState={name:"",freq:(pricedbFreq||"mensual"),lastN:0,bench:"IPSA",source:null,sel:{}};
-  if(caState.source==null)caState.source=(Object.keys(consolidatedSeries().tick||{}).length>0)?"sistema":"activo";
-  const C=caSourceSeries(caState.source);
+  if(!caState)caState={name:"",freq:(pricedbFreq||"mensual"),lastN:0,bench:"IPSA",sel:{}};
+  const C=consolidatedSeries();   // única fuente: la base poblada del sistema (Datos + cierres de carteras)
   Object.keys(C.tick||{}).forEach(t=>{if(caState.sel[t]===undefined)caState.sel[t]=true;});
-  const idxs=caIndexNames(C,caState.source);if(!caState.bench||idxs.indexOf(caState.bench)<0)caState.bench=idxs[0]||"IPSA";
+  const idxs=caIndexNames(C,"sistema");if(!caState.bench||idxs.indexOf(caState.bench)<0)caState.bench=idxs[0]||"IPSA";
   return C;
 }
 function caUnit(f){return f==="diario"?"días":f==="semanal"?"semanas":"meses";}
 function viewCrear(){
   const C=caEnsure();const S=caState;
   const rows=caRows(C),ts=rows.map(r=>r.t),selCount=ts.filter(t=>S.sel[t]).length;
-  const idxs=caIndexNames(C,S.source);
-  const sysN=Object.keys(consolidatedSeries().tick||{}).length,actN=Object.keys(activeUniverseSeries().tick||{}).length;
-  const srcSeg=`<div class="home-seg" role="group" aria-label="Fuente de datos"><button data-casrc="sistema" class="${S.source==="sistema"?"on":""}">Datos del sistema (${sysN})</button><button data-casrc="activo" class="${S.source==="activo"?"on":""}">Universo del análisis (${actN})</button></div>`;
-  const srcHint=S.source==="activo"
-    ? "Universo del <b>análisis activo</b> (IPSA · demo o el que tengas importado): todas sus acciones con su historial."
-    : "Todos los precios reales del sistema: la <b>base de Datos</b> + los <b>cierres</b> de tus carteras y el IPSA.";
+  const idxs=caIndexNames(C,"sistema");
   let form;
-  if(sysN===0&&actN===0){
+  if(!ts.length){
     form=`<div class="note" style="margin:0">Aún no hay precios en el sistema. Ve al módulo <b>Datos</b> para cargar planillas o cierres y poder crear análisis.<div style="margin-top:11px"><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
-  }else if(!ts.length){
-    form=`<div class="ca-f" style="margin-bottom:4px"><span>Fuente de datos</span>${srcSeg}</div><div class="note" style="margin:11px 0 0">Esta fuente no tiene precios cargados. Cambia de fuente arriba${S.source==="sistema"?" o carga datos en <b>Datos</b>":""}.</div>`;
   }else{
     const seg=`<div class="home-seg" role="group" aria-label="Periodicidad">${["diario","semanal","mensual"].map(f=>`<button data-cafreq="${f}" class="${S.freq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
-    const benchSel=idxs.length?`<div class="home-seg" role="group" aria-label="Índice de referencia">${idxs.map(ix=>`<button data-cabench="${ix}" class="${S.bench===ix?"on":""}">${ix}</button>`).join("")}</div>`:`<div class="ca-bench-none">Esta fuente no trae índice de referencia</div>`;
+    const benchSel=idxs.length?`<div class="home-seg" role="group" aria-label="Índice de referencia">${idxs.map(ix=>`<button data-cabench="${ix}" class="${S.bench===ix?"on":""}">${ix}</button>`).join("")}</div>`:`<div class="ca-bench-none">No hay índice (IPSA) en la base · cárgalo en <b>Datos</b></div>`;
     const chips=rows.map(r=>`<button class="ca-chip ${S.sel[r.t]?"on":""}" data-catk="${r.t}"><span class="rk-dot" style="background:${r.c}"></span>${r.t}<span class="ca-chip-n">${r.np}</span></button>`).join("");
-    form=`<div class="ca-f" style="margin-bottom:13px"><span>Fuente de datos</span>${srcSeg}<span class="ca-srchint">${srcHint}</span></div>
-    <div class="ca-form">
+    form=`<div class="ca-form">
       <label class="ca-f"><span>Nombre del análisis</span><input id="caName" type="text" maxlength="44" placeholder="ej. IPSA · últimos 12 meses" value="${(""+S.name).replace(/"/g,"&quot;")}"></label>
       <div class="ca-f"><span>Periodicidad</span>${seg}</div>
       <label class="ca-f ca-f-n"><span>Ventana · últimos ${caUnit(S.freq)} (0 = todo el historial)</span><input id="caN" type="number" min="0" step="1" inputmode="numeric" value="${S.lastN||0}"></label>
@@ -3815,20 +3833,20 @@ function viewCrear(){
     <div class="note" style="margin:10px 0 0;font-size:11.5px">El <b>benchmark</b> es el índice contra el que se calcula la β y el α de Jensen. La regresión usa <b>un</b> índice; si quieres comparar contra IPSA <i>y</i> IGPA, crea un análisis con cada uno.</div>
     <div class="ca-stk"><div class="ca-stk-h"><b>Acciones del análisis</b><span>${selCount} de ${ts.length} seleccionadas · <a data-caall>todas</a> · <a data-canone>ninguna</a></span></div>
       <div class="ca-grid">${chips}</div></div>
-    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${(selCount<2||!idxs.length)?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${!idxs.length?"Esta fuente no trae índice de referencia":selCount<2?"Elige al menos 2 acciones":selCount+" acciones · benchmark "+S.bench+" · se requieren ~4 períodos"}</span></div>`;
+    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${(selCount<2||!idxs.length)?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia (IPSA) en la base":selCount<2?"Elige al menos 2 acciones":selCount+" acciones · benchmark "+S.bench+" · se requieren ~4 períodos"}</span></div>`;
   }
-  const create=card("Crear análisis","Arma un análisis a tu medida con los datos del sistema: elige la fuente, la periodicidad, la ventana de tiempo y qué acciones incluir",form);
+  const create=card("Crear análisis","Arma un análisis a tu medida con los datos del sistema (base de Datos + cierres de tus carteras): periodicidad, ventana de tiempo y qué acciones incluir",form);
   const list=analysisList(),cur=currentAnalysisId();
-  const savedRows=list.map(a=>{const on=String(a.id)===String(cur),canDel=a.kind==="import";
-    const meta=a.kind==="demo"?"IPSA · demo (14 acciones)":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones");
-    return `<div class="ca-saved ${on?"on":""}"><div class="ca-saved-l"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span>${meta}</span></div><div class="ca-saved-r">${on?'<span class="ca-badge">Activo</span>':`<button class="btn btnu" data-caact="${a.id}">Activar</button>`}${canDel?`<button class="wbtn del" data-cadel="${a.id}" title="Eliminar análisis">✕</button>`:""}</div></div>`;}).join("");
-  const saved=card("Análisis guardados","El análisis activo alimenta Comparativa, Detalle, CAPM, Multifactor y el Constructor de portafolio",`<div class="ca-savedlist">${savedRows}</div>`);
+  const savedRows=list.map(a=>{const on=String(a.id)===String(cur),canDel=(a.kind==="import"||a.kind==="demo");
+    const meta=a.kind==="demo"?"IPSA · demo (14 acciones) · sus datos ya están copiados en la base":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones");
+    const delAttr=a.kind==="demo"?"data-cahidedemo":`data-cadel="${a.id}"`;
+    return `<div class="ca-saved ${on?"on":""}"><div class="ca-saved-l"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span>${meta}</span></div><div class="ca-saved-r">${on?'<span class="ca-badge">Activo</span>':`<button class="btn btnu" data-caact="${a.id}">Activar</button>`}${canDel?`<button class="wbtn del" ${delAttr} title="Eliminar análisis">✕</button>`:""}</div></div>`;}).join("");
+  const saved=card("Análisis guardados","El análisis activo alimenta Comparativa, Detalle, CAPM, Multifactor y el Constructor · puedes eliminar el IPSA · demo: sus 23 meses ya quedaron en la base",`<div class="ca-savedlist">${savedRows}</div>`);
   return create+saved;
 }
 function attachCrear(){
   const grab=()=>{const n=document.getElementById("caName");if(n)caState.name=n.value;const q=document.getElementById("caN");if(q)caState.lastN=Math.max(0,parseInt(q.value,10)||0);};
-  const srcTk=()=>Object.keys(caSourceSeries(caState.source).tick||{});
-  document.querySelectorAll("[data-casrc]").forEach(b=>b.onclick=()=>{grab();caState.source=b.dataset.casrc;caState.sel={};srcTk().forEach(t=>caState.sel[t]=true);caState.bench=null;render();});
+  const srcTk=()=>Object.keys(consolidatedSeries().tick||{});
   document.querySelectorAll("[data-cafreq]").forEach(b=>b.onclick=()=>{grab();caState.freq=b.dataset.cafreq;render();});
   document.querySelectorAll("[data-cabench]").forEach(b=>b.onclick=()=>{grab();caState.bench=b.dataset.cabench;render();});
   document.querySelectorAll("[data-catk]").forEach(b=>b.onclick=()=>{grab();caState.sel[b.dataset.catk]=!caState.sel[b.dataset.catk];render();});
@@ -3836,19 +3854,20 @@ function attachCrear(){
   const _none=document.querySelector("[data-canone]");if(_none)_none.onclick=()=>{grab();srcTk().forEach(t=>caState.sel[t]=false);render();};
   const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};
   const c=document.getElementById("caCreate");if(c)c.onclick=()=>{
-    grab();const Csrc=caSourceSeries(caState.source);const tickers=Object.keys(Csrc.tick||{}).filter(t=>caState.sel[t]);
+    grab();const Csrc=consolidatedSeries();const tickers=Object.keys(Csrc.tick||{}).filter(t=>caState.sel[t]);
     if(tickers.length<2){window.alert("Elige al menos 2 acciones para el análisis.");return;}
-    if(!caIndexNames(Csrc,caState.source).length){window.alert("Esta fuente no trae un índice de referencia (IPSA). Cambia de fuente o carga el IPSA en el módulo Datos.");return;}
+    if(!caIndexNames(Csrc,"sistema").length){window.alert("Falta el índice de referencia (IPSA) en la base. Cárgalo en el módulo Datos.");return;}
     const imp=pricedbToIMP(caState.freq,{tickers,lastN:caState.lastN,bench:caState.bench,source:Csrc});
-    if(!imp){window.alert("No hay suficiente historial para esas acciones/ventana con el benchmark "+caState.bench+". Se necesitan ~4 períodos con el índice y los precios; amplía la ventana, cambia de frecuencia o elige otra fuente.");return;}
+    if(!imp){window.alert("No hay suficiente historial para esas acciones/ventana con el benchmark "+caState.bench+". Se necesitan ~4 períodos con el índice y los precios; amplía la ventana o cambia de frecuencia.");return;}
     const id="s"+Date.now()+Math.floor(Math.random()*1000);
     const nm=(caState.name||"").trim()||("Análisis "+caState.freq+(caState.lastN?(" · últimos "+caState.lastN+" "+caUnit(caState.freq)):" · todo")+" · "+caState.bench+" · "+tickers.length+" acc.");
-    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,bench:caState.bench,source:caState.source,tickers}});
+    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,bench:caState.bench,tickers}});
     lsSet("inv_impsets_v1",IMPSETS);impsetActivate(id);
     caState.name="";modulo="eval";page="comparativa";render();
   };
   document.querySelectorAll("[data-caact]").forEach(b=>b.onclick=()=>{if(activateAnalysis(b.dataset.caact))render();});
   document.querySelectorAll("[data-cadel]").forEach(b=>b.onclick=()=>{const s=(IMPSETS||[]).find(x=>String(x.id)===String(b.dataset.cadel));if(confirm('¿Eliminar el análisis "'+(s?s.name:"")+'"? No se puede deshacer.'))impsetDelete(b.dataset.cadel);});
+  const _hd=document.querySelector("[data-cahidedemo]");if(_hd)_hd.onclick=()=>{if(confirm('¿Quitar el análisis "IPSA · demo" de la lista? Sus 23 meses de datos ya están en la base del sistema, así que NO se pierden y puedes seguir creando análisis.')){lsSet("inv_demo_hidden",1);if(currentAnalysisId()==="demo"){if(!activateAnalysis("datos")){applyDataset("demo");}}render();}};
 }
 function viewImport(){
   const tmpl=card("Importar acciones para analizar","Carga muchas acciones candidatas, córreles el análisis completo — CAPM, riesgo-retorno, SML, correlaciones — y decide antes de armar tu portafolio",
@@ -4424,7 +4443,7 @@ function authLock(){try{sessionStorage.removeItem("inv_sess_v1");localStorage.re
 
 /* ===== PROYECTOS: análisis + simulaciones + inversiones vinculados ===== */
 function currentAnalysisId(){return (typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId)?String(impActiveId):"demo";}
-function analysisList(){const out=[{id:"demo",name:"IPSA · demo",kind:"demo",n:(typeof DEMO!=="undefined"&&DEMO.stocks)?DEMO.stocks.length:14}];if(typeof pricedbEmpty==="function"&&!pricedbEmpty())out.push({id:"datos",name:"Datos del sistema",kind:"datos",n:pricedbTickers().length});(IMPSETS||[]).forEach(s=>out.push({id:String(s.id),name:s.name,kind:"import",n:(s.imp&&s.imp.assets)?s.imp.assets.length:0}));return out;}
+function analysisList(){const out=[];if(!lsGet("inv_demo_hidden"))out.push({id:"demo",name:"IPSA · demo",kind:"demo",n:(typeof DEMO!=="undefined"&&DEMO.stocks)?DEMO.stocks.length:14});if(typeof pricedbEmpty==="function"&&!pricedbEmpty())out.push({id:"datos",name:"Datos del sistema",kind:"datos",n:pricedbTickers().length});(IMPSETS||[]).forEach(s=>out.push({id:String(s.id),name:s.name,kind:"import",n:(s.imp&&s.imp.assets)?s.imp.assets.length:0}));return out;}
 function analysisName(id){const a=analysisList().find(x=>x.id===String(id));return a?a.name:"(no disponible)";}
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
@@ -4571,6 +4590,7 @@ function clientLoad(){
   invProfile=lsGet("inv_profile_v1")||null;profAns=lsGet("inv_profile_ans_v1")||{};profGoal=lsGet("inv_profile_goal_v1")||{};profEdit=false;
   try{ if(IMP&&lsGet("inv_dataset_active")==="import"){setActive(impToActive());DATASET="import";} else {setActive(DEMO);DATASET="demo";} }
   catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
+  try{pricedbAutoSeed();}catch(e){}   // base poblada (demo + cierres) una vez por cliente
   syncProj();
   simState.sel={};if(invProfile)simState.profile=invProfile.profile;
   editIdx=null;scenEditId=null;impFiles=[];impMsg="";mindAuto=mindAuto;
@@ -5010,6 +5030,7 @@ function removeExampleClients(){try{
   if(!CLIENTS.some(c=>c.id===activeClient)){activeClient="c_me";try{localStorage.setItem("inv_active_client","c_me");clientLoad();}catch(e){}}
 }catch(e){}}
 try{removeExampleClients();}catch(e){}
+try{pricedbAutoSeed();}catch(e){}
 render();
 authInit();
 </script>
