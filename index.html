@@ -997,8 +997,10 @@
   .prj-card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);padding:1.05rem 1.15rem;box-shadow:var(--sh-xs);transition:border-color .15s,box-shadow .15s;}
   .prj-card.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset,var(--sh-md);}
   .prj-head{display:flex;align-items:flex-start;gap:11px;}
-  .prj-name{flex:1;border:1px solid transparent;background:transparent;font:850 16px var(--font);color:var(--navy);padding:.2rem .4rem;border-radius:8px;letter-spacing:-.3px;min-width:0;}
-  .prj-name:hover{border-color:var(--line);} .prj-name:focus{outline:none;border-color:var(--accent);background:var(--card2);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  .prj-name{flex:1;border:1px solid transparent;border-bottom:1px dashed var(--line2);background:transparent;font:850 16px var(--font);color:var(--navy);padding:.2rem 1.5rem .2rem .4rem;border-radius:8px;letter-spacing:-.3px;min-width:0;cursor:text;}
+  .prj-name:hover{border-color:var(--line);background:var(--card2);} .prj-name:focus{outline:none;border-color:var(--accent);background:var(--card2);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  .prj-namewrap{position:relative;flex:1;min-width:0;display:flex;align-items:center;}
+  .prj-namewrap::after{content:"✎";position:absolute;right:.45rem;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none;}
   .prj-sub{font-size:10.5px;color:var(--faint);font-weight:600;margin-top:2px;padding-left:.4rem;}
   .prj-act{padding:.4rem .75rem;font-size:12px;}
   .prj-del{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--muted);cursor:pointer;font-size:13px;flex-shrink:0;}
@@ -1254,9 +1256,9 @@
   .fw-pct{font:800 23px var(--font);font-variant-numeric:tabular-nums;letter-spacing:-.5px;flex:0 0 auto;}
   .fw-pct span{font-size:13px;margin-left:1px;}
   .fw-pct.nd{font-size:14px;color:var(--mut);font-weight:700;}
-  .fw-chart{height:58px;}
-  .fw-chart .mkt-spark{width:100%;height:58px;}
-  .fw-chart .line-spark{height:58px;}
+  .fw-chart{height:112px;}
+  .fw-chart .mkt-spark{width:100%;height:112px;}
+  .fw-chart .line-spark{height:112px;}
   .fw-stats{display:flex;gap:26px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px;}
   .fw-stat{display:flex;flex-direction:column;gap:3px;}
   .fw-sl{font-size:10.5px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
@@ -1275,7 +1277,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="cli-wrap"><button class="cli-btn" id="clientBtn"><span class="cli-dot"></span><span class="cli-lbl">Cliente</span><span class="cli-name" id="clientName"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="cli-menu" id="clientMenu"></div></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Volver al inicio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/></svg>Inicio</button><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="cli-wrap"><button class="cli-btn" id="clientBtn"><span class="cli-dot"></span><span class="cli-lbl">Cliente</span><span class="cli-name" id="clientName"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="cli-menu" id="clientMenu"></div></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Volver al inicio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
@@ -1774,6 +1776,13 @@ function withCanonicalUniverse(fn){
   const sv={STOCKS,MKT,CORR,TICK,RF,PRIMA};
   try{STOCKS=DATA.stocks;MKT=DATA.market;CORR=DATA.corr;TICK=DATA.tickers;RF=DATA.rf;PRIMA=DATA.prima;return fn();}
   finally{STOCKS=sv.STOCKS;MKT=sv.MKT;CORR=sv.CORR;TICK=sv.TICK;RF=sv.RF;PRIMA=sv.PRIMA;}
+}
+/* universo LIBRE para Operar (comprar / inyectar capital): todas las acciones del IPSA + las que ya tenga la cartera,
+   independiente del análisis activo. Así puedes operar cualquier acción del IPSA, no solo las del análisis. */
+function operarUniverse(){
+  const m={};(DATA.stocks||[]).forEach(s=>{m[s.t]=s;});
+  ((typeof PF!=="undefined"&&PF&&PF.holdings)||[]).forEach(h=>{if(!m[h.t])m[h.t]={t:h.t,n:h.n||h.t,c:h.c||"#1E5FD1",b:h.b};});
+  return Object.keys(m).sort().map(k=>m[k]);
 }
 function saveScenario(){
   const M=simMetrics();
@@ -2503,8 +2512,9 @@ function viewOperar(){
   if(opState.pid!==activeId)opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
   const posRows=IM.perStock.map(p=>{const aw=V>0?p.val/V*100:0,tw=p.hd.w*100,dr=aw-tw,drc=Math.abs(dr)<1.5?muted:(dr>0?red:green);return `<tr><td>${tk(p.hd)}</td><td class="r">${p.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(p.cur)}</td><td class="r">${fmtCLP(p.val)}</td><td class="r">${aw.toFixed(1)}%</td><td class="r" style="color:${muted}">${tw.toFixed(1)}%</td><td class="r" style="color:${drc};font-weight:700">${(dr>=0?"+":"")}${dr.toFixed(1)} pts</td></tr>`;}).join("");
   const posTable=`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio últ.</th><th class="r">Valor</th><th class="r">Peso actual</th><th class="r">Objetivo</th><th class="r">Drift</th></tr></thead><tbody>${posRows}</tbody></table></div>`;
+  const UNI=operarUniverse();   // universo libre: IPSA completo + holdings (independiente del análisis)
   const sellOpts=IM.perStock.filter(p=>p.sh>1e-4).map(p=>p.hd.t);
-  const buyOpts=STOCKS.map(s=>s.t);
+  const buyOpts=UNI.map(s=>s.t);
   const tkrOpts=(opState.side==="sell"?sellOpts:buyOpts);
   if(opState.tkr&&tkrOpts.indexOf(opState.tkr)<0)opState.tkr=null;
   const osel=opState.tkr||tkrOpts[0]||"";
@@ -2513,16 +2523,16 @@ function viewOperar(){
   const omonto=(parseFloat(opState.qty)>0&&parseFloat(priceVal)>0)?(parseFloat(opState.qty)*parseFloat(priceVal)):0;
   const opBody=`<div class="op-form"><div class="op-side" role="group" aria-label="Tipo de operación"><button type="button" class="opbtn buy ${opState.side==="buy"?"on":""}" data-opside="buy" aria-pressed="${opState.side==="buy"}">Comprar</button><button type="button" class="opbtn sell ${opState.side==="sell"?"on":""}" data-opside="sell" aria-pressed="${opState.side==="sell"}">Vender</button></div>
     <div class="op-grid">
-      <div><label class="genl" for="optkr">Acción</label><select id="optkr" aria-label="Acción a operar">${tkrOpts.length?tkrOpts.map(t=>{const st=STOCKS.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones para vender</option>'}</select></div>
+      <div><label class="genl" for="optkr">Acción</label><select id="optkr" aria-label="Acción a operar">${tkrOpts.length?tkrOpts.map(t=>{const st=UNI.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones para vender</option>'}</select></div>
       <div><label class="genl" for="opqty">Cantidad (acciones)</label><input type="number" step="any" id="opqty" value="${opState.qty}" placeholder="Ej: 100" aria-label="Cantidad de acciones"></div>
       <div><label class="genl" for="opprice">Precio por acción (CLP)</label><input type="number" step="any" id="opprice" value="${priceVal}" placeholder="${lastPrice||"precio"}" aria-label="Precio por acción en pesos"></div>
       <div><label class="genl" for="opdate">Fecha</label><input type="date" id="opdate" value="${opState.date||new Date().toISOString().slice(0,10)}" aria-label="Fecha de la operación"></div>
     </div>
     <div class="op-foot"><div class="op-amt">${opState.side==="sell"?"Monto a recibir":"Monto a invertir"}: <b>${omonto>0?fmtCLP(omonto):"—"}</b></div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
   const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Se recalcula el capital, el valor de la cartera y el drift de cada posición — sin tener que rebalancear todo.",opBody+`<div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
-  if(!injState.rows.length){injState.rows=PF.holdings.map(hd=>({t:hd.t,qty:"",price:(lastW.prices[hd.t]!=null?lastW.prices[hd.t]:(((STOCKS.find(s=>s.t===hd.t)||{}).prices||[]).slice(-1)[0]||""))}));}
+  if(!injState.rows.length){injState.rows=PF.holdings.map(hd=>({t:hd.t,qty:"",price:(lastW.prices[hd.t]!=null?lastW.prices[hd.t]:(((UNI.find(s=>s.t===hd.t)||{}).prices||[]).slice(-1)[0]||""))}));}
   let injTotal=0;
-  const injRows=injState.rows.map((r,i)=>{const q=parseFloat(r.qty),p=parseFloat(r.price),m=(q>0&&p>0)?q*p:0;injTotal+=m;return `<div class="inj-row"><select data-injt="${i}">${STOCKS.map(s=>`<option value="${s.t}" ${s.t===r.t?"selected":""}>${s.t} · ${s.n}</option>`).join("")}</select><input type="number" step="any" data-injq="${i}" value="${r.qty}" placeholder="Cantidad"><input type="number" step="any" data-injp="${i}" value="${r.price}" placeholder="Precio"><span class="inj-monto">${m>0?fmtCLP(m):"—"}</span><button class="inj-rm" data-injrm="${i}" title="Quitar fila">✕</button></div>`;}).join("");
+  const injRows=injState.rows.map((r,i)=>{const q=parseFloat(r.qty),p=parseFloat(r.price),m=(q>0&&p>0)?q*p:0;injTotal+=m;return `<div class="inj-row"><select data-injt="${i}">${UNI.map(s=>`<option value="${s.t}" ${s.t===r.t?"selected":""}>${s.t} · ${s.n}</option>`).join("")}</select><input type="number" step="any" data-injq="${i}" value="${r.qty}" placeholder="Cantidad"><input type="number" step="any" data-injp="${i}" value="${r.price}" placeholder="Precio"><span class="inj-monto">${m>0?fmtCLP(m):"—"}</span><button class="inj-rm" data-injrm="${i}" title="Quitar fila">✕</button></div>`;}).join("");
   const injBody=`<div class="inj-head"><span>Acción</span><span>Cantidad</span><span>Precio (CLP)</span><span>Monto</span><span></span></div><div class="inj-list">${injRows||'<div class="note" style="margin:0">Agrega las acciones que compraste con el aporte.</div>'}</div><div style="margin-top:11px"><button class="btn" id="injadd">+ Agregar acción</button></div><div class="inj-foot"><div class="op-amt">Total a inyectar: <b>${injTotal>0?fmtCLP(injTotal):"—"}</b></div><button class="btn btn-pri" id="doinject">✓ Registrar compras del aporte</button></div><div class="note" style="margin-top:11px">Indica <b>acción, cantidad y precio</b> de cada compra; Investor calcula el monto por acción, suma el capital aportado y recalcula el valor de la cartera y el drift. El aporte <b>no</b> cuenta como rentabilidad.</div>`;
   const injCard=card("Inyectar capital nuevo","Registra las compras del aporte por acción, cantidad y precio — sin porcentajes objetivo.",injBody);
   return projbar+summary+opCard+injCard;
@@ -2710,18 +2720,19 @@ function attachInv(){
   const vs=document.getElementById("versim");if(vs)vs.onclick=()=>{let sel,amt;const b0=WEEKS[0];if(b0&&b0.qty){let tot=0;const per={};PF.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*(b0.prices[hd.t]||0);per[hd.t]=m;tot+=m;});sel={};PF.holdings.forEach(hd=>{sel[hd.t]=+((tot?per[hd.t]/tot:0)*100).toFixed(1);});const ks=Object.keys(sel);if(ks.length){const sm=ks.reduce((a,k)=>a+sel[k],0);sel[ks[0]]=+(sel[ks[0]]+(100-sm)).toFixed(1);}amt=Math.round(tot);}else{const o=PF.origSim||{sel:(function(){const s={};PF.holdings.forEach(hd=>{s[hd.t]=+(hd.w*100).toFixed(1);});return s;})(),amount:PF.amount};sel=Object.assign({},o.sel);amt=o.amount;}simState.sel=sel;simState.amount=amt;scenEditId=null;modulo="sim";page="constructor";render();};
   const gi=document.getElementById("geninforme");if(gi)gi.onclick=genInvReport;
   const gx=document.getElementById("genxls");if(gx)gx.onclick=exportInvCSV;
-  document.querySelectorAll("[data-injt]").forEach(s=>s.onchange=()=>{const i=+s.dataset.injt;if(!injState.rows[i])return;injState.rows[i].t=s.value;const lw=WEEKS[WEEKS.length-1];injState.rows[i].price=(lw&&lw.prices[s.value]!=null)?lw.prices[s.value]:(((STOCKS.find(x=>x.t===s.value)||{}).prices||[]).slice(-1)[0]||"");render();});
+  document.querySelectorAll("[data-injt]").forEach(s=>s.onchange=()=>{const i=+s.dataset.injt;if(!injState.rows[i])return;injState.rows[i].t=s.value;const lw=WEEKS[WEEKS.length-1];injState.rows[i].price=(lw&&lw.prices[s.value]!=null)?lw.prices[s.value]:(((operarUniverse().find(x=>x.t===s.value)||{}).prices||[]).slice(-1)[0]||"");render();});
   function _injAmt(){let tot=0;injState.rows.forEach(r=>{const q=parseFloat(r.qty),p=parseFloat(r.price);if(q>0&&p>0)tot+=q*p;});const el=document.querySelector(".inj-foot .op-amt b");if(el)el.textContent=tot>0?fmtCLP(tot):"—";document.querySelectorAll(".inj-row").forEach((row,i)=>{const r=injState.rows[i];if(!r)return;const q=parseFloat(r.qty),p=parseFloat(r.price),m=(q>0&&p>0)?q*p:0;const mm=row.querySelector(".inj-monto");if(mm)mm.textContent=m>0?fmtCLP(m):"—";});}
   document.querySelectorAll("[data-injq]").forEach(inp=>inp.oninput=()=>{injState.rows[+inp.dataset.injq].qty=inp.value;_injAmt();});
   document.querySelectorAll("[data-injp]").forEach(inp=>inp.oninput=()=>{injState.rows[+inp.dataset.injp].price=inp.value;_injAmt();});
   document.querySelectorAll("[data-injrm]").forEach(b=>b.onclick=()=>{injState.rows.splice(+b.dataset.injrm,1);render();});
-  const iadd=document.getElementById("injadd");if(iadd)iadd.onclick=()=>{injState.rows.push({t:(STOCKS[0]||{}).t||"",qty:"",price:""});render();};
+  const iadd=document.getElementById("injadd");if(iadd)iadd.onclick=()=>{const U=operarUniverse();injState.rows.push({t:(U[0]||{}).t||"",qty:"",price:""});render();};
   const di=document.getElementById("doinject");if(di)di.onclick=()=>{
     const rows=(injState.rows||[]).map(r=>({t:r.t,q:parseFloat(r.qty),p:parseFloat(r.price)})).filter(r=>r.t&&r.q>0&&r.p>0);
     if(!rows.length){window.alert("Agrega al menos una compra con acción, cantidad y precio.");return;}
     const agg={};rows.forEach(r=>{const o=agg[r.t]||(agg[r.t]={qty:0,money:0});o.qty+=r.q;o.money+=r.q*r.p;});
     const lw=WEEKS[WEEKS.length-1],prices=Object.assign({},lw?lw.prices:{}),alloc={};let amount=0;
-    Object.keys(agg).forEach(t=>{const o=agg[t],avgP=o.money/o.qty;if(!PF.holdings.some(hd=>hd.t===t)){const st=STOCKS.find(x=>x.t===t)||{t,n:t,s:"",c:"#1E5FD1",b:1};PF.holdings.push({t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0});}prices[t]=avgP;alloc[t]=+o.money.toFixed(0);amount+=o.money;});
+    const _UNI=operarUniverse();
+    Object.keys(agg).forEach(t=>{const o=agg[t],avgP=o.money/o.qty;if(!PF.holdings.some(hd=>hd.t===t)){const st=_UNI.find(x=>x.t===t)||{t,n:t,s:"",c:"#1E5FD1",b:1};PF.holdings.push({t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0});}prices[t]=avgP;alloc[t]=+o.money.toFixed(0);amount+=o.money;});
     WEEKS.push({date:new Date().toISOString().slice(0,10),prices,ipsa:lw?lw.ipsa:1,ev:{kind:"inject",amount:+amount.toFixed(0),alloc}});
     saveProjects();injState={pid:activeId,rows:[]};render();};
   document.querySelectorAll("[data-opside]").forEach(b=>b.onclick=()=>{opState.side=b.dataset.opside;opState.tkr=null;opState.price="";render();});
@@ -3780,9 +3791,18 @@ function pricedbSanitize(){
   stripCF(PRICEDB.ipsa);
   Object.keys(PRICEDB.px||{}).forEach(t=>stripCF(PRICEDB.px[t]));
   Object.keys(ix).forEach(k=>stripCF(ix[k]));
-  if(nWk||nCF)savePriceDB();
+  // 3) IPSA/índice FANTASMA por delante del mercado: en este sistema el IPSA se cierra junto con las acciones,
+  //    así que un valor del índice en una fecha POSTERIOR al último cierre de TODAS las acciones es espurio
+  //    (p.ej. un 29/06 del IPSA cuando el último cierre real de las acciones fue el 26/06). Se recorta.
+  let nGhost=0;
+  const lastStock=(function(){let mx=null;Object.keys(PRICEDB.px||{}).forEach(t=>{const ds=Object.keys(PRICEDB.px[t]||{});if(ds.length){const d=ds.sort()[ds.length-1];if(mx==null||d>mx)mx=d;}});return mx;})();
+  if(lastStock){
+    Object.keys(PRICEDB.ipsa||{}).forEach(d=>{if(d>lastStock){delete PRICEDB.ipsa[d];nGhost++;}});
+    Object.keys(ix).forEach(k=>Object.keys(ix[k]).forEach(d=>{if(d>lastStock){delete ix[k][d];nGhost++;}}));
+  }
+  if(nWk||nCF||nGhost)savePriceDB();
   const id=Object.keys(PRICEDB.ipsa||{}).sort();
-  return {nWk,nCF,ipsaTo:id.length?id[id.length-1]:null};
+  return {nWk,nCF,nGhost,ipsaTo:id.length?id[id.length-1]:null};
 }
 function pricedbTickers(){return Object.keys(PRICEDB.px||{});}
 function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s[d]=1);Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>s[d]=1));return Object.keys(s).sort();}
@@ -4033,7 +4053,7 @@ function attachDatos(){
   const bknow=document.querySelector("[data-bknow]");if(bknow)bknow.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");render();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
   const bkr=document.querySelector("[data-bkrestore]");if(bkr)bkr.onclick=()=>autobkRestore();
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
-  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF)?("Base reparada.\n\n• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia: sin fines de semana ni arrastres. Último dato: "+(r.ipsaTo||"—")+"."));};
+  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost)?("Base reparada.\n\n• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
   const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
     if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
     const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera la compra inicial y sus operaciones, y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
@@ -4455,7 +4475,7 @@ function opDo(){
   let hd=PF.holdings.find(h=>h.t===t);
   if(!hd){
     if(side==="sell"){window.alert("No tienes "+t+" en la cartera.");return;}
-    const st=STOCKS.find(x=>x.t===t)||{t,n:t,s:"importada",c:"#1E5FD1",b:1};
+    const st=operarUniverse().find(x=>x.t===t)||{t,n:t,s:"importada",c:"#1E5FD1",b:1};
     hd={t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0};PF.holdings.push(hd);
   }
   let qty=q;
@@ -4541,7 +4561,7 @@ function viewContab(){
       <div class="net-op">−</div>
       <div class="net-it"><span>Comisiones (IVA incl.)</span><b style="color:${red}">${T.fees>0?fmtCLP(T.fees):"$0"}</b></div>
       <div class="net-op">=</div>
-      <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)} · ${(netPct>=0?"+":"")+netPct.toFixed(2)}%</b></div>
+      <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)}&nbsp;&nbsp;<span style="font-weight:700;opacity:.7">(${(netPct>=0?"+":"")+netPct.toFixed(2)}%)</span></b></div>
     </div>
     <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary()})${T.feesIva>0?`, de las cuales <b>${fmtCLP(T.feesIva)}</b> corresponden a <b>IVA</b>`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy.</div>`);
   // Resultado realizado por venta — lo más importante para la declaración de renta
@@ -4769,7 +4789,7 @@ function viewProyectos(){
     const aChips=L.analyses.length?L.analyses.map(id=>{const isP=String(id)===String(prim),act=currentAnalysisId()===String(id);return `<span class="prj-chip an ${isP?"primary":""} ${act?"active":""}"><button class="prj-star" data-primary="${p.id}|${id}" title="${isP?"Análisis vigente del proyecto":"Marcar como vigente"}">${isP?"★":"☆"}</button><button class="prj-go" data-actanalysis="${id}" title="Activar este análisis">${analysisName(id)}</button><button class="prj-x" data-unlink="${p.id}|analysis|${id}">✕</button></span>`;}).join(""):'<span class="prj-none">— sin análisis —</span>';
     const sChips=L.scenarios.length?L.scenarios.map(id=>`<span class="prj-chip sc">${scenName(id)}<button class="prj-x" data-unlink="${p.id}|scenario|${id}">✕</button></span>`).join(""):'<span class="prj-none">— sin simulaciones —</span>';
     return `<div class="prj-card ${active?"on":""}">
-      <div class="prj-head"><div style="flex:1;min-width:0"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}" title="Haz clic para editar el nombre del proyecto" aria-label="Nombre del proyecto"><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${p.date||"—"}</div></div>
+      <div class="prj-head"><div style="flex:1;min-width:0"><span class="prj-namewrap"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}" title="Haz clic para editar el nombre del proyecto" aria-label="Nombre del proyecto"></span><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${p.date||"—"}</div></div>
         ${active?'<span class="badge pos">ACTIVO</span>':`<button class="btn prj-act" data-pact="${p.id}">Activar</button>`}<button class="prj-del" data-pdel="${p.id}" title="Eliminar proyecto">🗑</button></div>
       <div class="prj-metrics">
         <div class="prj-m"><span class="l">Invertido</span><b>${fmtCLP(s.invested)}</b></div>
@@ -5232,7 +5252,7 @@ function viewHome(){
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
     const stat=(l,v,c,lc)=>`<div class="fw-stat"><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
     if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
-    const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,58);
+    const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,112);
     return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}</div></button>`;};
   const fundsInner=funds.length
     ? (funds.length<=2
@@ -5260,8 +5280,8 @@ function viewHome(){
   const bestArr=byRet.slice(0,bestN), worstArr=byWorst.slice(0,worstN);
   const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div><button class="btn btnu" data-openprices title="Cargar precios de cierre para toda la plataforma">↻ Actualizar precios</button></div>`;
   const stkInner=stats.length?`<div class="stk-cols">
-    ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,bestArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red,1)}
-    ${stkBlock("Peor rentabilidad","retorno "+perPhrase,worstArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(1)+"%",s=>s.ret>=0?green:red,1)}</div>`
+    ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,bestArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}
+    ${stkBlock("Peor rentabilidad","retorno "+perPhrase,worstArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}</div>`
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
   const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} · cada acción con su último dato disponible (y su fecha) · usa <b>↻ Actualizar precios</b> para cargar cierres · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
