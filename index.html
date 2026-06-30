@@ -3995,6 +3995,7 @@ function datosBase(){
     :`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Puntos</th><th>Rango de fechas</th><th class="r">Último</th><th class="r ntr">β</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
   const actions=`<div class="datos-acts">
     <button class="btn btn-pri" data-dgo="cargar">+ Cargar planilla</button>
+    <button class="btn" data-dseed title="Copia a la base el histórico de las 14 acciones del IPSA (23 meses) + IPSA, sin pisar tus cierres">📥 Cargar histórico IPSA (23 meses)</button>
     <button class="btn" data-dapply ${empty?"disabled":""}>↻ ACTUALIZAR SISTEMA</button>
     <button class="btn" data-dgo="cierre">Cierre diario</button>
     <span class="datos-freq"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span></div>`;
@@ -4015,7 +4016,9 @@ function datosBase(){
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:3px 6px"><button class="btn" data-ddaydel>Quitar este día</button></span>
     <button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema</button>
     <span class="genl" style="margin:0;flex-basis:100%"><b>Reparar</b> quita fines de semana y arrastres (precios copiados sin cierre real) · <b>Quitar un día</b> elimina una fecha puntual · <b>Limpiar</b> deja solo la <b>compra inicial</b> de cada cartera y vacía la base/análisis/escenarios. El último dato de la base es <b>${lastDate}</b>.</span></div>`;
-  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+backup+danger);
+  const monthsCov=(function(){const set={};(pricedbAllDates()||[]).forEach(d=>set[(""+d).slice(0,7)]=1);return Object.keys(set).length;})();
+  const diagNote=(!empty&&monthsCov<6)?`<div class="note" style="margin:12px 0 0;border-color:#E0A100;background:rgba(245,158,11,.10)">⚠️ <b>Tu base solo cubre ${monthsCov} mes(es)</b> (${S.ipsaFrom||"—"} → ${S.ipsaTo||"—"}). Por eso un análisis <b>mensual o semanal</b> de acciones como SANTANDER o LATAM no alcanza: solo tienes cierres recientes. Pulsa <b>📥 Cargar histórico IPSA (23 meses)</b> arriba y ese historial se sumará a tus cierres diarios (sin pisarlos).</div>`:"";
+  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+diagNote+backup+danger);
   const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
   return intro+tbl;
 }
@@ -4048,6 +4051,7 @@ function attachDatos(){
   document.querySelectorAll("[data-dgo]").forEach(b=>b.onclick=()=>{page=b.dataset.dgo;render();});
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
   const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);}catch(e){}render();window.alert("Sistema actualizado con los datos cargados.\n\nSeguimientos: "+r.nPts+" punto(s) en "+r.nProj+" cartera(s). El Home, los análisis y los rankings ya reflejan la base.");};
+  const dseed=document.querySelector("[data-dseed]");if(dseed)dseed.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de cargar histórico IPSA");}catch(e){}const n=pricedbSeedDemo();PRICEDB.seeded=true;savePriceDB();try{pricedbSanitize();}catch(e){}render();window.alert(n>0?("Histórico del IPSA cargado a la base: "+n+" punto(s) (14 acciones × ~23 meses + IPSA).\n\nTus cierres diarios se conservaron. Ahora puedes crear análisis mensuales/semanales con cualquier acción del IPSA."):"El histórico del IPSA ya estaba cargado (no se duplicó nada).");};
   const bkon=document.querySelector("[data-bkon]");if(bkon)bkon.onchange=()=>{AUTOBK.on=bkon.checked;autobkSave();};
   const bkd=document.querySelector("[data-bkdays]");if(bkd)bkd.onchange=()=>{AUTOBK.days=+bkd.value||7;autobkSave();};
   const bknow=document.querySelector("[data-bknow]");if(bknow)bknow.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");render();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
@@ -4956,7 +4960,10 @@ function betaTag(b){return b<0.8?"defensivo":b<1?"moderado":b<1.2?"de mercado":"
 /* ===================== DATOS CONSOLIDADOS DE SEGUIMIENTO ===================== */
 function allTrackedProjects(){const out=[];CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>out.push({c,p}));});return out;}
 /* "jul-24" → "2024-07-15" (día medio del mes, para no chocar con fechas diarias de seguimiento) */
-function labelToDate(lab){const M={ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago:8,sep:9,oct:10,nov:11,dic:12};const p=(""+lab).split("-");const mo=M[(p[0]||"").toLowerCase()]||1;const yy=parseInt(p[1],10);const yr=isNaN(yy)?2025:(yy<100?2000+yy:yy);return yr+"-"+String(mo).padStart(2,"0")+"-15";}
+function labelToDate(lab){const M={ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago:8,sep:9,oct:10,nov:11,dic:12};const p=(""+lab).split("-");const mo=M[(p[0]||"").toLowerCase()]||1;const yy=parseInt(p[1],10);const yr=isNaN(yy)?2025:(yy<100?2000+yy:yy);
+  // representante mensual en DÍA HÁBIL: si el 15 cae sábado/domingo se corre a viernes/lunes (si no, el saneo de fin de semana borraría el dato mensual)
+  let day=15;const wd=new Date(Date.UTC(yr,mo-1,15)).getUTCDay();if(wd===6)day=14;else if(wd===0)day=16;
+  return yr+"-"+String(mo).padStart(2,"0")+"-"+String(day).padStart(2,"0");}
 /* histórico de precios por acción + IPSA: universo de análisis (todo el historial disponible) + lo ingresado en los seguimientos */
 function consolidatedSeries(){
   const tick={},names={},cols={},ipsaMap={};
