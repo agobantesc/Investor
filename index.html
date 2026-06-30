@@ -1205,8 +1205,14 @@
   .imp-dz:hover,.imp-dz.over{border-color:var(--accent);background:var(--a-50);}
   .imp-dz b{color:var(--navy);}
   .datos-acts{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+  .datos-maint{display:flex;gap:9px;flex-wrap:wrap;align-items:center;}
   .datos-freq{margin-left:auto;display:flex;align-items:center;gap:8px;}
   @media(max-width:760px){.datos-freq{margin-left:0;}}
+  .datos-iss{display:flex;flex-direction:column;gap:7px;margin:13px 1.1rem 2px;}
+  .iss{font-size:12px;font-weight:600;padding:.5rem .7rem;border-radius:9px;border:1px solid var(--line2);line-height:1.4;}
+  .iss-warn{background:rgba(245,158,11,.10);border-color:#E0A100;color:var(--ink);}
+  .iss-info{background:var(--soft);color:var(--mut);}
+  .iss-ok{background:rgba(16,140,94,.09);border-color:rgba(16,140,94,.4);color:var(--green);font-size:12px;font-weight:700;padding:.5rem .7rem;border-radius:9px;margin:13px 1.1rem 2px;}
   /* Home: saludo del día */
   .home-greet{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
   .hg-hi{font:800 19px var(--font);color:var(--navy);letter-spacing:-.3px;}
@@ -3743,6 +3749,7 @@ function impCalc(){
    Alimenta Home, análisis, simulaciones y los seguimientos de todas las carteras. Namespaced por cliente. */
 let PRICEDB=(function(){const d=lsGet("inv_pricedb_v1");return (d&&d.px)?d:{tickers:{},px:{},ipsa:{}};})();
 let pricedbFreq=lsGet("inv_pricedb_freq")||"mensual";
+let datosCovTab=lsGet("inv_datos_covtab")||"mensual";   // pestaña de cadencia en "Acciones cargadas"
 function savePriceDB(){PRICEDB.updated=new Date().toISOString().slice(0,10);return lsSet("inv_pricedb_v1",PRICEDB);}
 function pricedbEmpty(){return !PRICEDB||!PRICEDB.px||!Object.keys(PRICEDB.px).length;}
 /* la bolsa (IPSA) opera lun–vie: un cierre en sáb/dom es un dato inválido */
@@ -3810,9 +3817,14 @@ function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s
 function pdAsOf(map,sortedKeys,D){let lo=null;for(let i=0;i<sortedKeys.length;i++){if(sortedKeys[i]<=D)lo=sortedKeys[i];else break;}return lo!=null?map[lo]:null;}
 /* metadatos por defecto de un ticker (toma del universo demo si existe) */
 function pdMeta(t,srcName){const st=((typeof DEMO!=="undefined"&&DEMO.stocks)||(typeof STOCKS!=="undefined"?STOCKS:[])||[]).find(s=>s.t===t)||{};const ci=Object.keys(PRICEDB.tickers).length;return {n:srcName||st.n||t,s:st.s||"",c:st.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci%IMP_PAL.length]:"#1E5FD1"),b:(st.b!=null?st.b:null)};}
-/* carga diaria / puntual: escribe un día (fecha + IPSA + precios) en la base */
+/* ¿es una fecha válida para la base? día hábil y no posterior al último día bursátil real (no se inventan días futuros) */
+function validBaseDate(date){return !!date&&isTradingDay(date)&&date<=lastTradingDay();}
+/* última fecha con datos reales en la base (para proponerla por defecto en los cierres y no inventar un día por delante) */
+function lastBaseDate(){try{const ds=pricedbAllDates();if(ds.length)return ds[ds.length-1];}catch(e){}return lastTradingDay();}
+/* carga diaria / puntual: escribe un día (fecha + IPSA + precios) en la base. RECHAZA fechas que no corresponden
+   (fin de semana o futuras) para que ni un cierre manual ni una planilla puedan ensuciar la base con días inexistentes. */
 function pricedbUpsertDay(date,ipsa,priceMap){
-  if(!date)return;
+  if(!validBaseDate(date))return;
   if(ipsa!=null&&isFinite(ipsa)&&ipsa>0)PRICEDB.ipsa[date]=+ipsa;
   Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;(PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);});
   savePriceDB();
@@ -3824,13 +3836,15 @@ function pricedbIndexNames(){return Object.keys(pricedbIdxAll());}
 function pricedbIdxMap(name){if(!name||name==="IPSA")return PRICEDB.ipsa||{};return (PRICEDB.idx&&PRICEDB.idx[name])||{};}
 /* carga masiva: fusiona series parseadas (formato impFiles: {name,src,dates,closes}) en la base */
 function pricedbMergeFiles(files,benchName){
-  let added=0,tk=0;
+  let added=0,tk=0,skipped=0;
+  // solo se aceptan días hábiles y no futuros: una planilla con filas de fin de semana o fechas posteriores a hoy no ensucia la base
   (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];const nm=pdIndexOf(f.name,benchName);
-    if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(d&&isFinite(v)&&v>0){tgt[d]=v;added++;}}return;}
+    if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){tgt[d]=v;added++;}}return;}
     const t=f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);
-    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(d&&isFinite(v)&&v>0){PRICEDB.px[t][d]=v;added++;}}
+    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){PRICEDB.px[t][d]=v;added++;}}
   });
-  savePriceDB();return {added,tk};
+  savePriceDB();try{pricedbSanitize();}catch(e){}   // saneo inmediato: sin arrastres ni IPSA por delante del mercado, sin esperar a la próxima recarga
+  return {added,tk,skipped};
 }
 function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];savePriceDB();}
 /* resumen para la vista: por ticker -> n puntos, rango, último precio */
@@ -3856,10 +3870,11 @@ function pricedbSeedDemo(){
 /* guarda en la base los CIERRES de los proyectos (no las operaciones); idempotente, no pisa lo existente */
 function pricedbIngestProjects(){
   try{let n=0;(PROJECTS||[]).forEach(p=>{(p.weeks||[]).forEach(w=>{
+    if(w.ev)return;   // semana de OPERACIÓN (compra/venta/aporte): contabilidad, nunca alimenta la base de precios
+    if(!isTradingDay(w.date))return;   // no ingresa días no hábiles a la base
     if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false&&PRICEDB.ipsa[w.date]==null){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}   // no ingiere IPSA arrastrado a la base
-    const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // el precio de una compra/venta es contabilidad, no un cierre
     const fresh=w.fresh;   // no copiar a la base los precios arrastrados (carry-forward); solo los cierres reales de ese día
-    const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
+    const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
   });});if(n)savePriceDB();return n;}catch(e){return 0;}
 }
 /* población automática de la base (una vez por cliente): cierres de proyectos + universo demo */
@@ -3980,47 +3995,91 @@ function systemClean(){
   }catch(e){}
   return kept;
 }
+/* cobertura por cadencia: para cada acción (y el IPSA) cuántos períodos CONSECUTIVOS recientes tiene a cada
+   cadencia (diario/semanal/mensual) con sus fechas reales, y cuál es su cadencia "principal" (la más fina con racha ≥3). */
+function coverageByFreq(){
+  const FREQS=[["diario","daily"],["semanal","weekly"],["mensual","monthly"]];
+  function recentRun(map,freq){
+    const rs=resampleMap(map||{},freq);const total=rs.length;
+    if(!total)return {n:0,from:null,to:null,total:0};
+    let i=total-1;while(i>0&&gapOK(rs[i-1].d,rs[i].d,freq))i--;
+    const run=rs.slice(i);return {n:run.length,from:run[0].d,to:run[run.length-1].d,total};
+  }
+  function classify(t,map,col,name){
+    const o={t,name:name||t,col:col||"#1E5FD1"};
+    FREQS.forEach(([f,k])=>{o[k]=recentRun(map,f);});
+    // PRIMARIA = la cadencia con la racha consecutiva reciente MÁS LARGA (desempate: la más gruesa).
+    // Así una acción con 24 meses + 3 días recientes queda como "mensual" (24>3), no "diaria".
+    let primary=null,bestN=-1;
+    [["mensual","monthly"],["semanal","weekly"],["diario","daily"]].forEach(([f,k])=>{if(o[k].n>bestN){bestN=o[k].n;primary=f;}});
+    o.primary=bestN>=2?primary:null;return o;
+  }
+  const out=[];const meta=(PRICEDB&&PRICEDB.tickers)||{};
+  Object.keys((PRICEDB&&PRICEDB.px)||{}).sort().forEach(t=>{const m=PRICEDB.px[t];if(!m||!Object.keys(m).length)return;const md=meta[t]||{};out.push(classify(t,m,md.c,md.n||t));});
+  const ip=(PRICEDB&&PRICEDB.ipsa)||{};if(Object.keys(ip).length)out.push(classify("__IPSA__",ip,"#0F172A","IPSA"));
+  return out;
+}
+/* detección de inconsistencias en la base (solo diagnostica; los arreglos los hace "Reparar base") */
+function detectInconsistencies(){
+  const issues=[];const PX=(PRICEDB&&PRICEDB.px)||{},IPSA=(PRICEDB&&PRICEDB.ipsa)||{};
+  const tickers=Object.keys(PX).filter(t=>PX[t]&&Object.keys(PX[t]).length);
+  if(!tickers.length&&!Object.keys(IPSA).length)return issues;
+  const datesOf=t=>Object.keys(PX[t]).sort();
+  // 1) fin de semana
+  (function(){const wk={};tickers.forEach(t=>datesOf(t).forEach(d=>{if(!isTradingDay(d))wk[t]=1;}));Object.keys(IPSA).forEach(d=>{if(!isTradingDay(d))wk.IPSA=1;});const who=Object.keys(wk);if(who.length)issues.push({level:"warn",msg:"Hay fechas de fin de semana en la base (la bolsa no opera sáb/dom). Usa “Reparar base”.",tickers:who});})();
+  // 2) acciones rezagadas
+  (function(){let gl=null;tickers.forEach(t=>{const ds=datesOf(t),l=ds[ds.length-1];if(l&&(gl==null||l>gl))gl=l;});if(!gl)return;const stale=[];tickers.forEach(t=>{const ds=datesOf(t),l=ds[ds.length-1];if(l&&l<gl&&!gapOK(l,gl,"diario"))stale.push(t);});if(stale.length)issues.push({level:"info",msg:"Estas acciones no tienen el último cierre del grupo ("+gl+"): su dato más reciente está rezagado.",tickers:stale});})();
+  // 3) rangos mensuales incompatibles
+  (function(){const monthly=tickers.map(t=>{const ds=datesOf(t);return {t,from:ds[0].slice(0,7),to:ds[ds.length-1].slice(0,7),mp:resampleMap(PX[t],"mensual").length};}).filter(x=>x.mp>=2);if(monthly.length<2)return;const ls=monthly.reduce((a,b)=>b.from>a.from?b:a),ee=monthly.reduce((a,b)=>b.to<a.to?b:a);const os=ls.from,oe=ee.to;const months=os<=oe?(periodIndex(oe+"-15","mensual")-periodIndex(os+"-15","mensual")+1):0;if(months<3)issues.push({level:"warn",msg:"Las acciones no comparten suficiente historial mensual (solapamiento "+(months>0?(os+" → "+oe+", "+months+" mes(es)"):"vacío")+"): un análisis mensual conjunto no es comparable.",tickers:[ls.t,ee.t]});})();
+  // 4) IPSA ausente donde hay acciones
+  (function(){if(!Object.keys(IPSA).length){if(tickers.length)issues.push({level:"info",msg:"No hay IPSA en la base: las métricas relativas al índice no estarán disponibles."});return;}const need={};tickers.forEach(t=>datesOf(t).forEach(d=>{if(isTradingDay(d))need[d]=1;}));const miss=Object.keys(need).filter(d=>IPSA[d]==null).sort();if(miss.length)issues.push({level:"info",msg:"Faltan "+miss.length+" fecha(s) de IPSA donde sí hay cierres de acciones (ej. "+miss[miss.length-1]+")."});})();
+  // 5) arrastre sospechado (valores finales idénticos)
+  (function(){const cf=[];tickers.forEach(t=>{const rs=resampleMap(PX[t],"diario");if(rs.length<2)return;if(dropTrailingFlat(rs).length<rs.length)cf.push(t);});if(Object.keys(IPSA).length){const ri=resampleMap(IPSA,"diario");if(ri.length>=2&&dropTrailingFlat(ri).length<ri.length)cf.push("IPSA");}if(cf.length)issues.push({level:"warn",msg:"Valores finales repetidos idénticos (un cierre real no repite al decimal): posible arrastre. “Reparar base” los limpia.",tickers:cf});})();
+  return issues;
+}
 function viewDatos(){const pg=page||"base";if(pg==="cargar")return datosCargar();if(pg==="cierre")return datosCierre();return datosBase();}
 function datosBase(){
   const S=pricedbSummary(),empty=pricedbEmpty();
   const active=(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos");
-  const freqSeg=`<div class="home-seg" role="group" aria-label="Frecuencia de análisis">${["diario","semanal","mensual"].map(f=>`<button data-dfreq="${f}" class="${pricedbFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
+  const lastDate=lastBaseDate();
   const kpis=`<div class="tiles">
     ${tile("Acciones en la base",empty?"—":String(S.rows.length),"con historial cargado",indigo,ink)}
     ${tile("Cobertura IPSA",S.ipsaN?(S.ipsaN+" fechas"):"—",S.ipsaFrom?(S.ipsaFrom+" → "+S.ipsaTo):"sin IPSA aún",indigo,ink)}
-    ${tile("Última actualización",PRICEDB.updated||"—","de la base",indigo,ink)}
+    ${tile("Último dato",empty?"—":lastDate,"de la base",indigo,ink)}
     ${tile("Alimenta el sistema",empty?"—":"Home · análisis · seguimientos","desde los datos cargados",indigo,empty?muted:green)}</div>`;
-  const rows=empty?"":S.rows.map(r=>`<tr><td>${datosTk(r)}</td><td>${r.s||"—"}</td><td class="r">${r.np}</td><td>${r.from} → ${r.to}</td><td class="r">${fmtP(r.last)}</td><td class="r">${r.b!=null?r.b.toFixed(2):"—"}</td><td class="r"><button class="wbtn del" data-ddel="${r.t}" title="Quitar de la base">✕</button></td></tr>`).join("");
-  const table=empty?`<div class="note" style="margin:0">Tu base de precios está vacía. Ve a <b>Cargar planilla</b> para subir tus archivos de Investing, o usa <b>Cierre diario</b> para empezar a ingresar precios.</div>`
-    :`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Puntos</th><th>Rango de fechas</th><th class="r">Último</th><th class="r ntr">β</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
-  const actions=`<div class="datos-acts">
-    <button class="btn btn-pri" data-dgo="cargar">+ Cargar planilla</button>
-    <button class="btn" data-dseed title="Copia a la base el histórico de las 14 acciones del IPSA (23 meses) + IPSA, sin pisar tus cierres">📥 Cargar histórico IPSA (23 meses)</button>
-    <button class="btn" data-dapply ${empty?"disabled":""}>↻ ACTUALIZAR SISTEMA</button>
-    <button class="btn" data-dgo="cierre">Cierre diario</button>
-    <span class="datos-freq"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span></div>`;
-  const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
-  const bkLast=(AUTOBK&&AUTOBK.lastDL)?(""+AUTOBK.lastDL).slice(0,10):"nunca";
-  const bkSnap=bkInfo?((""+bkInfo.date).slice(0,16).replace("T"," ")):"—";
-  const daysOpts=[7,14,30].map(d=>`<option value="${d}" ${(AUTOBK&&AUTOBK.days===d)?"selected":""}>cada ${d} días</option>`).join("");
-  const backup=`<div class="datos-bk" style="display:flex;gap:11px 14px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">
-    <span class="genl" style="margin:0;font-weight:600">🛡️ Respaldo automático</span>
-    <label style="display:inline-flex;gap:6px;align-items:center;font-size:12px;cursor:pointer"><input type="checkbox" data-bkon ${(AUTOBK&&AUTOBK.on)?"checked":""}> activado</label>
-    <select data-bkdays class="genl" style="margin:0;padding:3px 6px">${daysOpts}</select>
-    <button class="btn" data-bknow>⬇ Descargar respaldo ahora</button>
-    <button class="btn" data-bkrestore>↩ Restaurar copia interna</button>
-    <span class="genl" style="margin:0">última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b></span></div>`;
-  const lastDate=(function(){const ds=pricedbAllDates();return ds.length?ds[ds.length-1]:lastTradingDay();})();
-  const danger=`<div class="datos-clean" style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)">
-    <button class="btn" data-dfix>🔧 Reparar base</button>
-    <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:3px 6px"><button class="btn" data-ddaydel>Quitar este día</button></span>
-    <button class="btn" data-dclean style="border-color:var(--red);color:var(--red)">🧹 Limpiar sistema</button>
-    <span class="genl" style="margin:0;flex-basis:100%"><b>Reparar</b> quita fines de semana y arrastres (precios copiados sin cierre real) · <b>Quitar un día</b> elimina una fecha puntual · <b>Limpiar</b> deja solo la <b>compra inicial</b> de cada cartera y vacía la base/análisis/escenarios. El último dato de la base es <b>${lastDate}</b>.</span></div>`;
+  // ── PANEL SIMPLE: solo 2 botones principales ──
   const monthsCov=(function(){const set={};(pricedbAllDates()||[]).forEach(d=>set[(""+d).slice(0,7)]=1);return Object.keys(set).length;})();
-  const diagNote=(!empty&&monthsCov<6)?`<div class="note" style="margin:12px 0 0;border-color:#E0A100;background:rgba(245,158,11,.10)">⚠️ <b>Tu base solo cubre ${monthsCov} mes(es)</b> (${S.ipsaFrom||"—"} → ${S.ipsaTo||"—"}). Por eso un análisis <b>mensual o semanal</b> de acciones como SANTANDER o LATAM no alcanza: solo tienes cierres recientes. Pulsa <b>📥 Cargar histórico IPSA (23 meses)</b> arriba y ese historial se sumará a tus cierres diarios (sin pisarlos).</div>`:"";
-  const intro=card("Base de precios del sistema","Tu repositorio central de precios: alimenta el análisis, las simulaciones, el Home y los seguimientos de todas tus carteras. Carga planillas de Investing (diario/semanal/mensual) o el cierre de cada día.",kpis+actions+diagNote+backup+danger);
-  const tbl=card("Acciones cargadas",empty?"Aún sin datos":`${S.rows.length} acción(es) · IPSA ${S.ipsaN} fecha(s)`,{html:table,flush:true});
-  return intro+tbl;
+  const diagNote=(!empty&&monthsCov<6)?`<div class="note" style="margin:12px 0 0;border-color:#E0A100;background:rgba(245,158,11,.10)">⚠️ <b>Tu base solo cubre ${monthsCov} mes(es)</b> (${S.ipsaFrom||"—"} → ${S.ipsaTo||"—"}). Por eso un análisis <b>mensual o semanal</b> de acciones como SANTANDER o LATAM no alcanza. Pulsa <b>📥 Cargar histórico IPSA</b> (abajo) y ese historial se sumará a tus cierres (sin pisarlos).</div>`:"";
+  const actions=`<div class="datos-acts">
+    <button class="btn btn-pri" data-dgo="cargar">📈 Cargar planilla</button>
+    <button class="btn btn-pri" data-dapply ${empty?"disabled":""}>↻ Actualizar sistema</button></div>
+    <div class="genl" style="margin:10px 0 0"><b>Cargar planilla</b>: sube tus CSV/XLSX (diario, semanal o mensual). <b>Actualizar sistema</b>: refresca Home, análisis y seguimientos con la base.</div>`;
+  const intro=card("Base de precios del sistema","Tu repositorio central de precios. Solo se aceptan días hábiles reales: ni una planilla ni un cierre pueden registrar fines de semana ni fechas futuras.",kpis+actions+diagNote);
+  // ── ACCIONES CARGADAS: pestañas por cadencia (diario/semanal/mensual) + inconsistencias ──
+  const COV=empty?[]:coverageByFreq();
+  const ISS=empty?[]:detectInconsistencies();
+  const FK={diario:"daily",semanal:"weekly",mensual:"monthly"};
+  const fk=FK[datosCovTab]||"monthly";
+  const tabSeg=`<div class="home-seg" role="tablist" aria-label="Cadencia">${["diario","semanal","mensual"].map(f=>{const n=COV.filter(c=>c[FK[f]].n>=2).length;return `<button data-dcov="${f}" role="tab" class="${datosCovTab===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}${n?` <span style="opacity:.6">${n}</span>`:""}</button>`;}).join("")}</div>`;
+  const covList=COV.filter(c=>c[fk].n>=2).sort((a,b)=>b[fk].n-a[fk].n);   // aparece en la pestaña solo si tiene ≥2 períodos consecutivos (una cadencia real, no un punto suelto)
+  const meta=t=>(PRICEDB.tickers&&PRICEDB.tickers[t])||{};
+  const covRows=covList.map(c=>{const isIp=c.t==="__IPSA__";const sct=isIp?"Índice":(meta(c.t).s||"—");return `<tr><td><b style="color:${c.col}">${isIp?"IPSA":c.t}</b>${c.primary===datosCovTab?' <span class="badge pos" style="font-size:8px">principal</span>':""}</td><td>${sct}</td><td class="r">${c[fk].n}</td><td>${c[fk].from} → ${c[fk].to}</td>${isIp?'<td></td>':`<td class="r"><button class="wbtn del" data-ddel="${c.t}" title="Quitar de la base">✕</button></td>`}</tr>`;}).join("");
+  const covTable=empty?`<div class="note" style="margin:0">Tu base está vacía. Usa <b>Cargar planilla</b> o el <b>Cierre diario</b> para empezar.</div>`
+    :(covList.length?`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Períodos seguidos</th><th>Rango (${datosCovTab})</th><th></th></tr></thead><tbody>${covRows}</tbody></table></div>`
+      :`<div class="note" style="margin:0">Ninguna acción tiene una racha <b>${datosCovTab}</b> reciente (períodos consecutivos). Prueba otra pestaña o carga más cierres a esa cadencia.</div>`);
+  const issHtml=ISS.length?`<div class="datos-iss">${ISS.map(i=>`<div class="iss iss-${i.level}">${i.level==="warn"?"⚠️":"ℹ️"} ${i.msg}${i.tickers&&i.tickers.length?` <span style="opacity:.7">(${i.tickers.map(t=>t==="__IPSA__"?"IPSA":t).join(", ")})</span>`:""}</div>`).join("")}</div>`
+    :(empty?"":`<div class="iss iss-ok">✓ Sin inconsistencias detectadas en la base.</div>`);
+  const tbl=card("Acciones cargadas","Cada pestaña muestra las acciones con datos REALES a esa cadencia (racha reciente de períodos consecutivos) y su rango.",{html:tabSeg+covTable+issHtml,flush:true});
+  // ── MANTENIMIENTO (secundario): cierre diario, histórico, quitar un día, reparar ──
+  const freqSeg=`<div class="home-seg" role="group" aria-label="Frecuencia de análisis">${["diario","semanal","mensual"].map(f=>`<button data-dfreq="${f}" class="${pricedbFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
+  const maint=card("Mantenimiento de datos","Acciones puntuales sobre la base.",`<div class="datos-maint">
+    <button class="btn" data-dgo="cierre">📝 Cierre diario manual</button>
+    <button class="btn" data-dseed title="Copia a la base el histórico de las 14 acciones del IPSA (23 meses) + IPSA, sin pisar tus cierres">📥 Cargar histórico IPSA (23 meses)</button>
+    <button class="btn" data-dfix>🔧 Reparar base</button>
+    <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:5px 7px"><button class="btn" data-ddaydel>Quitar este día</button></span>
+    <span class="datos-freq" style="margin-left:auto"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span>
+    </div><div class="genl" style="margin:10px 0 0"><b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
+  return intro+tbl+maint;
 }
 function datosCargar(){
   const drop=card("Cargar planilla a la base","Sube tus CSV/XLSX de Investing — un combinado (Fecha;IPSA;TICKER…) o un archivo por acción. Diario, semanal o mensual. Se fusionan en la base por fecha (lo nuevo actualiza, nunca borra).",
@@ -4039,7 +4098,7 @@ function datosCargar(){
 function datosCierre(){
   const C=consolidatedSeries(),tickers=pricedbTickers(),held=allHeldTickers().map(h=>h.t);
   const all=[...new Set([...tickers,...held])].sort();
-  const today=lastTradingDay();   // si hoy es fin de semana, propone el último día hábil (la bolsa no opera sáb/dom)
+  const today=lastBaseDate();   // propone la ÚLTIMA fecha con datos (no “hoy”): así un cierre sin tocar la fecha no inventa un día por delante
   const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="" placeholder="${(last!=null&&last!=="")?('último '+last):'precio'}" aria-label="Precio ${t}"></div>`;}).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones. Carga una planilla en <b>Cargar planilla</b> o registra una compra en Inversión.</div>`;
   const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="" placeholder="último ${lastKnownIpsa(C)}"></label></div>
@@ -4052,17 +4111,9 @@ function attachDatos(){
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
   const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);}catch(e){}render();window.alert("Sistema actualizado con los datos cargados.\n\nSeguimientos: "+r.nPts+" punto(s) en "+r.nProj+" cartera(s). El Home, los análisis y los rankings ya reflejan la base.");};
   const dseed=document.querySelector("[data-dseed]");if(dseed)dseed.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de cargar histórico IPSA");}catch(e){}const n=pricedbSeedDemo();PRICEDB.seeded=true;savePriceDB();try{pricedbSanitize();}catch(e){}render();window.alert(n>0?("Histórico del IPSA cargado a la base: "+n+" punto(s) (14 acciones × ~23 meses + IPSA).\n\nTus cierres diarios se conservaron. Ahora puedes crear análisis mensuales/semanales con cualquier acción del IPSA."):"El histórico del IPSA ya estaba cargado (no se duplicó nada).");};
-  const bkon=document.querySelector("[data-bkon]");if(bkon)bkon.onchange=()=>{AUTOBK.on=bkon.checked;autobkSave();};
-  const bkd=document.querySelector("[data-bkdays]");if(bkd)bkd.onchange=()=>{AUTOBK.days=+bkd.value||7;autobkSave();};
-  const bknow=document.querySelector("[data-bknow]");if(bknow)bknow.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");render();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
-  const bkr=document.querySelector("[data-bkrestore]");if(bkr)bkr.onclick=()=>autobkRestore();
+  document.querySelectorAll("[data-dcov]").forEach(b=>b.onclick=()=>{datosCovTab=b.dataset.dcov;lsSet("inv_datos_covtab",datosCovTab);render();});
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
   const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost)?("Base reparada.\n\n• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
-  const dcln=document.querySelector("[data-dclean]");if(dcln)dcln.onclick=()=>{
-    if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
-    const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera la compra inicial y sus operaciones, y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
-    if(typed==null||typed.trim().toUpperCase()!=="LIMPIAR"){window.alert("Cancelado. No se eliminó nada.");return;}
-    const k=systemClean();page="base";render();window.alert("Listo. Se conservó la compra inicial de "+k+" cartera(s).\n\nAhora carga tus planillas (mensual/semanal/diario, acciones e índices) en “Cargar planilla” y pulsa ACTUALIZAR SISTEMA.");};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
     if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
     if(!confirm('⚠ Doble chequeo de seguridad\n\nVas a ELIMINAR definitivamente '+t+' ('+np+' precio[s]) de la base. Esta acción no se puede deshacer.\n\n¿Eliminar '+t+'?'))return;
@@ -4073,9 +4124,9 @@ function attachDatos(){
     const dz=document.getElementById("dDrop");if(dz){dz.ondragover=e=>{e.preventDefault();dz.classList.add("over");};dz.ondragleave=()=>dz.classList.remove("over");dz.ondrop=e=>{e.preventDefault();dz.classList.remove("over");if(e.dataTransfer.files.length)impOnFiles(e.dataTransfer.files);};}}
   document.querySelectorAll("[data-drm]").forEach(b=>b.onclick=()=>{impFiles.splice(+b.dataset.drm,1);render();});
   const dcl=document.querySelector("[data-dclear]");if(dcl)dcl.onclick=()=>{impFiles=[];impMsg="";render();};
-  const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) en "+r.tk+" acción(es).\n\nSeguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
+  const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) en "+r.tk+" acción(es)."+(r.skipped>0?"\n\n"+r.skipped+" fila(s) ignorada(s) por ser fin de semana o fecha futura (no corresponden a un día bursátil).":"")+"\n\nSeguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
   const dtm=document.querySelector("[data-dtmpl]");if(dtm)dtm.onclick=()=>impDownloadTemplate();
-  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}if(!weekendGuard(date))return;const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
+  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(res&&res.invalid){window.alert("La fecha "+date+" no corresponde a un día bursátil válido (fin de semana o futura). No se registró nada.");return;}if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
 }
 function impDownloadTemplate(){const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B\n2025-01-31;6500;52000;5800;38000\n2025-02-28;6610;53400;6010;36500\n2025-03-31;6720;55100;5950;40200\n2025-04-30;6680;54200;6230;39100\n2025-05-31;6810;56800;6480;42500\n2025-06-30;6905;57500;6390;41000\n";const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
 /* ===================== CREAR ANÁLISIS (parametrizado desde la base del sistema) ===================== */
@@ -4232,6 +4283,10 @@ function cfgRender(){
   const prof=(invProfile&&invProfile.levels)?`<b>${invProfile.label}</b> · nivel ${invProfile.level}/5`:(invProfile?"Reevaluar (cuestionario actualizado)":"Sin evaluar");
   const keyOk=cpKey?'<span class="cfg-pill ok">Configurada</span>':'<span class="cfg-pill no">No configurada</span>';
   const ds=DATASET==="import"&&IMP?`Importado (${IMP.assets.length} acciones)`:"Demo · IPSA";
+  const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
+  const bkLast=(AUTOBK&&AUTOBK.lastDL)?(""+AUTOBK.lastDL).slice(0,10):"nunca";
+  const bkSnap=bkInfo?((""+bkInfo.date).slice(0,16).replace("T"," ")):"—";
+  const daysOpts=[7,14,30].map(d=>`<option value="${d}" ${(AUTOBK&&AUTOBK.days===d)?"selected":""}>cada ${d} días</option>`).join("");
   m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes generales de Investor</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Perfil de inversionista</div><div class="cfg-row"><div class="cfg-k">${prof}<div class="cfg-sub">Personaliza el copiloto y el asistente</div></div><button class="btn btn-pri" id="cfgProf">${invProfile?"Ver / reevaluar":"Hacer evaluación"}</button></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Apariencia</div><div class="cfg-row"><div class="cfg-k">Tema</div><div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Escala de interfaz<div class="cfg-sub">Tamaño general, como el zoom del navegador</div></div><div class="cfg-seg">${[80,90,100,110].map(s=>'<button class="'+(Math.round(uiScale*100)===s?"on":"")+'" data-scale="'+s+'">'+s+'%</button>').join("")}</div></div></div>
@@ -4246,6 +4301,11 @@ function cfgRender(){
       <div class="cfg-row" style="margin-top:6px"><div class="cfg-k"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkIva" ${BROKER.iva?"checked":""}> Agregar IVA (19%) a la comisión</label><div class="cfg-sub" id="cfgBkSum">${brokerSummary()}</div></div></div>
       <div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). Se descuentan en la Contabilidad y en el Administrador de clientes.</div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Datos</div><div class="cfg-row"><div class="cfg-k">Set de análisis activo<div class="cfg-sub">${ds}</div></div>${IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Importa en Análisis → Importar</span>'}</div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Respaldo de tu seguimiento<div class="cfg-sub">Exporta/restaura todo como archivo JSON</div></div><div style="display:flex;gap:7px"><button class="btn" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Fuente de petróleo (URL JSON)<div class="cfg-sub">Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.</div></div><input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="flex:1 1 230px;min-width:200px;padding:.45rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 11.5px var(--font);color:var(--ink)"></div></div>
+    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Respaldo automático</div>
+      <div class="cfg-row"><div class="cfg-k"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkOn" ${(AUTOBK&&AUTOBK.on)?"checked":""}> Respaldo automático activado</label><div class="cfg-sub">Te propone descargar una copia cada cierto tiempo · última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b></div></div><select id="cfgBkDays" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${daysOpts}</select></div>
+      <div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Copia ahora<div class="cfg-sub">Descarga un respaldo o restaura la última copia interna</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgBkNow">⬇ Descargar respaldo</button><button class="btn" id="cfgBkRestore">↩ Restaurar copia interna</button></div></div></div>
+    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Mantenimiento de datos</div>
+      <div class="cfg-row"><div class="cfg-k">Limpiar sistema<div class="cfg-sub">Deja solo la <b>compra inicial</b> y las operaciones de cada cartera; vacía la base de precios, los análisis y las simulaciones (se reconstruye cargando planillas). No borra tus proyectos.</div></div><button class="btn" id="cfgClean" style="color:var(--red);border-color:var(--red-line)">🧹 Limpiar sistema</button></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Acceso</div><div class="cfg-row"><div class="cfg-k">${(AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña"}<div class="cfg-sub">Pantalla de inicio de sesión local en este navegador</div></div><div style="display:flex;gap:7px;flex-wrap:wrap">${(AUTH&&AUTH.enabled)?('<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'):'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>'}</div></div></div>
     <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Pro · Roadmap<div class="cfg-sub">Precios en vivo, arquitectura y próximos pasos</div></div><button class="btn" id="cfgPro">Ver roadmap →</button></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">Investor · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
     <input type="file" id="cfgRstFile" accept="application/json,.json" style="display:none">`;
@@ -4270,6 +4330,17 @@ function cfgRender(){
   const rfl=m.querySelector("#cfgRstFile");m.querySelector("#cfgRst").onclick=()=>rfl.click();rfl.onchange=ev=>{if(ev.target.files[0]){importBackup(ev.target.files[0]);cfgClose();}};
   const _ou=m.querySelector("#cfgOilUrl");if(_ou)_ou.onchange=()=>{OIL_URL=(_ou.value||"").trim();try{localStorage.setItem("inv_oil_url",OIL_URL);}catch(e){}if(OIL_URL&&typeof mindFetch==="function")mindFetch();};
   m.querySelector("#cfgReset").onclick=()=>{if(confirm("¿Borrar TODOS los datos de Investor en este navegador? No se puede deshacer.")){try{localStorage.clear();}catch(e){}location.reload();}};
+  // Respaldo automático (movido desde Datos)
+  const _bo=m.querySelector("#cfgBkOn");if(_bo)_bo.onchange=()=>{AUTOBK.on=_bo.checked;autobkSave();};
+  const _bd=m.querySelector("#cfgBkDays");if(_bd)_bd.onchange=()=>{AUTOBK.days=+_bd.value||7;autobkSave();};
+  const _bn=m.querySelector("#cfgBkNow");if(_bn)_bn.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");cfgRender();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
+  const _br=m.querySelector("#cfgBkRestore");if(_br)_br.onclick=()=>autobkRestore();
+  // Limpiar sistema (movido desde Datos)
+  const _cl=m.querySelector("#cfgClean");if(_cl)_cl.onclick=()=>{
+    if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
+    const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera la compra inicial y sus operaciones, y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
+    if(typed==null||typed.trim().toUpperCase()!=="LIMPIAR"){window.alert("Cancelado. No se eliminó nada.");return;}
+    const k=systemClean();cfgClose();modulo="datos";page="base";render();window.alert("Listo. Se conservó la compra inicial de "+k+" cartera(s).\n\nAhora carga tus planillas en Datos → “Cargar planilla” y pulsa Actualizar sistema.");};
 }
 
 /* ---------------- COPILOTO: perfil + dataset ---------------- */
@@ -4979,10 +5050,11 @@ function consolidatedSeries(){
   allTrackedProjects().forEach(({p})=>{
     (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||names[hd.t]||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
     (p.weeks||[]).forEach(w=>{
+      if(w.ev)return;   // semana de OPERACIÓN (compra/venta/aporte): es CONTABILIDAD, no un cierre de mercado → nunca alimenta la serie del índice ni de precios (evita días fantasma como un 29/06 arrastrado)
+      if(!isTradingDay(w.date))return;   // solo días hábiles en la serie de mercado
       if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false)ipsaMap[w.date]=w.ipsa;   // no superpone IPSA arrastrado (cierre sin valor real del índice)
-      const opT=(w.ev&&w.ev.kind==="trade")?w.ev.t:null;   // precio de la operación: es contabilidad, no un cierre → no mezclar en la serie de precios
       const fresh=w.fresh;   // si el cierre marcó qué tickers son REALES de ese día, ignora los arrastrados (carry-forward) para no generar retornos 0% espurios
-      const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(t===opT)return;if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
+      const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
     });
   });
   return {tick,names,cols,ipsaMap};
@@ -5027,6 +5099,7 @@ function lastKnownIpsa(C){C=C||consolidatedSeries();const ds=Object.keys(C.ipsaM
 function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;saveProjects();}else{try{localStorage.setItem("pf_projects_v1__"+cid,JSON.stringify(projs));}catch(e){saveWarn();}}}
 /* agrega un punto de valoración (precios de cierre) a TODOS los proyectos con seguimiento */
 function applyPlatformPrices(date,ipsa,priceMap){
+  if(!validBaseDate(date))return {nProj:0,nCli:0,nSkip:0,invalid:true};   // fecha que no corresponde (fin de semana o futura): no se registra nada
   try{pricedbUpsertDay(date,ipsa,priceMap);}catch(e){}   // el cierre diario también alimenta la base del sistema
   let nProj=0,nCli=0,nSkip=0;
   CLIENTS.forEach(c=>{
@@ -5057,7 +5130,7 @@ function platformPricesOpen(){
   (STOCKS||[]).forEach(s=>{if(!m[s.t])m[s.t]={t:s.t,n:s.n||s.t,c:s.c||"#1E5FD1"};});
   pricedbTickers().forEach(t=>{if(!m[t]){const md=PRICEDB.tickers[t]||{};m[t]={t,n:md.n||t,c:md.c||"#1E5FD1"};}});
   allHeldTickers().forEach(h=>{if(!m[h.t])m[h.t]={t:h.t,n:h.n,c:h.c};});
-  const today=lastTradingDay();   // fin de semana → último día hábil
+  const today=lastBaseDate();   // propone la última fecha con datos (no “hoy”): evita inventar un día por delante si no se toca la fecha
   const rows=Object.keys(m).sort().map(k=>{const h=m[k];return {t:h.t,n:h.n,c:h.c,price:"",last:lastKnownPrice(h.t,C)};});   // price vacío: el usuario ingresa solo los cierres reales (sin arrastre 0%)
   _ppxState={date:today,ipsa:"",ipsaLast:lastKnownIpsa(C),rows};
   platformPricesRender();
@@ -5084,8 +5157,8 @@ function platformPricesRender(){
     const pm={};S.rows.forEach(r=>{if(r.price!=null&&isFinite(r.price)&&r.price>0)pm[r.t]=r.price;});
     const ip=(S.ipsa!=null&&isFinite(S.ipsa)&&S.ipsa>0)?S.ipsa:null;
     if(!Object.keys(pm).length&&ip==null){window.alert("Ingresa al menos un precio o el valor del IPSA.");return;}
-    if(!weekendGuard(S.date))return;
     const res=applyPlatformPrices(S.date,ip,pm);
+    if(res&&res.invalid){window.alert("La fecha "+S.date+" no corresponde a un día bursátil válido (fin de semana o futura). No se registró nada.");return;}
     modalCloseId("ppxBack");
     window.alert("Precios del "+S.date+" guardados en la base ("+Object.keys(pm).length+" acción(es)).\n\n"+res.nProj+" cartera(s) con seguimiento actualizado(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior a esa fecha.":""));
     render();
