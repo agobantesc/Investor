@@ -4098,7 +4098,7 @@ function datosCargar(){
 function datosCierre(){
   const C=consolidatedSeries(),tickers=pricedbTickers(),held=allHeldTickers().map(h=>h.t);
   const all=[...new Set([...tickers,...held])].sort();
-  const today=lastBaseDate();   // propone la ÚLTIMA fecha con datos (no “hoy”): así un cierre sin tocar la fecha no inventa un día por delante
+  const today=lastTradingDay();   // propone el día real (último día hábil); el sistema igual rechaza fines de semana y fechas futuras
   const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="" placeholder="${(last!=null&&last!=="")?('último '+last):'precio'}" aria-label="Precio ${t}"></div>`;}).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones. Carga una planilla en <b>Cargar planilla</b> o registra una compra en Inversión.</div>`;
   const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="" placeholder="último ${lastKnownIpsa(C)}"></label></div>
@@ -5130,7 +5130,7 @@ function platformPricesOpen(){
   (STOCKS||[]).forEach(s=>{if(!m[s.t])m[s.t]={t:s.t,n:s.n||s.t,c:s.c||"#1E5FD1"};});
   pricedbTickers().forEach(t=>{if(!m[t]){const md=PRICEDB.tickers[t]||{};m[t]={t,n:md.n||t,c:md.c||"#1E5FD1"};}});
   allHeldTickers().forEach(h=>{if(!m[h.t])m[h.t]={t:h.t,n:h.n,c:h.c};});
-  const today=lastBaseDate();   // propone la última fecha con datos (no “hoy”): evita inventar un día por delante si no se toca la fecha
+  const today=lastTradingDay();   // propone el día real (último día hábil); el sistema igual rechaza fines de semana y fechas futuras
   const rows=Object.keys(m).sort().map(k=>{const h=m[k];return {t:h.t,n:h.n,c:h.c,price:"",last:lastKnownPrice(h.t,C)};});   // price vacío: el usuario ingresa solo los cierres reales (sin arrastre 0%)
   _ppxState={date:today,ipsa:"",ipsaLast:lastKnownIpsa(C),rows};
   platformPricesRender();
