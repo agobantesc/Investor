@@ -1001,6 +1001,12 @@
   .prj-name:hover{border-color:var(--line);background:var(--card2);} .prj-name:focus{outline:none;border-color:var(--accent);background:var(--card2);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
   .prj-namewrap{position:relative;flex:1;min-width:0;display:flex;align-items:center;}
   .prj-namewrap::after{content:"✎";position:absolute;right:.45rem;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none;}
+  .proj-steps{display:flex;flex-direction:column;gap:10px;}
+  .pstep{display:flex;align-items:center;gap:12px;padding:.8rem .9rem;border:1px solid var(--line);border-radius:12px;background:var(--card2);}
+  .pstep-n{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font:800 13px var(--font);display:flex;align-items:center;justify-content:center;}
+  .pstep-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .pstep-b b{font:800 13px var(--font);color:var(--navy);}
+  .pstep-b span{font-size:11.5px;color:var(--mut);font-weight:600;}
   .prj-sub{font-size:10.5px;color:var(--faint);font-weight:600;margin-top:2px;padding-left:.4rem;}
   .prj-act{padding:.4rem .75rem;font-size:12px;}
   .prj-del{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--muted);cursor:pointer;font-size:13px;flex-shrink:0;}
@@ -1283,7 +1289,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="cli-wrap"><button class="cli-btn" id="clientBtn"><span class="cli-dot"></span><span class="cli-lbl">Cliente</span><span class="cli-name" id="clientName"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button><div class="cli-menu" id="clientMenu"></div></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Volver al inicio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Volver al inicio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><span class="mkpill"><span class="live-dot"></span>IPSA · simulación</span><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
@@ -2210,18 +2216,36 @@ function genPDF(){
 
 // ===== INVERSIÓN (bloqueado) =====
 function applyScenario(id){const sc=SCEN.find(s=>s.id===id);if(!sc)return;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;applyInvestment(sc.name);}
+/* ¿el proyecto está "vacío" (recién creado, sin inversión definida)? */
+function projIsEmpty(p){return !!p&&!(p.holdings&&p.holdings.length)&&!(p.weeks&&p.weeks.length);}
+/* crea un PROYECTO vacío (sin inversión todavía); el usuario lo construye: análisis → simulación → invertir */
+function projectCreate(name){
+  const nm=(""+(name||"")).trim()||("Proyecto "+(PROJECTS.length+1));
+  const proj={id:Date.now(),name:nm,date:new Date().toLocaleDateString("es-CL"),amount:0,bp:0,erCapm:0,sig:0,sharpe:0,corrAvg:0,bench:"IPSA",freq:"diario",holdings:[],weeks:[],links:{analyses:["demo"],scenarios:[],primary:"demo"}};
+  PROJECTS.push(proj);activeId=proj.id;editIdx=null;saveProjects();syncProj();return proj;
+}
 function applyInvestment(defName,skipPrompt,canonical){
   const M=canonical?withCanonicalUniverse(simMetrics):simMetrics();
   if(!M.ws.length){alert("Selecciona acciones y define sus pesos antes de aplicar la inversión.");return;}
   if(!simState.amount||simState.amount<=0){alert("Ingresa el monto a invertir.");return;}
+  const benchName=canonical?"IPSA":((typeof DATASET!=="undefined"&&DATASET==="import"&&typeof IMP!=="undefined"&&IMP&&IMP.bench)?IMP.bench.name:"IPSA");
+  const anId=canonical?"demo":currentAnalysisId();
+  const holdings=M.ws.map(x=>({t:x.s.t,n:x.s.n,s:x.s.s,c:x.s.c,b:x.s.b,w:x.w,monto:simState.amount*x.w}));
+  const cur=curProj();
+  // si el proyecto ACTIVO está vacío, se define SU inversión (no se crea otro) → todo se gestiona por proyecto
+  if(projIsEmpty(cur)){
+    if(defName&&(""+defName).trim())cur.name=(""+defName).trim();
+    Object.assign(cur,{amount:simState.amount,bp:M.bp,erCapm:M.erCapm,sig:M.sig,sharpe:M.sharpe,corrAvg:M.corrAvg,bench:benchName,freq:cur.freq||"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings});
+    if(!cur.links)cur.links={analyses:[anId],scenarios:[],primary:anId};
+    try{const _sc=projDefaultScenario(cur);if(_sc){_sc.m.retH=M.retH;SCEN.push(_sc);cur.links.scenarios=[...new Set([...(cur.links.scenarios||[]),_sc.id])];lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
+    activeId=cur.id;editIdx=null;saveProjects();syncProj();modulo="inv";page="ingreso";render();return;
+  }
+  // si no hay proyecto vacío activo, se crea uno nuevo con la inversión
   let nm;
   if(skipPrompt){nm=defName;}
   else{nm=window.prompt("Nombre del proyecto de inversión:",defName||("Proyecto "+(PROJECTS.length+1)));if(nm===null)return;}
-  // inversión LIBRE (canonical): siempre IPSA como benchmark (análisis "demo" = IPSA), sin heredar un análisis importado con otro índice
-  const anId=canonical?"demo":currentAnalysisId();
-  const benchName=canonical?"IPSA":((typeof DATASET!=="undefined"&&DATASET==="import"&&typeof IMP!=="undefined"&&IMP&&IMP.bench)?IMP.bench.name:"IPSA");
   const proj={id:Date.now(),name:(nm||("Proyecto "+(PROJECTS.length+1))).trim(),date:new Date().toLocaleDateString("es-CL"),amount:simState.amount,bp:M.bp,erCapm:M.erCapm,sig:M.sig,sharpe:M.sharpe,corrAvg:M.corrAvg,bench:benchName,
-      freq:"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings:M.ws.map(x=>({t:x.s.t,n:x.s.n,s:x.s.s,c:x.s.c,b:x.s.b,w:x.w,monto:simState.amount*x.w})),weeks:[],links:{analyses:[anId],scenarios:[],primary:anId}};
+      freq:"diario",origSim:{sel:Object.assign({},simState.sel),amount:simState.amount},holdings,weeks:[],links:{analyses:[anId],scenarios:[],primary:anId}};
   try{const _sc=projDefaultScenario(proj);if(_sc){_sc.m.retH=M.retH;SCEN.push(_sc);proj.links.scenarios=[_sc.id];lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
   PROJECTS.push(proj);activeId=proj.id;editIdx=null;saveProjects();syncProj();
   modulo="inv";page="ingreso";render();
@@ -2351,20 +2375,32 @@ function invNewForm(){
   const S=invNew,stks=(DATA.stocks||[]);   // universo LIBRE: todas las acciones del IPSA, sin importar el análisis activo
   const nsel=Object.keys(S.sel).filter(t=>S.sel[t]).length;
   const chips=stks.map(s=>`<button class="ca-chip ${S.sel[s.t]?"on":""}" data-invtk="${s.t}"><span class="rk-dot" style="background:${s.c}"></span>${s.t}</button>`).join("");
-  return card("Realizar nueva inversión","Elige libremente las acciones del IPSA y el monto (independiente del análisis activo) · se reparte en partes iguales y luego registras la compra real (precios y cantidades).",
+  return card("Definir la inversión del proyecto","Elige libremente las acciones del IPSA y el monto · se reparte en partes iguales y luego registras la compra real (precios y cantidades).",
     `<div class="ca-form">
-      <label class="ca-f"><span>Nombre de la inversión</span><input id="invNewName" type="text" maxlength="44" value="${(""+(S.name||"")).replace(/"/g,"&quot;")}" placeholder="ej. Cartera junio 2026"></label>
+      <label class="ca-f"><span>Nombre del proyecto</span><input id="invNewName" type="text" maxlength="44" value="${(""+(S.name||"")).replace(/"/g,"&quot;")}" placeholder="ej. Cartera junio 2026"></label>
       <label class="ca-f ca-f-n"><span>Monto a invertir (CLP)</span><input id="invNewAmt" type="number" min="0" step="any" value="${S.amount||""}" placeholder="ej. 2000000"></label>
     </div>
     <div class="ca-stk"><div class="ca-stk-h"><b>Acciones de la inversión</b><span>${nsel} seleccionada(s) · <a data-invall>todas</a> · <a data-invnone>ninguna</a></span></div>
       <div class="ca-grid">${chips||'<div class="note" style="margin:0">No hay acciones en el universo activo. Carga datos o un análisis primero.</div>'}</div></div>
-    <div class="ca-foot"><button class="btn btn-pri" id="invNewCreate" ${(nsel<1||!(S.amount>0))?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear inversión y registrar compra</button> <button class="btn" id="invNewCancel">Cancelar</button>
+    <div class="ca-foot"><button class="btn btn-pri" id="invNewCreate">Crear inversión y registrar compra</button> <button class="btn" id="invNewCancel">Cancelar</button>
       <span class="note" style="margin:0">${nsel<1?"Elige al menos 1 acción":!(S.amount>0)?"Define el monto a invertir":(nsel+" acción(es) · "+fmtCLP(S.amount)+" · ~"+(100/nsel).toFixed(1)+"% c/u")}</span></div>`);
+}
+/* pasos guiados para un proyecto VACÍO (recién creado): análisis → simulación → invertir */
+function projGuidedSteps(p){
+  const nm=(""+(p.name||"Proyecto")).replace(/</g,"&lt;");
+  return card("Construye tu proyecto: "+nm,"Un proyecto se arma en 3 pasos. Lo ideal es <b>partir por el análisis</b> y terminar definiendo la inversión.",
+   `<div class="proj-steps">
+     <div class="pstep"><span class="pstep-n">1</span><div class="pstep-b"><b>Análisis</b><span>Estudia las acciones del IPSA y crea un análisis para este proyecto.</span></div><button class="btn" data-pstep="eval|crear">Ir a Análisis →</button></div>
+     <div class="pstep"><span class="pstep-n">2</span><div class="pstep-b"><b>Simulación</b><span>Arma y optimiza la cartera: pesos, riesgo y Sharpe.</span></div><button class="btn" data-pstep="sim|constructor">Ir a Simulación →</button></div>
+     <div class="pstep"><span class="pstep-n">3</span><div class="pstep-b"><b>Invertir</b><span>Elige las acciones y el monto, y registra la compra real.</span></div><button class="btn btn-pri" id="projDefineInv">Definir inversión →</button></div>
+   </div>`);
 }
 /* handlers del formulario "Realizar nueva inversión" (usado desde el módulo Proyectos) */
 function attachInvNew(){
   if(!invNew)return;
   const invGrab=()=>{if(!invNew)return;const n=document.getElementById("invNewName");if(n)invNew.name=n.value;const a=document.getElementById("invNewAmt");if(a)invNew.amount=parseFloat(a.value)||0;};
+  const _na=document.getElementById("invNewName");if(_na)_na.oninput=()=>{invNew.name=_na.value;};   // mantiene el estado al día sin re-render (no pierde el foco)
+  const _am=document.getElementById("invNewAmt");if(_am)_am.oninput=()=>{invNew.amount=parseFloat(_am.value)||0;};
   document.querySelectorAll("[data-invtk]").forEach(b=>b.onclick=()=>{invGrab();invNew.sel[b.dataset.invtk]=!invNew.sel[b.dataset.invtk];render();});
   const _iva=document.querySelector("[data-invall]");if(_iva)_iva.onclick=()=>{invGrab();(DATA.stocks||[]).forEach(s=>invNew.sel[s.t]=true);render();};
   const _ivn=document.querySelector("[data-invnone]");if(_ivn)_ivn.onclick=()=>{invGrab();invNew.sel={};render();};
@@ -2374,7 +2410,7 @@ function attachInvNew(){
     if(tickers.length<1){window.alert("Elige al menos 1 acción.");return;}
     if(!(invNew.amount>0)){window.alert("Ingresa el monto a invertir.");return;}
     simState.sel={};tickers.forEach(t=>simState.sel[t]=+(100/tickers.length).toFixed(4));simState.amount=invNew.amount;
-    const name=(""+(invNew.name||"")).trim()||("Inversión "+((PROJECTS||[]).length+1));
+    const name=(""+(invNew.name||"")).trim();   // si va vacío y se llena un proyecto vacío, conserva el nombre del proyecto
     invNew=null;applyInvestment(name,true,true);};   // canonical=true: métricas contra el universo IPSA completo
 }
 function viewInv(){
@@ -2383,6 +2419,11 @@ function viewInv(){
     <div style="font-size:19px;font-weight:800;color:var(--navy)">Módulo de Inversión</div>
     <div class="note" style="max-width:560px;margin:13px auto 0;border:none;background:none">Aún no hay proyectos de inversión. Ve a <b>Proyectos</b> y pulsa <b>➕ Nueva inversión</b> para crear tu primera cartera (eliges acciones y monto), o ármala en <b>Simulación → Constructor</b>.</div><div style="margin-top:18px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap"><button class="btn btn-pri" data-gomod="proyectos">📁 Ir a Proyectos</button><button class="btn" id="loaddemo">🧪 Cargar proyectos de prueba</button></div></div>`;
   if(!PF){activeId=PROJECTS[0].id;syncProj();}
+  if(projIsEmpty(PF)){   // proyecto sin inversión definida: guía o formulario
+    const bar=card("Proyectos de inversión","Gestiona cada proyecto por separado · crea o activa proyectos en el módulo Proyectos.",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${(""+p.name).replace(/</g,"&lt;")} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" data-gomod="proyectos">📁 Proyectos</button>`);
+    if(invNew) return bar+invNewForm();
+    return bar+projGuidedSteps(PF);
+  }
   return viewInvActive();
 }
 function viewInvActive(){
@@ -2699,6 +2740,9 @@ function attachInv(){
   if(modulo!=="inv")return;
   document.querySelectorAll("[data-stksel]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invStkSel=b.dataset.stksel||null;render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
   const ld=document.getElementById("loaddemo");if(ld)ld.onclick=seedDemos;
+  document.querySelectorAll("[data-pstep]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.pstep.split("|");modulo=m;page=pg;render();});
+  const _pdi=document.getElementById("projDefineInv");if(_pdi)_pdi.onclick=()=>{const p=curProj();invNew={name:(p&&p.name)||"",amount:"",sel:{}};render();};
+  attachInvNew();   // handlers del formulario de inversión cuando está abierto en el módulo Inversión
   const be=document.getElementById("bkpexport");if(be)be.onclick=exportBackup;
   const bim=document.getElementById("bkpimport"),bf=document.getElementById("bkpfile");if(bim&&bf){bim.onclick=()=>bf.click();bf.onchange=ev=>{if(ev.target.files[0])importBackup(ev.target.files[0]);};}
   document.querySelectorAll("[data-setfreq]").forEach(b=>b.onclick=()=>changeFreq(b.dataset.setfreq));
@@ -2779,7 +2823,7 @@ function render(){
   else if(modulo==="pro") h=viewPro();
   else if(modulo==="mercados") h=viewMercados();
   else if(modulo==="proyectos") h=viewProyectos();
-  else if(modulo==="clientes") h=viewClientes();
+  else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
   else if(modulo==="perfil") h=viewPerfil();
   else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
   else if(page==="comparativa") h=viewComparativa();
@@ -4213,6 +4257,7 @@ function attachCrear(){
     const nm=(caState.name||"").trim()||("Análisis "+caState.freq+(caState.lastN?(" · últimos "+caState.lastN+" "+caUnit(caState.freq)):" · todo")+" · "+caState.bench+" · "+tickers.length+" acc.");
     IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,bench:caState.bench,tickers}});
     lsSet("inv_impsets_v1",IMPSETS);impsetActivate(id);
+    try{const cp=curProj();if(cp){projAddLink(cp.id,"analysis",id);}}catch(e){}   // vincula el análisis al proyecto activo y lo deja como vigente
     caState.name="";modulo="eval";page="comparativa";render();
   };
   document.querySelectorAll("[data-caact]").forEach(b=>b.onclick=()=>{if(activateAnalysis(b.dataset.caact))render();});
@@ -4848,8 +4893,8 @@ function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));
 
 function viewProyectos(){
   syncProj();
-  const cliBanner=`<div class="card"><div class="bd" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="min-width:0"><div style="font:800 14px var(--font);color:var(--navy)"><span class="cli-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${activeClientObj().color};vertical-align:middle;margin-right:7px"></span>Gestionando la cartera de ${(""+activeClientObj().name).replace(/</g,"&lt;")}</div><div class="note" style="margin:5px 0 0">${CLIENTS.length>1?("Administras "+CLIENTS.length+" clientes."):"Puedes administrar las inversiones de otras personas como clientes independientes."} Los proyectos de abajo son de este cliente.</div></div><button class="btn btn-pri" data-go-clientes>Administrador de clientes →</button></div></div>`;
-  if(invNew) return cliBanner+invNewForm();   // crear una nueva inversión directamente en el módulo Proyectos
+  const cliBanner="";   // gestión de clientes retirada (monousuario)
+  if(invNew) return invNewForm();   // crear una nueva inversión directamente en el módulo Proyectos
   const all=PROJECTS.map(p=>({p,s:projSummary(p)}));
   const totInv=all.reduce((a,x)=>a+x.s.invested,0),totVal=all.reduce((a,x)=>a+x.s.value,0),totGain=totVal-totInv,totPct=totInv>0?totGain/totInv*100:0;
   const head=card("Proyectos de inversión","Gestiona tus proyectos y lo que cada uno tiene vinculado: análisis y simulaciones · rentabilidad consolidada",
@@ -4859,8 +4904,11 @@ function viewProyectos(){
       ${tile("Valor actual",fmtCLP(totVal),"a últimos precios",indigo,accentT)}
       ${tile("Rentabilidad",(totGain>=0?"+":"")+fmtCLP(totGain),"ganancia/pérdida total",indigo,totGain>=0?green:red)}
       ${tile("Rentabilidad %",(totPct>=0?"+":"")+totPct.toFixed(2)+"%","sobre el capital",indigo,totPct>=0?green:red)}</div>`
-    :`<div class="note" style="margin:0">Aún no tienes proyectos de inversión. Pulsa <b>➕ Nueva inversión</b> para crear el primero (eliges acciones y monto), o arma una cartera en <b>Simulación → Constructor</b>.</div>`,
-    `<button class="btn btn-pri" id="projNew">➕ Nueva inversión</button>`);
+    :`<div class="note" style="margin:0">Aún no tienes proyectos. Pulsa <b>➕ Nuevo proyecto</b> y constrúyelo en 3 pasos: análisis → simulación → invertir.</div>`,
+    `<button class="btn btn-pri" id="projNew">➕ Nuevo proyecto</button>`);
+  // proyecto ACTIVO recién creado (sin inversión): muestra los pasos guiados arriba
+  const curP=curProj();
+  const guided=(curP&&projIsEmpty(curP))?projGuidedSteps(curP):"";
   const aOpts=analysisList().map(a=>`<option value="${a.id}">${(""+a.name).replace(/</g,"&lt;")} (${a.n})</option>`).join("");
   const sOpts=(SCEN||[]).map(s=>`<option value="${s.id}">${(""+s.name).replace(/</g,"&lt;")}</option>`).join("");
   const cards=all.map(({p,s})=>{const active=p.id===activeId,L=projLinks(p);
@@ -4894,7 +4942,7 @@ function viewProyectos(){
   // Simulaciones
   const scRows=(SCEN||[]).length?(SCEN.map(sc=>`<div class="prj-srow"><span class="prj-dot sim"></span><div style="flex:1;min-width:0"><b>${(""+sc.name).replace(/</g,"&lt;")}</b><span class="prj-tag">${sc.comp.length} acciones · β ${sc.m.bp.toFixed(2)} · Sharpe ${sc.m.sharpe.toFixed(2)} · ${fmtCLP(sc.amount||0)}</span></div><button class="btn" data-scload="${sc.id}">Cargar</button><button class="prj-del" data-scren="${sc.id}" title="Renombrar simulación">✎</button><button class="prj-del" data-scdel="${sc.id}" title="Eliminar simulación">🗑</button></div>`).join("")):'<div class="note" style="margin:0">Sin simulaciones guardadas. Guarda escenarios en Simulación → Constructor.</div>';
   const scCard=card("Simulaciones (escenarios)","Carteras simuladas y guardadas · cárgalas al Constructor o elimínalas",`<div class="prj-srlist">${scRows}</div>`);
-  return cliBanner+head+projCard+anCard+scCard;
+  return cliBanner+head+guided+projCard+anCard+scCard;
 }
 function attachProyectos(){
   document.querySelectorAll("[data-prename]").forEach(inp=>inp.onchange=()=>{const p=PROJECTS.find(x=>String(x.id)===inp.dataset.prename);if(p){p.name=(inp.value||"").trim()||p.name;saveProjects();}});
@@ -4917,8 +4965,10 @@ function attachProyectos(){
   document.querySelectorAll("[data-clidel]").forEach(b=>b.onclick=()=>clientDelete(b.dataset.clidel));
   const _cab=document.getElementById("cliAddBtn");if(_cab)_cab.onclick=()=>clientFormOpen();
   const _gc=document.querySelector("[data-go-clientes]");if(_gc)_gc.onclick=()=>{modulo="clientes";render();};
-  const _pn=document.getElementById("projNew");if(_pn)_pn.onclick=()=>{invNew={name:"",amount:"",sel:{}};render();};
-  attachInvNew();   // handlers del formulario "Nueva inversión" cuando está abierto
+  const _pn=document.getElementById("projNew");if(_pn)_pn.onclick=()=>{const nm=window.prompt("Nombre del nuevo proyecto:","Proyecto "+(PROJECTS.length+1));if(nm===null)return;projectCreate(nm);render();};
+  document.querySelectorAll("[data-pstep]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.pstep.split("|");modulo=m;page=pg;render();});
+  const _pdi=document.getElementById("projDefineInv");if(_pdi)_pdi.onclick=()=>{const p=curProj();invNew={name:(p&&p.name)||"",amount:"",sel:{}};render();};
+  attachInvNew();   // handlers del formulario de inversión cuando está abierto
 }
 /* ===== ADMINISTRADOR DE CLIENTES (panel de gestión) ===== */
 function viewClientes(){
@@ -5407,15 +5457,14 @@ let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
 function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
 applyScale(uiScale);
 try{document.addEventListener("click",clientMenuClose);}catch(e){}
-/* por ahora: solo administración. Quita los clientes de ejemplo si existían y vuelve a la cartera propia. */
+/* monousuario: ya no hay gestión de clientes. Se conserva un único cliente interno (c_me) para no romper
+   el almacenamiento; cualquier cliente extra deja de mostrarse (sus datos quedan inertes, no se borran). */
 function removeExampleClients(){try{
   const before=CLIENTS.length;
-  CLIENTS=CLIENTS.filter(c=>!(c.example||/^c_ex_/.test(c.id)));
-  if(CLIENTS.length!==before){
-    saveClients();
-    ["c_ex_mjr","c_ex_dh","c_ex_ffs"].forEach(id=>{try{Object.keys(CLIENT_KEYS).forEach(k=>localStorage.removeItem(k+"__"+id));localStorage.removeItem("inv_profile_v1__"+id);}catch(e){}});
-  }
-  if(!CLIENTS.some(c=>c.id===activeClient)){activeClient="c_me";try{localStorage.setItem("inv_active_client","c_me");clientLoad();}catch(e){}}
+  CLIENTS=CLIENTS.filter(c=>c.id==="c_me");
+  if(!CLIENTS.length)CLIENTS=[{id:"c_me",name:"Administración",color:"#1E5FD1"}];
+  if(CLIENTS.length!==before)saveClients();
+  if(activeClient!=="c_me"){activeClient="c_me";try{localStorage.setItem("inv_active_client","c_me");clientLoad();}catch(e){}}
 }catch(e){}}
 try{removeExampleClients();}catch(e){}
 try{pricedbAutoSeed();}catch(e){}
