@@ -1,0 +1,27 @@
+# Copia este archivo a .github/workflows/update-closes.yml (GitHub exige que los workflows vivan ahí).
+# Corre de lunes a viernes después del cierre de la Bolsa de Santiago y guarda data/closes.json en el repo.
+# Investor lo lee desde: https://raw.githubusercontent.com/<usuario>/<repo>/main/data/closes.json
+name: Actualizar cierres IPSA
+on:
+  schedule:
+    - cron: "5 22 * * 1-5"   # 22:05 UTC ≈ 18:05/19:05 Chile (después del cierre ~16:00)
+  workflow_dispatch: {}       # permite ejecutarlo a mano desde la pestaña Actions
+permissions:
+  contents: write
+jobs:
+  closes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Obtener cierres (Yahoo Finance .SN)
+        run: node automation/fetch-closes.mjs
+      - name: Commit del JSON
+        run: |
+          git config user.name "closes-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/closes.json
+          git diff --cached --quiet && echo "Sin cambios" || git commit -m "cierres: $(date -u +%F)"
+          git push
