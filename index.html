@@ -3885,15 +3885,17 @@ function pricedbIndexNames(){return Object.keys(pricedbIdxAll());}
 function pricedbIdxMap(name){if(!name||name==="IPSA")return PRICEDB.ipsa||{};return (PRICEDB.idx&&PRICEDB.idx[name])||{};}
 /* carga masiva: fusiona series parseadas (formato impFiles: {name,src,dates,closes}) en la base */
 function pricedbMergeFiles(files,benchName){
-  let added=0,tk=0,skipped=0;
-  // solo se aceptan días hábiles y no futuros: una planilla con filas de fin de semana o fechas posteriores a hoy no ensucia la base
+  let added=0,updated=0,tk=0,skipped=0;
+  // FUSIÓN por celda (acción × fecha), "el último dato manda": una fila nueva reemplaza el valor de esa
+  // acción en esa fecha (p.ej. una planilla oficial pisa un cierre manual del mismo día), pero NUNCA borra
+  // otras fechas ni otras acciones. Solo se aceptan días hábiles y no futuros.
   (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];const nm=pdIndexOf(f.name,benchName);
-    if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){tgt[d]=v;added++;}}return;}
+    if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(tgt[d]!=null)updated++;else added++;tgt[d]=v;}}return;}
     const t=f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);
-    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){PRICEDB.px[t][d]=v;added++;}}
+    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(PRICEDB.px[t][d]!=null)updated++;else added++;PRICEDB.px[t][d]=v;}}
   });
   savePriceDB();try{pricedbSanitize();}catch(e){}   // saneo inmediato: sin arrastres ni IPSA por delante del mercado, sin esperar a la próxima recarga
-  return {added,tk,skipped};
+  return {added,updated,tk,skipped};
 }
 function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];savePriceDB();}
 /* resumen para la vista: por ticker -> n puntos, rango, último precio */
@@ -4174,7 +4176,7 @@ function attachDatos(){
     const dz=document.getElementById("dDrop");if(dz){dz.ondragover=e=>{e.preventDefault();dz.classList.add("over");};dz.ondragleave=()=>dz.classList.remove("over");dz.ondrop=e=>{e.preventDefault();dz.classList.remove("over");if(e.dataTransfer.files.length)impOnFiles(e.dataTransfer.files);};}}
   document.querySelectorAll("[data-drm]").forEach(b=>b.onclick=()=>{impFiles.splice(+b.dataset.drm,1);render();});
   const dcl=document.querySelector("[data-dclear]");if(dcl)dcl.onclick=()=>{impFiles=[];impMsg="";render();};
-  const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) en "+r.tk+" acción(es)."+(r.skipped>0?"\n\n"+r.skipped+" fila(s) ignorada(s) por ser fin de semana o fecha futura (no corresponden a un día bursátil).":"")+"\n\nSeguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
+  const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) nuevo(s)"+(r.updated>0?" y "+r.updated+" actualizado(s) (mismo día/acción que ya tenías, p.ej. un cierre manual → se reemplaza por el de la planilla)":"")+" en "+r.tk+" acción(es)."+(r.skipped>0?"\n\n"+r.skipped+" fila(s) ignorada(s) por ser fin de semana o fecha futura.":"")+"\n\nNo se borró ningún otro dato. Seguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
   const dtm=document.querySelector("[data-dtmpl]");if(dtm)dtm.onclick=()=>impDownloadTemplate();
   const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(res&&res.invalid){window.alert("La fecha "+date+" no corresponde a un día bursátil válido (fin de semana o futura). No se registró nada.");return;}if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
 }
