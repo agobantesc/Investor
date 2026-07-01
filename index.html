@@ -4048,6 +4048,7 @@ function pricedbToIMP(freq,opts){
   let run=core.common;
   if(opts.lastN&&opts.lastN>0&&run.length>opts.lastN+1)run=run.slice(run.length-(opts.lastN+1));
   if(run.length<4)return null;
+  if(pricedbBenchJump(core,freq,run))return null;   // benchmark con salto de escala (fuentes mezcladas): un análisis daría β≈0 — no se construye
   const {PY,ipsaR,tickR,benchName}=core,src=opts.source||null;
   const benchPrices=run.map(k=>ipsaR[k].v);
   const bs=impStats(benchPrices,PY),rf=(typeof RF==="number"&&isFinite(RF)?RF:5.5),benchRet=bs.retAnn*100,prima=benchRet-rf;
@@ -4063,6 +4064,17 @@ function pricedbToIMP(freq,opts){
     bench:{name:benchName,prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-rf)/(bs.sigAnn*100):0},assets,corr,dropped:[]};
 }
 /* REGLA 3 · disponibilidad: ¿alcanza la ventana pedida (a la frecuencia) con datos vigentes de TODAS las acciones? */
+/* SALTO DE ESCALA en el benchmark: un índice bursátil NO varía 40% en un mes (ni 15% en un día / 25% en una semana).
+   Si un tramo de la ventana lo hace, hay valores de DOS FUENTES/ESCALAS mezclados (p.ej. IPSA histórico ~10.800 con
+   IPSA real ~6.500) — eso infla la varianza del mercado y colapsa las β a ~0. Se detecta y se INDICAN las fechas. */
+function pricedbBenchJump(core,freq,run){
+  const th=freq==="diario"?0.15:freq==="semanal"?0.25:0.40;
+  for(let i=1;i<run.length;i++){
+    const a=core.ipsaR[run[i-1]],b=core.ipsaR[run[i]];
+    if(a&&b&&a.v>0&&Math.abs(b.v/a.v-1)>th)return {from:a.d,v0:a.v,to:b.d,v1:b.v,ret:(b.v/a.v-1)*100};
+  }
+  return null;
+}
 function pricedbCheckAnalysis(freq,opts){
   freq=freq||"mensual";opts=opts||{};
   const core=pricedbAnalysisCore(freq,opts);
@@ -4071,6 +4083,10 @@ function pricedbCheckAnalysis(freq,opts){
   if(!core.tickers.length)return {ok:false,unit,reason:"No hay acciones seleccionadas."};
   const availPts=core.common.length,availRet=Math.max(0,availPts-1);
   const needPts=(opts.lastN&&opts.lastN>0)?(opts.lastN+1):4;
+  // ventana efectiva del análisis (la misma que usará pricedbToIMP) para revisar el benchmark
+  let run=core.common;if(opts.lastN&&opts.lastN>0&&run.length>opts.lastN+1)run=run.slice(run.length-(opts.lastN+1));
+  const jump=pricedbBenchJump(core,freq,run);
+  if(jump)return {ok:false,unit,jump,reason:"El "+(core.benchName||"IPSA")+" salta "+(jump.ret>=0?"+":"")+jump.ret.toFixed(0)+"% entre el "+jump.from+" ("+jump.v0.toLocaleString("es-CL")+") y el "+jump.to+" ("+jump.v1.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados en la base. Con eso las β saldrían ≈0. Elimina esos datos (Datos → Quitar este día) o limpia y recarga el índice de una sola fuente."};
   const limiting=core.tickers.filter(t=>core.perTicker[t]<needPts).map(t=>({t,n:Math.max(0,core.perTicker[t]-1)})).sort((a,b)=>a.n-b.n);
   // rezagadas: acciones cuyo último período es ANTERIOR al más reciente del grupo (no tienen el período más nuevo → recortan la ventana común)
   const lagging=core.tickers.filter(t=>core.tickLast[t]&&core.groupLatest&&core.tickLast[t]<core.groupLatest).map(t=>({t,last:core.tickLast[t]})).sort((a,b)=>a.last<b.last?-1:1);
@@ -4173,6 +4189,12 @@ function detectInconsistencies(){
   (function(){if(!Object.keys(IPSA).length){if(tickers.length)issues.push({level:"info",msg:"No hay IPSA en la base: las métricas relativas al índice no estarán disponibles."});return;}const need={};tickers.forEach(t=>datesOf(t).forEach(d=>{if(isTradingDay(d))need[d]=1;}));const miss=Object.keys(need).filter(d=>IPSA[d]==null).sort();if(miss.length)issues.push({level:"info",msg:"Faltan "+miss.length+" fecha(s) de IPSA donde sí hay cierres de acciones (ej. "+miss[miss.length-1]+")."});})();
   // 5) arrastre sospechado (valores finales idénticos)
   (function(){const cf=[];tickers.forEach(t=>{const rs=resampleMap(PX[t],"diario");if(rs.length<2)return;if(dropTrailingFlat(rs).length<rs.length)cf.push(t);});if(Object.keys(IPSA).length){const ri=resampleMap(IPSA,"diario");if(ri.length>=2&&dropTrailingFlat(ri).length<ri.length)cf.push("IPSA");}if(cf.length)issues.push({level:"warn",msg:"Valores finales repetidos idénticos (un cierre real no repite al decimal): posible arrastre. “Reparar base” los limpia.",tickers:cf});})();
+  // 6) SALTO DE ESCALA en el IPSA: dos fuentes/escalas mezcladas (p.ej. 10.800 vs 6.500) → las β de cualquier análisis colapsan a ≈0
+  (function(){if(!Object.keys(IPSA).length)return;
+    const rs=resampleMap(IPSA,"mensual");
+    for(let i=1;i<rs.length;i++){const r=rs[i].v/rs[i-1].v-1;
+      if(Math.abs(r)>0.40){issues.push({level:"warn",msg:"El IPSA salta "+(r>=0?"+":"")+(r*100).toFixed(0)+"% entre el "+rs[i-1].d+" ("+rs[i-1].v.toLocaleString("es-CL")+") y el "+rs[i].d+" ("+rs[i].v.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados. Elimina esos días (Quitar este día) o limpia y recarga el índice de una sola fuente — si no, las β de los análisis salen ≈0."});break;}}
+  })();
   return issues;
 }
 function viewDatos(){const pg=page||"base";if(pg==="cargar")return datosCargar();if(pg==="cierre")return datosCierre();return datosBase();}
@@ -4187,7 +4209,7 @@ function datosBase(){
     ${tile("Alimenta el sistema",empty?"—":"Home · análisis · seguimientos","desde los datos cargados",indigo,empty?muted:green)}</div>`;
   // ── PANEL SIMPLE: solo 2 botones principales ──
   const monthsCov=(function(){const set={};(pricedbAllDates()||[]).forEach(d=>set[(""+d).slice(0,7)]=1);return Object.keys(set).length;})();
-  const diagNote=(!empty&&monthsCov<6)?`<div class="note" style="margin:12px 0 0;border-color:#E0A100;background:rgba(245,158,11,.10)">⚠️ <b>Tu base solo cubre ${monthsCov} mes(es)</b> (${S.ipsaFrom||"—"} → ${S.ipsaTo||"—"}). Por eso un análisis <b>mensual o semanal</b> de acciones como SANTANDER o LATAM no alcanza. Pulsa <b>📥 Cargar histórico IPSA</b> (abajo) y ese historial se sumará a tus cierres (sin pisarlos).</div>`:"";
+  const diagNote=(!empty&&monthsCov<6)?`<div class="note" style="margin:12px 0 0;border-color:#E0A100;background:rgba(245,158,11,.10)">⚠️ <b>Tu base solo cubre ${monthsCov} mes(es)</b> (${S.ipsaFrom||"—"} → ${S.ipsaTo||"—"}). Un análisis <b>mensual o semanal</b> necesita más historia: carga planillas con más meses en <b>Cargar planilla</b>.</div>`:"";
   const actions=`<div class="datos-acts">
     <button class="btn btn-pri" data-dgo="cargar">📈 Cargar planilla</button>
     <button class="btn btn-pri" data-dapply ${empty?"disabled":""}>↻ Actualizar sistema</button></div>
@@ -4215,7 +4237,6 @@ function datosBase(){
   const maint=card("Mantenimiento de datos","Acciones puntuales sobre la base.",`<div class="datos-maint">
     <button class="btn" data-dgo="cierre">📝 Cierre diario manual</button>
     <button class="btn" data-dsync title="Trae los cierres desde tu fuente automática (JSON diario) y los fusiona en la base">⟳ Sincronizar cierres</button>
-    <button class="btn" data-dseed title="Copia a la base el histórico de las 14 acciones del IPSA (23 meses) + IPSA, sin pisar tus cierres">📥 Cargar histórico IPSA (23 meses)</button>
     <button class="btn" data-dfix>🔧 Reparar base</button>
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:5px 7px"><button class="btn" data-ddaydel>Quitar este día</button></span>
     <span class="datos-freq" style="margin-left:auto"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span>
@@ -4252,7 +4273,6 @@ function attachDatos(){
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
   const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);}catch(e){}render();window.alert("Sistema actualizado con los datos cargados.\n\nSeguimientos: "+r.nPts+" punto(s) en "+r.nProj+" cartera(s). El Home, los análisis y los rankings ya reflejan la base.");};
   const dsy=document.querySelector("[data-dsync]");if(dsy)dsy.onclick=()=>{dsy.disabled=true;dsy.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{dsy.disabled=false;render();});};
-  const dseed=document.querySelector("[data-dseed]");if(dseed)dseed.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de cargar histórico IPSA");}catch(e){}const n=pricedbSeedDemo();PRICEDB.seeded=true;savePriceDB();try{pricedbSanitize();}catch(e){}render();window.alert(n>0?("Histórico del IPSA cargado a la base: "+n+" punto(s) (14 acciones × ~23 meses + IPSA).\n\nTus cierres diarios se conservaron. Ahora puedes crear análisis mensuales/semanales con cualquier acción del IPSA."):"El histórico del IPSA ya estaba cargado (no se duplicó nada).");};
   document.querySelectorAll("[data-dcov]").forEach(b=>b.onclick=()=>{datosCovTab=b.dataset.dcov;lsSet("inv_datos_covtab",datosCovTab);render();});
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
   const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost)?("Base reparada.\n\n• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
