@@ -262,7 +262,7 @@
   .amtwrap>span{color:var(--muted);font-weight:800;}
   .simlist{display:flex;flex-direction:column;gap:7px;}
   .simrow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:16px;padding:.55rem .8rem;border:1px solid var(--line);border-radius:10px;background:var(--soft);}
-  .simrow.on{background:#fff;border-color:var(--line2);box-shadow:var(--sh);}
+  .simrow.on{background:var(--card);border-color:var(--line2);box-shadow:var(--sh);}
   .simchk{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;}
   .simchk input{width:16px;height:16px;accent-color:var(--indigo);cursor:pointer;}
   .simsec{font-size:10px;color:var(--faint);font-weight:600;}
@@ -276,6 +276,8 @@
   .simwarn{color:var(--amber);font-size:11px;font-weight:600;}
   .genrow{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap;}
   .genl{font-size:10px;letter-spacing:.5px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:8px;line-height:1.3;}
+  .gl{text-transform:none!important;}
+  .helpline{font-size:11.5px;color:var(--muted);font-weight:600;line-height:1.5;}
   .pbtns{display:flex;gap:6px;}
   .pbtn,.nbtn{padding:.48rem .85rem;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--muted);font-weight:700;font-size:12px;cursor:pointer;font-family:var(--font);}
   .nbtn{padding:.48rem .75rem;min-width:38px;}
@@ -285,12 +287,12 @@
   .btn-pri:hover{background:#1A52B8;}
   .genhint{margin-top:13px;font-size:11.5px;color:var(--muted);}
   .altchips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:15px;}
-  .altchip{border:1px solid;border-radius:7px;padding:.22rem .6rem;font-size:11px;font-weight:800;background:#fff;}
+  .altchip{border:1px solid;border-radius:7px;padding:.22rem .6rem;font-size:11px;font-weight:800;background:var(--card);}
   .altmets{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px;}
   .altm{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:.72rem .55rem;text-align:center;}
   .altml{font-size:10px;letter-spacing:.5px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:6px;}
   .altmv{font-size:1.42rem;font-weight:800;color:var(--ink);line-height:1.05;letter-spacing:-.3px;}
-  .charttip{position:fixed;z-index:200;background:#fff;border:1px solid var(--line2);border-radius:9px;padding:.5rem .75rem;font-size:13.5px;font-weight:800;color:var(--ink);box-shadow:var(--shL);pointer-events:none;display:none;line-height:1.45;}
+  .charttip{position:fixed;z-index:200;background:var(--card);border:1px solid var(--line2);border-radius:9px;padding:.5rem .75rem;font-size:13.5px;font-weight:800;color:var(--ink);box-shadow:var(--shL);pointer-events:none;display:none;line-height:1.45;}
   .charttip b{display:block;color:var(--faint);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
   #projsvg{cursor:crosshair;}
   .projctrl{display:flex;gap:26px;flex-wrap:wrap;margin-bottom:15px;}
@@ -299,7 +301,7 @@
   .pinp:focus{border-color:var(--indigo);}
   input[type=date]{border:1px solid var(--line2);border-radius:9px;padding:.45rem .7rem;font-family:var(--font);font-size:13px;color:var(--ink);outline:none;}
   #wipsa{border:none;background:transparent;font-family:var(--font);font-size:15px;font-weight:800;color:var(--ink);outline:none;}
-  .wbtn{border:1px solid var(--line2);background:#fff;border-radius:6px;width:25px;height:25px;cursor:pointer;font-size:12px;color:var(--muted);line-height:1;}
+  .wbtn{border:1px solid var(--line2);background:var(--card);border-radius:6px;width:25px;height:25px;cursor:pointer;font-size:12px;color:var(--muted);line-height:1;}
   .wbtn:hover{border-color:var(--indigo);color:var(--indigo);}
   .wbtn.del:hover{border-color:var(--red);color:var(--red);}
 
@@ -1501,7 +1503,7 @@ function heat(v){if(v>=0)return `rgba(14,159,110,${0.12+0.62*Math.min(1,v)})`;re
 function marketTiles(){
   const t=(l,v,s,c)=>`<div class="mstat"><div class="ml">${l}</div><div class="mv tnum" style="color:${c}">${v}</div><div class="ms">${s}</div></div>`;
   return `<div class="mstats">`+
-    t("IPSA · Retorno anual",pc(MKT.ret),"Total 24m "+pc(MKT.tot),col(MKT.ret))+
+    t("IPSA · Retorno anual",pc(MKT.ret),"Total "+winShort()+" "+pc(MKT.tot),col(MKT.ret))+
     t("IPSA · Sharpe",MKT.sharpe.toFixed(2),"Retorno ajustado por riesgo",indigo)+
     t("Tasa libre de riesgo",p0(RF),"Bono soberano 10 años",ink)+
     `</div>`;
@@ -1593,7 +1595,7 @@ function viewComparativa(){
   pts.push({x:MKT.sig,y:MKT.ret,c:indigo,label:"IPSA",shape:"diamond",r:8});
   pts.push({x:0,y:RF,c:muted,label:"Rf",shape:"tri"});
   const leg=`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>IPSA (mercado)</span><span><span class="lgdot" style="background:${muted}"></span>Rf</span></div>`;
-  const scatter=card("Mapa Riesgo–Retorno","Volatilidad anual (X) vs retorno anual (Y) · 24 meses",svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
+  const scatter=card("Mapa Riesgo–Retorno","Volatilidad anual (X) vs retorno anual (Y) · "+winLong(),svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
   const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
   const rows=byS.map(s=>{const a=s.a24;return `<tr><td>${tk(s)}</td><td>${badge(s.s,s.c)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(a.ret)}</td>
@@ -1602,7 +1604,7 @@ function viewComparativa(){
   const mkt=`<tr style="background:var(--soft)"><td style="font-weight:800;color:${indigo}">IPSA</td><td>${badge("mercado",indigo)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">1.00</td><td class="num">${chip(MKT.ret)}</td><td class="tnum num">${p0(MKT.sig)}</td>
     <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="num">${chip(MKT.tot)}</td></tr>`;
-  const tbl=card("Comparativa de candidatas","Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["R²",1],["Total 24m",1]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
+  const tbl=card("Comparativa de candidatas","Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["R²",1],["Total "+winShort(),1]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
   return marketTiles()+scatter+tbl+corrCard();
 }
 
@@ -1910,7 +1912,7 @@ function viewSim(){
   const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState.sel[t]||0),0);
   const shs=STOCKS.map(s=>s.a24.sharpe),maxSh=Math.max(0.01,...shs),loSh=Math.min(0,...shs);
   const comps=STOCKS.map(s=>MF.comp[s.t]||0),maxAbsC=Math.max(0.01,...comps.map(Math.abs));
-  const head=`<thead><tr><th></th><th>Acción</th><th class="r">β</th><th class="r">Ret 24m</th><th class="r">σ</th><th class="r">Sharpe</th><th class="r">α Jensen</th><th class="r">Multifactor</th><th class="r">Peso</th></tr></thead>`;
+  const head=`<thead><tr><th></th><th>Acción</th><th class="r gl">β</th><th class="r">Ret. anual</th><th class="r gl">σ</th><th class="r">Sharpe</th><th class="r"><span class="gl">α</span> Jensen</th><th class="r">Multifactor</th><th class="r">Peso</th></tr></thead>`;
   const rows=STOCKS.map(s=>{const on=simState.sel[s.t]!=null,a=s.a24,comp=MF.comp[s.t]||0;
     const bcol=s.b<0.85?green:(s.b>1.2?red:ink);
     const shPct=Math.max(5,Math.min(100,(a.sharpe-loSh)/(maxSh-loSh)*100));
@@ -1941,7 +1943,7 @@ function simResults(){
     tile("E(R) CAPM anual",p0(M.erCapm),"retorno exigido",indigo,indigo)+
     tile("E(R) CAPM mensual",p0(M.erM,2),"compuesto",indigo,ink)+
     tile("E(R) CAPM semanal",p0(M.erW,2),"compuesto",indigo,ink)+
-    tile("Retorno histórico",pc(M.retH),"anual · 24m",indigo,col(M.retH))+
+    tile("Retorno histórico",pc(M.retH),"anual · "+winShort(),indigo,col(M.retH))+
     tile("Riesgo σ",p0(M.sig),"prom. pond. "+p0(M.wavgSig),indigo,ink)+
     tile("Sharpe",M.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),indigo,M.sharpe>=0?green:red)+tile("Correlación portafolio",M.corrAvg.toFixed(2),"media entre acciones",indigo,ink)+`</div>`;
   const arows=M.ws.map(x=>`<tr><td>${tk(x.s)}</td><td>${badge(x.s.s,x.s.c)}</td><td class="tnum">${(x.w*100).toFixed(1)}%</td><td class="tnum" style="font-weight:700">${fmtCLP(simState.amount*x.w)}</td><td class="tnum" style="color:${accentT};font-weight:700">${x.s.b.toFixed(2)}</td></tr>`).join("");
@@ -1966,7 +1968,7 @@ function simResults(){
   const series=M.ws.map(x=>({label:x.s.t,c:x.s.c,vals:cum(x.s.rets)}));
   series.push({label:"IPSA",c:muted,vals:cum(MKT.rets),dash:true});
   const leg=`<div class="legend">`+series.map(s=>`<span><span class="lgdot" style="background:${s.c}"></span>${s.label}</span>`).join("")+`</div>`;
-  const multi=card("Comportamiento últimos 24 meses","Retorno acumulado (base 100) de las acciones seleccionadas vs IPSA",svgMulti({series,labels:DATA.labels,h:320}),leg);
+  const multi=card("Comportamiento de la ventana ("+winLong()+")","Retorno acumulado (base 100) de las acciones seleccionadas vs IPSA",svgMulti({series,labels:DATA.labels,h:320}),leg);
   const proj=simState.proj||"mensual";
   const hopts=HZN[proj];let hzn=simState.horizon;if(!hopts.includes(hzn))hzn=HZNDEF[proj];
   let perYear,capmRate;if(proj==="semanal"){perYear=52;capmRate=M.erW/100;}else if(proj==="anual"){perYear=1;capmRate=M.erCapm/100;}else{perYear=12;capmRate=M.erM/100;}
@@ -2075,7 +2077,7 @@ function viewAsistente(){
     const chips=M.ws.map(x=>`<span class="altchip" style="border-color:${x.s.c};color:${x.s.c};background:${x.s.c}12">${x.s.t} ${(x.w*100).toFixed(0)}%</span>`).join(" ");
     const bar=`<div style="display:flex;height:14px;border-radius:8px;overflow:hidden;margin:0 0 14px;border:1px solid var(--line)">${M.ws.map(x=>`<div style="width:${(x.w*100).toFixed(2)}%;background:${x.s.c}" title="${x.s.t} ${(x.w*100).toFixed(0)}%"></div>`).join("")}</div>`;
     const alphaP=alphaOf(M);
-    const mets=[["β",M.bp.toFixed(2),ink],["α Jensen",pc(alphaP),col(alphaP)],["E(R) CAPM",p0(M.erCapm),indigo],["Retorno 24m",pc(M.retH),col(M.retH)],["σ",p0(M.sig),ink],["ρ portafolio",M.corrAvg.toFixed(2),ink],["Sharpe",M.sharpe.toFixed(2),BC.sharpe]];
+    const mets=[["β",M.bp.toFixed(2),ink],["α Jensen",pc(alphaP),col(alphaP)],["E(R) CAPM",p0(M.erCapm),indigo],["Retorno ventana",pc(M.retH),col(M.retH)],["σ",p0(M.sig),ink],["ρ portafolio",M.corrAvg.toFixed(2),ink],["Sharpe",M.sharpe.toFixed(2),BC.sharpe]];
     const mh=mets.map(m=>`<div class="altm" style="border-top:2.5px solid ${m[2]}33"><div class="altml">${m[0]}</div><div class="altmv tnum" style="color:${m[2]}">${m[1]}</div></div>`).join("");
     let bdg="";if(idx===bestSh)bdg+=pill("★ Mejor Sharpe",BC.sharpe);if(idx===bestRt)bdg+=pill("↑ Mayor retorno",BC.ret);if(idx===lowSg)bdg+=pill("◇ Menor riesgo",BC.risk);if(idx===bestAl)bdg+=pill("α Mayor alpha",BC.alpha);
     return `<div class="card" style="border-left:5px solid ${th.c}"><div class="hd" style="background:linear-gradient(180deg,${th.bg},#fff)"><div style="display:flex;align-items:center;gap:12px"><div style="flex:0 0 auto;width:36px;height:36px;border-radius:50%;background:${th.c};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 2px 6px ${th.c}55">${idx+1}</div><div><div class="ct" style="font-size:17px;color:${th.c}">${alt.name}${bdg}</div><div class="cs" style="font-size:12px">${alt.desc}</div></div></div><button class="btn btn-pri" data-load="${idx}">Cargar en Constructor →</button></div><div class="bd">${bar}<div class="altchips">${chips}</div><div class="altmets">${mh}</div></div></div>`;}).join("");
@@ -2135,7 +2137,7 @@ function genPDF(){
   const sml=svgScatter({pts:lpts,lines:[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:"#1E5FD1",dash:true}],xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",w:820,h:330});
   const projChart=svgRLine(expv,expv.map((_,i)=>String(i)),"#1E5FD1");
   const comp=M.ws.map(x=>`<tr><td><b style="color:${x.s.c}">${x.s.t}</b></td><td>${x.s.n}</td><td>${x.s.s}</td><td class="r">${(x.w*100).toFixed(1)}%</td><td class="r">${fmtCLP(simState.amount*x.w)}</td><td class="r">${x.s.b.toFixed(2)}</td><td class="r">${x.s.a24.sig.toFixed(1)}%</td><td class="r">${x.s.a24.sharpe.toFixed(2)}</td><td class="r">${(x.s.a24.ret>=0?"+":"")+x.s.a24.ret.toFixed(1)}%</td></tr>`).join("");
-  const varRows=[["Semanal",M.erW,52],["Mensual",M.erM,12],["Anual",M.erCapm,1]].map(a=>{const s=M.sig/Math.sqrt(a[2]);const v=a[1]-1.645*s;return `<tr><td>${a[0]}</td><td class="r">${a[1].toFixed(2)}%</td><td class="r">${s.toFixed(2)}%</td><td class="r" style="color:${v<0?'#C0182B':'#0E8C5E'};font-weight:bold">${v.toFixed(2)}%</td><td class="r">${v<0?fmtCLP(simState.amount*-v/100):"—"}</td></tr>`;}).join("");
+  const varRows=[["Semanal",M.erW,52],["Mensual",M.erM,12],["Anual",M.erCapm,1]].map(a=>{const s=M.sig/Math.sqrt(a[2]);const v=a[1]-1.645*s;return `<tr><td>${a[0]}</td><td class="r">${a[1].toFixed(2)}%</td><td class="r">${s.toFixed(2)}%</td><td class="r" style="color:${v<0?'var(--red)':'var(--green)'};font-weight:bold">${v.toFixed(2)}%</td><td class="r">${v<0?fmtCLP(simState.amount*-v/100):"—"}</td></tr>`;}).join("");
   const ms=[0,0.25,0.5,0.75,1].map(fr=>Math.round(hzn*fr)).filter((v,i,a)=>a.indexOf(v)===i).map(i=>`<tr><td>${i} ${uni}</td><td class="r">${fmtCLP(expv[i])}</td><td class="r">${((expv[i]/simState.amount-1)*100).toFixed(1)}%</td></tr>`).join("");
   const cidx=M.ws.map(x=>TICK.indexOf(x.s.t));
   let heatHtml=`<table style="width:auto;border-collapse:separate;border-spacing:3px;margin:8px auto"><tr><td></td>`+M.ws.map(x=>`<td style="font-size:9px;font-weight:800;color:${x.s.c};text-align:center;padding:2px 6px">${x.s.t}</td>`).join("")+`</tr>`;
@@ -2183,7 +2185,7 @@ function genPDF(){
     ${sh(2,"Composición detallada")}
     <table><thead><tr><th>Acción</th><th>Empresa</th><th>Sector</th><th class="r">Peso</th><th class="r">Monto</th><th class="r">β</th><th class="r">σ</th><th class="r">Sharpe</th><th class="r">Ret. 24m</th></tr></thead><tbody>${comp}
       <tr class="tot"><td>TOTAL</td><td></td><td></td><td class="r">100%</td><td class="r">${fmtCLP(simState.amount)}</td><td class="r">${M.bp.toFixed(2)}</td><td class="r">${M.sig.toFixed(1)}%</td><td class="r">${M.sharpe.toFixed(2)}</td><td class="r">${(M.retH>=0?"+":"")+M.retH.toFixed(1)}%</td></tr></tbody></table>
-    ${sh(3,"Comportamiento histórico · 24 meses")}
+    ${sh(3,"Comportamiento histórico · "+winLong())}
     <div class="lgrow">${bleg}</div>${behav}
     <div class="note" style="margin-top:8px">Retorno acumulado (base 100) de cada acción del portafolio frente al IPSA en la ventana de análisis. Permite comparar la trayectoria relativa de las posiciones.</div>
     ${sh(4,"Riesgo, retorno y valoración (SML)","pb")}
@@ -2431,7 +2433,7 @@ function viewInv(){
 function viewInvActive(){
   const IM=invMetrics();
   const fr=FREQ[PF.freq||"diario"];
-  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos desde Simulación → Aplicar inversión",
+  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",
     `<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const _b0=WEEKS[0];
   const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;const bp=per.reduce((a,x)=>a+(x.m/tot)*x.hd.b,0);return {per,tot,bp};})():null;
@@ -2446,7 +2448,7 @@ function viewInvActive(){
   const freqBar=card("Periodicidad de registro","Cambia cada cuánto registras los precios. Al pasar a una periodicidad mayor (ej. diario→semanal), reorganizo tus registros previos conservando uno por período.",`<div class="pbtns">`+[["diario","Diario"],["semanal","Semanal"],["mensual","Mensual"]].map(([k,l])=>`<button class="pbtn ${(PF.freq||"diario")===k?"on":""}" data-setfreq="${k}">${l}</button>`).join("")+`</div>`);
   const ftitle=editing?("Editar "+(editIdx===0?"compra":fr.u+" "+editIdx)):(isFirst?"Registrar compra ("+fr.u+" inicial)":"Ingresar "+fr.u+" "+WEEKS.length);
   const fsub=editing?"Modifica los precios o la fecha y guarda los cambios":(isFirst?"Precio de compra y nº de acciones por papel (el monto invertido se calcula) + IPSA del día":"Precios de cierre "+fr.per+" y valor del IPSA");
-  const banner=editing?`<div class="note" style="margin-bottom:12px;border-color:#F3D9A8;background:#FCF6EA;color:#8A6D1F">Editando ${editIdx===0?"la compra":fr.det+" "+editIdx}. <a id="canceledit" style="color:var(--indigo);cursor:pointer;font-weight:800">✕ Cancelar edición</a></div>`:"";
+  const banner=editing?`<div class="note" style="margin-bottom:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">Editando ${editIdx===0?"la compra":fr.det+" "+editIdx}. <a id="canceledit" style="color:var(--indigo);cursor:pointer;font-weight:800">✕ Cancelar edición</a></div>`:"";
   const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:new Date().toISOString().slice(0,10)}"></div><div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div></div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo de la simulación</div><div id="compraprev" style="margin-top:6px"></div>':''}<div style="margin-top:13px"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button></div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
@@ -2531,7 +2533,7 @@ function viewInvActive(){
   const allocBody=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><div style="text-align:center;flex-shrink:0">${svgDonut(allocItems)}<div class="legend" style="justify-content:center;max-width:210px;margin:8px auto 0">${allocLeg}</div></div><div style="flex:1;min-width:300px"><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor</th></tr></thead><tbody>${driftRows}</tbody></table></div></div></div><div class="note" style="margin-top:12px">El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo de compra (por subir o bajar de precio). ${mxs?("La de mayor desviación es <b style='color:"+mxs.hd.c+"'>"+mxs.hd.t+"</b> ("+((mxs.val/L.val-mxs.hd.w)*100>=0?"+":"")+((mxs.val/L.val-mxs.hd.w)*100).toFixed(1)+" pp). "):""}Si el drift crece mucho, considera rebalancear para volver a tu asignación objetivo.</div>`;
   const drifts=IM.perStock.map(p=>({p,dr:(p.val/L.val-p.hd.w)*100}));
   const breaches=drifts.filter(d=>Math.abs(d.dr)>5);
-  const driftAlert=breaches.length?`<div class="note" style="margin-top:12px;border-color:#F3D9A8;background:#FCF6EA;color:#8A6D1F"><b>⚠ Alerta de rebalanceo:</b> ${breaches.map(d=>d.p.hd.t+" "+(d.dr>=0?"+":"")+d.dr.toFixed(1)+" pp").join(", ")} ${breaches.length>1?"superan":"supera"} el 5% de desviación respecto al objetivo. Revisa la <b>estrategia de rebalanceo</b> más abajo.</div>`:`<div class="note" style="margin-top:12px;border-color:#CDE7D8;background:#EAF6EF;color:#1A6B45">✓ Todas las posiciones están dentro de ±5 pp de su objetivo · sin necesidad de rebalancear.</div>`;
+  const driftAlert=breaches.length?`<div class="note" style="margin-top:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)"><b>⚠ Alerta de rebalanceo:</b> ${breaches.map(d=>d.p.hd.t+" "+(d.dr>=0?"+":"")+d.dr.toFixed(1)+" pp").join(", ")} ${breaches.length>1?"superan":"supera"} el 5% de desviación respecto al objetivo. Revisa la <b>estrategia de rebalanceo</b> más abajo.</div>`:`<div class="note" style="margin-top:12px;border-color:var(--green-line);background:var(--greenbg);color:var(--green)">✓ Todas las posiciones están dentro de ±5 pp de su objetivo · sin necesidad de rebalancear.</div>`;
   const allocCard=card("Composición actual vs objetivo","Cómo se desviaron los pesos desde la compra · base para rebalancear",allocBody+driftAlert);
   const invTools=`<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" id="geninforme">📄 Generar informe</button><button class="btn" id="genxls">📊 Generar Excel</button></div>`;
   const b0q=WEEKS[0];
@@ -2567,7 +2569,7 @@ function viewOperar(){
   if(!PF){activeId=PROJECTS[0].id;syncProj();}
   const fr=FREQ[PF.freq||"diario"];
   if(injState.pid!==activeId)injState={pid:activeId,rows:[]};
-  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos desde Simulación → Aplicar inversión",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
+  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
   const summary=card(PF.name,`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const IM=invMetrics();
@@ -3698,6 +3700,9 @@ function attachPerfil(){
 /* ---------------- DATASET ACTIVO (demo <-> importado) ---------------- */
 const DEMO={stocks:DATA.stocks,market:DATA.market,corr:DATA.corr,tickers:DATA.tickers,labels:DATA.labels,window:DATA.window,n:DATA.n,rf:DATA.rf,prima:DATA.prima,erm:DATA.erm,perYear:12};
 let DATASET="demo";
+/* etiqueta corta de la ventana del análisis activo (n períodos + unidad), para no fijar '24m' en la UI */
+function winShort(){const u=DATA.perYear===252?'d':DATA.perYear===52?'sem':'m';return DATA.n+u;}
+function winLong(){const u=DATA.perYear===252?'días':DATA.perYear===52?'semanas':'meses';return DATA.n+' '+u;}
 function setActive(s){
   if(!s||!Array.isArray(s.stocks)||!s.stocks.length){console.warn("setActive: dataset vacío, se ignora");return false;}
   DATA.stocks=s.stocks;DATA.market=s.market;DATA.corr=s.corr;DATA.tickers=s.tickers;DATA.labels=s.labels;DATA.window=s.window;DATA.n=s.n;DATA.rf=s.rf;DATA.prima=s.prima;DATA.perYear=s.perYear;
@@ -3712,7 +3717,9 @@ function applyDataset(which){
 }
 
 /* ---------------- IMPORTAR ACCIONES (multi-archivo, formato Investing) ---------------- */
-const IMP_PAL=["#1E5FD1","#0E8C5E","#DB2777","#A8700C","#7C3AED","#0EA5E9","#D9730D","#0E8F86","#CE2F3B","#65A30D","#6D54D8","#0891B2","#9333EA","#E11D48","#15803D","#CA8A04"];
+/* paleta categórica de series, en ORDEN FIJO y validada (banda de luminosidad, croma, separación CVD ≥12 entre
+   adyacentes y contraste ≥3:1 sobre superficie clara y oscura) — no reordenar ni ciclar */
+const IMP_PAL=["#1E5FD1","#D9730D","#0E8F86","#DB2777","#65A30D","#7C3AED","#A8700C","#0369A1","#9F1239","#0E8C5E","#6D54D8","#B45309","#0891B2","#BE185D","#4D7C0F","#4338CA"];
 const IMP_PY={diario:252,semanal:52,mensual:12};
 const IMP_KNOWN=[[/banco de cr|^bci/i,"BCI"],[/cervecer|^ccu/i,"CCU"],[/banco de chile|banco chile/i,"CHILE"],[/santander/i,"SANTANDER"],[/enel/i,"ENELCHILE"],[/colb/i,"COLBUN"],[/falabella/i,"FALABELLA"],[/cencosud/i,"CENCOSUD"],[/copec/i,"COPEC"],[/cmpc/i,"CMPC"],[/sqm|sociedad qu/i,"SQM-B"],[/entel/i,"ENTEL"],[/latam/i,"LATAM"],[/parque arauco|parauco/i,"PARAUCO"],[/ipsa/i,"IPSA"]];
 let impFiles=[], IMP=lsGet("inv_import_v1")||null, impFreq="mensual", impRf=RF, impBench=null, impMsg="";
@@ -4068,7 +4075,7 @@ function coverageByFreq(){
   }
   const out=[];const meta=(PRICEDB&&PRICEDB.tickers)||{};
   Object.keys((PRICEDB&&PRICEDB.px)||{}).sort().forEach(t=>{const m=PRICEDB.px[t];if(!m||!Object.keys(m).length)return;const md=meta[t]||{};out.push(classify(t,m,md.c,md.n||t));});
-  const ip=(PRICEDB&&PRICEDB.ipsa)||{};if(Object.keys(ip).length)out.push(classify("__IPSA__",ip,"#0F172A","IPSA"));
+  const ip=(PRICEDB&&PRICEDB.ipsa)||{};if(Object.keys(ip).length)out.push(classify("__IPSA__",ip,"var(--navy)","IPSA"));
   return out;
 }
 /* detección de inconsistencias en la base (solo diagnostica; los arreglos los hace "Reparar base") */
@@ -4105,7 +4112,7 @@ function datosBase(){
   const actions=`<div class="datos-acts">
     <button class="btn btn-pri" data-dgo="cargar">📈 Cargar planilla</button>
     <button class="btn btn-pri" data-dapply ${empty?"disabled":""}>↻ Actualizar sistema</button></div>
-    <div class="genl" style="margin:10px 0 0"><b>Cargar planilla</b>: sube tus CSV/XLSX (diario, semanal o mensual). <b>Actualizar sistema</b>: refresca Home, análisis y seguimientos con la base.</div>`;
+    <div class="helpline" style="margin:10px 0 0"><b>Cargar planilla</b>: sube tus CSV/XLSX (diario, semanal o mensual). <b>Actualizar sistema</b>: refresca Home, análisis y seguimientos con la base.</div>`;
   const intro=card("Base de precios del sistema","Tu repositorio central de precios. Solo se aceptan días hábiles reales: ni una planilla ni un cierre pueden registrar fines de semana ni fechas futuras.",kpis+actions+diagNote);
   // ── ACCIONES CARGADAS: pestañas por cadencia (diario/semanal/mensual) + inconsistencias ──
   const COV=empty?[]:coverageByFreq();
@@ -4130,7 +4137,7 @@ function datosBase(){
     <button class="btn" data-dfix>🔧 Reparar base</button>
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:5px 7px"><button class="btn" data-ddaydel>Quitar este día</button></span>
     <span class="datos-freq" style="margin-left:auto"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span>
-    </div><div class="genl" style="margin:10px 0 0"><b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
+    </div><div class="helpline" style="margin:10px 0 0"><b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
   return intro+tbl+maint;
 }
 function datosCargar(){
@@ -4933,8 +4940,8 @@ function viewProyectos(){
         <div class="prj-m"><span class="l">Valor actual</span><b>${s.hasData?fmtCLP(s.value):"—"}</b></div>
         <div class="prj-m"><span class="l">Rentab. $</span><b style="color:${s.gain>=0?green:red}">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</b></div>
         <div class="prj-m"><span class="l">Rentab. %</span><b style="color:${s.gainPct>=0?green:red}">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</b></div>
-        <div class="prj-m"><span class="l">β cartera</span><b style="color:${accentT}">${(s.beta||0).toFixed(2)}</b></div>
-        <div class="prj-m" title="α de Jensen realizado: retorno real menos el exigido por CAPM para la β de la cartera (acumulado a la fecha, no anualizado)"><span class="l">α de Jensen</span><b style="color:${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0)?green:red):'var(--navy)'}">${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0?"+":"")+(s.alphaReal*100).toFixed(2)+"%"):"—"}</b></div>
+        <div class="prj-m"><span class="l"><span class="gl">β</span> cartera</span><b style="color:${accentT}">${(s.beta||0).toFixed(2)}</b></div>
+        <div class="prj-m" title="α de Jensen realizado: retorno real menos el exigido por CAPM para la β de la cartera (acumulado a la fecha, no anualizado)"><span class="l"><span class="gl">α</span> de Jensen</span><b style="color:${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0)?green:red):'var(--navy)'}">${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0?"+":"")+(s.alphaReal*100).toFixed(2)+"%"):"—"}</b></div>
         <div class="prj-m" title="Sharpe modelado de la cartera (retorno esperado por unidad de riesgo, según su construcción CAPM/Markowitz)"><span class="l">Sharpe</span><b style="color:${accentT}">${(s.sharpe||0).toFixed(2)}</b></div>
       </div>
       <div class="prj-links">
@@ -5387,9 +5394,9 @@ function viewHome(){
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
   const funds=D.projs.slice().sort((a,b)=>(b.val||0)-(a.val||0));
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
-    if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
+    if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
     const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,40);
-    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
+    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
     const stat=(l,v,c,lc)=>`<div class="fw-stat"><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
@@ -5425,7 +5432,7 @@ function viewHome(){
     ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,bestArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}
     ${stkBlock("Peor rentabilidad","retorno "+perPhrase,worstArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}</div>`
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
-  const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} · cada acción con su último dato disponible (y su fecha) · usa <b>↻ Actualizar precios</b> para cargar cierres · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
+  const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} · cada acción con su último dato disponible (y su fecha) · los cierres se cargan en <b>Datos</b> · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
   return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
