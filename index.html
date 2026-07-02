@@ -807,16 +807,21 @@
 
   /* ════════════════ NAV SUPERIOR (Mercados / Perfil) ════════════════ */
   .tnav{display:flex;gap:8px;}
-  .topnav{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 .85rem;border-radius:10px;
-    border:1px solid var(--line2);background:var(--card);color:var(--muted);font:700 12.5px var(--font);
+  .topnav{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 .95rem;border-radius:11px;
+    border:1px solid var(--line2);background:var(--card);color:var(--muted);font:700 13px var(--font);
     cursor:pointer;transition:.15s var(--ease);box-shadow:var(--sh-xs);white-space:nowrap;}
-  .topnav svg{opacity:.78;}
+  .topnav svg{opacity:.82;flex:0 0 auto;}
   .topnav:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 13px rgba(30,95,209,.16);}
   .topnav.on{color:#fff;background:linear-gradient(180deg,var(--a-400),var(--accent));border-color:transparent;box-shadow:0 3px 11px rgba(30,95,209,.32);}
   .topnav.on svg{opacity:1;}
   .topnav-home{font-weight:800;}
   .topnav-home:not(.on){color:var(--accent);border-color:var(--accent);background:var(--a-50);}
-  @media(max-width:1080px){.topnav{padding:0 .6rem;}}
+  .beta-tag{font:800 8px var(--font);letter-spacing:.6px;text-transform:uppercase;padding:2px 5px 1px;border-radius:6px;
+    background:#7C3AED;color:#fff;line-height:1;margin-left:-1px;box-shadow:0 1px 3px rgba(124,58,237,.3);}
+  .topnav-beta:not(.on){border-color:rgba(124,58,237,.42);}
+  .topnav-beta:not(.on) svg{color:#7C3AED;opacity:.95;}
+  .topnav.on .beta-tag{background:rgba(255,255,255,.28);color:#fff;box-shadow:none;}
+  @media(max-width:1080px){.topnav{padding:0 .62rem;font-size:12px;}.topnav .beta-tag{display:none;}}
 
   /* ════════════════ META DE ANÁLISIS (ventana de datos) ════════════════ */
   .eval-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 16px;padding:.5rem .85rem;
@@ -1281,6 +1286,21 @@
   .fw-hint{font-size:11.5px;color:var(--mut);font-weight:600;}
   @media(max-width:760px){.home-fundgrid.n2{grid-template-columns:1fr;}}
   @media(max-width:880px){.home-grid-news{grid-template-columns:1fr;}}
+  /* ── Montecarlo (beta) ── */
+  .mc-beta{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:var(--muted);
+    background:linear-gradient(90deg,rgba(124,58,237,.10),rgba(124,58,237,.02));border:1px solid rgba(124,58,237,.26);
+    border-radius:13px;padding:10px 15px;margin-bottom:15px;}
+  .mc-beta b{color:#7C3AED;}
+  .mc-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;}
+  .mc-fld{display:flex;flex-direction:column;gap:6px;font:800 10px var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .mc-fld input{padding:.52rem .62rem;border:1px solid var(--line2);border-radius:10px;background:var(--card);
+    font:700 14.5px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;transition:.15s var(--ease);}
+  .mc-fld input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  .mc-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:15px;}
+  .mc-seglab{font:800 10px var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .mc-goal{display:inline-flex;align-items:center;gap:7px;font:700 12px var(--font);color:var(--ink);cursor:pointer;}
+  .mc-goal input[type=number]{width:120px;padding:.44rem .5rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12.5px var(--font);color:var(--ink);}
+  .mc-goal input[type=number]:disabled{opacity:.45;}
 </style>
 </head>
 <body>
@@ -1292,7 +1312,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Volver al inicio"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navDatos" data-mod="datos" title="Datos · base de precios"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>Datos</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navPerfil" data-mod="perfil" title="Perfil"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Perfil</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button></div><button class="mkpill" id="projPill" title="Proyecto activo · ir a Proyectos"><span class="live-dot"></span><span id="projPillTxt">Proyecto</span></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Inicio"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav topnav-beta" id="navMontecarlo" data-mod="montecarlo" title="Montecarlo · proyecciones probabilísticas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg>Montecarlo<span class="beta-tag">beta</span></button></div><button class="mkpill" id="projPill" title="Proyecto activo · ir a Proyectos"><span class="live-dot"></span><span id="projPillTxt">Proyecto</span></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
@@ -1487,6 +1507,7 @@ const MODS={
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
   perfil:{label:"Perfil",tabs:[{id:"perfil",label:"Perfil de inversionista",n:"1"}]},
+  montecarlo:{label:"Montecarlo",beta:true,tabs:[{id:"proyeccion",label:"Proyección probabilística",n:"1"}]},
   inv:{label:"Inversión",tabs:[{id:"ingreso",label:"Invertir",n:"1"},{id:"seguimiento",label:"Seguimiento",n:"2"},{id:"historial",label:"Historial",n:"3"},{id:"operar",label:"Operar",n:"4"},{id:"contabilidad",label:"Contabilidad",n:"5"}]},
   pro:{label:"Pro · Roadmap",tabs:[{id:"realtime",label:"Datos en tiempo real",n:"1"},{id:"copilot",label:"Copiloto IA",n:"2"}]},
 };
@@ -1500,12 +1521,13 @@ const ICO={
  perfil:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
  mercados:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
  proyectos:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
+ montecarlo:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg>',
  clientes:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
 };
 function renderChrome(){
   let nav="";   // "Inicio" vive fijo en la barra superior (topbar), no en el menú lateral
   nav+=`<div class="sgroup">Módulos</div>`;
-  ["eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
+  ["datos","eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
   document.getElementById("snav").innerHTML=nav;
@@ -2855,6 +2877,7 @@ function render(){
   else if(modulo==="inv") h=(page==="operar"?viewOperar():page==="contabilidad"?viewContab():viewInv());
   else if(modulo==="pro") h=viewPro();
   else if(modulo==="mercados") h=viewMercados();
+  else if(modulo==="montecarlo") h=viewMontecarlo();
   else if(modulo==="proyectos") h=viewProyectos();
   else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
   else if(modulo==="perfil") h=viewPerfil();
@@ -2879,6 +2902,7 @@ function render(){
   if(modulo==="eval"&&page==="crear") attachCrear();
   if(modulo==="perfil") attachPerfil();
   if(modulo==="mercados") attachMercados();
+  if(modulo==="montecarlo") attachMontecarlo();
   if(modulo==="proyectos") attachProyectos();
   if(modulo==="clientes") attachClientes();
   if(modulo==="inicio") attachHome();
@@ -3227,7 +3251,7 @@ MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máxim
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
 
-HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_investor_profile, get_imported_analysis, get_multifactor, get_market_indicators, get_market_news, get_ipsa_snapshot. Sugerencia de arranque por intención (no es un pipeline rígido): análisis de acción → get_stock o list_stocks+get_multifactor; optimización → get_constructor+get_investor_profile y valida con evaluate_portfolio; diagnóstico → get_performance_summary y luego get_active_portfolio; mercado → get_market_indicators+get_market_news+get_ipsa_snapshot. No llames tools que no aportan a la pregunta.
+HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_projection, get_investor_profile, get_imported_analysis, get_multifactor, get_market_indicators, get_market_news, get_ipsa_snapshot. Sugerencia de arranque por intención (no es un pipeline rígido): análisis de acción → get_stock o list_stocks+get_multifactor; optimización/construcción → get_constructor+get_investor_profile y valida con evaluate_portfolio; diagnóstico → get_performance_summary y luego get_active_portfolio; proyección/futuro/meta/"¿cuánto podría valer?" → get_projection; mercado → get_market_indicators+get_market_news+get_ipsa_snapshot. No llames tools que no aportan a la pregunta.
 
 5 FOCOS (los procesos son guía mental, no plantilla de salida obligatoria):
 1) ANALIZAR ACCIONES — get_stock; rankear/comparar: list_stocks+get_multifactor; encaje: get_correlations. Razona: driver macro del sector/β/estilo; CAPM (E(R) exigido vs retorno24m, α, r²); MF (composite, factores z>+0,5 favorecen / z<−0,5 perjudican, matiza con r²/horizonte); riesgo (σ, Sharpe, correlación); VEREDICTO (comprar/mantener/evitar/sobreponderar/reducir) con cifras y alineado al perfil; si choca con el perfil, adviértelo.
@@ -3235,6 +3259,11 @@ HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, lis
 3) SEGUIMIENTOS Y CIERRES — get_performance_summary (pulso); get_active_portfolio (detalle: vsIPSA_pts, β realizado vs esperado, maxDD, Sharpe realizado, porAccion). Diagnostica con cifras la causa que más resta (concentración, perdedora, drift, exceso β, Sharpe bajo); separa ruido de tesis rota con get_stock. PROPÓN 1–3 cambios (acción, de X% a Y%, por qué) y VALÍDALOS con evaluate_portfolio mostrando deltas. CIERRES: realizado (TWR, vsIPSA, P/L) vs tesis y perfil → tesis cumplida / rota / gestión de riesgo, y qué hacer con el capital liberado.
 4) MERCADO Y MACRO → ACCIONES — get_market_news + get_market_indicators + get_ipsa_snapshot. Identifica 1–3 drivers (dirección y magnitud); distingue señal sostenida de ruido. Mapéalo al ticker con SIGNO y canal (costo/ingreso/margen/valuación); matiza con get_stock (β amplifica) o la exposición real (get_active_portfolio/get_constructor).
 5) RAZONAMIENTO SENIOR — encadena "indicador/noticia → ticker(s) → recomendación con números". Idoneidad: si una acción/cartera excede el perfil (ej. conservador con β alto o LATAM), adviértelo y ofrece alternativa; si insiste, propónsela con la advertencia delante. Si la cartera no alcanza el retorno requerido, NO subas el riesgo sobre el perfil: sugiere más aporte, más horizonte o ajustar la meta. Horizonte: largo plazo favorece Value/Quality; corto, Momentum.
+
+PLAYBOOKS ACCIONABLES (usa el que aplique; cita cifras de las tools y cierra con pasos ejecutables):
+• CONSTRUIR CARTERA DESDE CERO (Markowitz aplicado): 1) fija objetivo y restricciones desde get_investor_profile (nivel de riesgo, β objetivo, retorno requerido, horizonte, topes por acción/sector). 2) universo candidato con list_stocks + get_multifactor (prioriza Sharpe alto y factores alineados al perfil; descarta β/σ fuera de rango). 3) diversifica con get_correlations (combina pares de baja correlación; evita apilar nombres muy correlacionados). 4) arma pesos (arranca en igual ponderación o inverso-vol y desplázalos hacia mayor Sharpe / menor correlación, respetando topes de concentración). 5) VALIDA con evaluate_portfolio y muestra β, E(R) CAPM y MF, σ, Sharpe, correlación media y factores. 6) itera 1–2 veces buscando ↑Sharpe y ↓σ. 7) entrega pesos finales (ticker %), el racional y el paso "guardar en Constructor → Operar".
+• COMPRAR / VENDER / REBALANCEAR (disciplina, no impulso): parte de get_active_portfolio + get_performance_summary. VENDER/REDUCIR si: tesis rota (confírmalo con get_stock: cambió el fundamento/estilo, no solo el precio), concentración sobre el tope, β/σ de la cartera fuera del perfil, o una posición concentra demasiado el riesgo. COMPRAR/AÑADIR si: hay hueco de diversificación (get_correlations), un factor del perfil está infra-representado, o aparece una candidata con mejor Sharpe que la posición marginal. REBALANCEAR POR BANDAS: si un peso se desvía más de ~5–7 puntos de su objetivo, vuélvelo al objetivo (recorta lo que subió, refuerza lo que bajó). Considera costos (comisión/mínimos) y no operes por ruido. SIEMPRE cuantifica el cambio (de X% a Y%) y valida el "después" con evaluate_portfolio mostrando Δβ/ΔSharpe/Δσ/Δcorr. Máximo 1–3 movimientos por vez.
+• PROYECTAR A FUTURO (probabilístico, nunca una sola cifra): usa get_projection para dar mediana, rango p25–p75, adverso p5, optimista p95 al horizonte pedido, más probabilidad de pérdida y de meta. Para planificar una meta, tantea aporte mensual y horizonte hasta que la probabilidad de alcanzarla sea razonable. Explica que el rango se ensancha con el tiempo y que μ/σ son supuestos (no garantía). Si el usuario quiere verlo, remítelo al módulo "Montecarlo" de la barra superior. Nunca presentes un número único como certeza.
 
 MAPA DE SENSIBILIDAD (IPSA):
 - PETRÓLEO ↔ LATAM: INVERSA (jet fuel = mayor costo). Petróleo↓ = mejor margen (+); petróleo↑ = (−).
@@ -3270,6 +3299,7 @@ const COPILOT_TOOLS=[
   {name:"get_scenarios",description:"Escenarios de simulación guardados por el usuario, con su composición y métricas.",input_schema:{type:"object",properties:{}}},
   {name:"get_constructor",description:"La cartera que el usuario tiene en este momento en el Constructor (Simulación), con sus métricas y exposición factorial.",input_schema:{type:"object",properties:{}}},
   {name:"evaluate_portfolio",description:"Evalúa una cartera hipotética. Entrega pesos por ticker (en %, suman ~100). Devuelve β, E(R) CAPM, E(R) multifactor, σ, Sharpe, correlación media y exposición factorial. Úsalo para proponer/comparar carteras.",input_schema:{type:"object",properties:{weights:{type:"object",description:"Mapa ticker->peso %, ej. {\"BCI\":40,\"ENELCHILE\":30,\"COLBUN\":30}",additionalProperties:{type:"number"}},amount:{type:"number",description:"Monto a invertir en CLP (opcional)"}},required:["weights"]}},
+  {name:"get_projection",description:"Proyección Monte Carlo (probabilística) del capital a futuro: simula trayectorias log-normales (GBM) con el retorno esperado (μ) y el riesgo (σ) del proyecto ACTIVO —o los que le pases— y devuelve, al horizonte pedido: mediana, rango p25–p75, escenario adverso p5, optimista p95, probabilidad de terminar bajo lo aportado y, si das meta, probabilidad de alcanzarla. Es el mismo motor del módulo Montecarlo. Úsalo para '¿cuánto podría valer en X años?', VaR y planificación de metas. Nunca inventes proyecciones: llámalo.",input_schema:{type:"object",properties:{horizonYears:{type:"number",description:"Horizonte en años (default 5)"},monthlyContribution:{type:"number",description:"Aporte mensual en CLP (opcional)"},goal:{type:"number",description:"Meta de capital en CLP (opcional; devuelve prob. de alcanzarla)"},initialCapital:{type:"number",description:"Capital inicial CLP (opcional; default = valor del proyecto activo)"},expectedReturnPct:{type:"number",description:"μ anual en % (opcional; default = E(R) CAPM del proyecto)"},volatilityPct:{type:"number",description:"σ anual en % (opcional; default = σ del proyecto)"}}}},
   {name:"get_investor_profile",description:"Perfil de inversionista del usuario (conservador/moderado/riesgoso) para personalizar recomendaciones.",input_schema:{type:"object",properties:{}}},
   {name:"get_imported_analysis",description:"Si el usuario importó un set de acciones propio, devuelve sus métricas CAPM, benchmark y correlaciones. Vacío si usa el set demo.",input_schema:{type:"object",properties:{}}},
   {name:"get_multifactor",description:"Modelo multifactor de estilo (más allá del CAPM). Por cada acción del set activo: Composite, z-scores de los 6 factores (Momentum, Low-Vol, Value, Quality, Size, Dividend Yield), E(R) multifactor y estilo; más los pesos de factor del perfil. Úsalo para analizar/recomendar con factores, no solo β.",input_schema:{type:"object",properties:{}}},
@@ -3334,6 +3364,21 @@ function cpRunTool(name,input){
       const res={tickersInvalidos:bad.length?bad:undefined,beta:+e.PM.bp.toFixed(2),erCAPM_pct:+e.PM.erCapm.toFixed(2),erMultifactor_pct:e.erMF,retornoHist24m_pct:+e.PM.retH.toFixed(1),sigma_pct:+e.PM.sig.toFixed(1),sharpe:+e.PM.sharpe.toFixed(2),correlacionMedia:+e.PM.corrAvg.toFixed(2),exposicionFactorial:e.Z,
         composicion:e.PM.ws.map(x=>({t:x.s.t,peso:+(x.w*100).toFixed(1),montoCLP:amount?Math.round(amount*x.w):undefined}))};
       return JSON.stringify(res);
+    }
+    if(name==="get_projection"){
+      const d=(typeof mcDefaults==="function")?mcDefaults():{v0:0,mu:RF+PRIMA,sig:(MKT&&MKT.sig)||14,src:"—"};
+      const st={v0:(+input.initialCapital>0)?+input.initialCapital:d.v0,
+        mu:isFinite(+input.expectedReturnPct)&&input.expectedReturnPct!==""&&input.expectedReturnPct!=null?+input.expectedReturnPct:d.mu,
+        sig:isFinite(+input.volatilityPct)&&input.volatilityPct!==""&&input.volatilityPct!=null?+input.volatilityPct:d.sig,
+        horizonY:(+input.horizonYears>0)?+input.horizonYears:5,
+        contrib:(+input.monthlyContribution>0)?+input.monthlyContribution:0,
+        goalOn:(+input.goal>0),goal:(+input.goal>0)?+input.goal:0,paths:800};
+      if(!(st.v0>0))return JSON.stringify({error:"No hay capital inicial. Define un proyecto activo con seguimiento, o pasa initialCapital en CLP."});
+      const R=mcSimulate(st),f=R.final;
+      return JSON.stringify({fuenteParametros:d.src,capitalInicialCLP:Math.round(st.v0),retornoEsperadoAnualPct:+st.mu.toFixed(2),volatilidadAnualPct:+st.sig.toFixed(2),horizonteAnios:st.horizonY,aporteMensualCLP:st.contrib,aportadoTotalCLP:Math.round(R.invested),trayectorias:R.N,
+        proyeccion:{medianaCLP:Math.round(f.p50),rango50_p25CLP:Math.round(f.p25),rango50_p75CLP:Math.round(f.p75),adverso_p5CLP:Math.round(f.p5),optimista_p95CLP:Math.round(f.p95),mediaCLP:Math.round(f.mean)},
+        probPerdida_pct:+(R.probLoss*100).toFixed(1),probMeta_pct:R.probGoal!=null?+(R.probGoal*100).toFixed(1):null,
+        nota:"Monte Carlo GBM log-normal; supone μ y σ constantes. Educativo, no es garantía. Detalle visual en el módulo Montecarlo."});
     }
     if(name==="get_investor_profile"){if(!invProfile||!invProfile.levels)return "El usuario aún no completó (o debe reevaluar) su perfil de inversionista en el módulo Perfil. Puedes sugerirle hacerlo.";return JSON.stringify({nivel:invProfile.level+"/5",etiqueta:invProfile.label,perfilFactores:invProfile.profile,subniveles:invProfile.levels,subpuntajes:invProfile.scores,retornoRequerido_pct:invProfile.reqCAGR,nota:invProfile.note,instrumentosComplejos:invProfile.complex_ok?"permitidos":"bloqueados (idoneidad)",saaSugerida:invProfile.alloc,guia:invProfile.guideShort});}
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
@@ -4149,6 +4194,14 @@ function systemClean(){
   }catch(e){}
   return kept;
 }
+/* borra por completo la base de precios (fuente única): vacía px/ipsa/idx y deja seeded=true para que el demo no
+   se vuelva a sembrar. No toca proyectos ni la compra inicial. El usuario recarga con planillas. */
+function pricedbWipe(){
+  try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de vaciar la base de precios");}catch(e){}
+  PRICEDB={tickers:{},px:{},ipsa:{},idx:{},seeded:true};savePriceDB();
+  lsSet("inv_demo_hidden",1);   // no reaparece el análisis "IPSA · demo"
+  try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")applyDataset("demo");}catch(e){}
+}
 /* cobertura por cadencia: para cada acción (y el IPSA) cuántos períodos CONSECUTIVOS recientes tiene a cada
    cadencia (diario/semanal/mensual) con sus fechas reales, y cuál es su cadencia "principal" (la más fina con racha ≥3). */
 function coverageByFreq(){
@@ -4238,9 +4291,10 @@ function datosBase(){
     <button class="btn" data-dgo="cierre">📝 Cierre diario manual</button>
     <button class="btn" data-dsync title="Trae los cierres desde tu fuente automática (JSON diario) y los fusiona en la base">⟳ Sincronizar cierres</button>
     <button class="btn" data-dfix>🔧 Reparar base</button>
+    <button class="btn" data-dwipe style="color:var(--red);border-color:var(--red-line)">🗑 Vaciar base de precios</button>
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:5px 7px"><button class="btn" data-ddaydel>Quitar este día</button></span>
     <span class="datos-freq" style="margin-left:auto"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span>
-    </div><div class="helpline" style="margin:10px 0 0"><b>Sincronizar cierres</b>: ${_apxTxt}. <b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
+    </div><div class="helpline" style="margin:10px 0 0"><b>Sincronizar cierres</b>: ${_apxTxt}. <b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. <b>Vaciar base de precios</b> deja la base en blanco para recargar planillas como fuente única (no borra proyectos). El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
   return intro+tbl+maint;
 }
 function datosCargar(){
@@ -4275,6 +4329,13 @@ function attachDatos(){
   const dsy=document.querySelector("[data-dsync]");if(dsy)dsy.onclick=()=>{dsy.disabled=true;dsy.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{dsy.disabled=false;render();});};
   document.querySelectorAll("[data-dcov]").forEach(b=>b.onclick=()=>{datosCovTab=b.dataset.dcov;lsSet("inv_datos_covtab",datosCovTab);render();});
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
+  const dwp=document.querySelector("[data-dwipe]");if(dwp)dwp.onclick=()=>{
+    if(pricedbEmpty()){window.alert("La base de precios ya está vacía. Carga tus planillas en “Cargar planilla”.");return;}
+    if(!confirm('Vaciar POR COMPLETO la base de precios (todos los precios de acciones y del IPSA).\n\nEs el punto de partida para recargar tus planillas (mensual / semanal / diaria) como fuente ÚNICA de datos.\n\n✓ NO borra tus proyectos ni la compra inicial de tus carteras.\n✓ Se guarda un respaldo interno antes de vaciar.\n✓ El cierre diario manual y la sincronización automática seguirán poblando la base.\n\n¿Continuar?'))return;
+    const typed=window.prompt('⚠ Confirmación de seguridad\n\nEsto deja la base de precios en blanco. Después cargas tus planillas en “Cargar planilla”.\n\nPara confirmar, escribe en mayúsculas: VACIAR');
+    if(typed==null||typed.trim().toUpperCase()!=="VACIAR"){window.alert("Cancelado. No se vació nada.");return;}
+    pricedbWipe();page="base";render();
+    window.alert("Base de precios vaciada. Ahora carga tus planillas en Datos → “Cargar planilla” y pulsa “Actualizar sistema”.\n\nSi además quieres reiniciar los seguimientos de las carteras (conservando la compra inicial), usa ⚙ Configuración → “Limpiar sistema”.");};
   const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost)?("Base reparada.\n\n• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
     if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
@@ -5011,6 +5072,125 @@ function projPrimaryAnalysis(p){const L=projLinks(p);if(L.primary&&L.analyses.ma
 function projSetPrimary(pid,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;projLinks(p).primary=String(id);saveProjects();render();}
 function activateAnalysis(id){if(!id)return false;if(String(id)==="demo"){applyDataset("demo");return true;}if(String(id)==="datos"){return pricedbActivateAnalysis();}if(typeof impsetActivate==="function"&&(IMPSETS||[]).some(s=>String(s.id)===String(id))){impsetActivate(id);return true;}return false;}
 function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;activeId=p.id;saveProjects();syncProj();if(!activateAnalysis(projPrimaryAnalysis(p)))render();}
+
+/* ===================================================================== */
+/* ============ MÓDULO MONTECARLO (beta) · proyección probabilística ==== */
+/* ===================================================================== */
+let mcState=null;
+function mcRandn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+/* parámetros por defecto: toma μ/σ/valor del proyecto activo si existe; si no, del mercado (IPSA) */
+function mcDefaults(){
+  try{syncProj();}catch(e){}
+  const p=(typeof curProj==="function")?curProj():null;
+  let v0=1000000, mu=RF+PRIMA, sg=(MKT&&MKT.sig)||14, src="Mercado · IPSA (sin proyecto activo)";
+  if(p){let s=null;try{s=projSummary(p);}catch(e){}
+    const val=(s&&s.hasData&&s.value)?s.value:((typeof realCap==="function"&&realCap())||p.amount||0);
+    if(val>0)v0=Math.round(val);
+    if(isFinite(p.erCapm)&&p.erCapm)mu=p.erCapm;
+    if(isFinite(p.sig)&&p.sig>0)sg=p.sig;
+    src="Proyecto activo · "+(p.name||"cartera");
+  }
+  return {v0:Math.round(v0),mu:+(+mu).toFixed(2),sig:+(+sg).toFixed(2),horizonY:5,contrib:0,goalOn:false,goal:Math.round(v0*2),paths:500,src};
+}
+function mcEnsure(){if(!mcState)mcState=mcDefaults();return mcState;}
+/* motor GBM log-normal: N trayectorias, pasos mensuales, con aporte mensual opcional; devuelve percentiles por paso */
+function mcSimulate(st){
+  const H=Math.max(1,Math.round(st.horizonY*12)), N=Math.max(50,Math.min(2000,st.paths||500));
+  const mu=st.mu/100, sg=Math.max(0,st.sig/100), dt=1/12;
+  const drift=(mu-0.5*sg*sg)*dt, vol=sg*Math.sqrt(dt), contrib=Math.max(0,st.contrib||0);
+  const cols=[];for(let t=0;t<=H;t++)cols.push(new Float64Array(N));
+  for(let j=0;j<N;j++){let v=st.v0;cols[0][j]=v;
+    for(let t=1;t<=H;t++){v=v*Math.exp(drift+vol*mcRandn());v+=contrib;if(v<0)v=0;cols[t][j]=v;}}
+  const pct=(col,q)=>{const a=Array.prototype.slice.call(col).sort((x,y)=>x-y);const idx=(a.length-1)*q,lo=Math.floor(idx),hi=Math.ceil(idx);return lo===hi?a[lo]:a[lo]+(a[hi]-a[lo])*(idx-lo);};
+  const steps=cols.map(col=>{let sum=0;for(let i=0;i<N;i++)sum+=col[i];return {p5:pct(col,.05),p25:pct(col,.25),p50:pct(col,.5),p75:pct(col,.75),p95:pct(col,.95),mean:sum/N};});
+  const finalCol=cols[H];const invested=st.v0+contrib*H;
+  let nLoss=0,nGoal=0;for(let i=0;i<N;i++){if(finalCol[i]<invested)nLoss++;if(st.goalOn&&st.goal>0&&finalCol[i]>=st.goal)nGoal++;}
+  return {H,N,steps,invested,probLoss:nLoss/N,probGoal:(st.goalOn&&st.goal>0)?nGoal/N:null,final:steps[H]};
+}
+/* gráfico de abanico: bandas de percentiles (5–95 y 25–75) + mediana, línea base y meta */
+function svgFan(o){
+  const S=o.steps,n=S.length,W=820,H=o.h||340,m={l:76,r:74,t:20,b:46},step=(W-m.l-m.r)/(n-1||1);
+  const MC=o.c||"#7C3AED";
+  const extra=[o.v0];if(o.goal)extra.push(o.goal);
+  const lo=Math.min(...S.map(s=>s.p5),...extra),hi=Math.max(...S.map(s=>s.p95),...extra);
+  const pad=(hi-lo)*0.06||hi*0.05||1,bd={min:Math.max(0,lo-pad),max:hi+pad};
+  const X=i=>m.l+step*i,Y=v=>H-m.b-(v-bd.min)/(bd.max-bd.min)*(H-m.t-m.b);
+  let g="";
+  for(let i=0;i<=4;i++){const v=bd.min+(bd.max-bd.min)*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="10.5" fill="${faint}">${fmtK(v)}</text>`;}
+  const bandPath=(top,bot)=>{let d="M"+X(0).toFixed(1)+" "+Y(S[0][top]).toFixed(1);for(let i=1;i<n;i++)d+=" L"+X(i).toFixed(1)+" "+Y(S[i][top]).toFixed(1);for(let i=n-1;i>=0;i--)d+=" L"+X(i).toFixed(1)+" "+Y(S[i][bot]).toFixed(1);return d+" Z";};
+  g+=`<path d="${bandPath("p5","p95")}" fill="${MC}" opacity="0.10"/><path d="${bandPath("p25","p75")}" fill="${MC}" opacity="0.20"/>`;
+  const lineP=k=>"M"+S.map((s,i)=>X(i).toFixed(1)+" "+Y(s[k]).toFixed(1)).join(" L");
+  g+=`<path d="${lineP("p5")}" fill="none" stroke="${MC}" stroke-width="1" stroke-dasharray="4 4" opacity="0.55"/><path d="${lineP("p95")}" fill="none" stroke="${MC}" stroke-width="1" stroke-dasharray="4 4" opacity="0.55"/><path d="${lineP("p50")}" fill="none" stroke="${MC}" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const y0=Y(o.v0);g+=`<line x1="${m.l}" y1="${y0.toFixed(1)}" x2="${W-m.r}" y2="${y0.toFixed(1)}" stroke="${AC}" stroke-width="1.2" stroke-dasharray="2 4"/>`;
+  if(o.goal){const yg=Y(o.goal);g+=`<line x1="${m.l}" y1="${yg.toFixed(1)}" x2="${W-m.r}" y2="${yg.toFixed(1)}" stroke="${green}" stroke-width="1.6" stroke-dasharray="6 4"/><text x="${(m.l+6).toFixed(1)}" y="${(yg-5).toFixed(1)}" font-size="10.5" font-weight="800" fill="${green}">Meta ${fmtK(o.goal)}</text>`;}
+  g+=`<line x1="${m.l}" y1="${(H-m.b).toFixed(1)}" x2="${W-m.r}" y2="${(H-m.b).toFixed(1)}" stroke="${AC}" stroke-width="1.1"/>`;
+  const totM=n-1,yearMode=totM>24,tick=yearMode?12:(totM<=12?3:6);
+  for(let i=0;i<=totM;i+=tick){const lab=i===0?"Hoy":(yearMode?(i/12+"a"):(i+"m"));g+=`<text x="${X(i).toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="10.5" fill="${muted}">${lab}</text>`;}
+  const ends=[["p95",green],["p50",MC],["p5",red]].map(([k,c])=>({k,c,y:Y(S[n-1][k]),v:S[n-1][k]})).sort((a,b)=>a.y-b.y);
+  for(let i=1;i<ends.length;i++){if(ends[i].y-ends[i-1].y<19)ends[i].y=ends[i-1].y+19;}
+  ends.forEach(e=>{const yc=Math.max(m.t+8,Math.min(H-m.b-8,e.y));g+=`<circle cx="${X(n-1).toFixed(1)}" cy="${Y(e.v).toFixed(1)}" r="3.4" fill="${e.c}" stroke="#fff" stroke-width="1.6"/><rect x="${(W-m.r+6).toFixed(1)}" y="${(yc-9).toFixed(1)}" width="${m.r-10}" height="18" rx="5" fill="${e.c}"/><text x="${(W-m.r+6+(m.r-10)/2).toFixed(1)}" y="${(yc+3.4).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff">${fmtK(e.v)}</text>`;});
+  window.__mcGeo={xs:S.map((_,i)=>X(i)),p5y:S.map(s=>Y(s.p5)),p50y:S.map(s=>Y(s.p50)),p95y:S.map(s=>Y(s.p95)),v5:S.map(s=>s.p5),v50:S.map(s=>s.p50),v95:S.map(s=>s.p95),mt:m.t,mb:m.b,H,MC};
+  return `<svg id="mcfan" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="mcfanhover"></g></svg>`;
+}
+function attachMcHover(){
+  const svg=document.getElementById("mcfan");if(!svg||!window.__mcGeo)return;const G=window.__mcGeo;
+  svg.onmousemove=e=>{const r=svg.getBoundingClientRect();const vx=(e.clientX-r.left)/r.width*820;
+    let bi=0,bd=1e9;G.xs.forEach((x,i)=>{const d=Math.abs(x-vx);if(d<bd){bd=d;bi=i;}});const hx=G.xs[bi].toFixed(1);
+    const hv=document.getElementById("mcfanhover");if(hv)hv.innerHTML=`<line x1="${hx}" y1="${G.mt}" x2="${hx}" y2="${G.H-G.mb}" stroke="${G.MC}" stroke-width="1" stroke-dasharray="3 3"/><circle cx="${hx}" cy="${G.p50y[bi].toFixed(1)}" r="4.5" fill="${G.MC}" stroke="#fff" stroke-width="2"/>`;
+    let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
+    const moLab=bi===0?"Hoy":(bi%12===0?(bi/12+" año(s)"):bi+" mes(es)");
+    const row=(l,val,c)=>`<div style="display:flex;justify-content:space-between;gap:22px;margin-top:3px"><span style="color:var(--faint);font-weight:600;font-size:12px">${l}</span><span style="color:${c||"var(--ink)"};font-weight:800;font-size:13px">${val}</span></div>`;
+    tt.innerHTML=`<div style="font-weight:800;font-size:13px;color:var(--ink);padding-bottom:4px;margin-bottom:2px;border-bottom:1px solid var(--line2)">${moLab}</div>`+row("Optimista (p95)",fmtCLP(G.v95[bi]),green)+row("Mediana (p50)",fmtCLP(G.v50[bi]),G.MC)+row("Adverso (p5)",fmtCLP(G.v5[bi]),red);
+    placeTip(tt,e);};
+  svg.onmouseleave=()=>{const hv=document.getElementById("mcfanhover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
+}
+function viewMontecarlo(){
+  const st=mcEnsure();const MC="#7C3AED";
+  const v0=Math.max(0,+st.v0||0),mu=+st.mu||0,sg=Math.max(0,+st.sig||0);
+  const hzns=[1,3,5,10],pathsOpts=[200,500,1000];
+  const betaBanner=`<div class="mc-beta">🧪 <b>Montecarlo · beta</b> — módulo experimental de proyección probabilística. Resultados estadísticos con fines educativos; no es asesoría ni garantía de rentabilidad.</div>`;
+  const ctrl=`<div class="mc-form">
+      <label class="mc-fld">Capital inicial (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mc="v0" value="${v0}"></label>
+      <label class="mc-fld">Retorno esperado μ (% anual)<input type="number" step="0.1" inputmode="decimal" data-mc="mu" value="${mu}"></label>
+      <label class="mc-fld">Volatilidad σ (% anual)<input type="number" step="0.1" min="0" inputmode="decimal" data-mc="sig" value="${sg}"></label>
+      <label class="mc-fld">Aporte mensual (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mc="contrib" value="${st.contrib||0}"></label>
+    </div>
+    <div class="mc-row">
+      <span class="mc-seglab">Horizonte</span><div class="home-seg">${hzns.map(y=>`<button data-mchz="${y}" class="${st.horizonY===y?"on":""}">${y} año${y>1?"s":""}</button>`).join("")}</div>
+      <span class="mc-seglab">Trayectorias</span><div class="home-seg">${pathsOpts.map(pn=>`<button data-mcp="${pn}" class="${st.paths===pn?"on":""}">${pn}</button>`).join("")}</div>
+      <label class="mc-goal"><input type="checkbox" data-mc-goalon ${st.goalOn?"checked":""}> Meta<input type="number" min="0" step="any" data-mc="goal" value="${st.goal||0}" ${st.goalOn?"":"disabled"}></label>
+      <button class="btn" data-mc-sync title="Reutilizar el capital, retorno y riesgo del proyecto activo">↺ Usar proyecto activo</button>
+      <button class="btn btn-pri" data-mc-run>🎲 Volver a simular</button>
+    </div>`;
+  const head=card("Simulación Monte Carlo","Proyección probabilística del capital por trayectorias aleatorias (modelo GBM log-normal). Fuente de parámetros: "+st.src+".",ctrl);
+  if(v0<=0){return betaBanner+head+notecard(`Ingresa un <b>capital inicial</b> mayor a 0 para proyectar. Los parámetros μ (retorno esperado) y σ (riesgo) se toman del <b>proyecto activo</b> si existe, o del mercado (IPSA); también puedes ajustarlos a mano arriba.`);}
+  const R=mcSimulate({v0,mu,sig:sg,horizonY:st.horizonY,contrib:st.contrib,goalOn:st.goalOn,goal:st.goal,paths:st.paths});
+  const fin=R.final,invested=R.invested,medGain=invested>0?(fin.p50/invested-1)*100:0;
+  const goalTile=(st.goalOn&&R.probGoal!=null)
+    ? tile("Prob. de meta",(R.probGoal*100).toFixed(0)+"%","alcanzar "+fmtK(st.goal),MC,R.probGoal>=0.6?green:R.probGoal>=0.3?amber:red)
+    : tile("Media esperada",fmtCLP(fin.mean),"promedio de trayectorias",MC,ink);
+  const tiles=`<div class="tiles">
+    ${tile("Mediana a "+st.horizonY+" año"+(st.horizonY>1?"s":""),fmtCLP(fin.p50),(medGain>=0?"+":"")+medGain.toFixed(1)+"% vs aportado",MC,col(medGain))}
+    ${tile("Rango probable (50%)",fmtK(fin.p25)+" – "+fmtK(fin.p75),"entre p25 y p75",MC,ink)}
+    ${tile("Optimista (p95)",fmtCLP(fin.p95),"solo 5% supera esto",MC,green)}
+    ${tile("Adverso (p5)",fmtCLP(fin.p5),"solo 5% cae bajo esto",MC,red)}
+    ${tile("Prob. de pérdida",(R.probLoss*100).toFixed(0)+"%","terminar bajo lo aportado ("+fmtK(invested)+")",MC,R.probLoss>0.4?red:R.probLoss>0.2?amber:green)}
+    ${goalTile}</div>`;
+  const leg=`<div class="legend"><span><span class="lgdot" style="background:${MC};opacity:.28"></span>Rango 5–95%</span><span><span class="lgdot" style="background:${MC};opacity:.5"></span>Rango 25–75%</span><span><span class="lgdot" style="background:${MC}"></span>Mediana</span>${st.goalOn?`<span><span class="lgdot" style="background:${green}"></span>Meta</span>`:""}</div>`;
+  const chart=card("Abanico de proyección","Cada banda es un rango de resultados posibles; la línea central es la mediana. "+(st.contrib>0?("Aporte mensual "+fmtCLP(st.contrib)+". "):"")+R.N+" trayectorias · horizonte "+st.horizonY+" año"+(st.horizonY>1?"s":"")+".",svgFan({steps:R.steps,v0:v0,goal:st.goalOn?st.goal:0,c:MC,h:344}),leg);
+  const note=notecard(`En <b>${st.horizonY} año${st.horizonY>1?"s":""}</b>, partiendo de <b>${fmtCLP(v0)}</b>${st.contrib>0?(" más aportes de "+fmtCLP(st.contrib)+"/mes"):""} con μ ${mu.toFixed(1)}% y σ ${sg.toFixed(1)}% anual: la mitad de los escenarios termina entre <b>${fmtK(fin.p25)}</b> y <b>${fmtK(fin.p75)}</b>, con mediana <b>${fmtCLP(fin.p50)}</b>. En el 5% más adverso el capital cae a <b>${fmtK(fin.p5)}</b> o menos; hay <b>${(R.probLoss*100).toFixed(0)}%</b> de probabilidad de terminar bajo lo aportado. La dispersión crece con el horizonte: a más tiempo, más rango entre el mejor y el peor escenario.${mu<=RF?" Con μ ≤ tasa libre de riesgo, esta proyección es muy conservadora.":""}`);
+  return betaBanner+head+tiles+chart+note;
+}
+function attachMontecarlo(){
+  attachMcHover();
+  const st=mcEnsure();
+  document.querySelectorAll("[data-mc]").forEach(inp=>{inp.onchange=()=>{const k=inp.dataset.mc;st[k]=+inp.value||0;render();};});
+  document.querySelectorAll("[data-mchz]").forEach(b=>b.onclick=()=>{st.horizonY=+b.dataset.mchz;render();});
+  document.querySelectorAll("[data-mcp]").forEach(b=>b.onclick=()=>{st.paths=+b.dataset.mcp;render();});
+  const gon=document.querySelector("[data-mc-goalon]");if(gon)gon.onchange=()=>{st.goalOn=gon.checked;render();};
+  const sy=document.querySelector("[data-mc-sync]");if(sy)sy.onclick=()=>{mcState=mcDefaults();render();};
+  const rn=document.querySelector("[data-mc-run]");if(rn)rn.onclick=()=>render();
+}
 
 function viewProyectos(){
   syncProj();
