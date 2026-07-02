@@ -2866,6 +2866,15 @@ function evalMeta(){
   const act=(page!=="crear")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Gestión de análisis</button>':'';
   return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span>'+tag+'<span class="em-spacer"></span>'+act+'</div>';
 }
+/* true cuando el módulo Análisis mostraría el DEMO oculto: dataset activo = demo y el usuario limpió (demo oculto).
+   En ese caso no hay datos propios que mostrar → estado vacío en vez de la data hardcodeada del demo. */
+function evalIsEmpty(){return !(typeof DATASET!=="undefined"&&DATASET==="import") && !!lsGet("inv_demo_hidden");}
+/* estado vacío del módulo Análisis: no hay set activo (limpiaste la base y el demo está oculto). No muestra datos demo. */
+function evalEmpty(){
+  return card("Análisis · sin datos activos","Limpiaste el sistema: no hay ningún set de análisis activo, así que esta sección está en blanco hasta que cargues tu información.",
+    `<div class="note" style="margin:0">Para analizar acciones, primero <b>carga tus planillas</b> (mensual, semanal o diaria) en <b>Datos → Cargar planilla</b> y pulsa <b>Actualizar sistema</b>. Con eso el sistema arma el análisis (IPSA + tus acciones) a partir de tu propia base, y aquí verás la comparativa, el detalle, CAPM y multifactor con TUS datos —nunca los del demo.</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-gocargar>📈 Cargar planilla</button><button class="btn" data-go-import>Gestión de análisis</button></div>`);
+}
 let _lastViewKey="";
 function render(){
   renderChrome();
@@ -2882,12 +2891,13 @@ function render(){
   else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
   else if(modulo==="perfil") h=viewPerfil();
   else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
+  else if(modulo==="eval"&&page!=="crear"&&evalIsEmpty()) h=evalEmpty();   // base limpia + demo oculto: sin datos (no se muestra el demo)
   else if(page==="comparativa") h=viewComparativa();
   else if(page==="detalle") h=viewDetalle();
   else if(page==="capm") h=viewCAPM();
   else if(page==="multifactor") h=viewMultifactor();
   else if(page==="crear") h=viewCrear();
-  if(modulo==="eval"&&page!=="crear") h=evalMeta()+h;
+  if(modulo==="eval"&&page!=="crear"&&!evalIsEmpty()) h=evalMeta()+h;
   const _vk=modulo+"|"+page;
   const _mnOld=document.getElementById("main");
   const _keepScroll=(_vk===_lastViewKey);
@@ -2907,7 +2917,7 @@ function render(){
   if(modulo==="clientes") attachClientes();
   if(modulo==="inicio") attachHome();
   if(modulo==="datos") attachDatos();
-  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};}
+  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};const _gc=document.querySelector("[data-gocargar]");if(_gc)_gc.onclick=()=>{modulo="datos";page="cargar";render();};}
   attachScatterAll();
 }
 
