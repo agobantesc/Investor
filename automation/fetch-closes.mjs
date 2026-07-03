@@ -10,7 +10,9 @@
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 
+// Universo IPSA (~30). Clave = ticker en Investor, valor = símbolo Yahoo Finance (.SN = Bolsa de Santiago).
 const TICKERS = {
+  // núcleo (con historial demo en la app)
   CHILE: "CHILE.SN",
   SANTANDER: "BSANTANDER.SN",
   BCI: "BCI.SN",
@@ -25,6 +27,23 @@ const TICKERS = {
   ENTEL: "ENTEL.SN",
   LATAM: "LTM.SN",
   PARAUCO: "PARAUCO.SN",
+  // resto del IPSA
+  "AGUAS-A": "AGUAS-A.SN",
+  IAM: "IAM.SN",
+  ENELAM: "ENELAM.SN",
+  ECL: "ECL.SN",
+  "ANDINA-B": "ANDINA-B.SN",
+  CONCHATORO: "CONCHATORO.SN",
+  QUINENCO: "QUINENCO.SN",
+  MALLPLAZA: "MALLPLAZA.SN",
+  CENCOSHOPP: "CENCOSHOPP.SN",
+  VAPORES: "VAPORES.SN",
+  RIPLEY: "RIPLEY.SN",
+  SMU: "SMU.SN",
+  SONDA: "SONDA.SN",
+  ITAUCL: "ITAUCL.SN",
+  SECURITY: "SECURITY.SN",
+  CAP: "CAP.SN",
 };
 const IPSA_SYMBOL = "^IPSA";
 const DAYS_BACK = "10d"; // trae ~2 semanas para rellenar días perdidos (la fusión de Investor es por celda, no duplica)

@@ -1328,6 +1328,36 @@ const DATA = {"window": "jun-2024 a may-2026", "n": 23, "labels": ["jul-24", "ag
 // ===== PARÁMETROS =====
 let RF=DATA.rf, PRIMA=DATA.prima, ERM=DATA.erm;
 let STOCKS=DATA.stocks, MKT=DATA.market, CORR=DATA.corr, TICK=DATA.tickers;
+// ===== UNIVERSO IPSA COMPLETO (~30 acciones) =====
+// Metadatos para OPERAR, INVERTIR y RECONOCER planillas/cierres de todas las acciones del IPSA.
+// Las 14 con historial demo viven en DATA.stocks; estas 16 son solo metadatos (sus analíticas reales
+// salen de los datos que cargue el usuario). β = estimación sectorial inicial; y = símbolo Yahoo (.SN).
+const IPSA_EXTRA=[
+  {t:"AGUAS-A",n:"Aguas Andinas",s:"Sanitarias",c:"#0E8C86",b:0.5,y:"AGUAS-A.SN"},
+  {t:"IAM",n:"Inversiones Aguas Metropolitanas",s:"Sanitarias",c:"#0891B2",b:0.5,y:"IAM.SN"},
+  {t:"ENELAM",n:"Enel Américas",s:"Eléctrico",c:"#0D9488",b:0.9,y:"ENELAM.SN"},
+  {t:"ECL",n:"Engie Energía Chile",s:"Eléctrico",c:"#15803D",b:0.7,y:"ECL.SN"},
+  {t:"ANDINA-B",n:"Embotelladora Andina",s:"Bebidas",c:"#CA8A04",b:0.7,y:"ANDINA-B.SN"},
+  {t:"CONCHATORO",n:"Viña Concha y Toro",s:"Bebidas",c:"#B45309",b:0.6,y:"CONCHATORO.SN"},
+  {t:"QUINENCO",n:"Quiñenco",s:"Holding",c:"#4338CA",b:0.9,y:"QUINENCO.SN"},
+  {t:"MALLPLAZA",n:"Mallplaza",s:"Inmobiliario",c:"#7C3AED",b:1.0,y:"MALLPLAZA.SN"},
+  {t:"CENCOSHOPP",n:"Cencosud Shopping",s:"Inmobiliario",c:"#9F1239",b:0.9,y:"CENCOSHOPP.SN"},
+  {t:"VAPORES",n:"CSAV (Vapores)",s:"Transporte",c:"#0369A1",b:1.2,y:"VAPORES.SN"},
+  {t:"RIPLEY",n:"Ripley Corp",s:"Retail",c:"#DB2777",b:1.1,y:"RIPLEY.SN"},
+  {t:"SMU",n:"SMU",s:"Retail",c:"#BE185D",b:0.8,y:"SMU.SN"},
+  {t:"SONDA",n:"Sonda",s:"Tecnología",c:"#6D54D8",b:0.9,y:"SONDA.SN"},
+  {t:"ITAUCL",n:"Itaú Chile",s:"Banca",c:"#1E5FD1",b:0.9,y:"ITAUCL.SN"},
+  {t:"SECURITY",n:"Grupo Security",s:"Banca",c:"#2E7BD6",b:0.8,y:"SECURITY.SN"},
+  {t:"CAP",n:"CAP",s:"Minería",c:"#A8700C",b:1.2,y:"CAP.SN"}
+];
+// stock "sintético" para el universo canónico: metadatos + analíticas neutras (sin historial demo)
+function _uniSynth(m){const sg=(m.s==="Sanitarias"||m.s==="Eléctrico")?18:(m.s==="Banca"||m.s==="Holding")?22:26;
+  return {t:m.t,n:m.n,s:m.s,c:m.c,b:m.b,rets:[],prices:[],a24:{ret:0,sig:sg,r2:0,corr:0,alphaR:0,jensen:0,sharpe:0,er:+(RF+m.b*PRIMA).toFixed(2),tot:0}};}
+const DATA_UNIVERSE=(DATA.stocks||[]).concat(IPSA_EXTRA.map(_uniSynth));
+const UNIVERSE_TICK=DATA_UNIVERSE.map(s=>s.t);
+// resolutor de metadatos para CUALQUIER ticker del IPSA (análisis activo → universo → genérico)
+function uniStk(t){return (STOCKS||[]).find(s=>s.t===t)||DATA_UNIVERSE.find(s=>s.t===t)||null;}
+function uniMeta(t){const s=uniStk(t);return s?{t:s.t,n:s.n,s:s.s,c:s.c,b:(s.b!=null?s.b:1)}:{t:t,n:t,s:"—",c:"#1E5FD1",b:1};}
 let modulo="inicio", page="home", sel=STOCKS[0].t;
 let invStkSel=null;
 
@@ -1824,14 +1854,14 @@ function pMetrics(sel){
   const erCapm=RF+bp*PRIMA;
   const erM=(Math.pow(1+erCapm/100,1/12)-1)*100, erW=(Math.pow(1+erCapm/100,1/52)-1)*100;
   const retH=ws.reduce((a,x)=>a+x.w*x.s.a24.ret,0);
-  let varp=0;ws.forEach(xi=>ws.forEach(xj=>{const i=TICK.indexOf(xi.s.t),j=TICK.indexOf(xj.s.t);varp+=xi.w*xj.w*xi.s.a24.sig*xj.s.a24.sig*CORR[i][j];}));
+  let varp=0;ws.forEach(xi=>ws.forEach(xj=>{const i=TICK.indexOf(xi.s.t),j=TICK.indexOf(xj.s.t);const cc=(i>=0&&j>=0&&CORR[i]&&CORR[i][j]!=null)?CORR[i][j]:(xi.s.t===xj.s.t?1:0.4);varp+=xi.w*xj.w*(xi.s.a24.sig||0)*(xj.s.a24.sig||0)*cc;}));
   const sig=Math.sqrt(Math.max(0,varp));const wavgSig=ws.reduce((a,x)=>a+x.w*x.s.a24.sig,0);
   const sharpe=sig>0?(retH-RF)/sig:0;
-  const port=DATA.labels.map((_,k)=>ws.reduce((a,x)=>a+x.w*x.s.rets[k],0));
+  const port=DATA.labels.map((_,k)=>ws.reduce((a,x)=>a+x.w*((x.s.rets&&x.s.rets[k])||0),0));
   const mr=MKT.rets,mp=port.reduce((a,b)=>a+b,0)/port.length,mm=mr.reduce((a,b)=>a+b,0)/mr.length;
   let cpm=0,vpp=0,vmm=0;for(let k=0;k<port.length;k++){cpm+=(port[k]-mp)*(mr[k]-mm);vpp+=(port[k]-mp)**2;vmm+=(mr[k]-mm)**2;}
   const corrI=(vpp>0&&vmm>0)?cpm/Math.sqrt(vpp*vmm):0;
-  let cs=0,cc=0;for(let a=0;a<ws.length;a++)for(let b2=a+1;b2<ws.length;b2++){cs+=CORR[TICK.indexOf(ws[a].s.t)][TICK.indexOf(ws[b2].s.t)];cc++;}
+  let cs=0,cc=0;for(let a=0;a<ws.length;a++)for(let b2=a+1;b2<ws.length;b2++){const i=TICK.indexOf(ws[a].s.t),j=TICK.indexOf(ws[b2].s.t);cs+=(i>=0&&j>=0&&CORR[i]&&CORR[i][j]!=null)?CORR[i][j]:0.4;cc++;}
   const corrAvg=cc>0?cs/cc:0;
   return {ws,bp,erCapm,erM,erW,retH,sig,wavgSig,sharpe,corrI,corrAvg};
 }
@@ -1840,14 +1870,14 @@ function pMetrics(sel){
    sin importar qué análisis esté seleccionado. Restaura los globales al terminar. */
 function withCanonicalUniverse(fn){
   const sv={STOCKS,MKT,CORR,TICK,RF,PRIMA};
-  try{STOCKS=DATA.stocks;MKT=DATA.market;CORR=DATA.corr;TICK=DATA.tickers;RF=DATA.rf;PRIMA=DATA.prima;return fn();}
+  try{STOCKS=DATA_UNIVERSE;MKT=DATA.market;CORR=DATA.corr;TICK=UNIVERSE_TICK;RF=DATA.rf;PRIMA=DATA.prima;return fn();}
   finally{STOCKS=sv.STOCKS;MKT=sv.MKT;CORR=sv.CORR;TICK=sv.TICK;RF=sv.RF;PRIMA=sv.PRIMA;}
 }
 /* universo LIBRE para Operar (comprar / inyectar capital): todas las acciones del IPSA + las que ya tenga la cartera,
    independiente del análisis activo. Así puedes operar cualquier acción del IPSA, no solo las del análisis. */
 function operarUniverse(){
-  const m={};(DATA.stocks||[]).forEach(s=>{m[s.t]=s;});
-  ((typeof PF!=="undefined"&&PF&&PF.holdings)||[]).forEach(h=>{if(!m[h.t])m[h.t]={t:h.t,n:h.n||h.t,c:h.c||"#1E5FD1",b:h.b};});
+  const m={};(DATA_UNIVERSE||[]).forEach(s=>{m[s.t]=s;});
+  ((typeof PF!=="undefined"&&PF&&PF.holdings)||[]).forEach(h=>{if(!m[h.t])m[h.t]=uniStk(h.t)||{t:h.t,n:h.n||h.t,c:h.c||"#1E5FD1",b:h.b};});
   return Object.keys(m).sort().map(k=>m[k]);
 }
 function saveScenario(){
@@ -2426,7 +2456,7 @@ function invDetailCard(){
 }
 /* formulario de inversión directa: elige acciones + monto y crea el proyecto (sin construir en Simulación) */
 function invNewForm(){
-  const S=invNew,stks=(DATA.stocks||[]);   // universo LIBRE: todas las acciones del IPSA, sin importar el análisis activo
+  const S=invNew,stks=(DATA_UNIVERSE||[]).slice().sort((a,b)=>a.t<b.t?-1:1);   // universo LIBRE: IPSA completo (~30), sin importar el análisis activo
   const nsel=Object.keys(S.sel).filter(t=>S.sel[t]).length;
   const chips=stks.map(s=>`<button class="ca-chip ${S.sel[s.t]?"on":""}" data-invtk="${s.t}"><span class="rk-dot" style="background:${s.c}"></span>${s.t}</button>`).join("");
   return card("Definir la inversión del proyecto","Elige libremente las acciones del IPSA y el monto · se reparte en partes iguales y luego registras la compra real (precios y cantidades).",
@@ -2456,7 +2486,7 @@ function attachInvNew(){
   const _na=document.getElementById("invNewName");if(_na)_na.oninput=()=>{invNew.name=_na.value;};   // mantiene el estado al día sin re-render (no pierde el foco)
   const _am=document.getElementById("invNewAmt");if(_am)_am.oninput=()=>{invNew.amount=parseFloat(_am.value)||0;};
   document.querySelectorAll("[data-invtk]").forEach(b=>b.onclick=()=>{invGrab();invNew.sel[b.dataset.invtk]=!invNew.sel[b.dataset.invtk];render();});
-  const _iva=document.querySelector("[data-invall]");if(_iva)_iva.onclick=()=>{invGrab();(DATA.stocks||[]).forEach(s=>invNew.sel[s.t]=true);render();};
+  const _iva=document.querySelector("[data-invall]");if(_iva)_iva.onclick=()=>{invGrab();(DATA_UNIVERSE||[]).forEach(s=>invNew.sel[s.t]=true);render();};
   const _ivn=document.querySelector("[data-invnone]");if(_ivn)_ivn.onclick=()=>{invGrab();invNew.sel={};render();};
   const _ivc=document.getElementById("invNewCancel");if(_ivc)_ivc.onclick=()=>{invNew=null;render();};
   const _ivcr=document.getElementById("invNewCreate");if(_ivcr)_ivcr.onclick=()=>{invGrab();
@@ -3955,7 +3985,7 @@ function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s
 /* último valor ≤ D en un mapa fecha→valor (sus claves ya ordenadas) */
 function pdAsOf(map,sortedKeys,D){let lo=null;for(let i=0;i<sortedKeys.length;i++){if(sortedKeys[i]<=D)lo=sortedKeys[i];else break;}return lo!=null?map[lo]:null;}
 /* metadatos por defecto de un ticker (toma del universo demo si existe) */
-function pdMeta(t,srcName){const st=((typeof DEMO!=="undefined"&&DEMO.stocks)||(typeof STOCKS!=="undefined"?STOCKS:[])||[]).find(s=>s.t===t)||{};const ci=Object.keys(PRICEDB.tickers).length;return {n:srcName||st.n||t,s:st.s||"",c:st.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci%IMP_PAL.length]:"#1E5FD1"),b:(st.b!=null?st.b:null)};}
+function pdMeta(t,srcName){const st=((typeof DEMO!=="undefined"&&DEMO.stocks)||(typeof STOCKS!=="undefined"?STOCKS:[])||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};const ci=Object.keys(PRICEDB.tickers).length;return {n:srcName||st.n||t,s:st.s||"",c:st.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci%IMP_PAL.length]:"#1E5FD1"),b:(st.b!=null?st.b:null)};}
 /* ¿es una fecha válida para la base? día hábil y no posterior al último día bursátil real (no se inventan días futuros) */
 function validBaseDate(date){return !!date&&isTradingDay(date)&&date<=lastTradingDay();}
 /* última fecha con datos reales en la base (para proponerla por defecto en los cierres y no inventar un día por delante) */
