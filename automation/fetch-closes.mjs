@@ -36,14 +36,14 @@ const TICKERS = {
   CONCHATORO: "CONCHATORO.SN",
   QUINENCO: "QUINENCO.SN",
   MALLPLAZA: "MALLPLAZA.SN",
-  CENCOSHOPP: "CENCOSHOPP.SN",
   VAPORES: "VAPORES.SN",
   RIPLEY: "RIPLEY.SN",
   SMU: "SMU.SN",
   SONDA: "SONDA.SN",
   ITAUCL: "ITAUCL.SN",
-  SECURITY: "SECURITY.SN",
+  BICECORP: "BICECORP.SN",   // Grupo Security se fusionó con BICE en 2025 → BICECORP es el nombre IPSA vigente (SECURITY.SN dejó de existir)
   CAP: "CAP.SN",
+  // CENCOSHOPP (Cencosud Shopping) no está en Yahoo con .SN; cárgalo por planilla si consigues sus cierres.
 };
 const IPSA_SYMBOL = "^IPSA";
 // Rango a bajar. Por defecto ~2 semanas (rellena días perdidos; la fusión de Investor es por celda, no duplica).
@@ -55,8 +55,18 @@ const DAYS_BACK = (() => {
   return r;
 })();
 
-async function chart(symbol) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${DAYS_BACK}&interval=1d`;
+// segundos que cubre el rango pedido (para el modo period1/period2, más fiable en índices que ?range)
+function rangeSeconds() {
+  const m = /^(\d+)(d|mo|y)$/.exec(DAYS_BACK);
+  if (!m) return 6 * 365 * 86400; // "max" → ~6 años
+  const n = +m[1], u = m[2];
+  return n * (u === "d" ? 86400 : u === "mo" ? 30 * 86400 : 365 * 86400);
+}
+async function chart(symbol, usePeriod) {
+  const q = usePeriod
+    ? `period1=${Math.floor(Date.now() / 1000) - rangeSeconds()}&period2=${Math.floor(Date.now() / 1000)}&interval=1d`
+    : `range=${DAYS_BACK}&interval=1d`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${q}`;
   const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (investor-closes)" } });
   if (!res.ok) throw new Error(`${symbol}: HTTP ${res.status}`);
   const j = await res.json();
@@ -64,9 +74,13 @@ async function chart(symbol) {
   if (!r) throw new Error(`${symbol}: sin datos`);
   const ts = r.timestamp || [];
   const closes = r.indicators?.quote?.[0]?.close || [];
+  // los ÍNDICES (^IPSA) suelen traer `quote.close` casi todo null y el valor real en `adjclose`:
+  // por eso el backfill del IPSA venía con 1 solo día. Se usa adjclose como respaldo por punto.
+  const adj = r.indicators?.adjclose?.[0]?.adjclose || [];
   const out = {};
   ts.forEach((t, i) => {
-    const c = closes[i];
+    let c = closes[i];
+    if (c == null || !isFinite(c) || c <= 0) c = adj[i];
     if (c == null || !isFinite(c) || c <= 0) return;
     // fecha en horario de Santiago (los cierres son del día bursátil local)
     const d = new Date(t * 1000).toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
@@ -79,8 +93,15 @@ const byDate = {}; // date -> {ipsa, prices:{}}
 const errors = [];
 
 try {
-  const ipsa = await chart(IPSA_SYMBOL);
+  let ipsa = await chart(IPSA_SYMBOL);
+  // el índice debería traer tantos días como las acciones; si viene escaso, reintenta con period1/period2
+  if (Object.keys(ipsa).length < 10 && DAYS_BACK !== "10d") {
+    try { const alt = await chart(IPSA_SYMBOL, true); if (Object.keys(alt).length > Object.keys(ipsa).length) ipsa = alt; } catch (e) {}
+  }
+  const nIpsa = Object.keys(ipsa).length;
   for (const [d, v] of Object.entries(ipsa)) (byDate[d] ??= { date: d, prices: {} }).ipsa = v;
+  console.log(`IPSA: ${nIpsa} día(s).`);
+  if (!nIpsa) errors.push("IPSA (^IPSA): 0 puntos — el análisis no podrá calcular β sin el índice.");
 } catch (e) { errors.push(String(e.message || e)); }
 
 for (const [tick, sym] of Object.entries(TICKERS)) {
@@ -97,6 +118,9 @@ const days = Object.values(byDate)
 
 if (!days.length) { console.error("Sin datos. Errores:", errors); process.exit(1); }
 
+const ipsaDays = days.filter(d => d.ipsa != null).length;
+const tickerSet = new Set();
+days.forEach(d => Object.keys(d.prices || {}).forEach(t => tickerSet.add(t)));
 mkdirSync("data", { recursive: true });
 writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source: "Yahoo Finance (.SN)", errors, days }, null, 1));
-console.log(`OK: ${days.length} día(s), último ${days[days.length - 1].date}. Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);
+console.log(`OK: ${days.length} día(s) (${days[0].date} → ${days[days.length - 1].date}) · ${tickerSet.size} acciones · IPSA en ${ipsaDays} día(s). Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);
