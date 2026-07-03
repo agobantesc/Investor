@@ -2847,7 +2847,11 @@ function attachInv(){
     if(!ok||!ipsa||ipsa<=0){alert(compraMode?"Ingresa el precio de compra y la cantidad de acciones de cada papel, y el IPSA, con números válidos.":"Ingresa todos los precios de cierre y el valor del IPSA con números válidos.");return;}
     if(!weekendGuard(date))return;
     const rec={date,prices,ipsa};if(qty)rec.qty=qty;
+    const wasCompra=(editIdx===0||WEEKS.length===0);
     if(editIdx!=null){WEEKS[editIdx]=rec;editIdx=null;}else{WEEKS.push(rec);}
+    // la ponderación ejecutada (acciones enteras a precio de mercado) no calza exacto con la simulada:
+    // al registrar/editar la COMPRA, la simulación del proyecto pasa a reflejar los pesos REALES.
+    if(wasCompra&&qty){try{projSyncReal(PF);}catch(e){}}
     saveProjects();render();
   };
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
@@ -5103,12 +5107,29 @@ function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const in
   const reqRet=Math.pow(1+(p.erCapm||0)/100,IM.elapsedYrs||0)-1, alphaReal=L.ret-reqRet;
   return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:IM.series.map(s=>Math.round(s.val))};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
-/* escenario "de construcción" derivado del proyecto (su simulación original) */
+/* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
+   mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
+   los pesos, montos y métricas (β, E(R), σ) del proyecto —y su escenario "Construcción"— pasan a reflejar
+   lo realmente invertido. Idempotente: recalcula desde la compra vigente. Devuelve true si hubo cambios. */
+function projSyncReal(p){
+  if(!p||!p.holdings||!p.holdings.length)return false;
+  const b0=p.weeks&&p.weeks[0];if(!b0||!b0.qty)return false;
+  const per={};let tot=0;p.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*((b0.prices&&b0.prices[hd.t])||0);per[hd.t]=m;tot+=m;});
+  if(!(tot>0))return false;
+  p.holdings.forEach(hd=>{hd.w=per[hd.t]/tot;hd.monto=+per[hd.t].toFixed(0);});
+  const sel={};p.holdings.forEach(hd=>{sel[hd.t]=+(hd.w*100).toFixed(4);});
+  try{const M=withCanonicalUniverse(()=>pMetrics(sel));if(M){p.bp=+M.bp.toFixed(3);p.erCapm=+M.erCapm.toFixed(2);p.sig=+M.sig.toFixed(2);p.sharpe=+M.sharpe.toFixed(2);p.corrAvg=+M.corrAvg.toFixed(2);}}catch(e){}
+  p.origSim={sel:Object.assign({},sel),amount:Math.round(tot)};   // la simulación del proyecto refleja ahora la compra real
+  try{const sc=projDefaultScenario(p);if(sc){const i=SCEN.findIndex(s=>String(s.id)===String(sc.id));if(i>=0)SCEN[i]=sc;else SCEN.push(sc);lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
+  return true;
+}
+/* escenario "de construcción" derivado del proyecto (refleja la compra REAL si ya existe; si no, la simulación planeada) */
 function projDefaultScenario(p){
   if(!p||!p.holdings||!p.holdings.length)return null;
+  const real=!!(p.weeks&&p.weeks[0]&&p.weeks[0].qty);
   const sel=(p.origSim&&p.origSim.sel)?Object.assign({},p.origSim.sel):(function(){const s={};p.holdings.forEach(hd=>{s[hd.t]=+((hd.w||0)*100).toFixed(1);});return s;})();
   const comp=p.holdings.map(hd=>({t:hd.t,w:+((hd.w||0)*100).toFixed(1),c:hd.c||"#1E5FD1"}));
-  return {id:"sim_"+p.id,name:"Construcción · "+(p.name||"inicial"),amount:(p.origSim&&p.origSim.amount)||p.amount||0,sel:sel,
+  return {id:"sim_"+p.id,name:(real?"Cartera real · ":"Construcción · ")+(p.name||"inicial"),amount:(p.origSim&&p.origSim.amount)||p.amount||0,sel:sel,
     m:{bp:p.bp||0,erCapm:p.erCapm||0,retH:(p.erCapm||0),sig:p.sig||0,sharpe:p.sharpe||0,corrAvg:p.corrAvg||0},comp:comp};
 }
 function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p||!id)return;const L=projLinks(p),arr=kind==="analysis"?L.analyses:L.scenarios,s=String(id);if(arr.map(String).indexOf(s)<0)arr.push(s);if(kind==="analysis")L.primary=s;saveProjects();render();}
