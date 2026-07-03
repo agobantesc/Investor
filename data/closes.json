@@ -1,9 +1,8 @@
 {
- "updatedAt": "2026-07-03T17:13:06.144Z",
+ "updatedAt": "2026-07-03T17:35:20.597Z",
  "source": "Yahoo Finance (.SN)",
  "errors": [
-  "CENCOSHOPP.SN: HTTP 404",
-  "SECURITY.SN: HTTP 404"
+  "BICECORP.SN: HTTP 404"
  ],
  "days": [
   {
@@ -16344,35 +16343,36 @@
   {
    "date": "2026-07-03",
    "prices": {
-    "CHILE": 182.9,
-    "SANTANDER": 75.2,
-    "BCI": 60628,
-    "ENELCHILE": 79.55,
-    "COLBUN": 130.17,
-    "FALABELLA": 5770.1,
-    "CENCOSUD": 2094.7,
-    "COPEC": 5870.9,
-    "CMPC": 1046.9,
-    "SQM-B": 66907,
+    "CHILE": 182.66,
+    "SANTANDER": 75.25,
+    "BCI": 60878,
+    "ENELCHILE": 80.09,
+    "COLBUN": 130.4,
+    "FALABELLA": 5762.4,
+    "CENCOSUD": 2096.5,
+    "COPEC": 5878.9,
+    "CMPC": 1041,
+    "SQM-B": 66860,
     "CCU": 5213.4,
-    "ENTEL": 3543.7,
-    "LATAM": 25.83,
-    "PARAUCO": 3889.7,
-    "AGUAS-A": 333.28,
-    "IAM": 920.08,
+    "ENTEL": 3550.1,
+    "LATAM": 25.8,
+    "PARAUCO": 3880.5,
+    "AGUAS-A": 331.1,
+    "IAM": 920,
     "ENELAM": 82.08,
     "ECL": 1768.8,
-    "ANDINA-B": 4600,
+    "ANDINA-B": 4586.3,
     "CONCHATORO": 859.57,
-    "QUINENCO": 3980,
-    "MALLPLAZA": 3895.9,
-    "VAPORES": 45.5,
-    "RIPLEY": 378,
-    "SMU": 134.99,
-    "ITAUCL": 19409,
+    "QUINENCO": 3980.7,
+    "MALLPLAZA": 3899.8,
+    "VAPORES": 45.85,
+    "RIPLEY": 374,
+    "SMU": 134.7,
+    "SONDA": 315.01,
+    "ITAUCL": 19410,
     "CAP": 6432
    },
-   "ipsa": 10802.64
+   "ipsa": 10792.65
   }
  ]
 }
