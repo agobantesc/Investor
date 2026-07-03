@@ -1,7 +1,8 @@
 # Cierres diarios del IPSA para Investor.
 # - Corre solo de lunes a viernes tras el cierre de la Bolsa de Santiago y guarda data/closes.json.
 # - Para POBLAR la base una vez (backfill): pestaña Actions → Run workflow → range=2y.
-# Investor lo lee desde: https://raw.githubusercontent.com/agobantesc/Investor/main/data/closes.json
+# Investor lo lee desde (rama por defecto del repo):
+# https://raw.githubusercontent.com/agobantesc/Investor/claude/inversor-2-design-upgrade-k864ts/data/closes.json
 name: Actualizar cierres IPSA
 on:
   schedule:
