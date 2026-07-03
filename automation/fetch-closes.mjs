@@ -41,9 +41,9 @@ const TICKERS = {
   SMU: "SMU.SN",
   SONDA: "SONDA.SN",
   ITAUCL: "ITAUCL.SN",
-  BICECORP: "BICECORP.SN",   // Grupo Security se fusionó con BICE en 2025 → BICECORP es el nombre IPSA vigente (SECURITY.SN dejó de existir)
   CAP: "CAP.SN",
-  // CENCOSHOPP (Cencosud Shopping) no está en Yahoo con .SN; cárgalo por planilla si consigues sus cierres.
+  // Sin símbolo en Yahoo (404): BICECORP (ex Grupo Security) y CENCOSHOPP (Cencosud Shopping).
+  // Siguen en el universo de la app; sus cierres se cargan por planilla si se consiguen.
 };
 const IPSA_SYMBOL = "^IPSA";
 // Rango a bajar. Por defecto ~2 semanas (rellena días perdidos; la fusión de Investor es por celda, no duplica).
@@ -92,16 +92,37 @@ async function chart(symbol, usePeriod) {
 const byDate = {}; // date -> {ipsa, prices:{}}
 const errors = [];
 
+// HISTÓRICO del IPSA vía Stooq (CSV diario). Yahoo NO publica la historia del ^IPSA (solo el último valor):
+// por eso el índice venía con 1 solo día aunque las acciones trajeran 2 años.
+async function ipsaFromStooq() {
+  const ms = Date.now(), day = 86400e3;
+  const fmt = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
+  const url = `https://stooq.com/q/d/l/?s=%5Eipsa&i=d&d1=${fmt(ms - rangeSeconds() * 1000)}&d2=${fmt(ms + day)}`;
+  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (investor-closes)" } });
+  if (!res.ok) throw new Error(`stooq ^IPSA: HTTP ${res.status}`);
+  const lines = (await res.text()).trim().split(/\r?\n/);
+  if (lines.length < 2 || !/^date,/i.test(lines[0])) throw new Error(`stooq ^IPSA: respuesta inesperada (${lines[0]?.slice(0, 40)})`);
+  const out = {};
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(","), d = c[0], v = +c[4];   // Date,Open,High,Low,Close[,Volume]
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d) && isFinite(v) && v > 0) out[d] = +v.toFixed(2);
+  }
+  return out;
+}
 try {
-  let ipsa = await chart(IPSA_SYMBOL);
-  // el índice debería traer tantos días como las acciones; si viene escaso, reintenta con period1/period2
-  if (Object.keys(ipsa).length < 10 && DAYS_BACK !== "10d") {
-    try { const alt = await chart(IPSA_SYMBOL, true); if (Object.keys(alt).length > Object.keys(ipsa).length) ipsa = alt; } catch (e) {}
+  let ipsa = {};
+  try { ipsa = await chart(IPSA_SYMBOL); } catch (e) { errors.push(String(e.message || e)); }
+  if (Object.keys(ipsa).length < 5) {
+    try {
+      const st = await ipsaFromStooq();
+      ipsa = Object.assign({}, st, ipsa);   // si Yahoo trajo el valor de hoy, ese manda sobre el de Stooq
+      console.log(`IPSA: Stooq aportó ${Object.keys(st).length} día(s) de historia.`);
+    } catch (e) { errors.push(String(e.message || e)); }
   }
   const nIpsa = Object.keys(ipsa).length;
   for (const [d, v] of Object.entries(ipsa)) (byDate[d] ??= { date: d, prices: {} }).ipsa = v;
   console.log(`IPSA: ${nIpsa} día(s).`);
-  if (!nIpsa) errors.push("IPSA (^IPSA): 0 puntos — el análisis no podrá calcular β sin el índice.");
+  if (!nIpsa) errors.push("IPSA: 0 puntos (Yahoo y Stooq fallaron) — el análisis no podrá calcular β sin el índice.");
 } catch (e) { errors.push(String(e.message || e)); }
 
 for (const [tick, sym] of Object.entries(TICKERS)) {
@@ -110,6 +131,15 @@ for (const [tick, sym] of Object.entries(TICKERS)) {
     for (const [d, v] of Object.entries(px)) ((byDate[d] ??= { date: d, prices: {} }).prices[tick] = v);
   } catch (e) { errors.push(String(e.message || e)); }
   await new Promise(r => setTimeout(r, 350)); // cortesía con la API
+}
+
+// Si el run ocurre con la Bolsa de Santiago ABIERTA (antes de ~17:00 hora de Chile), el dato de HOY es un
+// valor intradía, no un cierre: se descarta. El run programado (18:05 Chile) trae el cierre real del día.
+const scHour = +new Date().toLocaleString("en-US", { timeZone: "America/Santiago", hour: "2-digit", hour12: false });
+const todaySc = new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+if (scHour < 17 && byDate[todaySc]) {
+  delete byDate[todaySc];
+  console.log(`Descartado ${todaySc}: mercado aún abierto (valor intradía, no cierre).`);
 }
 
 const days = Object.values(byDate)

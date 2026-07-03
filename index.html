@@ -713,9 +713,24 @@
     display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;}
   .cfg-back.open{display:flex;animation:cfgFade .18s ease;}
   @keyframes cfgFade{from{opacity:0}to{opacity:1}}
-  .cfg-modal{width:580px;max-width:96vw;max-height:90vh;overflow-y:auto;background:var(--card);border:1px solid var(--line2);
+  .cfg-modal{width:740px;max-width:96vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line2);
     border-radius:var(--r-lg);box-shadow:var(--sh-lg);animation:cfgRise .26s var(--ease-out);}
   @keyframes cfgRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  /* layout con pestañas: nav de categorías a la izquierda, contenido a la derecha */
+  .cfg-layout{display:flex;flex:1;min-height:0;}
+  .cfg-nav{flex:0 0 168px;border-right:1px solid var(--line);padding:.7rem .55rem;display:flex;flex-direction:column;gap:3px;background:var(--soft);overflow-y:auto;}
+  .cfg-nav button{display:flex;align-items:center;gap:9px;padding:.55rem .7rem;border:none;background:none;border-radius:9px;
+    font:700 12.5px var(--font);color:var(--muted);cursor:pointer;text-align:left;transition:.13s var(--ease);white-space:nowrap;}
+  .cfg-nav button svg{flex:0 0 auto;opacity:.8;}
+  .cfg-nav button:hover{background:var(--card);color:var(--ink);}
+  .cfg-nav button.on{background:linear-gradient(180deg,var(--a-400),var(--accent));color:#fff;box-shadow:0 2px 9px rgba(30,95,209,.3);}
+  .cfg-nav button.on svg{opacity:1;}
+  .cfg-body{flex:1;min-width:0;overflow-y:auto;padding-bottom:.4rem;}
+  .cfg-body .cfg-sec+.cfg-sec{border-top:1px solid var(--line);}
+  @media(max-width:640px){
+    .cfg-layout{flex-direction:column;}
+    .cfg-nav{flex:0 0 auto;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:.5rem .55rem;}
+  }
   .cfg-head{display:flex;align-items:center;gap:11px;padding:1rem 1.2rem;border-bottom:1px solid var(--line);
     background:linear-gradient(180deg,var(--card2),var(--card));position:sticky;top:0;z-index:2;}
   .cfg-head .cp-mark{width:34px;height:34px;}
@@ -1557,7 +1572,8 @@ const ICO={
 function renderChrome(){
   let nav="";   // "Inicio" vive fijo en la barra superior (topbar), no en el menú lateral
   nav+=`<div class="sgroup">Módulos</div>`;
-  ["datos","eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
+  // "Datos" ya no vive en el menú: el sistema se actualiza solo y todo lo de datos se maneja desde ⚙ Configuración → Datos
+  ["eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
     nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
   document.getElementById("snav").innerHTML=nav;
@@ -4610,71 +4626,128 @@ function cfgEnsureDOM(){if(document.getElementById("cfgBack"))return;const back=
 function cfgOpen(){cfgEnsureDOM();cfgRender();document.getElementById("cfgBack").classList.add("open");setTimeout(()=>{const x=document.getElementById("cfgX");if(x)try{x.focus();}catch(e){}},60);}
 function cfgClose(){const b=document.getElementById("cfgBack");if(b)b.classList.remove("open");}
 function cfgGo(m,p){modulo=m;if(p)page=p;cfgClose();render();}
+let cfgTab="general";   // pestaña activa de Configuración (persiste durante la sesión)
 function cfgRender(){
   const m=document.getElementById("cfgModal");if(!m)return;
   const dark=document.documentElement.getAttribute("data-theme")==="dark";
-  const prof=(invProfile&&invProfile.levels)?`<b>${invProfile.label}</b> · nivel ${invProfile.level}/5`:(invProfile?"Reevaluar (cuestionario actualizado)":"Sin evaluar");
-  const keyOk=cpKey?'<span class="cfg-pill ok">Configurada</span>':'<span class="cfg-pill no">No configurada</span>';
-  const ds=DATASET==="import"&&IMP?`Importado (${IMP.assets.length} acciones)`:"Demo · IPSA";
-  const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
-  const bkLast=(AUTOBK&&AUTOBK.lastDL)?(""+AUTOBK.lastDL).slice(0,10):"nunca";
-  const bkSnap=bkInfo?((""+bkInfo.date).slice(0,16).replace("T"," ")):"—";
-  const daysOpts=[7,14,30].map(d=>`<option value="${d}" ${(AUTOBK&&AUTOBK.days===d)?"selected":""}>cada ${d} días</option>`).join("");
-  m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes generales de Investor</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Perfil de inversionista</div><div class="cfg-row"><div class="cfg-k">${prof}<div class="cfg-sub">Personaliza el copiloto y el asistente</div></div><button class="btn btn-pri" id="cfgProf">${invProfile?"Ver / reevaluar":"Hacer evaluación"}</button></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Apariencia</div><div class="cfg-row"><div class="cfg-k">Tema</div><div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Escala de interfaz<div class="cfg-sub">Tamaño general, como el zoom del navegador</div></div><div class="cfg-seg">${[80,90,100,110].map(s=>'<button class="'+(Math.round(uiScale*100)===s?"on":"")+'" data-scale="'+s+'">'+s+'%</button>').join("")}</div></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Copiloto IA</div><div class="cfg-row"><div class="cfg-k">Clave de Anthropic ${keyOk}</div><button class="btn" id="cfgKey">${cpKey?"Gestionar":"Configurar"}</button></div><div class="cfg-row"><div class="cfg-k">Modelo</div><select id="cfgModel" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Operador y costos</div>
-      <div class="cfg-row"><div class="cfg-k">Operador (corredora)<div class="cfg-sub">Comisiones que la Contabilidad descuenta en tus operaciones</div></div><select id="cfgBkOp" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${Object.keys(BROKER_PRESETS).map(k=>`<option value="${k}" ${BROKER.op===k?"selected":""}>${BROKER_PRESETS[k].name}</option>`).join("")}</select></div>
-      <div class="cfg-fldrow">
+  const sec=(title,sub,rows)=>`<div class="cfg-sec" style="border-top:none"><div class="cfg-sl"><span class="cd"></span>${title}</div>${sub?`<div class="cfg-sub" style="margin:-4px 0 10px">${sub}</div>`:""}${rows}</div>`;
+  const row=(k,subk,ctrl,mt)=>`<div class="cfg-row"${mt?' style="margin-top:12px"':''}><div class="cfg-k">${k}${subk?`<div class="cfg-sub">${subk}</div>`:""}</div>${ctrl}</div>`;
+  const selStyle='padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)';
+  const inStyle='flex:1 1 230px;min-width:200px;padding:.45rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 11.5px var(--font);color:var(--ink)';
+  const TABS=[
+    ["general","General",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>'],
+    ["datos","Datos",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>'],
+    ["respaldo","Respaldos",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>'],
+    ["perfil","Perfil",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'],
+    ["ia","Agente IA",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>'],
+    ["costos","Costos",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>'],
+    ["seguridad","Seguridad",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>']
+  ];
+  if(!TABS.some(t=>t[0]===cfgTab))cfgTab="general";
+  let body="";
+  if(cfgTab==="general"){
+    body=sec("Apariencia","Tema y tamaño de la interfaz",
+      row("Tema","", `<div class="cfg-seg"><button class="${!dark?"on":""}" data-theme-set="light">Claro</button><button class="${dark?"on":""}" data-theme-set="dark">Oscuro</button></div>`)+
+      row("Escala de interfaz","Tamaño general, como el zoom del navegador",`<div class="cfg-seg">${[80,90,100,110].map(s=>'<button class="'+(Math.round(uiScale*100)===s?"on":"")+'" data-scale="'+s+'">'+s+'%</button>').join("")}</div>`,1))+
+      sec("Plataforma","",
+        row("Pro · Roadmap","Precios en vivo, arquitectura y próximos pasos",'<button class="btn" id="cfgPro">Ver roadmap →</button>')+
+        `<div class="cfg-sub" style="margin-top:12px;text-align:center">Investor · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div>`);
+  }else if(cfgTab==="datos"){
+    const S=(typeof pricedbSummary==="function")?pricedbSummary():null;
+    const nT=S?S.rows.length:0;
+    const estado=nT?(`<b>${nT}</b> acciones · IPSA ${S.ipsaN?("hasta <b>"+S.ipsaTo+"</b>"):"<b>sin datos</b>"} · ${S.ipsaN||0} fechas del índice`):"Base vacía · carga planillas o configura la fuente automática";
+    const _apxI=(typeof autopxLastInfo==="function")?autopxLastInfo():null;
+    const _apxTxt=AUTOPX_URL?(_apxI?(_apxI.error?("última sync: error ("+(""+_apxI.at).slice(0,10)+")"):("última sync: "+(""+_apxI.at).slice(0,16).replace("T"," ")+" · datos hasta "+(_apxI.lastDate||"—"))):"aún sin sincronizar"):"configura la URL de abajo para activarla";
+    const ds=DATASET==="import"&&IMP?`Importado (${IMP.assets.length} acciones)`:"Demo · IPSA";
+    body=sec("Actualización automática","La base se actualiza sola al abrir la app (una vez al día) desde tu fuente de cierres",
+      row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
+      row("Sincronizar ahora",_apxTxt,'<button class="btn btn-pri" id="cfgSyncNow">⟳ Sincronizar cierres</button>',1)+
+      row("Fuente automática de cierres (URL JSON)","Un JSON público actualizado a diario (GitHub Actions → raw.githubusercontent). Formato: {&quot;days&quot;:[{&quot;date&quot;,&quot;ipsa&quot;,&quot;prices&quot;:{...}}]}",`<input id="cfgAutoPx" placeholder="https://raw.githubusercontent.com/usuario/repo/main/data/closes.json" value="${(""+(AUTOPX_URL||"")).replace(/"/g,"&quot;")}" style="${inStyle}">`,1))+
+      sec("Carga manual","Para poblar historia o registrar un día puntual",
+        row("Planillas y cierres","Sube CSV/XLSX (diario, semanal o mensual) o ingresa el cierre de un día",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgGoCargar">📈 Cargar planilla</button><button class="btn" id="cfgGoCierre">📝 Cierre diario</button></div>'))+
+      sec("Otros","",
+        row("Set de análisis activo",ds,IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Se crea en Análisis → Gestión de análisis</span>')+
+        row("Fuente de petróleo (URL JSON)","Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.",`<input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="${inStyle}">`,1));
+  }else if(cfgTab==="respaldo"){
+    const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
+    const bkLast=(AUTOBK&&AUTOBK.lastDL)?(""+AUTOBK.lastDL).slice(0,10):"nunca";
+    const bkSnap=bkInfo?((""+bkInfo.date).slice(0,16).replace("T"," ")):"—";
+    const daysOpts=[7,14,30].map(d=>`<option value="${d}" ${(AUTOBK&&AUTOBK.days===d)?"selected":""}>cada ${d} días</option>`).join("");
+    body=sec("Respaldo manual","Todo tu Investor (proyectos, base, análisis) en un archivo JSON",
+      row("Respaldar / restaurar","Exporta o vuelve a un respaldo anterior",'<div style="display:flex;gap:7px"><button class="btn btn-pri" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div>'))+
+      sec("Respaldo automático","Una red de seguridad periódica",
+        row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkOn" ${(AUTOBK&&AUTOBK.on)?"checked":""}> Respaldo automático activado</label>`,`Te propone descargar una copia cada cierto tiempo · última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b>`,`<select id="cfgBkDays" style="${selStyle}">${daysOpts}</select>`)+
+        row("Copia ahora","Descarga un respaldo o restaura la última copia interna",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgBkNow">⬇ Descargar respaldo</button><button class="btn" id="cfgBkRestore">↩ Restaurar copia interna</button></div>',1));
+  }else if(cfgTab==="perfil"){
+    const prof=(invProfile&&invProfile.levels)?`<b>${invProfile.label}</b> · nivel ${invProfile.level}/5`:(invProfile?"Reevaluar (cuestionario actualizado)":"Sin evaluar");
+    body=sec("Perfil de inversionista","Define tu tolerancia al riesgo: personaliza al agente IA, el asistente y las alertas de idoneidad",
+      row(prof,"Cuestionario de 4 dimensiones (tolerancia, capacidad, conocimiento, meta)",`<button class="btn btn-pri" id="cfgProf">${invProfile?"Ver / reevaluar":"Hacer evaluación"}</button>`));
+  }else if(cfgTab==="ia"){
+    const keyOk=cpKey?'<span class="cfg-pill ok">Configurada</span>':'<span class="cfg-pill no">No configurada</span>';
+    body=sec("Agente de inversiones (IA)","Analista cuantitativo con acceso a tus datos · requiere una clave de Anthropic (BYOK)",
+      row(`Clave de Anthropic ${keyOk}`,"Se guarda solo en este navegador",`<button class="btn ${cpKey?"":"btn-pri"}" id="cfgKey">${cpKey?"Gestionar":"Configurar"}</button>`)+
+      row("Modelo","Calidad vs velocidad de las respuestas",`<select id="cfgModel" style="${selStyle}">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select>`,1));
+  }else if(cfgTab==="costos"){
+    body=sec("Operador y costos","Comisiones que la Contabilidad descuenta en tus operaciones",
+      row("Operador (corredora)","",`<select id="cfgBkOp" style="${selStyle}">${Object.keys(BROKER_PRESETS).map(k=>`<option value="${k}" ${BROKER.op===k?"selected":""}>${BROKER_PRESETS[k].name}</option>`).join("")}</select>`)+
+      `<div class="cfg-fldrow" style="margin-top:12px">
         <label class="cfg-fld">Comisión por operación (%)<input type="number" step="0.01" min="0" id="cfgBkPct" value="${BROKER.pct}"></label>
         <label class="cfg-fld">Comisión mínima (CLP)<input type="number" min="0" id="cfgBkMin" value="${BROKER.min}"></label>
         <label class="cfg-fld">Comisión máxima (CLP · 0 = sin tope)<input type="number" min="0" id="cfgBkMax" value="${BROKER.max}"></label>
-      </div>
-      <div class="cfg-row" style="margin-top:6px"><div class="cfg-k"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkIva" ${BROKER.iva?"checked":""}> Agregar IVA (19%) a la comisión</label><div class="cfg-sub" id="cfgBkSum">${brokerSummary()}</div></div></div>
-      <div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). Se descuentan en la Contabilidad.</div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Datos</div><div class="cfg-row"><div class="cfg-k">Set de análisis activo<div class="cfg-sub">${ds}</div></div>${IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Importa en Análisis → Importar</span>'}</div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Respaldo de tu seguimiento<div class="cfg-sub">Exporta/restaura todo como archivo JSON</div></div><div style="display:flex;gap:7px"><button class="btn" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Fuente automática de cierres (URL JSON)<div class="cfg-sub">Un JSON público actualizado a diario (p.ej. GitHub Actions → raw.githubusercontent). Investor lo sincroniza al abrir, una vez al día. Formato: {"days":[{"date","ipsa","prices":{...}}]}</div></div><input id="cfgAutoPx" placeholder="https://raw.githubusercontent.com/usuario/repo/main/data/closes.json" value="${(""+(AUTOPX_URL||"")).replace(/"/g,"&quot;")}" style="flex:1 1 230px;min-width:200px;padding:.45rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 11.5px var(--font);color:var(--ink)"></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Fuente de petróleo (URL JSON)<div class="cfg-sub">Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.</div></div><input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="flex:1 1 230px;min-width:200px;padding:.45rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:600 11.5px var(--font);color:var(--ink)"></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Respaldo automático</div>
-      <div class="cfg-row"><div class="cfg-k"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkOn" ${(AUTOBK&&AUTOBK.on)?"checked":""}> Respaldo automático activado</label><div class="cfg-sub">Te propone descargar una copia cada cierto tiempo · última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b></div></div><select id="cfgBkDays" style="padding:.4rem .55rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12px var(--font);color:var(--ink)">${daysOpts}</select></div>
-      <div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Copia ahora<div class="cfg-sub">Descarga un respaldo o restaura la última copia interna</div></div><div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgBkNow">⬇ Descargar respaldo</button><button class="btn" id="cfgBkRestore">↩ Restaurar copia interna</button></div></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Mantenimiento de datos</div>
-      <div class="cfg-row"><div class="cfg-k">Limpiar sistema<div class="cfg-sub">Deja solo la <b>compra inicial</b> y las operaciones de cada cartera; vacía la base de precios, los análisis y las simulaciones (se reconstruye cargando planillas). No borra tus proyectos.</div></div><button class="btn" id="cfgClean" style="color:var(--red);border-color:var(--red-line)">🧹 Limpiar sistema</button></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Acceso</div><div class="cfg-row"><div class="cfg-k">${(AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña"}<div class="cfg-sub">Pantalla de inicio de sesión local en este navegador</div></div><div style="display:flex;gap:7px;flex-wrap:wrap">${(AUTH&&AUTH.enabled)?('<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'):'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>'}</div></div></div>
-    <div class="cfg-sec"><div class="cfg-sl"><span class="cd"></span>Plataforma</div><div class="cfg-row"><div class="cfg-k">Pro · Roadmap<div class="cfg-sub">Precios en vivo, arquitectura y próximos pasos</div></div><button class="btn" id="cfgPro">Ver roadmap →</button></div><div class="cfg-row" style="margin-top:12px"><div class="cfg-k">Reiniciar todo<div class="cfg-sub">Borra perfil, escenarios, proyectos e importaciones de este navegador</div></div><button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button></div><div class="cfg-sub" style="margin-top:12px;text-align:center">Investor · datos guardados en este navegador · simulación educativa, no es asesoría financiera</div></div>
+      </div>`+
+      row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkIva" ${BROKER.iva?"checked":""}> Agregar IVA (19%) a la comisión</label>`,`<span id="cfgBkSum">${brokerSummary()}</span>`,"",1)+
+      `<div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). Se descuentan en la Contabilidad.</div>`);
+  }else if(cfgTab==="seguridad"){
+    body=sec("Acceso","Pantalla de inicio de sesión local en este navegador",
+      row((AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña","",`<div style="display:flex;gap:7px;flex-wrap:wrap">${(AUTH&&AUTH.enabled)?('<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'):'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>'}</div>`))+
+      sec("Zona de riesgo","Acciones destructivas · siempre con doble confirmación",
+        row("Limpiar sistema","Conserva la <b>compra inicial</b> y las operaciones de cada cartera; vacía base de precios, análisis y simulaciones (se reconstruye sincronizando o cargando planillas)",'<button class="btn" id="cfgClean" style="color:var(--red);border-color:var(--red-line)">🧹 Limpiar sistema</button>')+
+        row("Reiniciar todo","Borra perfil, escenarios, proyectos e importaciones de este navegador",'<button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button>',1));
+  }
+  m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes de Investor · ordenados por categoría</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
+    <div class="cfg-layout">
+      <nav class="cfg-nav" role="tablist" aria-label="Categorías de configuración">${TABS.map(t=>`<button role="tab" aria-selected="${cfgTab===t[0]}" class="${cfgTab===t[0]?"on":""}" data-cfgtab="${t[0]}">${t[2]}${t[1]}</button>`).join("")}</nav>
+      <div class="cfg-body">${body}</div>
+    </div>
     <input type="file" id="cfgRstFile" accept="application/json,.json" style="display:none">`;
-  m.querySelector("#cfgX").onclick=cfgClose;
-  m.querySelector("#cfgProf").onclick=()=>{profEdit=false;cfgGo("perfil","perfil");};
+  // ── wiring (cada control puede no existir según la pestaña: todo con guardas) ──
+  const q=s=>m.querySelector(s);
+  q("#cfgX").onclick=cfgClose;
+  m.querySelectorAll("[data-cfgtab]").forEach(b=>b.onclick=()=>{cfgTab=b.dataset.cfgtab;cfgRender();});
+  const _pf=q("#cfgProf");if(_pf)_pf.onclick=()=>{profEdit=false;cfgGo("perfil","perfil");};
   m.querySelectorAll("[data-theme-set]").forEach(b=>b.onclick=()=>{const d=document.documentElement;if(b.dataset.themeSet==="dark")d.setAttribute("data-theme","dark");else d.removeAttribute("data-theme");try{localStorage.setItem("inv_theme",b.dataset.themeSet);}catch(e){}refreshPalette();updateThemeBtn();render();cfgRender();});
   m.querySelectorAll("[data-scale]").forEach(b=>b.onclick=()=>{applyScale((+b.dataset.scale)/100);cfgRender();});
-  const _cfp=m.querySelector("#cfgPro");if(_cfp)_cfp.onclick=()=>cfgGo("pro","realtime");
-  const _lk=m.querySelector("#cfgLock");if(_lk)_lk.onclick=()=>{cfgClose();authLock();};
-  const _ac=m.querySelector("#cfgAuthChg");if(_ac)_ac.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authInit();};
-  const _ao=m.querySelector("#cfgAuthOff");if(_ao)_ao.onclick=()=>{if(confirm("¿Quitar la protección por contraseña?")){AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{sessionStorage.removeItem("inv_sess_v1");localStorage.removeItem("inv_remember_v1");}catch(e){}cfgRender();}};
-  const _an=m.querySelector("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authInit();};
+  const _cfp=q("#cfgPro");if(_cfp)_cfp.onclick=()=>cfgGo("pro","realtime");
+  const _lk=q("#cfgLock");if(_lk)_lk.onclick=()=>{cfgClose();authLock();};
+  const _ac=q("#cfgAuthChg");if(_ac)_ac.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authInit();};
+  const _ao=q("#cfgAuthOff");if(_ao)_ao.onclick=()=>{if(confirm("¿Quitar la protección por contraseña?")){AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{sessionStorage.removeItem("inv_sess_v1");localStorage.removeItem("inv_remember_v1");}catch(e){}cfgRender();}};
+  const _an=q("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authInit();};
   const bkSync=()=>{if(modulo==="clientes"||(modulo==="inv"&&page==="contabilidad")){try{render();}catch(e){}}};
-  const _bkOp=m.querySelector("#cfgBkOp");if(_bkOp)_bkOp.onchange=()=>{const v=_bkOp.value;if(v==="custom"){BROKER.op="custom";}else{Object.assign(BROKER,BROKER_PRESETS[v]);}saveBroker();cfgRender();bkSync();};
-  const bkSet=()=>{BROKER.op="custom";BROKER.pct=+(m.querySelector("#cfgBkPct")||{}).value||0;BROKER.min=+(m.querySelector("#cfgBkMin")||{}).value||0;BROKER.max=+(m.querySelector("#cfgBkMax")||{}).value||0;BROKER.iva=!!(m.querySelector("#cfgBkIva")||{}).checked;saveBroker();const su=m.querySelector("#cfgBkSum");if(su)su.textContent=brokerSummary();const op=m.querySelector("#cfgBkOp");if(op)op.value="custom";};
-  ["cfgBkPct","cfgBkMin","cfgBkMax"].forEach(id=>{const e=m.querySelector("#"+id);if(e){e.oninput=bkSet;e.onchange=bkSync;}});
-  const _bkIva=m.querySelector("#cfgBkIva");if(_bkIva)_bkIva.onchange=()=>{bkSet();bkSync();};
-  m.querySelector("#cfgKey").onclick=()=>{cfgClose();cpOpenPanel();};
-  m.querySelector("#cfgModel").onchange=e=>{cpModel=e.target.value;lsSet("inv_cp_model",cpModel);const s=document.getElementById("cpModelSel");if(s)s.value=cpModel;};
+  const _bkOp=q("#cfgBkOp");if(_bkOp)_bkOp.onchange=()=>{const v=_bkOp.value;if(v==="custom"){BROKER.op="custom";}else{Object.assign(BROKER,BROKER_PRESETS[v]);}saveBroker();cfgRender();bkSync();};
+  const bkSet=()=>{BROKER.op="custom";BROKER.pct=+(q("#cfgBkPct")||{}).value||0;BROKER.min=+(q("#cfgBkMin")||{}).value||0;BROKER.max=+(q("#cfgBkMax")||{}).value||0;BROKER.iva=!!(q("#cfgBkIva")||{}).checked;saveBroker();const su=q("#cfgBkSum");if(su)su.textContent=brokerSummary();const op=q("#cfgBkOp");if(op)op.value="custom";};
+  ["cfgBkPct","cfgBkMin","cfgBkMax"].forEach(id=>{const e=q("#"+id);if(e){e.oninput=bkSet;e.onchange=bkSync;}});
+  const _bkIva=q("#cfgBkIva");if(_bkIva)_bkIva.onchange=()=>{bkSet();bkSync();};
+  const _ky=q("#cfgKey");if(_ky)_ky.onclick=()=>{cfgClose();cpOpenPanel();};
+  const _md=q("#cfgModel");if(_md)_md.onchange=e=>{cpModel=e.target.value;lsSet("inv_cp_model",cpModel);const s=document.getElementById("cpModelSel");if(s)s.value=cpModel;};
   m.querySelectorAll("[data-ds]").forEach(b=>b.onclick=()=>{applyDataset(b.dataset.ds);cfgRender();});
-  m.querySelector("#cfgBkp").onclick=()=>{try{exportBackup();}catch(e){}};
-  const rfl=m.querySelector("#cfgRstFile");m.querySelector("#cfgRst").onclick=()=>rfl.click();rfl.onchange=ev=>{if(ev.target.files[0]){importBackup(ev.target.files[0]);cfgClose();}};
-  const _ou=m.querySelector("#cfgOilUrl");if(_ou)_ou.onchange=()=>{OIL_URL=(_ou.value||"").trim();try{localStorage.setItem("inv_oil_url",OIL_URL);}catch(e){}if(OIL_URL&&typeof mindFetch==="function")mindFetch();};
-  const _apx=m.querySelector("#cfgAutoPx");if(_apx)_apx.onchange=()=>{AUTOPX_URL=(_apx.value||"").trim();try{localStorage.setItem("inv_autopx_url",AUTOPX_URL);}catch(e){}if(AUTOPX_URL&&confirm("Fuente guardada. ¿Sincronizar los cierres ahora?"))autopxSync(true);};
-  m.querySelector("#cfgReset").onclick=()=>{if(confirm("¿Borrar TODOS los datos de Investor en este navegador? No se puede deshacer.")){try{localStorage.clear();}catch(e){}location.reload();}};
-  // Respaldo automático (movido desde Datos)
-  const _bo=m.querySelector("#cfgBkOn");if(_bo)_bo.onchange=()=>{AUTOBK.on=_bo.checked;autobkSave();};
-  const _bd=m.querySelector("#cfgBkDays");if(_bd)_bd.onchange=()=>{AUTOBK.days=+_bd.value||7;autobkSave();};
-  const _bn=m.querySelector("#cfgBkNow");if(_bn)_bn.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");cfgRender();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
-  const _br=m.querySelector("#cfgBkRestore");if(_br)_br.onclick=()=>autobkRestore();
-  // Limpiar sistema (movido desde Datos)
-  const _cl=m.querySelector("#cfgClean");if(_cl)_cl.onclick=()=>{
+  const _bp=q("#cfgBkp");if(_bp)_bp.onclick=()=>{try{exportBackup();}catch(e){}};
+  const rfl=q("#cfgRstFile"),_rs=q("#cfgRst");if(_rs&&rfl){_rs.onclick=()=>rfl.click();rfl.onchange=ev=>{if(ev.target.files[0]){importBackup(ev.target.files[0]);cfgClose();}};}
+  const _ou=q("#cfgOilUrl");if(_ou)_ou.onchange=()=>{OIL_URL=(_ou.value||"").trim();try{localStorage.setItem("inv_oil_url",OIL_URL);}catch(e){}if(OIL_URL&&typeof mindFetch==="function")mindFetch();};
+  const _apx=q("#cfgAutoPx");if(_apx)_apx.onchange=()=>{AUTOPX_URL=(_apx.value||"").trim();try{localStorage.setItem("inv_autopx_url",AUTOPX_URL);}catch(e){}if(AUTOPX_URL&&confirm("Fuente guardada. ¿Sincronizar los cierres ahora?"))autopxSync(true).finally(()=>cfgRender());};
+  const _sn=q("#cfgSyncNow");if(_sn)_sn.onclick=()=>{if(!AUTOPX_URL){window.alert("Primero configura la URL de la fuente automática (campo de abajo).");return;}_sn.disabled=true;_sn.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{try{render();}catch(e){}cfgRender();});};
+  const _gb=q("#cfgGoBase");if(_gb)_gb.onclick=()=>cfgGo("datos","base");
+  const _gc=q("#cfgGoCargar");if(_gc)_gc.onclick=()=>cfgGo("datos","cargar");
+  const _gd=q("#cfgGoCierre");if(_gd)_gd.onclick=()=>cfgGo("datos","cierre");
+  const _rst=q("#cfgReset");if(_rst)_rst.onclick=()=>{if(confirm("¿Borrar TODOS los datos de Investor en este navegador? No se puede deshacer.")){try{localStorage.clear();}catch(e){}location.reload();}};
+  const _bo=q("#cfgBkOn");if(_bo)_bo.onchange=()=>{AUTOBK.on=_bo.checked;autobkSave();};
+  const _bd=q("#cfgBkDays");if(_bd)_bd.onchange=()=>{AUTOBK.days=+_bd.value||7;autobkSave();};
+  const _bn=q("#cfgBkNow");if(_bn)_bn.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");cfgRender();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
+  const _br=q("#cfgBkRestore");if(_br)_br.onclick=()=>autobkRestore();
+  const _cl=q("#cfgClean");if(_cl)_cl.onclick=()=>{
     if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
     const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera la compra inicial y sus operaciones, y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
     if(typed==null||typed.trim().toUpperCase()!=="LIMPIAR"){window.alert("Cancelado. No se eliminó nada.");return;}
-    const k=systemClean();cfgClose();modulo="datos";page="base";render();window.alert("Listo. Se conservó la compra inicial de "+k+" cartera(s).\n\nAhora carga tus planillas en Datos → “Cargar planilla” y pulsa Actualizar sistema.");};
+    const k=systemClean();cfgClose();modulo="inicio";page="home";render();window.alert("Listo. Se conservó la compra inicial de "+k+" cartera(s).\n\nAhora sincroniza los cierres (⚙ Configuración → Datos) o carga tus planillas para reconstruir.");};
 }
 
 /* ---------------- COPILOTO: perfil + dataset ---------------- */
@@ -5566,6 +5639,19 @@ function resampleMap(map,freq){const dates=Object.keys(map).sort();const byP={};
 /* quita del FINAL las RACHAS de valores idénticos: son arrastres (carry-forward), no cierres reales.
    Exige ≥2 repeticiones seguidas: un único cierre plano puede ser real (papel ilíquido) y no se toca. */
 function dropTrailingFlat(rs){let k=0;const n=rs.length;while(n-2-k>=0&&rs[n-1-k].v===rs[n-2-k].v)k++;return k>=2?rs.slice(0,n-k):rs;}
+/* base MÓVIL: fecha as-of ~7 días (semanal) o ~1 mes calendario (mensual) ANTES de lastD en el mapa.
+   El período calendario en curso es PARCIAL (un "mensual" el día 3 compararía solo 3 días y mostraría
+   cualquier cosa): los retornos de vitrina (Home) usan el período móvil completo. Devuelve null en diario
+   o con datos ralos (→ se usa el par de períodos consecutivos de siempre). */
+function pdTrailingBase(map,lastD,freq){
+  if(freq==="diario")return null;
+  const t0=new Date(lastD+"T00:00:00");if(freq==="semanal")t0.setDate(t0.getDate()-7);else t0.setMonth(t0.getMonth()-1);
+  const tgt=localDay(t0);let base=null;
+  for(const d of Object.keys(map).sort()){if(d>lastD)break;if(d<=tgt)base=d;}
+  if(base==null||base===lastD)return null;
+  const off=(new Date(tgt+"T00:00:00")-new Date(base+"T00:00:00"))/864e5;
+  return off>(freq==="semanal"?5:12)?null:base;   // demasiado lejos del objetivo → no hay datos finos para un período móvil real
+}
 function periodIndex(dateStr,freq){const d=new Date(dateStr+"T00:00:00");if(freq==="mensual")return d.getFullYear()*12+d.getMonth();if(freq==="semanal"){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);return Math.round(t.getTime()/(7*864e5));}return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);}
 /* ¿dos puntos resampleados son de períodos consecutivos? (en diario se toleran fines de semana/feriado) */
 function gapOK(d0,d1,freq){if(freq==="diario"){const g=(new Date(d1+"T00:00:00")-new Date(d0+"T00:00:00"))/864e5;return g>0&&g<=4;}return (periodIndex(d1,freq)-periodIndex(d0,freq))===1;}
@@ -5583,9 +5669,11 @@ function seguimientoStats(freq){
     const vals=rs.map(x=>x.v);
     // solo retornos entre períodos consecutivos (evita que un hueco se cuente como un período y distorsione la anualización)
     const rets=[];for(let i=1;i<vals.length;i++){if(gapOK(rs[i-1].d,rs[i].d,freq))rets.push(vals[i]/vals[i-1]-1);}
-    // rentabilidad del último período (día/semana/mes según filtro) — el último tramo siempre es consecutivo (gapOK arriba)
-    const lastRet=rets[rets.length-1];
-    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,n:vals.length,series:vals,lastDate:rs[rs.length-1].d});
+    // rentabilidad del último período: MÓVIL si hay datos finos (pdTrailingBase); si no, el último par de períodos consecutivos
+    let lastRet=rets[rets.length-1];
+    const lastD=rs[rs.length-1].d,tb=pdTrailingBase(C.tick[t],lastD,freq);
+    if(tb!=null&&C.tick[t][tb]>0)lastRet=rs[rs.length-1].v/C.tick[t][tb]-1;
+    out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,n:vals.length,series:vals,lastDate:lastD});
   });
   return out;
 }
@@ -5755,7 +5843,9 @@ function ipsaSnapshot(name){
   const C=consolidatedSeries();let map=(name&&name!=="IPSA")?pricedbIdxMap(name):(C.ipsaMap||{});
   if(name&&name!=="IPSA"&&(!map||!Object.keys(map).length))map=C.ipsaMap||{};
   if(!Object.keys(map||{}).length)return null;
-  const per=f=>{const rs=dropTrailingFlat(resampleMap(map,f));if(rs.length<2)return null;const a=rs[rs.length-2],b=rs[rs.length-1];if(a.v<=0||!gapOK(a.d,b.d,f))return null;return (b.v/a.v-1)*100;};
+  const per=f=>{const rs=dropTrailingFlat(resampleMap(map,f));if(rs.length<2)return null;const b=rs[rs.length-1];
+    const tb=pdTrailingBase(map,b.d,f);if(tb!=null&&map[tb]>0)return (b.v/map[tb]-1)*100;   // período MÓVIL: la semana/mes calendario en curso es parcial
+    const a=rs[rs.length-2];if(a.v<=0||!gapOK(a.d,b.d,f))return null;return (b.v/a.v-1)*100;};
   const rsD=dropTrailingFlat(resampleMap(map,"diario"));const lp=rsD.length?rsD[rsD.length-1]:null;if(!lp)return null;   // último valor REAL del índice (ignora arrastres finales)
   return {name:name||"IPSA",last:lp.v,lastDate:lp.d,dia:per("diario"),semana:per("semanal"),mes:per("mensual")};
 }
@@ -5863,8 +5953,8 @@ function viewHome(){
   const _rkD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(2,4):"";
   const stkBlock=(title,sub,arr,valFn,colFn,startRank)=>{const rows=arr.map((s,i)=>`<div class="home-stk"><span class="stk-pos">${(startRank||1)+i}</span><span class="rk-dot" style="background:${s.col}"></span><span class="rk-body"><span class="rk-name">${s.t}</span><span class="rk-cli">${(""+s.name).replace(/</g,"&lt;")}${s.lastDate?' · al '+_rkD(s.lastDate):''}</span></span><span class="stk-spk">${mindSparkSVG(s.series&&s.series.length>1?s.series:[1,1],colFn(s))}</span><span class="rk-pct" style="color:${colFn(s)}">${valFn(s)}</span></div>`).join("");
     return `<div class="stk-block"><div class="stk-bh"><b>${title}</b><span>${sub}</span></div>${rows||'<div class="note" style="margin:6px 0 0;font-size:11px">Sin datos suficientes</div>'}</div>`;};
-  const perWord=homeStkFreq==="diario"?"último día":homeStkFreq==="semanal"?"última semana":"último mes";
-  const perPhrase=homeStkFreq==="semanal"?"de la última semana":"del "+perWord;
+  const perWord=homeStkFreq==="diario"?"último día":homeStkFreq==="semanal"?"última semana móvil (7 días)":"último mes móvil";
+  const perPhrase=homeStkFreq==="semanal"?"de la última semana móvil (7 días)":"del "+perWord;
   const byRet=[...stats].sort((a,b)=>b.ret-a.ret);
   const byWorst=[...stats].sort((a,b)=>a.ret-b.ret);
   // partimos las acciones en la mitad por rentabilidad: la mejor mitad a la izquierda, la peor a la derecha
