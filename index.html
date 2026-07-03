@@ -1691,12 +1691,15 @@ function viewComparativa(){
 // ===== DETALLE =====
 function viewDetalle(){
   const s=stk(sel),a=s.a24;
+  // unidad real del análisis activo (el demo es mensual, pero un análisis del usuario puede ser diario/semanal)
+  const perAdj=DATA.perYear===252?"diario":DATA.perYear===52?"semanal":"mensual";
+  const perPl=DATA.perYear===252?"diarios":DATA.perYear===52?"semanales":"mensuales";
   const selbar=`<div class="sel">${STOCKS.map(x=>`<button class="selb ${x.t===sel?'on':''}" data-sel="${x.t}" style="${x.t===sel?`background:${x.c};border-color:${x.c}`:''}"><span class="dot" style="background:${x.t===sel?'#fff':x.c}"></span>${x.t}</button>`).join("")}</div>`;
   const sg=a.jensen>1?"SUBVALORADA":a.jensen<-1?"SOBREVALORADA":"EQUILIBRIO",sgc=a.jensen>1?green:a.jensen<-1?red:muted;
   const tiles=`<div class="tiles">
     ${tile("β regresión",s.b.toFixed(2),s.b<0.8?"defensiva":s.b<1?"moderada":"agresiva",s.c,accentT)}
     ${tile("R²",a.r2.toFixed(2),"sistemático "+(a.r2*100).toFixed(0)+"%",s.c)}
-    ${tile("Retorno anual",pc(a.ret),"total 24m "+pc(a.tot),s.c,col(a.ret))}
+    ${tile("Retorno anual",pc(a.ret),"total "+winShort()+" "+pc(a.tot),s.c,col(a.ret))}
     ${tile("Volatilidad σ",p0(a.sig),(a.sig/MKT.sig).toFixed(1)+"× IPSA",s.c)}
     ${tile("Sharpe",a.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),s.c,a.sharpe>=0?green:red)}
     ${tile("E(R) CAPM",p0(a.er),"retorno exigido",s.c,indigo)}
@@ -1704,13 +1707,13 @@ function viewDetalle(){
   const xb=niceBounds(MKT.rets,0.1),yb=niceBounds(s.rets,0.1),am=a.alphaR/(DATA.perYear||12);
   const pts=s.rets.map((y,k)=>({x:MKT.rets[k],y:y,c:s.c+"d0",r:5}));
   const line=[{x1:xb.min,y1:am+s.b*xb.min,x2:xb.max,y2:am+s.b*xb.max,c:s.c}];
-  const scl=card("Recta Característica (SCL)",`Retorno mensual de ${s.t} (Y) vs IPSA (X) · pendiente = β ${s.b.toFixed(2)}`,svgScatter({pts,lines:line,xmin:xb.min,xmax:xb.max,ymin:yb.min,ymax:yb.max,xlab:"IPSA (% mensual)",ylab:s.t+" (% mensual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:300}));
+  const scl=card("Recta Característica (SCL)",`Retorno ${perAdj} de ${s.t} (Y) vs IPSA (X) · pendiente = β ${s.b.toFixed(2)}`,svgScatter({pts,lines:line,xmin:xb.min,xmax:xb.max,ymin:yb.min,ymax:yb.max,xlab:"IPSA (% "+perAdj+")",ylab:s.t+" (% "+perAdj+")",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:300}));
   const i=TICK.indexOf(s.t);
   const cl=STOCKS.filter(x=>x.t!==s.t).map(x=>{const c=CORR[i][TICK.indexOf(x.t)];return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .1rem;border-bottom:1px solid var(--line)">${tk(x)}<span class="tnum" style="font-weight:800;color:${c<0.3?green:c<0.6?amber:red}">${c.toFixed(2)}</span></div>`;}).join("");
   const corr=card("Correlación con otras","Menor = mejor diversificación",cl);
-  const mr=card("Retornos mensuales",`${s.t} vs IPSA · ${DATA.n} meses`,svgLine({vals:s.rets,labels:DATA.labels,c:s.c,cmp:MKT.rets,cmpC:muted,prices:s.prices.slice(1),h:215}),`<div class="legend"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>IPSA</span></div>`);
-  const plab=[prevMonth(DATA.labels[0]),...DATA.labels];
-  const ph=card("Historia del precio",`${s.t} · precio de cierre mensual · ${s.prices.length} meses`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
+  const mr=card("Retornos "+perPl,`${s.t} vs IPSA · ${winLong()}`,svgLine({vals:s.rets,labels:DATA.labels,c:s.c,cmp:MKT.rets,cmpC:muted,prices:s.prices.slice(1),h:215}),`<div class="legend"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>IPSA</span></div>`);
+  const plab=(/^[a-z]{3}-\d{2}$/i.test(""+DATA.labels[0]))?[prevMonth(DATA.labels[0]),...DATA.labels]:["inicio",...DATA.labels];   // solo el demo usa etiquetas mes-año; en un análisis del usuario son fechas
+  const ph=card("Historia del precio",`${s.t} · precio de cierre ${perAdj} · ${s.prices.length} puntos`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
   const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). Retorno anual ${pc(a.ret)} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). α de Jensen ${pc(a.jensen)} → <b>${a.jensen>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β. Señal de valoración: <b style="color:${sgc}">${sg}</b>.`);
   return selbar+tiles+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
 }
@@ -1718,16 +1721,21 @@ function viewDetalle(){
 // ===== CAPM / SML =====
 function viewCAPM(){
   const bmax=Math.max(...STOCKS.map(s=>s.b))*1.18;
-  const yb=niceBounds([RF,...STOCKS.map(s=>s.a24.ret)],0.14);
+  // dos SML cuando la prima ex-ante (supuesto forward) difiere mucho de la REALIZADA en la ventana: contra la
+  // ex-ante el propio mercado sale con α≠0 (sesga todo a "subvalorada"); la realizada pasa por el mercado (α=0)
+  const primaR=(MKT&&isFinite(MKT.ret))?(MKT.ret-RF):PRIMA;
+  const showR=Math.abs(primaR-PRIMA)>2;
+  const yb=niceBounds([RF,...STOCKS.map(s=>s.a24.ret)].concat(showR?[RF+bmax*primaR]:[]),0.14);
   const pts=STOCKS.map(s=>({x:s.b,y:s.a24.ret,c:s.c,label:s.t}));
-  const line=[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:indigo,dash:true}];
-  const chart=card("Security Market Line (SML)","Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:330}));
+  const line=[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:indigo,dash:true}].concat(showR?[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*primaR,c:muted,dash:true}]:[]);
+  const smlLeg=showR?`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>SML ex-ante (prima ${p0(PRIMA)})</span><span><span class="lgdot" style="background:${muted}"></span>SML realizada (prima ${p0(primaR)})</span></div>`:"";
+  const chart=card("Security Market Line (SML)","Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:330}),smlLeg);
   const byJ=[...STOCKS].sort((a,b)=>b.a24.jensen-a.a24.jensen);
   const rows=byJ.map(s=>{const a=s.a24;const sg=a.jensen>1?"SUBVALORADA":a.jensen<-1?"SOBREVALORADA":"EQUILIBRIO",sc=a.jensen>1?green:a.jensen<-1?red:muted;
     return `<tr><td>${tk(s)}</td><td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td>
     <td class="tnum num" style="color:${indigo};font-weight:600">${p0(a.er)}</td><td class="num">${chip(a.ret)}</td><td class="num">${chip(a.jensen)}</td><td>${badge(sg,sc)}</td></tr>`;}).join("");
   const tbl=card("Valoración CAPM","E(R) exigido = Rf + β × prima · α de Jensen = retorno real − exigido",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["β",1],["E(R) CAPM",1],["Retorno real",1],["α Jensen",1],["Señal",0]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
-  const note=notecard(`La <b>SML</b> muestra el retorno que el CAPM exige según el β (Rf ${p0(RF)}, prima ${p0(PRIMA)}). Un punto <b>sobre</b> la línea rindió más de lo exigido por su riesgo sistemático (α positivo); <b>bajo</b>, menos. Ojo: la ventana fue un mercado muy alcista, por eso varios retornos reales superan ampliamente lo exigido.`);
+  const note=notecard(`La <b>SML</b> muestra el retorno que el CAPM exige según el β (Rf ${p0(RF)}, prima ${p0(PRIMA)}). Un punto <b>sobre</b> la línea rindió más de lo exigido por su riesgo sistemático (α positivo); <b>bajo</b>, menos.`+(showR?` La línea <b>gris</b> usa la prima <b>realizada</b> de la ventana (mercado ${pc(MKT.ret)} − Rf = ${p0(primaR)}): contra ella el propio mercado queda en la línea (α=0), así que mide quién batió al mercado de verdad; la azul es el supuesto ex-ante que se usa para proyectar E(R) a futuro.`:` Ojo: la ventana fue un mercado muy alcista, por eso varios retornos reales superan ampliamente lo exigido.`));
   return chart+tbl+note;
 }
 
@@ -1748,14 +1756,16 @@ function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));return tru
 (function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Administración",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
 let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Administración",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Administración",color:"#1E5FD1"}];}})();
 (function(){try{if(localStorage.getItem("inv_mig_admin_v1"))return;localStorage.setItem("inv_mig_admin_v1","1");const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}}catch(e){}})();
+// arranque limpio por defecto: el análisis "IPSA · demo" queda oculto hasta que el usuario cargue sus datos
+// (el demo sigue disponible como universo canónico interno y vía "Proyectos de prueba", pero no se muestra como datos propios)
+(function(){try{if(lsGet("inv_demo_hidden")==null)lsSet("inv_demo_hidden",1);}catch(e){}})();
 const CLIENT_PAL=["#1E5FD1","#0E8C5E","#DB2777","#7C3AED","#D9730D","#0891B2","#CA8A04","#CE2F3B"];
 function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));return true;}catch(e){saveWarn();return false;}}
 function activeClientObj(){return CLIENTS.find(x=>x.id===activeClient)||CLIENTS[0];}
 let PROJECTS=lsGet("pf_projects_v1")||[],activeId=lsGet("pf_active_v1")||null,editIdx=null;
 (function(){const oldPF=lsGet("pf_portfolio_v1");if(!PROJECTS.length&&oldPF){const ow=lsGet("pf_weeks_v1")||[];PROJECTS.push(Object.assign({id:Date.now(),name:"Proyecto 1"},oldPF,{weeks:ow}));activeId=PROJECTS[0].id;lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);}})();
-const RECOVERED_PROJECT={"id":1749700000000,"name":"Inversión inicial","date":"01-06-2026","amount":2500000,"bp":1.04,"erCapm":11.72,"sig":13.4,"sharpe":0.9,"corrAvg":0.4,"freq":"diario","origSim":{"sel":{"FALABELLA":16.666666666666668,"SANTANDER":16.666666666666668,"BCI":16.666666666666668,"PARAUCO":16.666666666666668,"LATAM":16.666666666666668,"SQM-B":16.666666666666668},"amount":2500000},"holdings":[{"t":"FALABELLA","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SANTANDER","w":0.16666666666666666,"monto":416666.6666666667},{"t":"BCI","w":0.16666666666666666,"monto":416666.6666666667},{"t":"PARAUCO","w":0.16666666666666666,"monto":416666.6666666667},{"t":"LATAM","w":0.16666666666666666,"monto":416666.6666666667},{"t":"SQM-B","w":0.16666666666666666,"monto":416666.6666666667}],"weeks":[{"date":"2026-06-01","prices":{"FALABELLA":5760,"SANTANDER":70.47,"BCI":59722,"PARAUCO":3787.6,"LATAM":23.07,"SQM-B":74600},"ipsa":8000,"qty":{"FALABELLA":71,"SANTANDER":5882,"BCI":6,"PARAUCO":109,"LATAM":17930,"SQM-B":5}},{"date":"2026-06-01","prices":{"FALABELLA":5725.5538,"SANTANDER":69.9827,"BCI":59209.8167,"PARAUCO":3752.7733,"LATAM":22.8483,"SQM-B":73635.2423},"ipsa":7996},{"date":"2026-06-02","prices":{"FALABELLA":5640.3141,"SANTANDER":68.8764,"BCI":58176.829,"PARAUCO":3685.0052,"LATAM":22.4263,"SQM-B":72032.1862},"ipsa":7878.4},{"date":"2026-06-03","prices":{"FALABELLA":5608.7831,"SANTANDER":68.4278,"BCI":57702.1603,"PARAUCO":3652.6679,"LATAM":22.2203,"SQM-B":71129.5678},"ipsa":7796},{"date":"2026-06-04","prices":{"FALABELLA":5579.3743,"SANTANDER":68.0063,"BCI":57252.1325,"PARAUCO":3621.9332,"LATAM":22.0241,"SQM-B":70263.2587},"ipsa":7753.6},{"date":"2026-06-05","prices":{"FALABELLA":5595.8647,"SANTANDER":68.1449,"BCI":57274.6115,"PARAUCO":3621.1138,"LATAM":22.01,"SQM-B":69980.0492},"ipsa":7730.4},{"date":"2026-06-08","prices":{"FALABELLA":5545.3901,"SANTANDER":67.4689,"BCI":56613.7331,"PARAUCO":3577.1212,"LATAM":21.7335,"SQM-B":68866.2254},"ipsa":7645.6},{"date":"2026-06-09","prices":{"FALABELLA":5781.1202,"SANTANDER":70.2735,"BCI":58871.1283,"PARAUCO":3717.4631,"LATAM":22.5768,"SQM-B":71294.5181},"ipsa":7904},{"date":"2026-06-10","prices":{"FALABELLA":5769.8091,"SANTANDER":70.0732,"BCI":58608.1946,"PARAUCO":3698.5856,"LATAM":22.4529,"SQM-B":70660.7566},"ipsa":7866.4},{"date":"2026-06-11","prices":{"FALABELLA":5970,"SANTANDER":72.44,"BCI":60490,"PARAUCO":3815,"LATAM":23.15,"SQM-B":72605},"ipsa":8082.4}]};
-(function(){try{if(!lsGet("pf_recovered_v1")&&(!PROJECTS||!PROJECTS.length)){const rp=JSON.parse(JSON.stringify(RECOVERED_PROJECT));rp.holdings=rp.holdings.map(hd=>{const s=stk(hd.t);return s?{t:hd.t,n:s.n,s:s.s,c:s.c,b:s.b,w:hd.w,monto:hd.monto}:hd;});PROJECTS=[rp];activeId=rp.id;lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);lsSet("pf_recovered_v1",1);}}catch(e){}})();
-(function(){try{var FLAG="pf_realclose_20260618";if(lsGet(FLAG))return;var WK=[{"date":"2026-06-01","prices":{"FALABELLA":5760,"SANTANDER":70.47,"BCI":59722,"PARAUCO":3787.6,"LATAM":23.07,"SQM-B":74600},"ipsa":10626.41,"qty":{"FALABELLA":71,"SANTANDER":5882,"BCI":6,"PARAUCO":109,"LATAM":17930,"SQM-B":5}},{"date":"2026-06-02","prices":{"FALABELLA":5565,"SANTANDER":69.01,"BCI":57050,"PARAUCO":3765,"LATAM":22.6,"SQM-B":71930},"ipsa":10469.18},{"date":"2026-06-03","prices":{"FALABELLA":5450,"SANTANDER":68.1,"BCI":58399,"PARAUCO":3729.9,"LATAM":22.29,"SQM-B":71000},"ipsa":10359.94},{"date":"2026-06-04","prices":{"FALABELLA":5574,"SANTANDER":68.11,"BCI":56508,"PARAUCO":3649.9,"LATAM":22.26,"SQM-B":69655},"ipsa":10304.04},{"date":"2026-06-05","prices":{"FALABELLA":5511,"SANTANDER":68.7,"BCI":56508,"PARAUCO":3699.9,"LATAM":22.12,"SQM-B":69340},"ipsa":10273.09},{"date":"2026-06-08","prices":{"FALABELLA":5580,"SANTANDER":68.5,"BCI":55610,"PARAUCO":3634.1,"LATAM":21.81,"SQM-B":66850},"ipsa":10160.61},{"date":"2026-06-09","prices":{"FALABELLA":5740,"SANTANDER":72.1,"BCI":59100,"PARAUCO":3729.9,"LATAM":22.61,"SQM-B":69065},"ipsa":10501.02},{"date":"2026-06-10","prices":{"FALABELLA":5854,"SANTANDER":71.7,"BCI":59007,"PARAUCO":3779.9,"LATAM":21.7,"SQM-B":68000},"ipsa":10453.45},{"date":"2026-06-11","prices":{"FALABELLA":5970,"SANTANDER":72.44,"BCI":60490,"PARAUCO":3815,"LATAM":23.15,"SQM-B":72605},"ipsa":10740.7},{"date":"2026-06-12","prices":{"FALABELLA":5950,"SANTANDER":73.6,"BCI":61299,"PARAUCO":3775.2,"LATAM":23.94,"SQM-B":75500},"ipsa":10921.15},{"date":"2026-06-15","prices":{"FALABELLA":5970,"SANTANDER":73.99,"BCI":59800,"PARAUCO":3703.4,"LATAM":24.6,"SQM-B":74150},"ipsa":10878.98},{"date":"2026-06-16","prices":{"FALABELLA":6094,"SANTANDER":74,"BCI":60060,"PARAUCO":3840,"LATAM":24.49,"SQM-B":73899},"ipsa":10903.59},{"date":"2026-06-17","prices":{"FALABELLA":6052,"SANTANDER":72.71,"BCI":58600,"PARAUCO":3800,"LATAM":24.28,"SQM-B":74050},"ipsa":10805.99},{"date":"2026-06-18","prices":{"FALABELLA":6099,"SANTANDER":73.7,"BCI":59000,"PARAUCO":3816.5,"LATAM":25.12,"SQM-B":71950},"ipsa":10836.99}];var ps=PROJECTS||[];var tgt=ps.find(function(p){return p&&p.name==="Inversión inicial";})||ps[0];if(tgt){tgt.weeks=WK;tgt.freq=tgt.freq||"diario";lsSet("pf_projects_v1",PROJECTS);if(activeId==null){activeId=tgt.id;lsSet("pf_active_v1",activeId);}}lsSet(FLAG,1);}catch(e){}})();
+// (retirado) la recuperación automática del proyecto demo "Inversión inicial" y su backfill de cierres:
+// re-sembraban datos tras un "Reiniciar todo". Un arranque limpio queda limpio; los proyectos se crean en Proyectos.
 /* arma el objeto de respaldo (todos los clientes y sus datos) sin descargarlo */
 function backupPayload(){
   const clients={};(CLIENTS||[]).forEach(c=>{const o={};Object.keys(CLIENT_KEYS).forEach(k=>{const raw=localStorage.getItem(k+"__"+c.id);o[k]=raw!=null?JSON.parse(raw):null;});clients[c.id]=o;});
@@ -1766,7 +1776,7 @@ function backupPayload(){
     ui_scale:localStorage.getItem("inv_ui_scale"),
     clients};
 }
-function downloadBackup(data,fname){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=fname||("respaldo_investor_"+new Date().toISOString().slice(0,10)+".json");document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
+function downloadBackup(data,fname){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=fname||("respaldo_investor_"+localDay()+".json");document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
 function exportBackup(){try{downloadBackup(backupPayload());}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}}
 /* restaura desde un payload _v>=2 (archivo o copia interna). Devuelve true si quedó aplicado. */
 function restoreFromPayload(j){try{
@@ -1872,6 +1882,18 @@ function withCanonicalUniverse(fn){
   const sv={STOCKS,MKT,CORR,TICK,RF,PRIMA};
   try{STOCKS=DATA_UNIVERSE;MKT=DATA.market;CORR=DATA.corr;TICK=UNIVERSE_TICK;RF=DATA.rf;PRIMA=DATA.prima;return fn();}
   finally{STOCKS=sv.STOCKS;MKT=sv.MKT;CORR=sv.CORR;TICK=sv.TICK;RF=sv.RF;PRIMA=sv.PRIMA;}
+}
+/* pMetrics sobre el universo IPSA completo (30) MÁS sintéticos para los tickers de sel que no estén en él
+   (p.ej. holdings de un análisis importado no-IPSA): así ningún peso se descarta del β/σ del portafolio.
+   betaOf(t) permite entregar la β guardada del holding en vez de asumir 1. */
+function pMetricsUniverse(sel,betaOf){
+  const sv={STOCKS,MKT,CORR,TICK,RF,PRIMA};
+  try{
+    const extra=Object.keys(sel).filter(t=>!DATA_UNIVERSE.some(s=>s.t===t)).map(t=>{const b=(betaOf&&isFinite(betaOf(t)))?betaOf(t):1;
+      return {t,n:t,s:"fuera del IPSA",c:"#1E5FD1",b,rets:[],prices:[],a24:{ret:0,sig:24,r2:0,corr:0,alphaR:0,jensen:0,sharpe:0,er:+(DATA.rf+b*DATA.prima).toFixed(2),tot:0}};});
+    STOCKS=extra.length?DATA_UNIVERSE.concat(extra):DATA_UNIVERSE;MKT=DATA.market;CORR=DATA.corr;TICK=STOCKS.map(s=>s.t);RF=DATA.rf;PRIMA=DATA.prima;
+    return pMetrics(sel);
+  }finally{STOCKS=sv.STOCKS;MKT=sv.MKT;CORR=sv.CORR;TICK=sv.TICK;RF=sv.RF;PRIMA=sv.PRIMA;}
 }
 /* universo LIBRE para Operar (comprar / inyectar capital): todas las acciones del IPSA + las que ya tenga la cartera,
    independiente del análisis activo. Así puedes operar cualquier acción del IPSA, no solo las del análisis. */
@@ -2334,12 +2356,8 @@ function applyInvestment(defName,skipPrompt,canonical){
   PROJECTS.push(proj);activeId=proj.id;editIdx=null;saveProjects();syncProj();
   modulo="inv";page="ingreso";render();
 }
-function periodKey(ds,freq){
-  const d=new Date(ds+"T00:00:00");
-  if(freq==="mensual")return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-  if(freq==="semanal"){const t=new Date(d);const day=(t.getDay()||7);t.setDate(t.getDate()+4-day);const ys=new Date(t.getFullYear(),0,1);const wk=Math.ceil((((t-ys)/86400000)+1)/7);return t.getFullYear()+"-W"+String(wk).padStart(2,"0");}
-  return ds;
-}
+// periodKey vive UNA sola vez, junto a resampleMap/periodIndex (misma convención UTC de semanas);
+// una segunda copia aquí quedaba muerta por hoisting y era una trampa de mantención
 function resampleWeeks(newFreq){
   if(WEEKS.length<=1)return 0;
   const last={};WEEKS.forEach((w,i)=>{if(i===0)return;last[periodKey(w.date,newFreq)]=i;});
@@ -2404,7 +2422,7 @@ function invMetrics(){
   WEEKS.forEach((w,i)=>{
     let inflow=0;
     if(w.ev){
-      if(w.ev.kind==="inject"){const al=w.ev.alloc||{};Object.keys(al).forEach(t=>{const p=w.prices[t]||base.prices[t]||1;sh[t]=(sh[t]||0)+al[t]/p;cost[t]=(cost[t]||0)+al[t];});inflow=w.ev.amount||0;aport+=inflow;}
+      if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);sh[t]=(sh[t]||0)+q;cost[t]=(cost[t]||0)+al[t];});inflow=w.ev.amount||0;aport+=inflow;}   // ev.shares = cantidades reales compradas (los aportes antiguos sin shares se derivan del precio)
       else if(w.ev.kind==="rebal"&&w.ev.shares){PF.holdings.forEach(hd=>{const old=sh[hd.t]||0,nw=w.ev.shares[hd.t]!=null?w.ev.shares[hd.t]:old,p=w.prices[hd.t]||base.prices[hd.t]||1;if(nw<old)cost[hd.t]=(cost[hd.t]||0)*(old>0?nw/old:1);else if(nw>old)cost[hd.t]=(cost[hd.t]||0)+(nw-old)*p;sh[hd.t]=nw;});}
       else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;}else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;}}
     }
@@ -2534,7 +2552,7 @@ function viewInvActive(){
   const ftitle=editing?("Editar "+(editIdx===0?"compra":fr.u+" "+editIdx)):(isFirst?"Registrar compra ("+fr.u+" inicial)":"Ingresar "+fr.u+" "+WEEKS.length);
   const fsub=editing?"Modifica los precios o la fecha y guarda los cambios":(isFirst?"Precio de compra y nº de acciones por papel (el monto invertido se calcula) + IPSA del día":"Precios de cierre "+fr.per+" y valor del IPSA");
   const banner=editing?`<div class="note" style="margin-bottom:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">Editando ${editIdx===0?"la compra":fr.det+" "+editIdx}. <a id="canceledit" style="color:var(--indigo);cursor:pointer;font-weight:800">✕ Cancelar edición</a></div>`:"";
-  const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:new Date().toISOString().slice(0,10)}"></div><div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div></div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo de la simulación</div><div id="compraprev" style="margin-top:6px"></div>':''}<div style="margin-top:13px"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button></div>`);
+  const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:localDay()}"></div><div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div></div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo de la simulación</div><div id="compraprev" style="margin-top:6px"></div>':''}<div style="margin-top:13px"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button></div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
   if(!IM) return (seg||histPg)?(projbar+summary+notecard("Aún no hay datos registrados. Ve a la pestaña <b>Ingresar datos</b> para registrar la compra inicial y los precios de cada "+fr.u+".")):(projbar+summary+freqBar+form+notecard("Registra la <b>compra inicial</b> (precios de compra de cada acción y el IPSA del día en que invertiste) para comenzar el seguimiento."));
@@ -2594,7 +2612,7 @@ function viewInvActive(){
     ${tile("β realizado",IM.betaR!=null?IM.betaR.toFixed(2):"—",IM.betaR!=null?((IM.betaR>PF.bp?"más sensible":"menos sensible")+" que lo esperado"):"≥5 registros para calcular",indigo,accentT)}</div>`;
   const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real del portafolio vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual)",svgMulti({series:cseries,labels:dates,h:310,yfmt:fmtK,id:"invcapm",unit:""}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM</span></div>`):"";
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")} No es recomendación de inversión.`);
-  const rows=IM.series.map((s,i)=>{const pv=i>0?IM.series[i-1]:null;const dpo=pv&&pv.val>0?((s.val-(s.inflow||0))/pv.val-1):null;const dip=pv?((1+s.ipsaRet)/(1+pv.ipsaRet)-1):null;return `<tr><td><b>${i===0?"Compra":fr.pf+i}</b></td><td>${s.date}</td><td class="r" style="font-weight:700">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?chip(dpo*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?chip(dip*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${chip(s.ipsaRet*100)}</td><td class="r">${chip(s.diff*100)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar">✕</button></td></tr>`;}).join("");
+  const rows=IM.series.map((s,i)=>{const pv=i>0?IM.series[i-1]:null;const dpo=pv&&pv.val>0?((s.val-(s.inflow||0))/pv.val-1):null;const dip=pv?((1+s.ipsaRet)/(1+pv.ipsaRet)-1):null;const evLab=s.ev?(s.ev.kind==="inject"?"Aporte":s.ev.kind==="trade"?(s.ev.side==="sell"?"Venta":"Compra"):"Rebalanceo"):null;return `<tr><td><b>${i===0?"Compra":fr.pf+i}</b>${evLab?` <span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33">${evLab}</span>`:""}</td><td>${s.date}</td><td class="r" style="font-weight:700">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?chip(dpo*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?chip(dip*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${chip(s.ipsaRet*100)}</td><td class="r">${chip(s.diff*100)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar">✕</button></td></tr>`;}).join("");
   const tbl=card("Historial de seguimiento",nd+" registro"+(nd>1?"s":"")+" "+fr.adj+" · editable · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
   const vaRf=(pY)=>{const sp=(PF.sig/100)/Math.sqrt(pY),mp=Math.pow(1+PF.erCapm/100,1/pY)-1,v=mp-1.645*sp;return {pct:v,loss:L.val*Math.max(0,-v)};};
   const vD=vaRf(252),vW=vaRf(52),vM=vaRf(12),vP=PF.freq==="semanal"?vW:PF.freq==="mensual"?vM:vD;
@@ -2640,14 +2658,8 @@ function compraPreview(){
   const rws=rows.map(r=>`<tr><td>${tk(r.hd)}</td><td class="r">${r.q?r.q.toLocaleString("es-CL"):"—"}</td><td class="r" style="color:${muted}">${r.p?fmtP(r.p):"—"}</td><td class="r" style="font-weight:700">${r.m?fmtCLP(r.m):"—"}</td><td class="r">${fmtCLP(r.obj)}</td><td class="r" style="color:${!r.m?muted:(Math.abs(r.d)<1?muted:(r.d>=0?green:red))}">${r.m?((r.d>=0?"+":"−")+fmtCLP(Math.abs(r.d))):""}</td></tr>`).join("");
   return `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">Monto invertido</th><th class="r">Objetivo</th><th class="r">Δ</th></tr></thead><tbody>${rws}<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td></td><td class="r">${tot?fmtCLP(tot):"—"}</td><td class="r">${fmtCLP(PF.amount)}</td><td class="r" style="color:${!tot?muted:(Math.abs(dT)<1?muted:(dT>=0?green:red))}">${tot?((dT>=0?"+":"−")+fmtCLP(Math.abs(dT))):""}</td></tr></tbody></table></div>`;
 }
-function injTickers(){return PF.holdings.map(h=>h.t).concat(injState.extra.filter(t=>!PF.holdings.some(h=>h.t===t)));}
-function injPrice(t){const lw=WEEKS[WEEKS.length-1];if(lw&&lw.prices[t]!=null)return lw.prices[t];const st=STOCKS.find(x=>x.t===t);return st&&st.prices?st.prices[st.prices.length-1]:0;}
-function injPreview(){
-  if(!PF)return "";
-  const amt=injState.amount||0,ts=injTickers(),sum=ts.reduce((a,t)=>a+(parseFloat(injState.weights[t])||0),0)||1;
-  const rows=ts.map(t=>{const st=STOCKS.find(x=>x.t===t)||{t,c:"#888"};const wp=(parseFloat(injState.weights[t])||0)/sum;const a=amt*wp;const p=injPrice(t);const sh=p>0?Math.round(a/p):0;const lw=WEEKS[WEEKS.length-1];const ref=!(lw&&lw.prices[t]!=null);return `<tr><td>${tk(st)}</td><td class="r">${(wp*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${fmtCLP(a)}</td><td class="r" style="color:${muted}">~${sh.toLocaleString("es-CL")} acc${ref?" <span style='color:#B57A12'>(ref.)</span>":""}</td></tr>`;}).join("");
-  return `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Peso obj.</th><th class="r">Comprar</th><th class="r">Acciones aprox.</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
+// (retirado) injTickers/injPrice/injPreview: código muerto del formato antiguo de injState ({extra,weights,amount});
+// el flujo vigente usa injState.rows y habría lanzado TypeError si algo lo reactivaba
 function viewOperar(){
   syncProj();
   if(!PROJECTS.length) return viewInv();
@@ -2677,7 +2689,7 @@ function viewOperar(){
       <div><label class="genl" for="optkr">Acción</label><select id="optkr" aria-label="Acción a operar">${tkrOpts.length?tkrOpts.map(t=>{const st=UNI.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones para vender</option>'}</select></div>
       <div><label class="genl" for="opqty">Cantidad (acciones)</label><input type="number" step="any" id="opqty" value="${opState.qty}" placeholder="Ej: 100" aria-label="Cantidad de acciones"></div>
       <div><label class="genl" for="opprice">Precio por acción (CLP)</label><input type="number" step="any" id="opprice" value="${priceVal}" placeholder="${lastPrice||"precio"}" aria-label="Precio por acción en pesos"></div>
-      <div><label class="genl" for="opdate">Fecha</label><input type="date" id="opdate" value="${opState.date||new Date().toISOString().slice(0,10)}" aria-label="Fecha de la operación"></div>
+      <div><label class="genl" for="opdate">Fecha</label><input type="date" id="opdate" value="${opState.date||localDay()}" aria-label="Fecha de la operación"></div>
     </div>
     <div class="op-foot"><div class="op-amt">${opState.side==="sell"?"Monto a recibir":"Monto a invertir"}: <b>${omonto>0?fmtCLP(omonto):"—"}</b></div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
   const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Se recalcula el capital, el valor de la cartera y el drift de cada posición — sin tener que rebalancear todo.",opBody+`<div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
@@ -2843,11 +2855,14 @@ function attachInv(){
     if(compraMode){qty={};PF.holdings.forEach(hd=>{const pe=document.querySelector('.pinp[data-pt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const p=pe?parseFloat(pe.value):NaN,q=qe?parseFloat(qe.value):NaN;if(!p||p<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=p;}});}
     else{PF.holdings.forEach(hd=>{const el=document.querySelector('.pinp[data-pt="'+hd.t+'"]');const v=el?parseFloat(el.value):NaN;if(!v||v<=0)ok=false;else prices[hd.t]=v;});}
     const ipEl=document.getElementById("wipsa"),ipsa=ipEl?parseFloat(ipEl.value):NaN;
-    const dEl=document.getElementById("wdate"),date=dEl&&dEl.value?dEl.value:new Date().toISOString().slice(0,10);
+    const dEl=document.getElementById("wdate"),date=dEl&&dEl.value?dEl.value:localDay();
     if(!ok||!ipsa||ipsa<=0){alert(compraMode?"Ingresa el precio de compra y la cantidad de acciones de cada papel, y el IPSA, con números válidos.":"Ingresa todos los precios de cierre y el valor del IPSA con números válidos.");return;}
     if(!weekendGuard(date))return;
     const rec={date,prices,ipsa};if(qty)rec.qty=qty;
     const wasCompra=(editIdx===0||WEEKS.length===0);
+    // editar un registro que fue una OPERACIÓN (aporte/compra/venta/rebalanceo) conserva la operación:
+    // si se perdiera el campo ev, sus acciones y su flujo de caja desaparecerían del TWR y del libro
+    if(editIdx!=null&&WEEKS[editIdx]&&WEEKS[editIdx].ev)rec.ev=WEEKS[editIdx].ev;
     if(editIdx!=null){WEEKS[editIdx]=rec;editIdx=null;}else{WEEKS.push(rec);}
     // la ponderación ejecutada (acciones enteras a precio de mercado) no calza exacto con la simulada:
     // al registrar/editar la COMPRA, la simulación del proyecto pasa a reflejar los pesos REALES.
@@ -2855,7 +2870,7 @@ function attachInv(){
     saveProjects();render();
   };
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;if(window.confirm("¿Eliminar este registro diario?")){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;saveProjects();render();}});
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;const _ev=WEEKS[i]&&WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra"):"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";if(window.confirm(_msg)){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;saveProjects();render();}});
   document.querySelectorAll("[data-godatos]").forEach(b=>b.onclick=()=>{modulo="datos";page=b.dataset.godatos;render();});
   document.querySelectorAll("[data-invtab]").forEach(b=>b.onclick=()=>{page=b.dataset.invtab;render();});
   document.querySelectorAll("[data-gomod]").forEach(b=>b.onclick=()=>{modulo=b.dataset.gomod;if(modulo==="proyectos")page="hub";render();});
@@ -2875,10 +2890,15 @@ function attachInv(){
     const rows=(injState.rows||[]).map(r=>({t:r.t,q:parseFloat(r.qty),p:parseFloat(r.price)})).filter(r=>r.t&&r.q>0&&r.p>0);
     if(!rows.length){window.alert("Agrega al menos una compra con acción, cantidad y precio.");return;}
     const agg={};rows.forEach(r=>{const o=agg[r.t]||(agg[r.t]={qty:0,money:0});o.qty+=r.q;o.money+=r.q*r.p;});
-    const lw=WEEKS[WEEKS.length-1],prices=Object.assign({},lw?lw.prices:{}),alloc={};let amount=0;
+    const lw=WEEKS[WEEKS.length-1],prices=Object.assign({},lw?lw.prices:{}),alloc={},shares={};let amount=0;
     const _UNI=operarUniverse();
-    Object.keys(agg).forEach(t=>{const o=agg[t],avgP=o.money/o.qty;if(!PF.holdings.some(hd=>hd.t===t)){const st=_UNI.find(x=>x.t===t)||{t,n:t,s:"",c:"#1E5FD1",b:1};PF.holdings.push({t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0});}prices[t]=avgP;alloc[t]=+o.money.toFixed(0);amount+=o.money;});
-    WEEKS.push({date:new Date().toISOString().slice(0,10),prices,ipsa:lw?lw.ipsa:1,ev:{kind:"inject",amount:+amount.toFixed(0),alloc}});
+    // igual que en opDo: el precio de compra del aporte NO pisa el cierre conocido (solo papeles nuevos sin cierre);
+    // las acciones compradas van en ev.shares para no re-derivarlas de un precio que puede diferir del cierre
+    Object.keys(agg).forEach(t=>{const o=agg[t],avgP=o.money/o.qty;if(!PF.holdings.some(hd=>hd.t===t)){const st=_UNI.find(x=>x.t===t)||{t,n:t,s:"",c:"#1E5FD1",b:1};PF.holdings.push({t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0});}if(prices[t]==null)prices[t]=avgP;alloc[t]=+o.money.toFixed(0);shares[t]=o.qty;amount+=o.money;});
+    const _idate=localDay();
+    if(!weekendGuard(_idate))return;
+    WEEKS.push({date:_idate,prices,ipsa:lw?lw.ipsa:1,ev:{kind:"inject",amount:+amount.toFixed(0),alloc,shares}});
+    WEEKS.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
     saveProjects();injState={pid:activeId,rows:[]};render();};
   document.querySelectorAll("[data-opside]").forEach(b=>b.onclick=()=>{opState.side=b.dataset.opside;opState.tkr=null;opState.price="";render();});
   const _ot=document.getElementById("optkr");if(_ot)_ot.onchange=()=>{opState.tkr=_ot.value;opState.price="";render();};
@@ -3302,6 +3322,8 @@ REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERR
 
 HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_projection, get_investor_profile, get_imported_analysis, get_multifactor, get_market_indicators, get_market_news, get_ipsa_snapshot. Sugerencia de arranque por intención (no es un pipeline rígido): análisis de acción → get_stock o list_stocks+get_multifactor; optimización/construcción → get_constructor+get_investor_profile y valida con evaluate_portfolio; diagnóstico → get_performance_summary y luego get_active_portfolio; proyección/futuro/meta/"¿cuánto podría valer?" → get_projection; mercado → get_market_indicators+get_market_news+get_ipsa_snapshot. No llames tools que no aportan a la pregunta.
 
+UNIVERSO: el usuario puede operar e invertir en ~30 acciones del IPSA. Las que no están en el análisis activo llegan como "universo adicional" con β REFERENCIAL sectorial (sin historial cargado): preséntalas siempre como estimación, nunca como métrica calculada, y sugiere cargar sus precios (Datos → Cargar planilla) para tener cifras reales. Si una tool responde "sin análisis activo" (sistema recién limpiado), NO cites estadísticas: guía al usuario a poblar la base y crear su análisis.
+
 5 FOCOS (los procesos son guía mental, no plantilla de salida obligatoria):
 1) ANALIZAR ACCIONES — get_stock; rankear/comparar: list_stocks+get_multifactor; encaje: get_correlations. Razona: driver macro del sector/β/estilo; CAPM (E(R) exigido vs retorno24m, α, r²); MF (composite, factores z>+0,5 favorecen / z<−0,5 perjudican, matiza con r²/horizonte); riesgo (σ, Sharpe, correlación); VEREDICTO (comprar/mantener/evitar/sobreponderar/reducir) con cifras y alineado al perfil; si choca con el perfil, adviértelo.
 2) CONSTRUIR Y SIMULAR — base: get_constructor, get_investor_profile (nivel, retornoRequerido, sesgo factorial, SAA), get_scenarios. Toda cartera hipotética la VALIDAS con evaluate_portfolio({weights~100}, amount). Optimiza: ↑Sharpe, ↓correlación media, evita concentración sectorial, alinea factores. En análisis cuantifica deltas vs baseline (Δβ, ΔSharpe, ΔE(R), Δσ, Δcorr) y el trade-off. Entrega pesos finales explícitos (ticker y %).
@@ -3342,7 +3364,7 @@ function cpExposure(sel){const PM=pMetrics(sel);const Z={};MFSTYLE.forEach(k=>Z[
 const COPILOT_TOOLS=[
   {name:"get_active_portfolio",description:"Devuelve el proyecto de inversión ACTIVO con su composición y, si hay seguimiento, sus métricas reales (valor actual, ganancia, TWR, vs IPSA, β realizado, drawdown, Sharpe realizado) y la exposición factorial.",input_schema:{type:"object",properties:{}}},
   {name:"get_portfolios",description:"Lista todos los proyectos de inversión del usuario con su composición, objetivo y nº de registros.",input_schema:{type:"object",properties:{}}},
-  {name:"list_stocks",description:"Lista las 14 acciones del IPSA con β, retorno 24m, σ, Sharpe, α de Jensen, E(R) CAPM, E(R) multifactor, composite y estilo.",input_schema:{type:"object",properties:{}}},
+  {name:"list_stocks",description:"Lista las acciones del análisis activo con β, retorno, σ, Sharpe, α de Jensen, E(R) CAPM, E(R) multifactor, composite y estilo, MÁS el resto del universo IPSA (~30 acciones operables) con metadatos y β referencial. Si el sistema está limpio (sin datos cargados), devuelve solo el universo con metadatos.",input_schema:{type:"object",properties:{}}},
   {name:"get_stock",description:"Detalle de una acción: métricas CAPM, z-scores por factor del modelo multifactor, fundamentales ilustrativos y estilo.",input_schema:{type:"object",properties:{ticker:{type:"string",description:"Ticker, ej. BCI, SQM-B, FALABELLA"}},required:["ticker"]}},
   {name:"get_correlations",description:"Pares de acciones mejor (más diversificadores) y peor (más correlacionados) según la matriz de correlación de retornos mensuales.",input_schema:{type:"object",properties:{}}},
   {name:"get_scenarios",description:"Escenarios de simulación guardados por el usuario, con su composición y métricas.",input_schema:{type:"object",properties:{}}},
@@ -3380,18 +3402,32 @@ function cpRunTool(name,input){
       else out.seguimiento="Sin registros aún. La compra/ seguimiento se ingresa en Inversión → Ingresar datos.";
       return JSON.stringify(out);
     }
-    if(name==="list_stocks"){return JSON.stringify({ventana:DATA.window,rf:RF,prima:PRIMA,acciones:STOCKS.map(cpStockBrief)});}
+    if(name==="list_stocks"){
+      // sistema limpio (demo retirado, sin datos propios): no hay estadísticas que citar — solo el universo con metadatos
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return JSON.stringify({estado:"sin análisis activo",detalle:"El usuario limpió el sistema y aún no carga sus planillas: no hay β/σ/Sharpe calculados con SUS datos. Guíalo a Datos → Cargar planilla y luego Análisis → Gestión de análisis.",universoIPSA:DATA_UNIVERSE.map(s=>({ticker:s.t,empresa:s.n,sector:s.s,betaReferencial:s.b})),nota:"Solo metadatos del universo (~30 acciones IPSA); β referencial sectorial, NO calculada con datos del usuario."});
+      const out={ventana:DATA.window,rf:RF,prima:PRIMA,acciones:STOCKS.map(cpStockBrief)};
+      const extra=DATA_UNIVERSE.filter(s=>!STOCKS.some(x=>x.t===s.t));
+      if(extra.length)out.universoAdicional={nota:"También operables (universo IPSA, sin historial en el análisis activo; β referencial sectorial):",acciones:extra.map(s=>({ticker:s.t,empresa:s.n,sector:s.s,betaReferencial:s.b}))};
+      return JSON.stringify(out);
+    }
     if(name==="get_stock"){
       const t=(input.ticker||"").toUpperCase().trim();const s=STOCKS.find(x=>x.t===t)||STOCKS.find(x=>x.t.indexOf(t)===0);
-      if(!s)return "No existe ese ticker. Disponibles: "+STOCKS.map(x=>x.t).join(", ");
+      const _clean=(typeof evalIsEmpty==="function"&&evalIsEmpty());
+      if(!s||_clean){const u=uniStk(t)||DATA_UNIVERSE.find(x=>x.t.indexOf(t)===0);
+        if(u)return JSON.stringify({ticker:u.t,empresa:u.n,sector:u.s,betaReferencial:u.b,nota:_clean?"Sistema limpio: aún no hay datos cargados, solo metadatos del universo IPSA. Las métricas reales aparecerán cuando el usuario cargue planillas y cree un análisis.":"Acción del universo IPSA sin historial en el análisis activo: metadatos y β referencial sectorial. Para métricas reales, cargar sus precios en Datos."});
+        return "No existe ese ticker en el universo IPSA. Disponibles: "+DATA_UNIVERSE.map(x=>x.t).join(", ");}
       const z=MF.z[s.t],f=FUND[s.t]||{},a=s.a24;
-      return JSON.stringify({ticker:s.t,empresa:s.n,sector:s.s,
+      const isImp=(typeof DATASET!=="undefined"&&DATASET==="import");
+      const out={ticker:s.t,empresa:s.n,sector:s.s,
         capm:{beta:s.b,retorno24m_pct:a.ret,sigma_pct:a.sig,sharpe:a.sharpe,alphaJensen_pct:a.jensen,r2:a.r2,erCAPM_pct:+a.er.toFixed(2)},
-        multifactor:{erMF_pct:+MF.er[s.t].toFixed(2),composite:+MF.comp[s.t].toFixed(2),z:{momentum:+z.momentum.toFixed(2),lowvol:+z.lowvol.toFixed(2),value:+z.value.toFixed(2),quality:+z.quality.toFixed(2),size:+z.size.toFixed(2),yield:+z.yield.toFixed(2)}},
-        fundamentalesIlustrativos:{marketCapMM_USD:f.mcap,pb:f.pb,pe:f.pe,roe_pct:f.roe,deudaPatrimonio:f.de,divYield_pct:f.dy,crecimientoEPS_pct:f.eg,margenNeto_pct:f.nm},
-        estilo:cpStyleOf(s.t)});
+        multifactor:{erMF_pct:+MF.er[s.t].toFixed(2),composite:+MF.comp[s.t].toFixed(2),z:{momentum:+z.momentum.toFixed(2),lowvol:+z.lowvol.toFixed(2),value:isImp?null:+z.value.toFixed(2),quality:isImp?null:+z.quality.toFixed(2),size:isImp?null:+z.size.toFixed(2),yield:isImp?null:+z.yield.toFixed(2)}},
+        estilo:cpStyleOf(s.t)};
+      if(isImp)out.notaFactores="Set importado: los factores fundamentales (Value/Quality/Size/Yield) no aplican — no hay fundamentales reales del import; solo Momentum y Low-Vol salen de los precios.";
+      else out.fundamentalesIlustrativos={marketCapMM_USD:f.mcap,pb:f.pb,pe:f.pe,roe_pct:f.roe,deudaPatrimonio:f.de,divYield_pct:f.dy,crecimientoEPS_pct:f.eg,margenNeto_pct:f.nm};
+      return JSON.stringify(out);
     }
     if(name==="get_correlations"){
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo (el usuario limpió el sistema): no hay matriz de correlaciones basada en sus datos. Debe cargar planillas en Datos → Cargar planilla y crear un análisis en Gestión de análisis.";
       const N=STOCKS.length,pr=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)pr.push([CORR[i][j],STOCKS[i].t,STOCKS[j].t]);pr.sort((a,b)=>a[0]-b[0]);
       const fmt=p=>({par:p[1]+" + "+p[2],correlacion:+p[0].toFixed(2)});
       return JSON.stringify({masDiversificadores:pr.slice(0,5).map(fmt),masCorrelacionados:pr.slice(-5).reverse().map(fmt)});
@@ -3406,12 +3442,17 @@ function cpRunTool(name,input){
       return JSON.stringify({montoCLP:simState.amount,perfil:simState.profile,beta:+e.PM.bp.toFixed(2),erCapm:+e.PM.erCapm.toFixed(2),erMultifactor:e.erMF,retornoHist_pct:+e.PM.retH.toFixed(1),sigma_pct:+e.PM.sig.toFixed(1),sharpe:+e.PM.sharpe.toFixed(2),correlacionMedia:+e.PM.corrAvg.toFixed(2),exposicionFactorial:e.Z,composicion:e.PM.ws.map(x=>({t:x.s.t,peso:+(x.w*100).toFixed(1)}))});
     }
     if(name==="evaluate_portfolio"){
-      const w=input.weights||{},sel={};let bad=[];
-      Object.keys(w).forEach(k=>{const t=k.toUpperCase().trim();const s=STOCKS.find(x=>x.t===t);if(s)sel[s.t]=Math.max(0,+w[k]||0);else bad.push(k);});
-      if(!Object.keys(sel).length)return "Ningún ticker válido. Disponibles: "+STOCKS.map(x=>x.t).join(", ");
-      const e=cpExposure(sel);const amount=+input.amount||simState.amount||0;
-      const res={tickersInvalidos:bad.length?bad:undefined,beta:+e.PM.bp.toFixed(2),erCAPM_pct:+e.PM.erCapm.toFixed(2),erMultifactor_pct:e.erMF,retornoHist24m_pct:+e.PM.retH.toFixed(1),sigma_pct:+e.PM.sig.toFixed(1),sharpe:+e.PM.sharpe.toFixed(2),correlacionMedia:+e.PM.corrAvg.toFixed(2),exposicionFactorial:e.Z,
-        composicion:e.PM.ws.map(x=>({t:x.s.t,peso:+(x.w*100).toFixed(1),montoCLP:amount?Math.round(amount*x.w):undefined}))};
+      // resuelve contra el análisis activo Y el universo IPSA completo (~30): una cartera con acciones
+      // sin historial no se descarta — se evalúa con β referencial y se marca como estimación
+      const w=input.weights||{},sel={};let bad=[],metaOnly=[];
+      Object.keys(w).forEach(k=>{const t=k.toUpperCase().trim();const s=STOCKS.find(x=>x.t===t)||DATA_UNIVERSE.find(x=>x.t===t);if(s){sel[s.t]=Math.max(0,+w[k]||0);if(!STOCKS.some(x=>x.t===s.t))metaOnly.push(s.t);}else bad.push(k);});
+      if(!Object.keys(sel).length)return "Ningún ticker válido. Universo IPSA: "+DATA_UNIVERSE.map(x=>x.t).join(", ");
+      const PM=pMetricsUniverse(sel);const amount=+input.amount||simState.amount||0;
+      let Z=null,erMF=null;try{const selMF={};Object.keys(sel).forEach(t=>{if(STOCKS.some(x=>x.t===t)&&MF&&MF.z&&MF.z[t])selMF[t]=sel[t];});if(Object.keys(selMF).length){const e=cpExposure(selMF);Z=e.Z;erMF=e.erMF;}}catch(e){}
+      const res={tickersInvalidos:bad.length?bad:undefined,beta:+PM.bp.toFixed(2),erCAPM_pct:+PM.erCapm.toFixed(2),erMultifactor_pct:erMF,retornoHist_pct:+PM.retH.toFixed(1),sigma_pct:+PM.sig.toFixed(1),sharpe:+PM.sharpe.toFixed(2),correlacionMedia:+PM.corrAvg.toFixed(2),exposicionFactorial:Z,
+        composicion:PM.ws.map(x=>({t:x.s.t,peso:+(x.w*100).toFixed(1),montoCLP:amount?Math.round(amount*x.w):undefined}))};
+      if(metaOnly.length)res.nota="Sin historial cargado para "+metaOnly.join(", ")+": su β es referencial sectorial y su σ una estimación (el retorno histórico las excluye). Métricas exactas al cargar sus precios en Datos.";
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty())res.notaSistema="Sistema limpio (sin datos del usuario): TODA la evaluación usa β/σ referenciales del universo, no datos cargados. Preséntala como estimación.";
       return JSON.stringify(res);
     }
     if(name==="get_projection"){
@@ -3432,6 +3473,7 @@ function cpRunTool(name,input){
     if(name==="get_investor_profile"){if(!invProfile||!invProfile.levels)return "El usuario aún no completó (o debe reevaluar) su perfil de inversionista en el módulo Perfil. Puedes sugerirle hacerlo.";return JSON.stringify({nivel:invProfile.level+"/5",etiqueta:invProfile.label,perfilFactores:invProfile.profile,subniveles:invProfile.levels,subpuntajes:invProfile.scores,retornoRequerido_pct:invProfile.reqCAGR,nota:invProfile.note,instrumentosComplejos:invProfile.complex_ok?"permitidos":"bloqueados (idoneidad)",saaSugerida:invProfile.alloc,guia:invProfile.guideShort});}
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     if(name==="get_multifactor"){
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo (el usuario limpió el sistema): el modelo multifactor se calcula sobre SUS datos. Debe cargar planillas en Datos → Cargar planilla y crear un análisis en Gestión de análisis.";
       const acc=STOCKS.map(s=>{const z=MF.z[s.t]||{};return {t:s.t,composite:+(+MF.comp[s.t]||0).toFixed(2),erMF_pct:+(+MF.er[s.t]||0).toFixed(2),z:{momentum:+(+z.momentum||0).toFixed(2),lowvol:+(+z.lowvol||0).toFixed(2),value:+(+z.value||0).toFixed(2),quality:+(+z.quality||0).toFixed(2),size:+(+z.size||0).toFixed(2),yield:+(+z.yield||0).toFixed(2)},estilo:cpStyleOf(s.t)};}).sort((a,b)=>b.composite-a.composite);
       const out={primasFactor:LAMBDA,pesosPerfil:invProfile?(PROFILE_W[invProfile.profile]||null):null,acciones:acc};
       if(typeof DATASET!=="undefined"&&DATASET==="import")out.nota="Set importado: Momentum y Low-Vol vienen de tus precios; los factores fundamentales (Value/Quality/Size/Yield) no aplican y quedan neutros.";
@@ -3928,11 +3970,14 @@ function impCalc(){
 let PRICEDB=(function(){const d=lsGet("inv_pricedb_v1");return (d&&d.px)?d:{tickers:{},px:{},ipsa:{}};})();
 let pricedbFreq=lsGet("inv_pricedb_freq")||"mensual";
 let datosCovTab=lsGet("inv_datos_covtab")||"mensual";   // pestaña de cadencia en "Acciones cargadas"
-function savePriceDB(){PRICEDB.updated=new Date().toISOString().slice(0,10);return lsSet("inv_pricedb_v1",PRICEDB);}
+function savePriceDB(){PRICEDB.updated=localDay();return lsSet("inv_pricedb_v1",PRICEDB);}
 function pricedbEmpty(){return !PRICEDB||!PRICEDB.px||!Object.keys(PRICEDB.px).length;}
 /* la bolsa (IPSA) opera lun–vie: un cierre en sáb/dom es un dato inválido */
 function isTradingDay(d){if(!d)return true;const wd=new Date(d+"T00:00:00").getDay();return wd!==0&&wd!==6;}
-function lastTradingDay(){const d=new Date();while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);return d.toISOString().slice(0,10);}
+/* día LOCAL como YYYY-MM-DD. NUNCA usar toISOString() para un "día": es UTC y en Chile (UTC−3/−4) por la
+   tarde-noche devuelve el día SIGUIENTE, dejando pasar fechas futuras por validBaseDate. */
+function localDay(d){const x=d||new Date();const p=n=>String(n).padStart(2,"0");return x.getFullYear()+"-"+p(x.getMonth()+1)+"-"+p(x.getDate());}
+function lastTradingDay(){const d=new Date();while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);return localDay(d);}
 function weekendGuard(date){return isTradingDay(date)||window.confirm("La bolsa no opera fines de semana ("+date+" es "+(new Date(date+"T00:00:00").getDay()===0?"domingo":"sábado")+"). ¿Registrar el cierre de todas formas?");}
 /* limpia datos en días no hábiles (fin de semana) de la base y de las carteras; conserva las compras */
 function dropNonTradingData(){
@@ -3967,7 +4012,8 @@ function dropDateData(date){if(!date)return {nBase:0,nProj:0};let nBase=0,nProj=
    Idempotente. Devuelve {nWk, nCF, ipsaTo}. */
 function pricedbSanitize(){
   let nWk=0,nCF=0;
-  const stripCF=(map)=>{if(!map)return;const ds=Object.keys(map).sort();let i=ds.length-1;while(i>=1&&map[ds[i]]===map[ds[i-1]]){delete map[ds[i]];nCF++;i--;}};
+  // rachas de arrastre al final (≥2 valores idénticos seguidos); un único cierre plano puede ser real y se conserva
+  const stripCF=(map)=>{if(!map)return;const ds=Object.keys(map).sort();let k=0,i=ds.length-1;while(i>=1&&map[ds[i]]===map[ds[i-1]]){k++;i--;}if(k>=2){for(let j=ds.length-k;j<ds.length;j++){delete map[ds[j]];nCF++;}}};
   // 1) fin de semana / días no hábiles
   Object.keys(PRICEDB.ipsa||{}).forEach(d=>{if(!isTradingDay(d)){delete PRICEDB.ipsa[d];nWk++;}});
   Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>{if(!isTradingDay(d)){delete PRICEDB.px[t][d];nWk++;}}));
@@ -3976,14 +4022,15 @@ function pricedbSanitize(){
   stripCF(PRICEDB.ipsa);
   Object.keys(PRICEDB.px||{}).forEach(t=>stripCF(PRICEDB.px[t]));
   Object.keys(ix).forEach(k=>stripCF(ix[k]));
-  // 3) IPSA/índice FANTASMA por delante del mercado: en este sistema el IPSA se cierra junto con las acciones,
-  //    así que un valor del índice en una fecha POSTERIOR al último cierre de TODAS las acciones es espurio
-  //    (p.ej. un 29/06 del IPSA cuando el último cierre real de las acciones fue el 26/06). Se recorta.
+  // 3) IPSA/índice FANTASMA por delante del mercado: solo se recorta un valor posterior al último cierre de
+  //    las acciones cuando REPITE exactamente el valor anterior (firma del arrastre, p.ej. el 29/06 fantasma).
+  //    Un valor DISTINTO por delante es legítimo: el índice suele publicarse antes que todos los cierres.
   let nGhost=0;
   const lastStock=(function(){let mx=null;Object.keys(PRICEDB.px||{}).forEach(t=>{const ds=Object.keys(PRICEDB.px[t]||{});if(ds.length){const d=ds.sort()[ds.length-1];if(mx==null||d>mx)mx=d;}});return mx;})();
   if(lastStock){
-    Object.keys(PRICEDB.ipsa||{}).forEach(d=>{if(d>lastStock){delete PRICEDB.ipsa[d];nGhost++;}});
-    Object.keys(ix).forEach(k=>Object.keys(ix[k]).forEach(d=>{if(d>lastStock){delete ix[k][d];nGhost++;}}));
+    const trimGhost=(map)=>{const ds=Object.keys(map).sort();for(let i=ds.length-1;i>=1;i--){const d=ds[i];if(d<=lastStock)break;if(map[d]===map[ds[i-1]]){delete map[d];nGhost++;}else break;}};
+    trimGhost(PRICEDB.ipsa||{});
+    Object.keys(ix).forEach(k=>trimGhost(ix[k]));
   }
   if(nWk||nCF||nGhost)savePriceDB();
   const id=Object.keys(PRICEDB.ipsa||{}).sort();
@@ -4008,7 +4055,14 @@ function pricedbUpsertDay(date,ipsa,priceMap){
   savePriceDB();
 }
 /* índices/benchmarks disponibles en la base: IPSA vive en PRICEDB.ipsa; otros (IGPA, …) en PRICEDB.idx */
-function pdIndexOf(n,benchName){if(/igpa/i.test(n))return "IGPA";if(/^ipsa$/i.test(""+n)||/ipsa|índice|indice|index|bench/i.test(""+n)||(benchName&&n===benchName))return "IPSA";return null;}
+/* ¿la serie es un índice/benchmark? Exige coincidencia de PALABRA o nombre exacto: un ticker que solo
+   contiene "index"/"bench" (p.ej. INDEXCORP) es una acción, no el benchmark — antes se enrutaba al IPSA. */
+function pdIndexOf(n,benchName){const s=(""+n).trim();
+  if(benchName&&s===benchName)return /\bigpa\b/i.test(s)?"IGPA":"IPSA";
+  if(/\bigpa\b/i.test(s))return "IGPA";
+  if(/\bipsa\b/i.test(s))return "IPSA";
+  if(/^(índice|indice|index|benchmark|bench)$/i.test(s))return "IPSA";
+  return null;}
 function pricedbIdxAll(){const o={};if(PRICEDB.ipsa&&Object.keys(PRICEDB.ipsa).length)o.IPSA=PRICEDB.ipsa;const ix=PRICEDB.idx||{};Object.keys(ix).forEach(k=>{if(ix[k]&&Object.keys(ix[k]).length)o[k]=ix[k];});return o;}
 function pricedbIndexNames(){return Object.keys(pricedbIdxAll());}
 function pricedbIdxMap(name){if(!name||name==="IPSA")return PRICEDB.ipsa||{};return (PRICEDB.idx&&PRICEDB.idx[name])||{};}
@@ -4045,9 +4099,10 @@ async function autopxSync(manual){
     const byT={},ips={dates:[],closes:[]};
     days.forEach(d=>{
       if(d.ipsa!=null&&isFinite(+d.ipsa)&&+d.ipsa>0){ips.dates.push(d.date);ips.closes.push(+d.ipsa);}
-      Object.keys(d.prices||{}).forEach(t=>{
-        if(!/^[A-ZÑ0-9][A-ZÑ0-9.\-_]{0,13}$/i.test(t))return;   // el JSON es remoto: solo tickers con forma válida (nunca HTML) llegan a la base
-        const v=+d.prices[t];if(!isFinite(v)||v<=0)return;(byT[t]=byT[t]||{dates:[],closes:[]});byT[t].dates.push(d.date);byT[t].closes.push(v);});
+      Object.keys(d.prices||{}).forEach(k=>{
+        if(!/^[A-ZÑ0-9][A-ZÑ0-9.\-_]{0,13}$/i.test(k))return;   // el JSON es remoto: solo tickers con forma válida (nunca HTML) llegan a la base
+        const t=k.toUpperCase();   // normaliza: "bci" remoto no debe crear un ticker paralelo a "BCI"
+        const v=+d.prices[k];if(!isFinite(v)||v<=0)return;(byT[t]=byT[t]||{dates:[],closes:[]});byT[t].dates.push(d.date);byT[t].closes.push(v);});
     });
     const files=Object.keys(byT).map(t=>({name:t,src:t,dates:byT[t].dates,closes:byT[t].closes}));
     if(ips.dates.length)files.push({name:"IPSA",src:"IPSA",dates:ips.dates,closes:ips.closes});
@@ -4109,7 +4164,7 @@ function pricedbIngestProjects(){
   });});if(n)savePriceDB();return n;}catch(e){return 0;}
 }
 /* población automática de la base (una vez por cliente): cierres de proyectos + universo demo */
-function pricedbAutoSeed(){try{if(PRICEDB&&PRICEDB.seeded)return;pricedbIngestProjects();pricedbSeedDemo();PRICEDB.seeded=true;savePriceDB();}catch(e){}}
+function pricedbAutoSeed(){try{if(PRICEDB&&PRICEDB.seeded)return;pricedbIngestProjects();PRICEDB.seeded=true;savePriceDB();}catch(e){}}   // ya NO siembra el demo: un arranque (o un "Reiniciar todo") parte con la base limpia; el usuario la puebla con planillas
 /* núcleo del análisis: resamplea a la frecuencia y halla la corrida CONSECUTIVA más reciente
    donde el benchmark y TODOS los tickers pedidos tienen dato (datos vigentes, alineados y a la cadencia correcta) */
 function pricedbAnalysisCore(freq,opts){
@@ -4175,6 +4230,8 @@ function pricedbCheckAnalysis(freq,opts){
   const unit=freq==="diario"?"días":freq==="semanal"?"semanas":"meses";
   if(!core.benchHasData)return {ok:false,unit,reason:"No hay datos del índice ("+(opts.bench||"IPSA")+") a la frecuencia "+freq+". Carga el índice o cambia la frecuencia."};
   if(!core.tickers.length)return {ok:false,unit,reason:"No hay acciones seleccionadas."};
+  // la construcción (pricedbToIMP) exige ≥4 puntos (3 retornos): una ventana de 1–2 pasaría este chequeo y fallaría igual al crear
+  if(opts.lastN&&opts.lastN>0&&opts.lastN<3)return {ok:false,unit,reason:"La ventana mínima de un análisis es 3 "+unit+" (4 puntos). Sube «últimos "+unit+"» a 3 o más, o usa 0 para todo el historial."};
   const availPts=core.common.length,availRet=Math.max(0,availPts-1);
   const needPts=(opts.lastN&&opts.lastN>0)?(opts.lastN+1):4;
   // ventana efectiva del análisis (la misma que usará pricedbToIMP) para revisar el benchmark
@@ -4204,9 +4261,10 @@ function pricedbApplyToProjects(){
       allDates.forEach(D=>{if(D<=baseDate)return;
         if(!held.some(t=>px[t]&&px[t][D]!=null))return;
         const ip=pdAsOf(ipsaM,ik,D);
-        if(exIdx[D]!=null){const w=ws[exIdx[D]];if(w.ev)return;w.prices=w.prices||{};let ch=false;held.forEach(t=>{if(px[t]&&px[t][D]!=null){w.prices[t]=px[t][D];ch=true;}});const ipExact=ipsaM[D];if(ipExact!=null){w.ipsa=ipExact;ch=true;}if(ch)pts++;}   // solo IPSA EXACTO de la base; no pisa el cierre real con un as-of rezagado
-        else{const prices={};held.forEach(t=>{const v=(px[t]&&px[t][D]!=null)?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));prices[t]=(v!=null?v:basePrices[t]);});
-          ws.push({date:D,ipsa:ip!=null?ip:(ws[0].ipsa||0),prices});pts++;}   // fallback IPSA past-aware (compra), nunca un valor futuro
+        if(exIdx[D]!=null){const w=ws[exIdx[D]];if(w.ev)return;w.prices=w.prices||{};let ch=false;held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh&&w.fresh.indexOf(t)<0)w.fresh.push(t);}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}w.ipsaFresh=true;}if(ch)pts++;}   // solo IPSA EXACTO de la base; ch solo si el valor realmente cambió (no re-guardar todo en cada corrida)
+        else{const prices={},freshT=[];held.forEach(t=>{const ex=px[t]&&px[t][D]!=null;const v=ex?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));if(ex)freshT.push(t);prices[t]=(v!=null?v:basePrices[t]);});
+          const ipEx=ipsaM[D]!=null;
+          ws.push({date:D,ipsa:ipEx?ipsaM[D]:(ip!=null?ip:(ws[0].ipsa||0)),prices,fresh:freshT,ipsaFresh:ipEx});pts++;}   // fresh/ipsaFresh marcan qué es cierre REAL del día: los arrastres (as-of) no vuelven a la base ni generan retornos 0% espurios
       });
       if(pts){const tg=ws.map((w,i)=>({w,i}));tg.sort((a,b)=>a.w.date<b.w.date?-1:a.w.date>b.w.date?1:a.i-b.i);p.weeks=tg.map(x=>x.w);touched=true;nProj++;nPts+=pts;}
     });
@@ -4291,11 +4349,13 @@ function detectInconsistencies(){
   (function(){if(!Object.keys(IPSA).length){if(tickers.length)issues.push({level:"info",msg:"No hay IPSA en la base: las métricas relativas al índice no estarán disponibles."});return;}const need={};tickers.forEach(t=>datesOf(t).forEach(d=>{if(isTradingDay(d))need[d]=1;}));const miss=Object.keys(need).filter(d=>IPSA[d]==null).sort();if(miss.length)issues.push({level:"info",msg:"Faltan "+miss.length+" fecha(s) de IPSA donde sí hay cierres de acciones (ej. "+miss[miss.length-1]+")."});})();
   // 5) arrastre sospechado (valores finales idénticos)
   (function(){const cf=[];tickers.forEach(t=>{const rs=resampleMap(PX[t],"diario");if(rs.length<2)return;if(dropTrailingFlat(rs).length<rs.length)cf.push(t);});if(Object.keys(IPSA).length){const ri=resampleMap(IPSA,"diario");if(ri.length>=2&&dropTrailingFlat(ri).length<ri.length)cf.push("IPSA");}if(cf.length)issues.push({level:"warn",msg:"Valores finales repetidos idénticos (un cierre real no repite al decimal): posible arrastre. “Reparar base” los limpia.",tickers:cf});})();
-  // 6) SALTO DE ESCALA en el IPSA: dos fuentes/escalas mezcladas (p.ej. 10.800 vs 6.500) → las β de cualquier análisis colapsan a ≈0
+  // 6) SALTO DE ESCALA en el IPSA: dos fuentes/escalas mezcladas (p.ej. 10.800 vs 6.500) → las β de cualquier análisis colapsan a ≈0.
+  //    Umbral por cadencia (los mismos de pricedbBenchJump): un mixup fino que no llega al 40% mensual igual rompe un análisis diario/semanal.
   (function(){if(!Object.keys(IPSA).length)return;
-    const rs=resampleMap(IPSA,"mensual");
-    for(let i=1;i<rs.length;i++){const r=rs[i].v/rs[i-1].v-1;
-      if(Math.abs(r)>0.40){issues.push({level:"warn",msg:"El IPSA salta "+(r>=0?"+":"")+(r*100).toFixed(0)+"% entre el "+rs[i-1].d+" ("+rs[i-1].v.toLocaleString("es-CL")+") y el "+rs[i].d+" ("+rs[i].v.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados. Elimina esos días (Quitar este día) o limpia y recarga el índice de una sola fuente — si no, las β de los análisis salen ≈0."});break;}}
+    const TH=[["mensual",0.40],["semanal",0.25],["diario",0.15]];
+    for(const [f,th] of TH){const rs=resampleMap(IPSA,f);
+      for(let i=1;i<rs.length;i++){if(f!=="mensual"&&!gapOK(rs[i-1].d,rs[i].d,f))continue;const r=rs[i].v/rs[i-1].v-1;
+        if(Math.abs(r)>th){issues.push({level:"warn",msg:"El IPSA salta "+(r>=0?"+":"")+(r*100).toFixed(0)+"% ("+f+") entre el "+rs[i-1].d+" ("+rs[i-1].v.toLocaleString("es-CL")+") y el "+rs[i].d+" ("+rs[i].v.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados. Elimina esos días (Quitar este día) o limpia y recarga el índice de una sola fuente — si no, las β de los análisis salen ≈0."});return;}}}
   })();
   return issues;
 }
@@ -4627,7 +4687,7 @@ function cpProfileNote(){if(!invProfile||!invProfile.levels)return "";
   s+=" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";
   return s;}
 function cpSystemStatic(){return CP_SYSTEM;}   // bloque grande y estable (se cachea): no cambia al cambiar de cliente/perfil
-function cpSystemDynamic(){return (cpClientNote()+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"")).replace(/^\n+/,"");}   // notas volátiles (sin cachear)
+function cpSystemDynamic(){return (cpClientNote()+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"")+((typeof evalIsEmpty==="function"&&evalIsEmpty())?"\n\nESTADO ACTUAL: el usuario LIMPIÓ el sistema y aún no carga sus planillas — no hay análisis activo ni estadísticas propias. No cites β/σ/retornos como datos del usuario (las tools devuelven solo metadatos del universo con β referencial). Guíalo: Datos → Cargar planilla, luego Análisis → Gestión de análisis.":"")).replace(/^\n+/,"");}   // notas volátiles (sin cachear)
 function cpClientNote(){return "";}   // monousuario: sin gestión de clientes
 function cpSystemPrompt(){return cpSystemStatic()+"\n\n"+cpSystemDynamic();}   // compat: el agente real usa los dos bloques por separado (caché)
 
@@ -4831,12 +4891,15 @@ function opDo(){
   if(side==="sell"){const IM=invMetrics();const ps=IM&&IM.perStock.find(x=>x.hd.t===t);const held=ps?ps.sh:0;
     if(held<=1e-9){window.alert("No tienes acciones de "+t+" para vender.");return;}
     if(q>held+1e-6){if(!window.confirm("Indicaste "+q+" pero solo tienes "+held.toLocaleString("es-CL",{maximumFractionDigits:2})+". ¿Vender todo lo que tienes?"))return;qty=held;}}
-  const date=(dEl&&dEl.value)?dEl.value:(opState.date||new Date().toISOString().slice(0,10));
+  const date=(dEl&&dEl.value)?dEl.value:(opState.date||localDay());
   let basePrices=last?last.prices:{},ipsa=last?last.ipsa:1;
   // si ya hay una valoración (no-operación) en esa fecha —p.ej. de una carga masiva del módulo Datos— reutiliza sus precios y reemplázala por la operación (evita fechas duplicadas)
   const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev);
   if(sameIdx>=0){const sw=PF.weeks[sameIdx];basePrices=sw.prices||basePrices;if(sw.ipsa!=null)ipsa=sw.ipsa;PF.weeks.splice(sameIdx,1);}
-  const prices=Object.assign({},basePrices);prices[t]=p;
+  // el precio de la TRANSACCIÓN no pisa el cierre de mercado del día: si lo hiciera, las acciones que YA
+  // tenías se revalorizarían a tu precio de operación e inyectarían un retorno falso en el TWR y la β realizada.
+  // Solo se usa como precio del día si el papel no tiene cierre conocido (posición nueva sin historial).
+  const prices=Object.assign({},basePrices);if(prices[t]==null)prices[t]=p;
   PF.weeks.push({date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}});
   PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);   // mantiene el orden cronológico aunque la operación sea de una fecha anterior
   // NOTA: el precio de la operación NO se escribe en la base de precios (PRICEDB) — es un dato de contabilidad
@@ -4867,9 +4930,9 @@ function ledger(){
   const base=WEEKS[0],sh={},avg={},tx=[],realized=[];
   function buy(date,t,qq,pp,tipo){if(!(qq>0))return;const old=sh[t]||0,oc=(avg[t]||0)*old;sh[t]=old+qq;avg[t]=(oc+qq*pp)/sh[t];tx.push({date,t,side:"buy",shares:qq,price:pp,monto:qq*pp,tipo});}
   function sell(date,t,qq,pp,tipo){const old=sh[t]||0,s=Math.min(qq,old);if(s<=1e-9)return;const cb=(avg[t]||0)*s,proceeds=s*pp,gain=proceeds-cb;sh[t]=old-s;tx.push({date,t,side:"sell",shares:s,price:pp,monto:proceeds,tipo,cost:cb,gain});realized.push({date,t,shares:s,price:pp,cost:cb,gain});}
-  PF.holdings.forEach(hd=>{const p=base.prices[hd.t];if(p==null)return;const q=(base.qty&&base.qty[hd.t]!=null)?base.qty[hd.t]:(hd.monto/p);buy(base.date,hd.t,q,p,"Compra inicial");});
+  PF.holdings.forEach(hd=>{let p=base.prices[hd.t];if(p==null){const fw=WEEKS.find(w=>w.prices[hd.t]!=null);p=fw?fw.prices[hd.t]:null;}if(p==null||!(p>0))return;const q=(base.qty&&base.qty[hd.t]!=null)?base.qty[hd.t]:(hd.monto/p);buy(base.date,hd.t,q,p,"Compra inicial");});   // mismo fallback de precio base que invMetrics: sin él, una venta posterior saldría con costo 0 y ganancia inflada
   for(let i=1;i<WEEKS.length;i++){const w=WEEKS[i];if(!w.ev)continue;
-    if(w.ev.kind==="inject"){const al=w.ev.alloc||{};Object.keys(al).forEach(t=>{const p=w.prices[t]||base.prices[t]||1;buy(w.date,t,al[t]/p,p,"Aporte");});}
+    if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);buy(w.date,t,q,q>0?al[t]/q:0,"Aporte");});}
     else if(w.ev.kind==="trade"){const t=w.ev.t,p=w.ev.price||w.prices[t]||1;if(w.ev.side==="sell")sell(w.date,t,+w.ev.shares,p,"Venta");else buy(w.date,t,+w.ev.shares,p,"Compra");}
     else if(w.ev.kind==="rebal"&&w.ev.shares){Object.keys(w.ev.shares).forEach(t=>{const ns=w.ev.shares[t],old=sh[t]||0,p=w.prices[t]||base.prices[t]||1;if(ns>old+1e-9)buy(w.date,t,ns-old,p,"Rebalanceo");else if(ns<old-1e-9)sell(w.date,t,old-ns,p,"Rebalanceo");});}
   }
@@ -5113,23 +5176,32 @@ function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links
    lo realmente invertido. Idempotente: recalcula desde la compra vigente. Devuelve true si hubo cambios. */
 function projSyncReal(p){
   if(!p||!p.holdings||!p.holdings.length)return false;
-  const b0=p.weeks&&p.weeks[0];if(!b0||!b0.qty)return false;
-  const per={};let tot=0;p.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*((b0.prices&&b0.prices[hd.t])||0);per[hd.t]=m;tot+=m;});
-  if(!(tot>0))return false;
-  p.holdings.forEach(hd=>{hd.w=per[hd.t]/tot;hd.monto=+per[hd.t].toFixed(0);});
-  const sel={};p.holdings.forEach(hd=>{sel[hd.t]=+(hd.w*100).toFixed(4);});
-  try{const M=withCanonicalUniverse(()=>pMetrics(sel));if(M){p.bp=+M.bp.toFixed(3);p.erCapm=+M.erCapm.toFixed(2);p.sig=+M.sig.toFixed(2);p.sharpe=+M.sharpe.toFixed(2);p.corrAvg=+M.corrAvg.toFixed(2);}}catch(e){}
-  p.origSim={sel:Object.assign({},sel),amount:Math.round(tot)};   // la simulación del proyecto refleja ahora la compra real
+  const sel=projRealSel(p);if(!sel)return false;
+  // OJO: los pesos OBJETIVO del plan (hd.w, hd.monto, origSim) NO se tocan — son la referencia del drift y de
+  // "objetivo vs real". Solo se actualizan las métricas del proyecto y el escenario "Cartera real".
+  try{const M=pMetricsUniverse(sel.sel,t=>{const hd=p.holdings.find(h=>h.t===t);return hd?hd.b:null;});
+    if(M){p.bp=+M.bp.toFixed(3);p.erCapm=+M.erCapm.toFixed(2);p.sig=+M.sig.toFixed(2);p.sharpe=+M.sharpe.toFixed(2);p.corrAvg=+M.corrAvg.toFixed(2);}}catch(e){}
   try{const sc=projDefaultScenario(p);if(sc){const i=SCEN.findIndex(s=>String(s.id)===String(sc.id));if(i>=0)SCEN[i]=sc;else SCEN.push(sc);lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
   return true;
 }
-/* escenario "de construcción" derivado del proyecto (refleja la compra REAL si ya existe; si no, la simulación planeada) */
+/* pesos REALES ejecutados (desde la compra weeks[0].qty): {sel:{t:%},amount} o null si aún no hay compra real */
+function projRealSel(p){
+  const b0=p&&p.weeks&&p.weeks[0];if(!b0||!b0.qty||!p.holdings||!p.holdings.length)return null;
+  const per={};let tot=0;p.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*((b0.prices&&b0.prices[hd.t])||0);per[hd.t]=m;tot+=m;});
+  if(!(tot>0))return null;
+  const sel={};p.holdings.forEach(hd=>{sel[hd.t]=+(per[hd.t]/tot*100).toFixed(4);});
+  return {sel,amount:Math.round(tot)};
+}
+/* escenario "de construcción" derivado del proyecto: refleja la compra REAL (weeks[0].qty) si ya existe —
+   por el precio entero de las acciones la ponderación ejecutada difiere de la planeada — y si no, el plan (origSim) */
 function projDefaultScenario(p){
   if(!p||!p.holdings||!p.holdings.length)return null;
-  const real=!!(p.weeks&&p.weeks[0]&&p.weeks[0].qty);
-  const sel=(p.origSim&&p.origSim.sel)?Object.assign({},p.origSim.sel):(function(){const s={};p.holdings.forEach(hd=>{s[hd.t]=+((hd.w||0)*100).toFixed(1);});return s;})();
-  const comp=p.holdings.map(hd=>({t:hd.t,w:+((hd.w||0)*100).toFixed(1),c:hd.c||"#1E5FD1"}));
-  return {id:"sim_"+p.id,name:(real?"Cartera real · ":"Construcción · ")+(p.name||"inicial"),amount:(p.origSim&&p.origSim.amount)||p.amount||0,sel:sel,
+  const rs=(typeof projRealSel==="function")?projRealSel(p):null;
+  let sel,amount;
+  if(rs){sel=rs.sel;amount=rs.amount;}
+  else{sel=(p.origSim&&p.origSim.sel)?Object.assign({},p.origSim.sel):(function(){const s={};p.holdings.forEach(hd=>{s[hd.t]=+((hd.w||0)*100).toFixed(1);});return s;})();amount=(p.origSim&&p.origSim.amount)||p.amount||0;}
+  const comp=p.holdings.map(hd=>({t:hd.t,w:+(+sel[hd.t]||0).toFixed(1),c:hd.c||"#1E5FD1"}));
+  return {id:"sim_"+p.id,name:(rs?"Cartera real · ":"Construcción · ")+(p.name||"inicial"),amount:amount,sel:sel,
     m:{bp:p.bp||0,erCapm:p.erCapm||0,retH:(p.erCapm||0),sig:p.sig||0,sharpe:p.sharpe||0,corrAvg:p.corrAvg||0},comp:comp};
 }
 function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p||!id)return;const L=projLinks(p),arr=kind==="analysis"?L.analyses:L.scenarios,s=String(id);if(arr.map(String).indexOf(s)<0)arr.push(s);if(kind==="analysis")L.primary=s;saveProjects();render();}
@@ -5156,9 +5228,11 @@ function mcDefaults(){
     if(isFinite(p.sig)&&p.sig>0)sg=p.sig;
     src="Proyecto activo · "+(p.name||"cartera");
   }
-  return {v0:Math.round(v0),mu:+(+mu).toFixed(2),sig:+(+sg).toFixed(2),horizonY:5,contrib:0,goalOn:false,goal:Math.round(v0*2),paths:500,src};
+  return {v0:Math.round(v0),mu:+(+mu).toFixed(2),sig:+(+sg).toFixed(2),horizonY:5,contrib:0,goalOn:false,goal:Math.round(v0*2),paths:500,src,_pid:(typeof activeId!=="undefined"?activeId:null)};
 }
-function mcEnsure(){if(!mcState)mcState=mcDefaults();return mcState;}
+function mcEnsure(){
+  if(mcState&&typeof activeId!=="undefined"&&mcState._pid!==activeId)mcState=null;   // cambió el proyecto activo: re-derivar capital/μ/σ (no proyectar con la cartera anterior)
+  if(!mcState)mcState=mcDefaults();return mcState;}
 /* motor GBM log-normal: N trayectorias, pasos mensuales, con aporte mensual opcional; devuelve percentiles por paso */
 function mcSimulate(st){
   const H=Math.max(1,Math.round(st.horizonY*12)), N=Math.max(50,Math.min(2000,st.paths||500));
@@ -5171,8 +5245,11 @@ function mcSimulate(st){
   const steps=cols.map(col=>{let sum=0;for(let i=0;i<N;i++)sum+=col[i];return {p5:pct(col,.05),p25:pct(col,.25),p50:pct(col,.5),p75:pct(col,.75),p95:pct(col,.95),mean:sum/N};});
   const finalCol=cols[H];const invested=st.v0+contrib*H;
   let nLoss=0,nGoal=0;for(let i=0;i<N;i++){if(finalCol[i]<invested)nLoss++;if(st.goalOn&&st.goal>0&&finalCol[i]>=st.goal)nGoal++;}
-  return {H,N,steps,invested,probLoss:nLoss/N,probGoal:(st.goalOn&&st.goal>0)?nGoal/N:null,final:steps[H]};
+  // finalVals expone la distribución terminal: permite recalcular la prob. de meta al cambiar la meta SIN volver a sortear trayectorias
+  return {H,N,steps,invested,probLoss:nLoss/N,probGoal:(st.goalOn&&st.goal>0)?nGoal/N:null,final:steps[H],finalVals:finalCol};
 }
+/* prob. de alcanzar una meta sobre una simulación ya sorteada (sin re-simular) */
+function mcProbGoal(R,goal){if(!R||!R.finalVals||!(goal>0))return null;let n=0;for(let i=0;i<R.finalVals.length;i++)if(R.finalVals[i]>=goal)n++;return n/R.finalVals.length;}
 /* gráfico de abanico: bandas de percentiles (5–95 y 25–75) + mediana, línea base y meta */
 function svgFan(o){
   const S=o.steps,n=S.length,W=820,H=o.h||340,m={l:76,r:74,t:20,b:46},step=(W-m.l-m.r)/(n-1||1);
@@ -5230,10 +5307,14 @@ function viewMontecarlo(){
     </div>`;
   const head=card("Simulación Monte Carlo","Proyección probabilística del capital por trayectorias aleatorias (modelo GBM log-normal). Fuente de parámetros: "+st.src+".",ctrl);
   if(v0<=0){return betaBanner+head+notecard(`Ingresa un <b>capital inicial</b> mayor a 0 para proyectar. Los parámetros μ (retorno esperado) y σ (riesgo) se toman del <b>proyecto activo</b> si existe, o del mercado (IPSA); también puedes ajustarlos a mano arriba.`);}
-  const R=mcSimulate({v0,mu,sig:sg,horizonY:st.horizonY,contrib:st.contrib,goalOn:st.goalOn,goal:st.goal,paths:st.paths});
+  // la simulación se CACHEA por sus insumos (capital/μ/σ/horizonte/aporte/trayectorias): editar la meta u otro
+  // control no vuelve a sortear trayectorias (los números no "saltan"); "Volver a simular" fuerza un sorteo nuevo
+  const _mck=[v0,mu,sg,st.horizonY,st.contrib||0,st.paths,st.reroll||0].join("|");
+  let R;if(st._k===_mck&&st._R){R=st._R;}else{R=mcSimulate({v0,mu,sig:sg,horizonY:st.horizonY,contrib:st.contrib,goalOn:false,goal:0,paths:st.paths});st._k=_mck;st._R=R;}
+  const probGoal=(st.goalOn&&st.goal>0)?mcProbGoal(R,st.goal):null;
   const fin=R.final,invested=R.invested,medGain=invested>0?(fin.p50/invested-1)*100:0;
-  const goalTile=(st.goalOn&&R.probGoal!=null)
-    ? tile("Prob. de meta",(R.probGoal*100).toFixed(0)+"%","alcanzar "+fmtK(st.goal),MC,R.probGoal>=0.6?green:R.probGoal>=0.3?amber:red)
+  const goalTile=(st.goalOn&&probGoal!=null)
+    ? tile("Prob. de meta",(probGoal*100).toFixed(0)+"%","alcanzar "+fmtK(st.goal),MC,probGoal>=0.6?green:probGoal>=0.3?amber:red)
     : tile("Media esperada",fmtCLP(fin.mean),"promedio de trayectorias",MC,ink);
   const tiles=`<div class="tiles">
     ${tile("Mediana a "+st.horizonY+" año"+(st.horizonY>1?"s":""),fmtCLP(fin.p50),(medGain>=0?"+":"")+medGain.toFixed(1)+"% vs aportado",MC,col(medGain))}
@@ -5255,7 +5336,7 @@ function attachMontecarlo(){
   document.querySelectorAll("[data-mcp]").forEach(b=>b.onclick=()=>{st.paths=+b.dataset.mcp;render();});
   const gon=document.querySelector("[data-mc-goalon]");if(gon)gon.onchange=()=>{st.goalOn=gon.checked;render();};
   const sy=document.querySelector("[data-mc-sync]");if(sy)sy.onclick=()=>{mcState=mcDefaults();render();};
-  const rn=document.querySelector("[data-mc-run]");if(rn)rn.onclick=()=>render();
+  const rn=document.querySelector("[data-mc-run]");if(rn)rn.onclick=()=>{st.reroll=(st.reroll||0)+1;render();};   // sorteo nuevo explícito (invalida el cache)
 }
 
 function viewProyectos(){
@@ -5482,9 +5563,9 @@ function periodKey(dateStr,freq){
 }
 /* reduce un mapa fecha→valor a puntos por período (último de cada período) */
 function resampleMap(map,freq){const dates=Object.keys(map).sort();const byP={};dates.forEach(d=>{byP[periodKey(d,freq)]={d,v:map[d]};});return Object.keys(byP).sort().map(k=>byP[k]);}
-/* quita del FINAL los puntos cuyo valor repite EXACTAMENTE al anterior: son arrastres (carry-forward),
-   no cierres reales (un precio/índice real no repite idéntico al decimal). Deja el último movimiento real. */
-function dropTrailingFlat(rs){let a=rs;while(a.length>=2&&a[a.length-1].v===a[a.length-2].v)a=a.slice(0,-1);return a;}
+/* quita del FINAL las RACHAS de valores idénticos: son arrastres (carry-forward), no cierres reales.
+   Exige ≥2 repeticiones seguidas: un único cierre plano puede ser real (papel ilíquido) y no se toca. */
+function dropTrailingFlat(rs){let k=0;const n=rs.length;while(n-2-k>=0&&rs[n-1-k].v===rs[n-2-k].v)k++;return k>=2?rs.slice(0,n-k):rs;}
 function periodIndex(dateStr,freq){const d=new Date(dateStr+"T00:00:00");if(freq==="mensual")return d.getFullYear()*12+d.getMonth();if(freq==="semanal"){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);return Math.round(t.getTime()/(7*864e5));}return Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);}
 /* ¿dos puntos resampleados son de períodos consecutivos? (en diario se toleran fines de semana/feriado) */
 function gapOK(d0,d1,freq){if(freq==="diario"){const g=(new Date(d1+"T00:00:00")-new Date(d0+"T00:00:00"))/864e5;return g>0&&g<=4;}return (periodIndex(d1,freq)-periodIndex(d0,freq))===1;}
