@@ -1,0 +1,37 @@
+# Cierres diarios del IPSA para Investor.
+# - Corre solo de lunes a viernes tras el cierre de la Bolsa de Santiago y guarda data/closes.json.
+# - Para POBLAR la base una vez (backfill): pestaña Actions → Run workflow → range=2y.
+# Investor lo lee desde: https://raw.githubusercontent.com/agobantesc/Investor/main/data/closes.json
+name: Actualizar cierres IPSA
+on:
+  schedule:
+    - cron: "5 22 * * 1-5"   # 22:05 UTC ≈ 18:05/19:05 Chile (después del cierre ~16:00)
+  workflow_dispatch:          # ejecución manual desde la pestaña Actions
+    inputs:
+      range:
+        description: "Rango a bajar (10d para el día a día · 2y para POBLAR la base una vez)"
+        required: false
+        default: "10d"
+permissions:
+  contents: write
+jobs:
+  closes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Obtener cierres (Yahoo Finance .SN)
+        run: node automation/fetch-closes.mjs
+        env:
+          RANGE: ${{ github.event.inputs.range || '10d' }}
+      - name: Commit del JSON
+        run: |
+          git config user.name "closes-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/closes.json
+          git diff --cached --quiet && echo "Sin cambios" || git commit -m "cierres: $(date -u +%F) (${RANGE:-10d})"
+          git push
+        env:
+          RANGE: ${{ github.event.inputs.range || '10d' }}
