@@ -5,7 +5,12 @@ name: Actualizar cierres IPSA
 on:
   schedule:
     - cron: "5 22 * * 1-5"   # 22:05 UTC ≈ 18:05/19:05 Chile (después del cierre ~16:00)
-  workflow_dispatch: {}       # permite ejecutarlo a mano desde la pestaña Actions
+  workflow_dispatch:          # ejecución manual desde la pestaña Actions
+    inputs:
+      range:
+        description: "Rango a bajar (10d para el día a día · 2y para POBLAR la base una vez)"
+        required: false
+        default: "10d"
 permissions:
   contents: write
 jobs:
@@ -18,6 +23,8 @@ jobs:
           node-version: 20
       - name: Obtener cierres (Yahoo Finance .SN)
         run: node automation/fetch-closes.mjs
+        env:
+          RANGE: ${{ github.event.inputs.range || '10d' }}
       - name: Commit del JSON
         run: |
           git config user.name "closes-bot"

@@ -26,6 +26,19 @@ GitHub Actions (L–V, 18:05 Chile)                 Tu navegador
 4. Listo. Investor sincroniza **al abrir la app, una vez al día** (y siempre puedes forzar con
    **Datos → ⟳ Sincronizar cierres**).
 
+## Poblar la base masivamente (backfill, una sola vez)
+
+El mismo workflow sirve para cargar **años de historia diaria de las ~30 acciones + IPSA de una
+sola fuente** (misma escala para todo → sin β colapsadas por fuentes mezcladas):
+
+1. GitHub → pestaña **Actions** → *Actualizar cierres IPSA* → **Run workflow** → en `range`
+   escribe `2y` (o `1y`, `5y`, `max`) y ejecútalo. El `closes.json` queda con todo el historial.
+2. Abre Investor (o fuerza **Datos → ⟳ Sincronizar cierres**): los ~500 días hábiles se fusionan
+   por celda en la base.
+3. El cron diario sigue con su rango corto (`10d`) y mantiene la base al día desde entonces.
+
+También puedes correrlo local y subir el JSON: `RANGE=2y node automation/fetch-closes.mjs`.
+
 ## Cómo entra el dato a la base
 
 La sincronización usa **las mismas reglas que una planilla**: fusión por celda

@@ -46,7 +46,14 @@ const TICKERS = {
   CAP: "CAP.SN",
 };
 const IPSA_SYMBOL = "^IPSA";
-const DAYS_BACK = "10d"; // trae ~2 semanas para rellenar días perdidos (la fusión de Investor es por celda, no duplica)
+// Rango a bajar. Por defecto ~2 semanas (rellena días perdidos; la fusión de Investor es por celda, no duplica).
+// Para POBLAR MASIVAMENTE la base una vez, ejecútalo con un rango largo: RANGE=2y node automation/fetch-closes.mjs
+// (o desde GitHub → Actions → Run workflow con range=2y). Valores válidos de Yahoo: 10d, 1mo, 6mo, 1y, 2y, 5y, max.
+const DAYS_BACK = (() => {
+  const r = process.env.RANGE || process.argv[2] || "10d";
+  if (!/^(\d+(d|mo|y)|max)$/.test(r)) { console.error(`Rango inválido "${r}" (usa 10d, 1mo, 6mo, 1y, 2y, 5y o max)`); process.exit(1); }
+  return r;
+})();
 
 async function chart(symbol) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${DAYS_BACK}&interval=1d`;
