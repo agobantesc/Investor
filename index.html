@@ -2472,12 +2472,17 @@ function invNewForm(){
 /* pasos guiados para un proyecto VACÍO (recién creado): análisis → simulación → invertir */
 function projGuidedSteps(p){
   const nm=(""+(p.name||"Proyecto")).replace(/</g,"&lt;");
-  return card("Construye tu proyecto: "+nm,"Un proyecto se arma en 3 pasos. Lo ideal es <b>partir por el análisis</b> y terminar definiendo la inversión.",
-   `<div class="proj-steps">
-     <div class="pstep"><span class="pstep-n">1</span><div class="pstep-b"><b>Análisis</b><span>Estudia las acciones del IPSA y crea un análisis para este proyecto.</span></div><button class="btn" data-pstep="eval|crear">Ir a Análisis →</button></div>
-     <div class="pstep"><span class="pstep-n">2</span><div class="pstep-b"><b>Simulación</b><span>Arma y optimiza la cartera: pesos, riesgo y Sharpe.</span></div><button class="btn" data-pstep="sim|constructor">Ir a Simulación →</button></div>
-     <div class="pstep"><span class="pstep-n">3</span><div class="pstep-b"><b>Invertir</b><span>Elige las acciones y el monto, y registra la compra real.</span></div><button class="btn btn-pri" id="projDefineInv">Definir inversión →</button></div>
-   </div>`);
+  const noData=(typeof pricedbEmpty==="function")?pricedbEmpty():false;   // base vacía → primero cargar datos
+  let n=0;const step=(title,desc,btn)=>`<div class="pstep"><span class="pstep-n">${++n}</span><div class="pstep-b"><b>${title}</b><span>${desc}</span></div>${btn}</div>`;
+  const sub=noData
+    ? "Empieza por <b>cargar tus datos</b>; con ellos harás el análisis y la simulación antes de invertir."
+    : "El orden ideal: <b>análisis → simulación → invertir</b>. Estudia y optimiza la cartera antes de elegir las acciones y registrar la compra.";
+  const steps=
+    (noData?step("Cargar datos","Sube tus planillas (mensual/semanal/diaria) o registra cierres para poblar la base.",`<button class="btn btn-pri" data-pstep="datos|cargar">Ir a Datos →</button>`):"")+
+    step("Análisis","Estudia las acciones del IPSA con tus datos y crea un análisis para este proyecto.",`<button class="btn${noData?"":" btn-pri"}" data-pstep="eval|crear">Ir a Análisis →</button>`)+
+    step("Simulación","Arma y optimiza la cartera: pesos, riesgo, Sharpe y factores.",`<button class="btn" data-pstep="sim|constructor">Ir a Simulación →</button>`)+
+    step("Invertir","Con la cartera ya analizada y simulada, define acciones y monto, y registra la compra real.",`<button class="btn" id="projDefineInv">Definir inversión →</button>`);
+  return card("Construye tu proyecto: "+nm,sub,`<div class="proj-steps">${steps}</div>`);
 }
 /* handlers del formulario "Realizar nueva inversión" (usado desde el módulo Proyectos) */
 function attachInvNew(){
