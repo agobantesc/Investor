@@ -1,15 +1,15 @@
 {
- "updatedAt": "2026-07-04T03:47:55.402Z",
+ "updatedAt": "2026-07-04T03:50:18.906Z",
  "source": "Yahoo Finance (.SN) + fuentes IPSA",
  "ipsaSources": [
   "yahoo ^IPSA range: 1 día(s)",
   "yahoo ^IPSA period: 1 día(s)",
   "yahoo ^SPIPSA: ^SPIPSA: HTTP 404",
   "yahoo download csv: HTTP 401",
-  "stooq: HTTP 403"
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTYPE html><html><head> | stooq.pl=stooq.pl"
  ],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA range: 1 día(s) · yahoo ^IPSA period: 1 día(s) · yahoo ^SPIPSA: ^SPIPSA: HTTP 404 · yahoo download csv: HTTP 401 · stooq: HTTP 403"
+  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA range: 1 día(s) · yahoo ^IPSA period: 1 día(s) · yahoo ^SPIPSA: ^SPIPSA: HTTP 404 · yahoo download csv: HTTP 401 · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTYPE html><html><head> | stooq.pl=stooq.pl"
  ],
  "days": [
   {
