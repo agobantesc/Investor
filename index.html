@@ -3916,6 +3916,21 @@ function impParseInvesting(text,ticker){
   rows.sort((a,b)=>a[0]<b[0]?-1:1);
   return [{name:ticker,src:ticker,dates:rows.map(r=>r[0]),closes:rows.map(r=>r[1])}];
 }
+/* formato OHLC estándar (Stooq/Yahoo: Date,Open,High,Low,Close[,Volume] · o su versión en español):
+   es UNA serie — se toma solo el CIERRE. Sin esto, impParseCombined trataría Open/High/Low/Close/Volume
+   como cinco "acciones" distintas. El nombre sale del archivo (ipsa_d.csv → IPSA vía impTickerFrom). */
+function impParseOhlc(text,ticker){
+  const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+  const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",",mode=delim===";"?"es":"us";
+  const head=impSplit(lines[0],delim).map(h=>h.trim().replace(/^"|"$/g,"").toLowerCase());
+  const di=head.findIndex(h=>/^(date|fecha)$/.test(h));
+  let ci=head.findIndex(h=>/^(close|cierre|último|ultimo)$/.test(h));
+  if(ci<0)ci=head.findIndex(h=>/^adj\.? ?close$/.test(h));
+  const rows=[];
+  for(let i=1;i<lines.length;i++){const c=impSplit(lines[i],delim);const d=impNorm(c[di]),px=impNum(c[ci],mode);if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&isFinite(px)&&px>0)rows.push([d,px]);}
+  rows.sort((a,b)=>a[0]<b[0]?-1:1);
+  return [{name:ticker,src:ticker,dates:rows.map(r=>r[0]),closes:rows.map(r=>r[1])}];
+}
 function impParseCombined(text){
   const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
   const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",",mode=delim===";"?"es":"us";
@@ -3936,6 +3951,7 @@ async function impOnFiles(list){
     if(/\.xlsx$/i.test(f.name)){(await impReadXlsx(f)).forEach(impAddSeries);}
     else{const text=await f.text();const first=(text.split(/\r?\n/)[0]||"").toLowerCase();
       if(/(^|[",;])price([",;]|$)/.test(first)&&/open/.test(first))impParseInvesting(text,impTickerFrom(f.name)).forEach(impAddSeries);
+      else if(/(^|[",;])(date|fecha)([",;]|$)/.test(first)&&/(^|[",;])(close|cierre|último|ultimo)([",;]|$)/.test(first)&&/(^|[",;])(open|apertura)([",;]|$)/.test(first))impParseOhlc(text,impTickerFrom(f.name)).forEach(impAddSeries);
       else impParseCombined(text).forEach(impAddSeries);}
   }catch(e){impMsg="No se pudo leer "+f.name+": "+e.message+". ";}}
   if(impFiles.length){const ip=impFiles.find(s=>/ipsa|índice|indice|index|bench/i.test(s.name));impBench=ip?ip.name:"__avg__";}
@@ -5641,10 +5657,12 @@ function labelToDate(lab){const M={ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago
 function consolidatedSeries(){
   const tick={},names={},cols={},ipsaMap={};
   // 1) base del sistema (PRICEDB): TODAS las acciones con data histórica cargada
-  let usedDB=false;
-  try{if(typeof PRICEDB!=="undefined"&&PRICEDB&&PRICEDB.px&&Object.keys(PRICEDB.px).length){usedDB=true;
-    Object.keys(PRICEDB.tickers||{}).forEach(t=>{const m=PRICEDB.tickers[t]||{};names[t]=m.n||t;cols[t]=m.c||cols[t]||"#1E5FD1";});
-    Object.keys(PRICEDB.px).forEach(t=>{names[t]=names[t]||t;Object.keys(PRICEDB.px[t]).forEach(d=>{const v=PRICEDB.px[t][d];if(v>0&&isFinite(v))(tick[t]=tick[t]||{})[d]=v;});});
+  try{if(typeof PRICEDB!=="undefined"&&PRICEDB){
+    if(PRICEDB.px&&Object.keys(PRICEDB.px).length){
+      Object.keys(PRICEDB.tickers||{}).forEach(t=>{const m=PRICEDB.tickers[t]||{};names[t]=m.n||t;cols[t]=m.c||cols[t]||"#1E5FD1";});
+      Object.keys(PRICEDB.px).forEach(t=>{names[t]=names[t]||t;Object.keys(PRICEDB.px[t]).forEach(d=>{const v=PRICEDB.px[t][d];if(v>0&&isFinite(v))(tick[t]=tick[t]||{})[d]=v;});});
+    }
+    // el índice se incluye aunque aún no haya acciones en la base (p.ej. se cargó primero la planilla del IPSA)
     Object.keys(PRICEDB.ipsa||{}).forEach(d=>{const v=PRICEDB.ipsa[d];if(v>0&&isFinite(v))ipsaMap[d]=v;});
   }}catch(e){}
   // (sin fallback sintético: las métricas del Home usan SOLO datos reales — base del sistema + seguimientos)
