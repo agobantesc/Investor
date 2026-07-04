@@ -4383,7 +4383,7 @@ function pricedbCheckAnalysis(freq,opts){
   freq=freq||"mensual";opts=opts||{};
   const core=pricedbAnalysisCore(freq,opts);
   const unit=freq==="diario"?"días":freq==="semanal"?"semanas":"meses";
-  if(!core.benchHasData)return {ok:false,unit,reason:"No hay datos del índice ("+(opts.bench||"IPSA")+") a la frecuencia "+freq+". Carga el índice o cambia la frecuencia."};
+  if(!core.benchHasData)return {ok:false,unit,reason:"No hay datos del índice ("+(opts.bench||"IPSA")+") en la base. Cárgalo en Configuración → Datos."};
   if(!core.tickers.length)return {ok:false,unit,reason:"No hay acciones seleccionadas."};
   // la construcción (pricedbToIMP) exige ≥4 puntos (3 retornos): una ventana de 1–2 pasaría este chequeo y fallaría igual al crear
   if(opts.lastN&&opts.lastN>0&&opts.lastN<3)return {ok:false,unit,reason:"La ventana mínima de un análisis es 3 "+unit+" (4 puntos). Sube «últimos "+unit+"» a 3 o más, o usa 0 para todo el historial."};
@@ -4625,13 +4625,36 @@ let caState=null;
 function caIndexNames(C,srcKey){const out=[];if(C&&C.ipsaMap&&Object.keys(C.ipsaMap).length)out.push("IPSA");if(srcKey!=="activo"){const ix=(typeof PRICEDB!=="undefined"&&PRICEDB.idx)||{};Object.keys(ix).forEach(k=>{if(k!=="IPSA"&&ix[k]&&Object.keys(ix[k]).length)out.push(k);});}return out;}
 function caRows(C){return Object.keys(C.tick||{}).sort().map(t=>({t,n:(C.names&&C.names[t])||t,c:(C.cols&&C.cols[t])||"#1E5FD1",np:Object.keys(C.tick[t]).length}));}
 function caEnsure(){
-  if(!caState)caState={name:"",freq:(pricedbFreq||"mensual"),lastN:0,bench:"IPSA",sel:{}};
+  if(!caState)caState={name:"",months:CA_MIN_MONTHS,bench:"IPSA",sel:{}};
+  if(!caState.months||caState.months<CA_MIN_MONTHS)caState.months=CA_MIN_MONTHS;
   const C=consolidatedSeries();   // única fuente: la base poblada del sistema (Datos + cierres de carteras)
   Object.keys(C.tick||{}).forEach(t=>{if(caState.sel[t]===undefined)caState.sel[t]=true;});
   const idxs=caIndexNames(C,"sistema");if(!caState.bench||idxs.indexOf(caState.bench)<0)caState.bench=idxs[0]||"IPSA";
   return C;
 }
 function caUnit(f){return f==="diario"?"días":f==="semanal"?"semanas":"meses";}
+const CA_MIN_MONTHS=12;   // ventana mínima de un análisis: garantiza β/σ estables y una tabla SIEMPRE en retornos anuales
+/* meses → nº de retornos a cada cadencia (~21 días hábiles y ~4,35 semanas por mes) */
+function caMonthsToN(freq,months){return freq==="diario"?Math.round(months*21):freq==="semanal"?Math.round(months*4.345):Math.round(months);}
+/* La ventana del análisis se pide SOLO en meses; la cadencia de la regresión NO se elige a mano: se toma la
+   más FINA (diario → semanal → mensual) cuyos datos cubren la ventana con TODAS las acciones elegidas (los
+   feriados largos cortan la corrida diaria consecutiva; entonces se usa la semanal, etc.). Se tolera hasta
+   un 5% menos de lo pedido —sin bajar del mínimo de 12 meses— para no rechazar por días de calendario. */
+function caResolve(months,opts){
+  let short=null,err=null;
+  for(const f of ["diario","semanal","mensual"]){
+    const lastN=caMonthsToN(f,months),perM=f==="diario"?21:f==="semanal"?4.345:1;
+    const chk=pricedbCheckAnalysis(f,Object.assign({},opts,{lastN}));
+    if(chk.jump)return {ok:false,error:chk.reason,chk};   // escalas mezcladas en el índice: problema de datos, no de ventana
+    if(chk.ok)return {ok:true,freq:f,lastN,chk};
+    if(chk.reason){if(!err)err=chk.reason;continue;}
+    const mA=(chk.availRet||0)/perM;
+    if(chk.availRet>=4&&mA>=CA_MIN_MONTHS&&chk.availRet>=Math.floor(lastN*0.95))return {ok:true,freq:f,lastN:chk.availRet,chk,trimmed:true,mAvail:mA};
+    if(!short||mA>short.mAvail)short={mAvail:mA,chk};
+  }
+  if(short)return {ok:false,mAvail:short.mAvail,chk:short.chk};
+  return {ok:false,error:err||"No hay datos suficientes en la base."};
+}
 function viewCrear(){
   const C=caEnsure();const S=caState;
   const rows=caRows(C),ts=rows.map(r=>r.t),selCount=ts.filter(t=>S.sel[t]).length;
@@ -4640,33 +4663,30 @@ function viewCrear(){
   if(!ts.length){
     form=`<div class="note" style="margin:0">Aún no hay precios en el sistema. Ve al módulo <b>Datos</b> para cargar planillas o cierres y poder crear análisis.<div style="margin-top:11px"><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
   }else{
-    const seg=`<div class="home-seg" role="group" aria-label="Periodicidad">${["diario","semanal","mensual"].map(f=>`<button data-cafreq="${f}" class="${S.freq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
+    const mseg=`<div class="home-seg" role="group" aria-label="Ventana en meses">${[12,18,24,36].map(m=>`<button data-camonths="${m}" class="${S.months===m?"on":""}">${m} m</button>`).join("")}</div>`;
     const benchSel=idxs.length?`<div class="home-seg" role="group" aria-label="Índice de referencia">${idxs.map(ix=>`<button data-cabench="${ix}" class="${S.bench===ix?"on":""}">${ix}</button>`).join("")}</div>`:`<div class="ca-bench-none">No hay índice (IPSA) en la base · cárgalo en <b>Datos</b></div>`;
     const chips=rows.map(r=>`<button class="ca-chip ${S.sel[r.t]?"on":""}" data-catk="${r.t}"><span class="rk-dot" style="background:${r.c}"></span>${r.t}<span class="ca-chip-n">${r.np}</span></button>`).join("");
-    // REGLA 3 · disponibilidad en vivo: comprueba si la ventana pedida alcanza con datos vigentes de TODAS las acciones
+    // REGLA 3 · disponibilidad en vivo: ¿la ventana pedida (en meses) alcanza con datos vigentes de TODAS las acciones?
     const _selTk=ts.filter(t=>S.sel[t]);let _avOk=true,_avHint="";
-    const _perY=S.freq==="diario"?252:S.freq==="semanal"?52:12;
-    if(selCount>=2&&idxs.length){const _chk=pricedbCheckAnalysis(S.freq,{tickers:_selTk,lastN:S.lastN||0,bench:S.bench,source:C});_avOk=_chk.ok;
+    if(selCount>=2&&idxs.length){const R=caResolve(S.months,{tickers:_selTk,bench:S.bench,source:C});_avOk=!!R.ok;
       const _dd=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7):"";
-      if(_chk.ok){_avHint=" · ✓ "+_chk.availRet+" "+_chk.unit+" disponibles"+(_chk.from?(" ("+_dd(_chk.from)+"→"+_dd(_chk.to)+")"):"");
-        if(_chk.lagging&&_chk.lagging.length)_avHint+=" · ⚠ "+_chk.lagging.slice(0,3).map(x=>x.t).join(", ")+" sin el período más reciente (todas se alinean hasta "+_dd(_chk.to)+")";
-        // la ventana efectiva del análisis (lo pedido, o todo lo disponible si lastN=0)
-        const _effN=(S.lastN&&S.lastN>0)?Math.min(S.lastN,_chk.availRet):_chk.availRet;
-        if(_effN<_perY)_avHint+=" · 💡 se recomienda ≥1 año ("+_perY+" "+_chk.unit+") para β y σ estables — con menos, los retornos se muestran por ventana, no anualizados";}
-      else if(_chk.reason)_avHint=" · ⚠ "+_chk.reason;
-      else _avHint=" · ⚠ solo "+_chk.availRet+" "+_chk.unit+" con datos de todas"+(S.lastN?(" (pediste "+S.lastN+")"):"")+(_chk.limiting&&_chk.limiting.length?(" · limitan: "+_chk.limiting.slice(0,3).map(x=>x.t).join(", ")):"");}
+      const _cadL={diario:"diaria",semanal:"semanal",mensual:"mensual"};
+      if(R.ok){const c=R.chk;_avHint=" · ✓ "+S.months+" meses"+(R.trimmed?" (~"+Math.floor(R.mAvail)+" disponibles)":"")+" · cadencia "+_cadL[R.freq]+" (automática)"+(c.from?(" · datos "+_dd(c.from)+"→"+_dd(c.to)):"");
+        if(c.lagging&&c.lagging.length)_avHint+=" · ⚠ "+c.lagging.slice(0,3).map(x=>x.t).join(", ")+" sin el período más reciente";}
+      else if(R.error)_avHint=" · ⚠ "+R.error;
+      else _avHint=" · ⚠ solo ~"+Math.floor(R.mAvail)+" meses con datos de todas (pediste "+S.months+")"+(R.mAvail>=CA_MIN_MONTHS?" — baja la ventana":" — el mínimo es "+CA_MIN_MONTHS+" meses; carga más historial o quita acciones con pocos datos")+(R.chk&&R.chk.limiting&&R.chk.limiting.length?(" · limitan: "+R.chk.limiting.slice(0,3).map(x=>x.t).join(", ")):"");}
     form=`<div class="ca-form">
       <label class="ca-f"><span>Nombre del análisis</span><input id="caName" type="text" maxlength="44" placeholder="ej. IPSA · últimos 12 meses" value="${(""+S.name).replace(/"/g,"&quot;")}"></label>
-      <div class="ca-f"><span>Periodicidad</span>${seg}</div>
-      <label class="ca-f ca-f-n"><span>Ventana · últimos ${caUnit(S.freq)} (0 = todo el historial · recomendado ≥1 año)</span><input id="caN" type="number" min="0" step="1" inputmode="numeric" value="${S.lastN||0}"></label>
+      <div class="ca-f"><span>Ventana del análisis</span>${mseg}</div>
+      <label class="ca-f ca-f-n"><span>Meses de historial (mínimo ${CA_MIN_MONTHS})</span><input id="caM" type="number" min="${CA_MIN_MONTHS}" step="1" inputmode="numeric" value="${S.months}"></label>
       <div class="ca-f"><span>Índice de referencia (benchmark)</span>${benchSel}</div>
     </div>
-    <div class="note" style="margin:10px 0 0;font-size:11.5px">El <b>benchmark</b> es el índice contra el que se calcula la β y el α de Jensen. La regresión usa <b>un</b> índice; si quieres comparar contra IPSA <i>y</i> IGPA, crea un análisis con cada uno.</div>
+    <div class="note" style="margin:10px 0 0;font-size:11.5px">El <b>benchmark</b> es el índice contra el que se calcula la β y el α de Jensen. La regresión usa <b>un</b> índice; si quieres comparar contra IPSA <i>y</i> IGPA, crea un análisis con cada uno. Con al menos ${CA_MIN_MONTHS} meses, los retornos de la tabla son siempre <b>anuales</b>; la cadencia de los retornos (diaria/semanal/mensual) se elige sola según los datos disponibles.</div>
     <div class="ca-stk"><div class="ca-stk-h"><b>Acciones del análisis</b><span>${selCount} de ${ts.length} seleccionadas · <a data-caall>todas</a> · <a data-canone>ninguna</a></span></div>
       <div class="ca-grid">${chips}</div></div>
     <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${(selCount<2||!idxs.length||!_avOk)?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia (IPSA) en la base":selCount<2?"Elige al menos 2 acciones":(selCount+" acciones · "+S.bench+_avHint)}</span></div>`;
   }
-  const create=card("Gestión de análisis","Aquí gestionas los distintos análisis del proyecto: crea uno a tu medida con los datos del sistema (periodicidad, ventana de tiempo y acciones), actívalo o elimínalo",form);
+  const create=card("Gestión de análisis","Aquí gestionas los distintos análisis del proyecto: elige la ventana en meses (mínimo "+CA_MIN_MONTHS+") y las acciones — así siempre hay data para rentabilidades anuales",form);
   const list=analysisList(),cur=currentAnalysisId();
   const savedRows=list.map(a=>{const on=String(a.id)===String(cur),canDel=(a.kind==="import"||a.kind==="demo");
     const meta=a.kind==="demo"?"IPSA · demo (14 acciones) · sus datos ya están copiados en la base":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones");
@@ -4676,9 +4696,9 @@ function viewCrear(){
   return create+saved;
 }
 function attachCrear(){
-  const grab=()=>{const n=document.getElementById("caName");if(n)caState.name=n.value;const q=document.getElementById("caN");if(q)caState.lastN=Math.max(0,parseInt(q.value,10)||0);};
+  const grab=()=>{const n=document.getElementById("caName");if(n)caState.name=n.value;const q=document.getElementById("caM");if(q)caState.months=Math.max(CA_MIN_MONTHS,parseInt(q.value,10)||CA_MIN_MONTHS);};
   const srcTk=()=>Object.keys(consolidatedSeries().tick||{});
-  document.querySelectorAll("[data-cafreq]").forEach(b=>b.onclick=()=>{grab();caState.freq=b.dataset.cafreq;render();});
+  document.querySelectorAll("[data-camonths]").forEach(b=>b.onclick=()=>{grab();caState.months=+b.dataset.camonths;render();});
   document.querySelectorAll("[data-cabench]").forEach(b=>b.onclick=()=>{grab();caState.bench=b.dataset.cabench;render();});
   document.querySelectorAll("[data-catk]").forEach(b=>b.onclick=()=>{grab();caState.sel[b.dataset.catk]=!caState.sel[b.dataset.catk];render();});
   const _all=document.querySelector("[data-caall]");if(_all)_all.onclick=()=>{grab();srcTk().forEach(t=>caState.sel[t]=true);render();};
@@ -4688,22 +4708,22 @@ function attachCrear(){
     grab();const Csrc=consolidatedSeries();const tickers=Object.keys(Csrc.tick||{}).filter(t=>caState.sel[t]);
     if(tickers.length<2){window.alert("Elige al menos 2 acciones para el análisis.");return;}
     if(!caIndexNames(Csrc,"sistema").length){window.alert("Falta el índice de referencia (IPSA) en la base. Cárgalo en el módulo Datos.");return;}
-    const chk=pricedbCheckAnalysis(caState.freq,{tickers,lastN:caState.lastN,bench:caState.bench,source:Csrc});
-    if(!chk.ok){
-      let msg="No se puede crear el análisis "+caState.freq+" como lo pediste.\n\n";
-      if(chk.reason){msg+=chk.reason;}
+    const R=caResolve(caState.months,{tickers,bench:caState.bench,source:Csrc});
+    if(!R.ok){
+      let msg="No se puede crear el análisis de "+caState.months+" meses.\n\n";
+      if(R.error){msg+=R.error;}
       else{
-        msg+="Solo hay "+chk.availRet+" "+chk.unit+" consecutivos con datos de TODAS las acciones elegidas"+(chk.from?(" ("+chk.from+" a "+chk.to+")"):"")+(chk.needRet?(", y pediste "+chk.needRet+" "+chk.unit+"."):" (mínimo 4 puntos).");
-        if(chk.limiting&&chk.limiting.length)msg+="\n\nAcciones con menos historial "+chk.unit+": "+chk.limiting.slice(0,6).map(x=>x.t+" ("+x.n+")").join(", ")+".";
-        msg+="\n\nReduce la ventana, cambia la frecuencia o quita esas acciones.";
+        msg+="Solo hay ~"+Math.floor(R.mAvail)+" meses con datos de TODAS las acciones elegidas.";
+        if(R.chk&&R.chk.limiting&&R.chk.limiting.length)msg+="\n\nAcciones con menos historial: "+R.chk.limiting.slice(0,6).map(x=>x.t).join(", ")+".";
+        msg+=(R.mAvail>=CA_MIN_MONTHS)?"\n\nBaja la ventana a "+Math.floor(R.mAvail)+" meses o quita esas acciones.":"\n\nEl mínimo de un análisis es "+CA_MIN_MONTHS+" meses: carga más historial (Configuración → Datos) o quita las acciones con menos datos.";
       }
       window.alert(msg);return;
     }
-    const imp=pricedbToIMP(caState.freq,{tickers,lastN:caState.lastN,bench:caState.bench,source:Csrc});
-    if(!imp){window.alert("No se pudo construir el análisis con los datos disponibles. Prueba otra frecuencia o ventana.");return;}
+    const imp=pricedbToIMP(R.freq,{tickers,lastN:R.lastN,bench:caState.bench,source:Csrc});
+    if(!imp){window.alert("No se pudo construir el análisis con los datos disponibles.");return;}
     const id="s"+Date.now()+Math.floor(Math.random()*1000);
-    const nm=(caState.name||"").trim()||("Análisis "+caState.freq+(caState.lastN?(" · últimos "+caState.lastN+" "+caUnit(caState.freq)):" · todo")+" · "+caState.bench+" · "+tickers.length+" acc.");
-    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{freq:caState.freq,lastN:caState.lastN,bench:caState.bench,tickers}});
+    const nm=(caState.name||"").trim()||("Análisis "+caState.months+" meses · "+caState.bench+" · "+tickers.length+" acc.");
+    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{months:caState.months,freq:R.freq,lastN:R.lastN,bench:caState.bench,tickers}});
     lsSet("inv_impsets_v1",IMPSETS);impsetActivate(id);
     try{const cp=curProj();if(cp){projAddLink(cp.id,"analysis",id);}}catch(e){}   // vincula el análisis al proyecto activo y lo deja como vigente
     caState.name="";modulo="eval";page="comparativa";render();
