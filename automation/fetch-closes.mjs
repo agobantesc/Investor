@@ -8,7 +8,7 @@
  * Sin dependencias (Node 18+). Uso: node automation/fetch-closes.mjs
  * Ajusta el mapa TICKERS si agregas/cambias acciones (clave = ticker en Investor, valor = símbolo Yahoo).
  */
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
 
 // Universo IPSA (~30). Clave = ticker en Investor, valor = símbolo Yahoo Finance (.SN = Bolsa de Santiago).
 const TICKERS = {
@@ -91,6 +91,21 @@ async function chart(symbol, usePeriod) {
 
 const byDate = {}; // date -> {ipsa, prices:{}}
 const errors = [];
+
+// ARCHIVO ACUMULADO: parte del closes.json existente para que cada corrida SUME al histórico en vez de
+// reemplazarlo. Sin esto, la corrida diaria (10d) truncaba el archivo de 2 años al día siguiente del
+// backfill, y un backfill (2y) borraba los valores diarios del IPSA que Yahoo solo entrega el mismo día.
+// Lo nuevo manda por celda (acción × fecha); lo que la corrida no trae, se conserva.
+try {
+  const prev = JSON.parse(readFileSync("data/closes.json", "utf8"));
+  for (const d of prev.days || []) {
+    if (!d || !d.date) continue;
+    const e = (byDate[d.date] ??= { date: d.date, prices: {} });
+    if (d.ipsa != null && isFinite(+d.ipsa) && +d.ipsa > 0) e.ipsa = +d.ipsa;
+    for (const [t, v] of Object.entries(d.prices || {})) if (isFinite(+v) && +v > 0) e.prices[t] = +v;
+  }
+  console.log(`Archivo previo: ${Object.keys(byDate).length} día(s) conservado(s) como base.`);
+} catch (e) { console.log("Sin archivo previo utilizable (primera corrida)."); }
 
 // HISTÓRICO del IPSA: Yahoo NO publica la historia del ^IPSA vía chart (solo el último valor), así que se
 // intenta una CADENA de fuentes hasta juntar historia; cada intento queda registrado en ipsaSources del JSON.

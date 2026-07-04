@@ -1712,7 +1712,8 @@ function viewDetalle(){
   const perPl=DATA.perYear===252?"diarios":DATA.perYear===52?"semanales":"mensuales";
   const selbar=`<div class="sel">${STOCKS.map(x=>`<button class="selb ${x.t===sel?'on':''}" data-sel="${x.t}" style="${x.t===sel?`background:${x.c};border-color:${x.c}`:''}"><span class="dot" style="background:${x.t===sel?'#fff':x.c}"></span>${x.t}</button>`).join("")}</div>`;
   const _W=winMode(),_alfa=_W?alphaWin(s):a.jensen;
-  const sg=_alfa>1?"SUBVALORADA":_alfa<-1?"SOBREVALORADA":"EQUILIBRIO",sgc=_alfa>1?green:_alfa<-1?red:muted;
+  const _thr=_W?Math.max(0.3,winYears()):1;   // el umbral ±1pp del veredicto es ANUAL: en ventana corta se prorratea (con piso 0,3pp), o casi todo saldría "EQUILIBRIO"
+  const sg=_alfa>_thr?"SUBVALORADA":_alfa<-_thr?"SOBREVALORADA":"EQUILIBRIO",sgc=_alfa>_thr?green:_alfa<-_thr?red:muted;
   const tiles=`<div class="tiles">
     ${tile("β regresión",s.b.toFixed(2),s.b<0.8?"defensiva":s.b<1?"moderada":"agresiva",s.c,accentT)}
     ${tile("R²",a.r2.toFixed(2),"sistemático "+(a.r2*100).toFixed(0)+"%",s.c)}
@@ -1754,7 +1755,8 @@ function viewCAPM(){
   const smlLeg=showR?`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>SML ex-ante (prima ${p0(prima0,W?2:1)})</span><span><span class="lgdot" style="background:${muted}"></span>SML realizada (prima ${p0(primaR,W?2:1)})</span></div>`:"";
   const chart=card("Security Market Line (SML)",(W?("En términos de la VENTANA de "+winLong()+" · "):"")+"Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:W?("Retorno real "+winShort()+" (%)"):"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:330}),smlLeg);
   const byJ=[...STOCKS].sort((a,b)=>alfaOf(b)-alfaOf(a));
-  const rows=byJ.map(s=>{const al=alfaOf(s);const sg=al>1?"SUBVALORADA":al<-1?"SOBREVALORADA":"EQUILIBRIO",sc=al>1?green:al<-1?red:muted;
+  const aThr=W?Math.max(0.3,winYears()):1;   // mismo prorrateo del umbral ±1pp anual que en Detalle
+  const rows=byJ.map(s=>{const al=alfaOf(s);const sg=al>aThr?"SUBVALORADA":al<-aThr?"SOBREVALORADA":"EQUILIBRIO",sc=al>aThr?green:al<-aThr?red:muted;
     return `<tr><td>${tk(s)}</td><td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td>
     <td class="tnum num" style="color:${indigo};font-weight:600">${p0(erOf(s),W?2:1)}</td><td class="num">${chip(retOf(s))}</td><td class="num">${chip(al)}</td><td>${badge(sg,sc)}</td></tr>`;}).join("");
   const heads=W?[["Acción",0],["β",1],["Exigido "+winShort(),1],["Real "+winShort(),1],["α ventana",1],["Señal",0]]:[["Acción",0],["β",1],["E(R) CAPM",1],["Retorno real",1],["α Jensen",1],["Señal",0]];
@@ -1961,7 +1963,7 @@ function renameScenario(id){
 const SCPAL=["#1E5FD1","#0E8C5E","#B57A12","#D83A3A","#7C3AED","#0EA5E9","#DB2777","#65A30D","#EA580C","#0891B2"];
 function viewComparador(){
   const intro=card("Comparación de escenarios","Guarda simulaciones desde el Constructor (botón Guardar escenario) y compáralas aquí",
-    SCEN.length?`<div class="genrow" style="align-items:center"><div class="genhint" style="margin:0">${SCEN.length} escenario(s) guardado(s). Compara métricas, riesgo-retorno y proyección CAPM a 12 meses.</div><button class="btn" id="clrscen">Limpiar todo</button></div>`
+    SCEN.length?`<div class="genrow" style="align-items:center"><div class="genhint" style="margin:0">${SCEN.length} escenario(s) guardado(s). Compara métricas, riesgo-retorno y el retorno exigido (CAPM) a 12 meses.</div><button class="btn" id="clrscen">Limpiar todo</button></div>`
     :`<div class="note">Aún no has guardado escenarios. Ve al <b>Constructor de portafolio</b>, arma una alternativa y pulsa <b>Guardar escenario</b>. Luego vuelve aquí para compararlas lado a lado.</div>`);
   if(!SCEN.length)return intro;
   const rows=SCEN.map((s,i)=>{const comp=s.comp.map(c=>`<span class="tag" style="border-color:${c.c}55;color:${c.c}">${c.t} ${c.w}%</span>`).join(" ");
@@ -1988,8 +1990,8 @@ function viewComparador(){
   const N=12,labels=Array.from({length:N+1},(_,i)=>String(i));
   const series=SCEN.map((s,i)=>{const erM=Math.pow(1+s.m.erCapm/100,1/12)-1;return {label:s.name,c:SCPAL[i%SCPAL.length],vals:Array.from({length:N+1},(_,k)=>+(s.amount*Math.pow(1+erM,k)).toFixed(0))};});
   const leg=`<div class="legend">`+SCEN.map((s,i)=>`<span><span class="lgdot" style="background:${SCPAL[i%SCPAL.length]}"></span>${s.name}</span>`).join("")+`</div>`;
-  const proj=card("Proyección CAPM comparada (12 meses)","Crecimiento del monto según el retorno exigido (CAPM) de cada escenario · pasa el mouse para ver el valor de cada escenario por mes",svgMulti({series,labels,h:320,yfmt:fmtK,id:"cmpproj",xlabel:"Meses",unit:"Mes",flatx:true}),leg);
-  const note=notecard("Compara tus alternativas guardadas. <b>Mayor Sharpe</b> = mejor relación retorno/riesgo. <b>Menor σ y menor correlación</b> = mejor diversificada. La proyección usa solo CAPM (recta), sin escenarios optimista/pesimista. No es recomendación de inversión.");
+  const proj=card("Retorno exigido (CAPM) comparado · 12 meses","Crecimiento del monto al retorno exigido por CAPM de cada escenario · pasa el mouse para ver el valor de cada escenario por mes",svgMulti({series,labels,h:320,yfmt:fmtK,id:"cmpproj",xlabel:"Meses",unit:"Mes",flatx:true}),leg);
+  const note=notecard("Compara tus alternativas guardadas. <b>Mayor Sharpe</b> = mejor relación retorno/riesgo. <b>Menor σ y menor correlación</b> = mejor diversificada. La curva es el retorno <b>exigido</b> por CAPM (una vara de comparación entre escenarios, no una proyección de rentabilidad); para escenarios probabilísticos usa <b>Montecarlo</b>. No es recomendación de inversión.");
   return intro+tbl+scat+scatSML+proj+note;
 }
 function attachMultiHover(id){
@@ -2038,7 +2040,7 @@ function viewSim(){
   const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState.sel[t]||0),0);
   const shs=STOCKS.map(s=>s.a24.sharpe),maxSh=Math.max(0.01,...shs),loSh=Math.min(0,...shs);
   const comps=STOCKS.map(s=>MF.comp[s.t]||0),maxAbsC=Math.max(0.01,...comps.map(Math.abs));
-  const head=`<thead><tr><th></th><th>Acción</th><th class="r gl">β</th><th class="r">Ret. anual</th><th class="r gl">σ</th><th class="r">Sharpe</th><th class="r"><span class="gl">α</span> Jensen</th><th class="r">Multifactor</th><th class="r">Peso</th></tr></thead>`;
+  const head=`<thead><tr><th></th><th>Acción</th><th class="r gl">β</th><th class="r">Ret. anual${winMode()?"*":""}</th><th class="r gl">σ</th><th class="r">Sharpe</th><th class="r"><span class="gl">α</span> Jensen</th><th class="r">Multifactor</th><th class="r">Peso</th></tr></thead>`;
   const rows=STOCKS.map(s=>{const on=simState.sel[s.t]!=null,a=s.a24,comp=MF.comp[s.t]||0;
     const bcol=s.b<0.85?green:(s.b>1.2?red:ink);
     const shPct=Math.max(5,Math.min(100,(a.sharpe-loSh)/(maxSh-loSh)*100));
@@ -2056,7 +2058,7 @@ function viewSim(){
     </tr>`;}).join("");
   const sc=Math.abs(sum-100)<0.5?green:amber;
   const controls=card("Selección y pesos","Marca las acciones (✓) y define su % · métricas CAPM + multifactor con color para decidir de un vistazo",
-    `<div class="simhead"><div class="simamt"><span class="l">Monto a invertir (CLP)</span><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="amtinp" value="${simState.amount?simState.amount.toLocaleString('es-CL'):''}" placeholder="Ej: 1.000.000"/></div></div><button class="btn" id="eqw">Equiponderar</button></div><div class="tw cons-tw" style="margin-top:13px"><table class="cons-tbl">${head}<tbody>${rows}</tbody></table></div><div class="simsum">Suma de pesos: <b id="sumv" style="color:${sc}">${sum.toFixed(1)}%</b></div>`);
+    `<div class="simhead"><div class="simamt"><span class="l">Monto a invertir (CLP)</span><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="amtinp" value="${simState.amount?simState.amount.toLocaleString('es-CL'):''}" placeholder="Ej: 1.000.000"/></div></div><button class="btn" id="eqw">Equiponderar</button></div><div class="tw cons-tw" style="margin-top:13px"><table class="cons-tbl">${head}<tbody>${rows}</tbody></table></div><div class="simsum">Suma de pesos: <b id="sumv" style="color:${sc}">${sum.toFixed(1)}%</b>${winMode()?` <span style="color:var(--muted)">· *retorno anualizado desde una ventana ${winShort()} (&lt;1 año): referencial</span>`:""}</div>`);
   const edSc=scenEditId!=null?SCEN.find(s=>s.id===scenEditId):null;
   const scenBtns=edSc?`<span class="genl" style="margin:0;color:var(--indigo)">✎ Editando escenario: <b>${edSc.name}</b></span><button class="btn" id="cancelscen">Cancelar</button><button class="btn" id="savescen">Guardar como nuevo</button><button class="btn btn-pri" id="updscen">💾 Actualizar escenario</button>`:`<button class="btn" id="savescen">💾 Guardar escenario</button>`;
   return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:2px;flex-wrap:wrap;align-items:center">${scenBtns}<button class="btn" id="genpdf">📄 Descargar PDF</button><button class="btn btn-pri" id="applyinv">✓ Aplicar inversión</button></div>`+controls+`<div id="simres">${simResults()}</div>`;
@@ -2069,7 +2071,7 @@ function simResults(){
     tile("E(R) CAPM anual",p0(M.erCapm),"retorno exigido",indigo,indigo)+
     tile("E(R) CAPM mensual",p0(M.erM,2),"compuesto",indigo,ink)+
     tile("E(R) CAPM semanal",p0(M.erW,2),"compuesto",indigo,ink)+
-    tile("Retorno histórico",pc(M.retH),"anual · "+winShort(),indigo,col(M.retH))+
+    tile("Retorno histórico",pc(M.retH),(winMode()?"anualizado (referencial: ventana "+winShort()+" <1 año)":"anual · "+winShort()),indigo,col(M.retH))+
     tile("Riesgo σ",p0(M.sig),"prom. pond. "+p0(M.wavgSig),indigo,ink)+
     tile("Sharpe",M.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),indigo,M.sharpe>=0?green:red)+tile("Correlación portafolio",M.corrAvg.toFixed(2),"media entre acciones",indigo,ink)+`</div>`;
   const arows=M.ws.map(x=>`<tr><td>${tk(x.s)}</td><td>${badge(x.s.s,x.s.c)}</td><td class="tnum">${(x.w*100).toFixed(1)}%</td><td class="tnum" style="font-weight:700">${fmtCLP(simState.amount*x.w)}</td><td class="tnum" style="color:${accentT};font-weight:700">${x.s.b.toFixed(2)}</td></tr>`).join("");
@@ -2107,8 +2109,8 @@ function simResults(){
   const ctrl=`<div class="projctrl"><div><div class="genl">Escala</div><div class="pbtns">${projBtns}</div></div><div><div class="genl">Horizonte (${HZNUNIT[proj]})</div><div class="pbtns">${hznBtns}</div></div></div>`;
   const projLeg=`<div class="legend" style="margin:2px 0 4px"><span><span class="lgdot" style="background:${indigo}"></span>CAPM (retorno exigido)</span></div>`;
   const fvb=baseVals[steps];
-  const projBody=ctrl+projLeg+svgProj({labels:plabels,base:baseVals,unit:unitS})+`<div class="note" style="margin-top:11px">Horizonte <b>${hzn} ${HZNUNIT[proj]}</b> · monto inicial ${fmtCLP(simState.amount)}. <b style="color:${indigo}">CAPM</b> (recta, retorno exigido ${M.erCapm.toFixed(2)}% anual) → ${fmtCLP(fvb)}. Proyección determinística del retorno exigido por el modelo; no es garantía.</div>`;
-  const projCard=card("Proyección del monto invertido","Crecimiento del monto según el retorno exigido por CAPM",projBody);
+  const projBody=ctrl+projLeg+svgProj({labels:plabels,base:baseVals,unit:unitS})+`<div class="note" style="margin-top:11px">Horizonte <b>${hzn} ${HZNUNIT[proj]}</b> · monto inicial ${fmtCLP(simState.amount)}. <b style="color:${indigo}">CAPM</b> (recta, retorno exigido ${M.erCapm.toFixed(2)}% anual) → ${fmtCLP(fvb)}. Es el crecimiento AL RETORNO EXIGIDO por el modelo — una vara de comparación, no una proyección de rentabilidad esperada; para proyectar escenarios usa <b>Montecarlo</b> (barra superior).</div>`;
+  const projCard=card("Retorno exigido (CAPM) en el tiempo","Cómo crecería el monto si rindiera exactamente el retorno que el CAPM exige por su riesgo",projBody);
   const varData=[["Semanal",M.erW,52],["Mensual",M.erM,12],["Anual",M.erCapm,1]].map(a=>{const s=M.sig/Math.sqrt(a[2]);const v=a[1]-1.645*s;return {l:a[0],mu:a[1],s,v,loss:simState.amount*Math.max(0,-v)/100};});
   const varRows=varData.map(d=>`<tr><td style="font-weight:700">${d.l}</td><td class="tnum" style="color:${col(d.mu)}">${pc(d.mu,2)}</td><td class="tnum">${p0(d.s,2)}</td><td class="tnum" style="font-weight:800;color:${d.v<0?red:green}">${pc(d.v,2)}</td><td class="tnum" style="font-weight:700;color:${d.loss>0?red:muted}">${d.loss>0?"−"+fmtCLP(d.loss):"—"}</td></tr>`).join("");
   const varCard=card("Value at Risk (95%)","Pérdida máxima esperada con 95% de confianza · VaR = μ − 1,645·σ · σ escalada por √tiempo",{html:`<div class="tw"><table><thead><tr><th>Período</th><th>Retorno esp. (μ)</th><th>Riesgo (σ)</th><th>VaR 95%</th><th>Pérdida máx. (CLP)</th></tr></thead><tbody>${varRows}</tbody></table></div>`,flush:true});
@@ -2324,8 +2326,8 @@ function genPDF(){
     ${sh(6,"Retornos esperados (CAPM) y Value at Risk (95%)","pb")}
     <table><thead><tr><th>Escala</th><th class="r">Retorno esperado μ</th><th class="r">Riesgo σ</th><th class="r">VaR 95%</th><th class="r">Pérdida máx. (CLP)</th></tr></thead><tbody>${varRows}</tbody></table>
     <div class="note">El VaR 95% indica que, con 95% de confianza, la pérdida del portafolio no debería superar ese porcentaje (ni ese monto) en el período correspondiente, bajo el supuesto de distribución normal de retornos.</div>
-    ${sh(7,"Proyección del capital invertido","pb")}
-    <div class="note" style="margin-bottom:10px">Crecimiento estimado del capital con retorno esperado CAPM de ${M.erCapm.toFixed(2)}% anual, en escala <b>${proj}</b> y horizonte de <b>${hzn} ${uni}</b>. Valor estimado al final: <b>${fmtCLP(fvv)}</b> (${((fvv/simState.amount-1)*100).toFixed(1)}%).</div>
+    ${sh(7,"Retorno exigido (CAPM) en el tiempo","pb")}
+    <div class="note" style="margin-bottom:10px">Crecimiento del capital AL RETORNO EXIGIDO por CAPM (${M.erCapm.toFixed(2)}% anual) — una vara de comparación, no una proyección de rentabilidad — en escala <b>${proj}</b> y horizonte de <b>${hzn} ${uni}</b>. Valor al final si rinde exactamente lo exigido: <b>${fmtCLP(fvv)}</b> (${((fvv/simState.amount-1)*100).toFixed(1)}%).</div>
     ${projChart}
     <table style="max-width:520px;margin:12px auto 0"><thead><tr><th>Hito</th><th class="r">Valor estimado</th><th class="r">Variación</th></tr></thead><tbody>${ms}</tbody></table>
     ${sh(8,"Metodología y supuestos")}
@@ -2567,6 +2569,7 @@ function viewInvActive(){
   const chips=(_real?_real.per.map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
   const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(_real.bp||0).toFixed(2)} · σ ${(PF.sig||0).toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`;
   const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
+  if(editIdx!=null&&!WEEKS[editIdx])editIdx=null;   // el índice en edición puede quedar de otro proyecto: nunca editar un registro inexistente
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
   const compraMode=isFirst||editIdx===0;
   const pv=t=>ed?(ed.prices[t]||""):"";
@@ -2646,8 +2649,11 @@ function viewInvActive(){
   // seguimiento el conteo fijo de 21 registros dejaba el "peor mensual" en "—" aunque el mes ya se cumplió)
   const stepLoss=()=>{const v=IM.series;let mn=Infinity;for(let i=1;i<v.length;i++){const d=(v[i].val-(v[i].inflow||0))-v[i-1].val;if(d<mn)mn=d;}return mn===Infinity?null:Math.min(mn,0);};
   const realLossDays=days=>{const v=IM.series;let mn=Infinity;
+    // flujos acumulados: TODOS los aportes/ventas dentro de la ventana se netean, no solo el del último
+    // registro — un aporte intermedio maquillaba la pérdida real y una venta intermedia inventaba una
+    const cum=[];let acc=0;for(let k=0;k<v.length;k++){acc+=(v[k].inflow||0);cum[k]=acc;}
     for(let i=0;i<v.length;i++){const t0=new Date(v[i].date+"T00:00:00").getTime();
-      for(let j=i+1;j<v.length;j++){if(new Date(v[j].date+"T00:00:00").getTime()-t0>days*864e5)break;const d=(v[j].val-(v[j].inflow||0))-v[i].val;if(d<mn)mn=d;}}
+      for(let j=i+1;j<v.length;j++){if(new Date(v[j].date+"T00:00:00").getTime()-t0>days*864e5+36e5)break;const d=(v[j].val-(cum[j]-cum[i]))-v[i].val;if(d<mn)mn=d;}}   // +1h de tolerancia por el cambio de hora chileno
     return mn===Infinity?null:Math.min(mn,0);};
   const hzD=[["Diario",vD,PF.freq==="diario"?stepLoss():null],["Semanal",vW,realLossDays(7)],["Mensual",vM,realLossDays(31)]];
   const varRows=hzD.map(a=>`<tr><td><b>${a[0]}</b></td><td class="r">${pc(a[1].pct*100)}</td><td class="r" style="color:${red};font-weight:700">${fmtCLP(-a[1].loss)}</td><td class="r" style="font-weight:700;color:${a[2]!=null&&a[2]<0?red:muted}">${a[2]!=null?fmtCLP(a[2]):"—"}</td></tr>`).join("");
@@ -2969,23 +2975,32 @@ function render(){
   refreshPalette();
   window.__sgN=0;
   let h="";
-  if(modulo==="inicio") h=viewHome();
-  else if(modulo==="datos") h=viewDatos();
-  else if(modulo==="inv") h=(page==="operar"?viewOperar():page==="contabilidad"?viewContab():viewInv());
-  else if(modulo==="pro") h=viewPro();
-  else if(modulo==="mercados") h=viewMercados();
-  else if(modulo==="montecarlo") h=viewMontecarlo();
-  else if(modulo==="proyectos") h=viewProyectos();
-  else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
-  else if(modulo==="perfil") h=viewPerfil();
-  else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
-  else if(modulo==="eval"&&page!=="crear"&&evalIsEmpty()) h=evalEmpty();   // base limpia + demo oculto: sin datos (no se muestra el demo)
-  else if(page==="comparativa") h=viewComparativa();
-  else if(page==="detalle") h=viewDetalle();
-  else if(page==="capm") h=viewCAPM();
-  else if(page==="multifactor") h=viewMultifactor();
-  else if(page==="crear") h=viewCrear();
-  if(modulo==="eval"&&page!=="crear"&&!evalIsEmpty()) h=evalMeta()+h;
+  // RED DE SEGURIDAD: si una vista lanza una excepción, se muestra una tarjeta de error recuperable en vez de
+  // abortar render() a medias — que dejaba la navegación "congelada" (los botones nunca se re-conectaban)
+  try{
+    if(modulo==="inicio") h=viewHome();
+    else if(modulo==="datos") h=viewDatos();
+    else if(modulo==="inv") h=(page==="operar"?viewOperar():page==="contabilidad"?viewContab():viewInv());
+    else if(modulo==="pro") h=viewPro();
+    else if(modulo==="mercados") h=viewMercados();
+    else if(modulo==="montecarlo") h=viewMontecarlo();
+    else if(modulo==="proyectos") h=viewProyectos();
+    else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
+    else if(modulo==="perfil") h=viewPerfil();
+    else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
+    else if(modulo==="eval"&&page!=="crear"&&evalIsEmpty()) h=evalEmpty();   // base limpia + demo oculto: sin datos (no se muestra el demo)
+    else if(page==="comparativa") h=viewComparativa();
+    else if(page==="detalle") h=viewDetalle();
+    else if(page==="capm") h=viewCAPM();
+    else if(page==="multifactor") h=viewMultifactor();
+    else if(page==="crear") h=viewCrear();
+    if(modulo==="eval"&&page!=="crear"&&!evalIsEmpty()) h=evalMeta()+h;
+  }catch(err){
+    try{console.error("render("+modulo+"/"+page+"):",err);}catch(e){}
+    h=card("⚠ Esta vista tuvo un problema","La aplicación se recuperó y la navegación sigue funcionando.",
+      `<div class="note" style="margin:0;border-color:var(--red-line);background:var(--redbg)">Detalle técnico: <b>${(""+((err&&err.message)||err)).replace(/</g,"&lt;")}</b> · vista <b>${modulo}/${page}</b>.</div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:13px"><button class="btn btn-pri" data-recover-home>← Volver al inicio</button></div>`);
+  }
   const _vk=modulo+"|"+page;
   const _mnOld=document.getElementById("main");
   const _keepScroll=(_vk===_lastViewKey);
@@ -2993,20 +3008,23 @@ function render(){
   document.getElementById("main").innerHTML=`<div class="wrap">${h}</div>`;
   const _mn=document.getElementById("main");if(_mn)_mn.scrollTop=_keepScroll?_prevScroll:0;
   _lastViewKey=_vk;
-  if(modulo==="eval"&&page==="detalle"){ document.querySelectorAll(".selb").forEach(b=>b.onclick=()=>{sel=b.dataset.sel;render();}); attachLineHover(); attachPriceHover(); }
-  if(modulo==="sim"){ if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
-  if(modulo==="inv") attachInv();
-  if(modulo==="eval"&&page==="multifactor") attachMultifactor();
-  if(modulo==="eval"&&page==="crear") attachCrear();
-  if(modulo==="perfil") attachPerfil();
-  if(modulo==="mercados") attachMercados();
-  if(modulo==="montecarlo") attachMontecarlo();
-  if(modulo==="proyectos") attachProyectos();
-  if(modulo==="clientes") attachClientes();
-  if(modulo==="inicio") attachHome();
-  if(modulo==="datos") attachDatos();
-  if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};const _gc=document.querySelector("[data-gocargar]");if(_gc)_gc.onclick=()=>{modulo="datos";page="cargar";render();};}
-  attachScatterAll();
+  try{
+    if(modulo==="eval"&&page==="detalle"){ document.querySelectorAll(".selb").forEach(b=>b.onclick=()=>{sel=b.dataset.sel;render();}); attachLineHover(); attachPriceHover(); }
+    if(modulo==="sim"){ if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
+    if(modulo==="inv") attachInv();
+    if(modulo==="eval"&&page==="multifactor") attachMultifactor();
+    if(modulo==="eval"&&page==="crear") attachCrear();
+    if(modulo==="perfil") attachPerfil();
+    if(modulo==="mercados") attachMercados();
+    if(modulo==="montecarlo") attachMontecarlo();
+    if(modulo==="proyectos") attachProyectos();
+    if(modulo==="clientes") attachClientes();
+    if(modulo==="inicio") attachHome();
+    if(modulo==="datos") attachDatos();
+    if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};const _gc=document.querySelector("[data-gocargar]");if(_gc)_gc.onclick=()=>{modulo="datos";page="cargar";render();};}
+    attachScatterAll();
+  }catch(err){try{console.error("attach("+modulo+"/"+page+"):",err);}catch(e){}}
+  const _rh=document.querySelector("[data-recover-home]");if(_rh)_rh.onclick=()=>{modulo="inicio";page="home";editIdx=null;invNew=null;render();};
 }
 
 /* ===================================================================== */
@@ -3931,8 +3949,24 @@ let impFiles=[], IMP=lsGet("inv_import_v1")||null, impFreq="mensual", impRf=RF, 
 
 function impTickerFrom(fn){let s=fn.replace(/\.[a-z0-9]+$/i,"").replace(/[_-]+/g," ").replace(/\b(stock|price|history|historical|data)\b/gi,"").replace(/\s+/g," ").trim();for(const[re,t]of IMP_KNOWN)if(re.test(s)||re.test(fn))return t;const w=s.split(" ").filter(Boolean);if(!w.length)return "ACCION";const f=w[0].toUpperCase();return f.length<=10?f:f.slice(0,10);}
 function impSplit(line,delim){const out=[];let cur="",q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}else if(ch===delim&&!q){out.push(cur);cur="";}else cur+=ch;}out.push(cur);return out;}
-function impNorm(s){s=(""+s).trim().replace(/^"|"$/g,"");let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(m)return m[3]+"-"+("0"+m[1]).slice(-2)+"-"+("0"+m[2]).slice(-2);m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[3]).slice(-2);m=s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);if(m)return m[3]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2);return s;}
+/* normaliza una fecha a YYYY-MM-DD. dateMode: "es" = día/mes (03/07 = 3 de julio) · "us"/omitido = mes/día.
+   Un número >12 desambigua solo y manda sobre el modo. Valida que la fecha EXISTA (round-trip): "2025-13-03"
+   o un 31 de un mes de 30 días devuelven "" y la fila se descarta, en vez de entrar como fecha fantasma. */
+function impNorm(s,dateMode){s=(""+s).trim().replace(/^"|"$/g,"");
+  const mk=(y,mo,d)=>{y=+y;mo=+mo;d=+d;if(!(mo>=1&&mo<=12&&d>=1&&d<=31))return "";const t=new Date(y,mo-1,d);return (t.getFullYear()===y&&t.getMonth()===mo-1&&t.getDate()===d)?(y+"-"+("0"+mo).slice(-2)+"-"+("0"+d).slice(-2)):"";};
+  let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m){const a=+m[1],b=+m[2];const dayFirst=(a>12)?true:(b>12)?false:(dateMode==="es");return dayFirst?mk(m[3],b,a):mk(m[3],a,b);}
+  m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);if(m)return mk(m[3],m[2],m[1]);   // dd.mm.yyyy: export típico de investing.com en español
+  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return mk(m[1],m[2],m[3]);
+  m=s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);if(m)return mk(m[3],m[2],m[1]);
+  return s;}
 function impNum(s,mode){s=(""+s).trim().replace(/^"|"$/g,"").replace(/\s/g,"").replace(/\$/g,"").replace(/%/g,"");if(s==="")return NaN;if(mode==="es"){s=s.replace(/\./g,"").replace(",",".");}else{s=s.replace(/,/g,"");}return parseFloat(s);}
+/* modo decimal según la FORMA de los valores, no el delimitador: "6.550,70" es chileno (miles con punto)
+   aunque el archivo venga separado por comas — con el delimitador solo, esos precios entraban 1000× más chicos. */
+function impDecMode(vals,fallback){for(const s0 of (vals||[])){const v=(""+s0).trim().replace(/^"|"$/g,"");if(!v)continue;if(/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(v)||/^-?\d+,\d+$/.test(v))return "es";if(/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(v)||/^-?\d+\.\d+$/.test(v))return "us";}return fallback;}
+/* convención de fecha del archivo: si algún dd/mm/yyyy trae el PRIMER número >12 es día-primero ("es");
+   si trae el SEGUNDO >12 es mes-primero ("us"). Sin evidencia en ninguna fila, se usa el fallback. */
+function impDateMode(cells,fallback){let df=0,mf=0;for(const s0 of (cells||[])){const m=(""+s0).trim().replace(/^"|"$/g,"").match(/^(\d{1,2})\/(\d{1,2})\/\d{4}$/);if(!m)continue;if(+m[1]>12)df++;else if(+m[2]>12)mf++;}return df>mf?"es":mf>df?"us":fallback;}
 function impParseInvesting(text,ticker){
   const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
   const head=impSplit(lines[0],",").map(h=>h.trim().replace(/^"|"$/g,"").toLowerCase());
@@ -3941,18 +3975,24 @@ function impParseInvesting(text,ticker){
   rows.sort((a,b)=>a[0]<b[0]?-1:1);
   return [{name:ticker,src:ticker,dates:rows.map(r=>r[0]),closes:rows.map(r=>r[1])}];
 }
-/* formato OHLC estándar (Stooq/Yahoo: Date,Open,High,Low,Close[,Volume] · o su versión en español):
-   es UNA serie — se toma solo el CIERRE. Sin esto, impParseCombined trataría Open/High/Low/Close/Volume
-   como cinco "acciones" distintas. El nombre sale del archivo (ipsa_d.csv → IPSA vía impTickerFrom). */
+/* historial de UN activo (Stooq/Yahoo: Date,Open,High,Low,Close[,Volume] · su versión en español · o un
+   simple Date,Close / Fecha,Último): es UNA serie — se toma solo el CIERRE. Sin esto, impParseCombined
+   trataría Open/High/Low/Close/Volume como cinco "acciones" distintas o descartaría el archivo entero.
+   El nombre sale del archivo (ipsa_d.csv → IPSA vía impTickerFrom). */
 function impParseOhlc(text,ticker){
   const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
-  const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",",mode=delim===";"?"es":"us";
+  const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",";
   const head=impSplit(lines[0],delim).map(h=>h.trim().replace(/^"|"$/g,"").toLowerCase());
   const di=head.findIndex(h=>/^(date|fecha)$/.test(h));
   let ci=head.findIndex(h=>/^(close|cierre|último|ultimo)$/.test(h));
   if(ci<0)ci=head.findIndex(h=>/^adj\.? ?close$/.test(h));
+  if(ci<0)ci=head.findIndex(h=>/^(price|precio)$/.test(h));
+  if(di<0||ci<0)throw new Error("no se encontró la columna de fecha o la de cierre");
+  const body=lines.slice(1).map(l=>impSplit(l,delim));
+  const mode=impDecMode(body.map(c=>c[ci]),delim===";"?"es":"us");
+  const dmode=impDateMode(body.map(c=>c[di]),mode==="es"?"es":"us");
   const rows=[];
-  for(let i=1;i<lines.length;i++){const c=impSplit(lines[i],delim);const d=impNorm(c[di]),px=impNum(c[ci],mode);if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&isFinite(px)&&px>0)rows.push([d,px]);}
+  for(const c of body){const d=impNorm(c[di],dmode),px=impNum(c[ci],mode);if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&isFinite(px)&&px>0)rows.push([d,px]);}
   rows.sort((a,b)=>a[0]<b[0]?-1:1);
   return [{name:ticker,src:ticker,dates:rows.map(r=>r[0]),closes:rows.map(r=>r[1])}];
 }
@@ -3962,28 +4002,43 @@ function impParseOhlc(text,ticker){
 const IMP_BOGUS_COL=/^(open|high|low|close|adj\.? ?close|volume|vol\.?|price|apertura|m[áa]x\.?|m[áa]ximo|m[íi]n\.?|m[íi]nimo|cierre|[úu]ltimo|%? ?var\.?%?)$/i;
 function impParseCombined(text){
   const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
-  const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",",mode=delim===";"?"es":"us";
+  const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",";
   const header=impSplit(lines[0],delim).map(s=>s.trim().replace(/^"|"$/g,""));
   const idx=[];header.slice(1).forEach((h,j)=>{if(h&&!IMP_BOGUS_COL.test(h))idx.push([h,j]);});
+  if(!idx.length)throw new Error("solo trae columnas de mercado (Open/High/Low/Close/Volumen), ninguna acción. Si es el historial de UN activo, debe incluir columnas Fecha y Cierre/Close");
+  const body=lines.slice(1).map(l=>impSplit(l,delim));
+  const mode=impDecMode(body.map(c=>c[idx[0][1]+1]),delim===";"?"es":"us");
+  const dmode=impDateMode(body.map(c=>c[0]),mode==="es"?"es":"us");
   const dates=[],sv={};idx.forEach(([c])=>sv[c]=[]);
-  for(let i=1;i<lines.length;i++){const cells=impSplit(lines[i],delim);dates.push(impNorm(cells[0]));idx.forEach(([c,j])=>sv[c].push(impNum(cells[j+1],mode)));}
+  body.forEach(cells=>{dates.push(impNorm(cells[0],dmode));idx.forEach(([c,j])=>sv[c].push(impNum(cells[j+1],mode)));});
   return idx.map(([c])=>({name:c,src:c,dates:dates.slice(),closes:sv[c]}));
 }
 async function impInflate(bytes){const ds=new DecompressionStream("deflate-raw");const rs=new Blob([bytes]).stream().pipeThrough(ds);return new Uint8Array(await new Response(rs).arrayBuffer());}
 function impU16(b,o){return b[o]|(b[o+1]<<8);}function impU32(b,o){return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;}
 async function impUnzip(u8){let eocd=-1;for(let i=u8.length-22;i>=0;i--){if(u8[i]===0x50&&u8[i+1]===0x4b&&u8[i+2]===0x05&&u8[i+3]===0x06){eocd=i;break;}}if(eocd<0)throw new Error("no es un .xlsx válido");const cnt=impU16(u8,eocd+10),cdOff=impU32(u8,eocd+16);const files={};let p=cdOff;for(let n=0;n<cnt;n++){if(impU32(u8,p)!==0x02014b50)break;const method=impU16(u8,p+10),csize=impU32(u8,p+20),nameLen=impU16(u8,p+28),extraLen=impU16(u8,p+30),commLen=impU16(u8,p+32),lho=impU32(u8,p+42);const name=new TextDecoder().decode(u8.slice(p+46,p+46+nameLen));const lNameLen=impU16(u8,lho+26),lExtra=impU16(u8,lho+28),dataStart=lho+30+lNameLen+lExtra;const comp=u8.slice(dataStart,dataStart+csize);files[name]=(method===0)?comp:await impInflate(comp);p+=46+nameLen+extraLen+commLen;}return files;}
 function impXmlText(s){return s.replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&apos;/g,"'");}
-async function impReadXlsx(file){const u8=new Uint8Array(await file.arrayBuffer());const files=await impUnzip(u8);const dec=new TextDecoder();const shared=[];if(files["xl/sharedStrings.xml"]){const x=dec.decode(files["xl/sharedStrings.xml"]);(x.match(/<si>[\s\S]*?<\/si>/g)||[]).forEach(si=>shared.push(impXmlText(si)));}let sn=Object.keys(files).find(n=>/^xl\/worksheets\/sheet1\.xml$/.test(n))||Object.keys(files).find(n=>/^xl\/worksheets\/.*\.xml$/.test(n));if(!sn)throw new Error("sin hoja");const sx=dec.decode(files[sn]);const rowsXml=sx.match(/<row[\s\S]*?<\/row>/g)||[];const grid=[];let maxc=0;rowsXml.forEach(rx=>{const cells={};(rx.match(/<c[\s\S]*?(?:\/>|<\/c>)/g)||[]).forEach(cx=>{const ref=(cx.match(/r="([A-Z]+)\d+"/)||[])[1]||"";let col=0;for(let k=0;k<ref.length;k++)col=col*26+(ref.charCodeAt(k)-64);col-=1;if(col<0)col=0;const t=(cx.match(/t="([^"]+)"/)||[])[1];let val;if(t==="s"){const v=(cx.match(/<v>([\s\S]*?)<\/v>/)||[])[1];val=shared[+v]!=null?shared[+v]:"";}else if(t==="inlineStr"||t==="str"){val=impXmlText((cx.match(/<t[^>]*>([\s\S]*?)<\/t>/)||cx.match(/<v>([\s\S]*?)<\/v>/)||["",""])[1]);}else{const v=(cx.match(/<v>([\s\S]*?)<\/v>/)||[])[1];val=v!=null?+v:"";}cells[col]=val;if(col>maxc)maxc=col;});const arr=[];for(let i=0;i<=maxc;i++)arr.push(cells[i]!=null?cells[i]:"");grid.push(arr);});if(grid.length<3)throw new Error("pocas filas");const header=grid[0].map(x=>(""+x).trim()),cols=header.slice(1).filter(h=>h),dates=[],sv={};cols.forEach(c=>sv[c]=[]);for(let i=1;i<grid.length;i++){const row=grid[i];let d=row[0];if(typeof d==="number"&&d>20000&&d<80000)d=new Date(Date.UTC(1899,11,30)+d*864e5).toISOString().slice(0,10);dates.push(impNorm(""+d));cols.forEach((c,j)=>{const v=row[j+1];sv[c].push(typeof v==="number"?v:impNum(v,"us"));});}return cols.map(c=>({name:c,src:c,dates:dates.slice(),closes:sv[c]}));}
+async function impReadXlsx(file){const u8=new Uint8Array(await file.arrayBuffer());const files=await impUnzip(u8);const dec=new TextDecoder();const shared=[];if(files["xl/sharedStrings.xml"]){const x=dec.decode(files["xl/sharedStrings.xml"]);(x.match(/<si>[\s\S]*?<\/si>/g)||[]).forEach(si=>shared.push(impXmlText(si)));}let sn=Object.keys(files).find(n=>/^xl\/worksheets\/sheet1\.xml$/.test(n))||Object.keys(files).find(n=>/^xl\/worksheets\/.*\.xml$/.test(n));if(!sn)throw new Error("sin hoja");const sx=dec.decode(files[sn]);const rowsXml=sx.match(/<row[\s\S]*?<\/row>/g)||[];const grid=[];let maxc=0;rowsXml.forEach(rx=>{const cells={};(rx.match(/<c[\s\S]*?(?:\/>|<\/c>)/g)||[]).forEach(cx=>{const ref=(cx.match(/r="([A-Z]+)\d+"/)||[])[1]||"";let col=0;for(let k=0;k<ref.length;k++)col=col*26+(ref.charCodeAt(k)-64);col-=1;if(col<0)col=0;const t=(cx.match(/t="([^"]+)"/)||[])[1];let val;if(t==="s"){const v=(cx.match(/<v>([\s\S]*?)<\/v>/)||[])[1];val=shared[+v]!=null?shared[+v]:"";}else if(t==="inlineStr"||t==="str"){val=impXmlText((cx.match(/<t[^>]*>([\s\S]*?)<\/t>/)||cx.match(/<v>([\s\S]*?)<\/v>/)||["",""])[1]);}else{const v=(cx.match(/<v>([\s\S]*?)<\/v>/)||[])[1];val=v!=null?+v:"";}cells[col]=val;if(col>maxc)maxc=col;});const arr=[];for(let i=0;i<=maxc;i++)arr.push(cells[i]!=null?cells[i]:"");grid.push(arr);});if(grid.length<3)throw new Error("pocas filas");const header=grid[0].map(x=>(""+x).trim()),cols=header.slice(1).filter(h=>h),dates=[],sv={};cols.forEach(c=>sv[c]=[]);for(let i=1;i<grid.length;i++){const row=grid[i];let d=row[0];if(typeof d==="number"&&d>20000&&d<80000)d=new Date(Date.UTC(1899,11,30)+d*864e5).toISOString().slice(0,10);dates.push(impNorm(""+d));cols.forEach((c,j)=>{const v=row[j+1];sv[c].push(typeof v==="number"?v:impNum(v,"us"));});}// mismo enrutamiento que los archivos de texto: un libro OHLC (Date,Open,High,Low,Close…) es UNA serie
+// (solo el CIERRE, nombrada por el archivo); si no, se filtran las columnas de mercado para que Open/High/
+// Low/Volume no entren como "acciones" fantasma
+const ciX=cols.findIndex(c=>/^(close|cierre|último|ultimo|adj\.? ?close|price|precio)$/i.test((""+c).trim()));
+if(ciX>=0&&cols.every(c=>IMP_BOGUS_COL.test((""+c).trim()))){const t=impTickerFrom(file.name);return [{name:t,src:t,dates:dates.slice(),closes:sv[cols[ciX]]}];}
+const keep=cols.filter(c=>!IMP_BOGUS_COL.test((""+c).trim()));
+if(!keep.length)throw new Error("solo trae columnas de mercado (Open/High/Low/Close/Volumen), ninguna acción");
+return keep.map(c=>({name:c,src:c,dates:dates.slice(),closes:sv[c]}));}
 function impAddSeries(s){if(!s.closes||s.closes.length<4)return;s.closes=s.closes.map(Number);const k=impFiles.findIndex(x=>x.name===s.name);if(k>=0)impFiles[k]=s;else impFiles.push(s);}
 async function impOnFiles(list){
   impMsg="";const files=Array.from(list||[]);
   for(const f of files){try{
-    if(/\.xlsx$/i.test(f.name)){(await impReadXlsx(f)).forEach(impAddSeries);}
+    let out;
+    if(/\.xlsx$/i.test(f.name)){out=await impReadXlsx(f);}
     else{const text=await f.text();const first=(text.split(/\r?\n/)[0]||"").toLowerCase();
-      if(/(^|[",;])price([",;]|$)/.test(first)&&/open/.test(first))impParseInvesting(text,impTickerFrom(f.name)).forEach(impAddSeries);
-      else if(/(^|[",;])(date|fecha)([",;]|$)/.test(first)&&/(^|[",;])(close|cierre|último|ultimo)([",;]|$)/.test(first)&&/(^|[",;])(open|apertura)([",;]|$)/.test(first))impParseOhlc(text,impTickerFrom(f.name)).forEach(impAddSeries);
-      else impParseCombined(text).forEach(impAddSeries);}
-  }catch(e){impMsg="No se pudo leer "+f.name+": "+e.message+". ";}}
+      if(/(^|[",;])price([",;]|$)/.test(first)&&/open/.test(first))out=impParseInvesting(text,impTickerFrom(f.name));
+      // historial de UN activo: fecha + columna de cierre (con o sin Open/High/Low — un simple Date,Close también)
+      else if(/(^|[",;])(date|fecha)([",;]|$)/.test(first)&&/(^|[",;])(close|cierre|último|ultimo|adj\.? ?close|price|precio)([",;]|$)/.test(first))out=impParseOhlc(text,impTickerFrom(f.name));
+      else out=impParseCombined(text);}
+    out.forEach(impAddSeries);
+    if(!out.some(s=>s.closes&&s.closes.length>=4))impMsg+="Sin filas válidas en "+f.name+": revisa el formato de la fecha y la columna de cierre. ";   // nunca fallar en silencio: si el archivo no aportó nada, se dice
+  }catch(e){impMsg+="No se pudo leer "+f.name+": "+e.message+". ";}}
   if(impFiles.length){const ip=impFiles.find(s=>/ipsa|índice|indice|index|bench/i.test(s.name));impBench=ip?ip.name:"__avg__";}
   render();
 }
@@ -4107,8 +4162,11 @@ function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s
 function pdAsOf(map,sortedKeys,D){let lo=null;for(let i=0;i<sortedKeys.length;i++){if(sortedKeys[i]<=D)lo=sortedKeys[i];else break;}return lo!=null?map[lo]:null;}
 /* metadatos por defecto de un ticker (toma del universo demo si existe) */
 function pdMeta(t,srcName){const st=((typeof DEMO!=="undefined"&&DEMO.stocks)||(typeof STOCKS!=="undefined"?STOCKS:[])||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};const ci=Object.keys(PRICEDB.tickers).length;return {n:srcName||st.n||t,s:st.s||"",c:st.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci%IMP_PAL.length]:"#1E5FD1"),b:(st.b!=null?st.b:null)};}
-/* ¿es una fecha válida para la base? día hábil y no posterior al último día bursátil real (no se inventan días futuros) */
-function validBaseDate(date){return !!date&&isTradingDay(date)&&date<=lastTradingDay();}
+/* ¿es una fecha válida para la base? Debe EXISTIR en el calendario (un "2025-13-03" o un 30 de febrero
+   pasarían el chequeo de string y entrarían como fecha fantasma), ser día hábil y no futura. */
+function validBaseDate(date){if(!date)return false;const m=(""+date).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return false;
+  const t=new Date(+m[1],+m[2]-1,+m[3]);if(!(t.getFullYear()===+m[1]&&t.getMonth()===+m[2]-1&&t.getDate()===+m[3]))return false;
+  return isTradingDay(date)&&date<=lastTradingDay();}
 /* última fecha con datos reales en la base (para proponerla por defecto en los cierres y no inventar un día por delante) */
 function lastBaseDate(){try{const ds=pricedbAllDates();if(ds.length)return ds[ds.length-1];}catch(e){}return lastTradingDay();}
 /* carga diaria / puntual: escribe un día (fecha + IPSA + precios) en la base. RECHAZA fechas que no corresponden
@@ -4116,7 +4174,10 @@ function lastBaseDate(){try{const ds=pricedbAllDates();if(ds.length)return ds[ds
 function pricedbUpsertDay(date,ipsa,priceMap){
   if(!validBaseDate(date))return;
   if(ipsa!=null&&isFinite(ipsa)&&ipsa>0)PRICEDB.ipsa[date]=+ipsa;
-  Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;(PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);});
+  Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;
+    const nm=pdIndexOf(t,"IPSA");   // "IPSA"/"IGPA" tipeado como acción va al ÍNDICE, no a la base de acciones (igual que en pricedbMergeFiles)
+    if(nm){if(nm==="IPSA"){if(!(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL))PRICEDB.ipsa[date]=+v;}else{((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{})[date]=+v;}return;}   // con fuente automática, el IPSA manual se descarta (única fuente de la verdad)
+    (PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);});
   savePriceDB();
 }
 /* índices/benchmarks disponibles en la base: IPSA vive en PRICEDB.ipsa; otros (IGPA, …) en PRICEDB.idx */
@@ -4219,7 +4280,11 @@ async function autopxSync(manual){
 function autopxAutoRun(){try{
   if(!AUTOPX_URL)return;
   const last=autopxLastInfo(),today=autopxLocalDay();
-  if(last&&(last.day||(""+last.at).slice(0,10))===today&&!last.error)return;   // una vez por día LOCAL
+  if(last&&(last.day||(""+last.at).slice(0,10))===today&&!last.error){
+    // ya sincronizó hoy — pero si esa corrida fue ANTES de que la fuente publicara el último cierre
+    // (p.ej. abriste la app en la mañana), se reintenta: el gate diario no debe congelar datos viejos
+    if(!last.lastDate||last.lastDate>=lastTradingDay())return;
+  }
   autopxSync(false);
 }catch(e){}}
 function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];savePriceDB();}
@@ -4516,10 +4581,13 @@ function datosCierre(){
   const today=lastTradingDay();   // propone el día real (último día hábil); el sistema igual rechaza fines de semana y fechas futuras
   const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="" placeholder="${(last!=null&&last!=="")?('último '+last):'precio'}" aria-label="Precio ${t}"></div>`;}).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones. Carga una planilla en <b>Cargar planilla</b> o registra una compra en Inversión.</div>`;
-  const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="" placeholder="último ${lastKnownIpsa(C)}"></label></div>
+  const ipsaFld=(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)
+    ? `<div class="ppx-f"><span>IPSA (puntos)</span><div style="display:flex;align-items:center;gap:7px;padding:.45rem .6rem;border:1px dashed var(--line2);border-radius:9px;color:var(--muted);font:600 12px var(--font)">🔒 Lo entrega la fuente automática (último: ${lastKnownIpsa(C)})</div></div>`
+    : `<label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="" placeholder="último ${lastKnownIpsa(C)}"></label>`;
+  const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label>${ipsaFld}</div>
     <div class="ppx-grid" style="max-height:52vh">${rows}</div>
     <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:14px"><button class="btn" data-dgo="base">← Volver a la base</button><button class="btn btn-pri" data-dcapply>Guardar cierre y actualizar carteras</button></div>`;
-  return card("Cierre diario","Ingresa los precios de cierre del día. Se guardan en la base y se aplican a todos los proyectos que tengan esas acciones. Si te atrasaste varios días, mejor carga la planilla completa en “Cargar planilla”.",body);
+  return card("Cierre diario","Ingresa los precios de cierre del día. Se guardan en la base y se aplican a todos los proyectos que tengan esas acciones."+((typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)?" El <b>IPSA no se ingresa a mano</b>: lo escribe solo la fuente automática (única fuente de la verdad del índice); esta pantalla es para acciones que la fuente no cubre o un dato puntual — la sincronización pisará cualquier valor manual dentro de su ventana.":" Si te atrasaste varios días, mejor carga la planilla completa en “Cargar planilla”."),body);
 }
 function attachDatos(){
   document.querySelectorAll("[data-dgo]").forEach(b=>b.onclick=()=>{page=b.dataset.dgo;render();});
@@ -4577,16 +4645,20 @@ function viewCrear(){
     const chips=rows.map(r=>`<button class="ca-chip ${S.sel[r.t]?"on":""}" data-catk="${r.t}"><span class="rk-dot" style="background:${r.c}"></span>${r.t}<span class="ca-chip-n">${r.np}</span></button>`).join("");
     // REGLA 3 · disponibilidad en vivo: comprueba si la ventana pedida alcanza con datos vigentes de TODAS las acciones
     const _selTk=ts.filter(t=>S.sel[t]);let _avOk=true,_avHint="";
+    const _perY=S.freq==="diario"?252:S.freq==="semanal"?52:12;
     if(selCount>=2&&idxs.length){const _chk=pricedbCheckAnalysis(S.freq,{tickers:_selTk,lastN:S.lastN||0,bench:S.bench,source:C});_avOk=_chk.ok;
       const _dd=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7):"";
       if(_chk.ok){_avHint=" · ✓ "+_chk.availRet+" "+_chk.unit+" disponibles"+(_chk.from?(" ("+_dd(_chk.from)+"→"+_dd(_chk.to)+")"):"");
-        if(_chk.lagging&&_chk.lagging.length)_avHint+=" · ⚠ "+_chk.lagging.slice(0,3).map(x=>x.t).join(", ")+" sin el período más reciente (todas se alinean hasta "+_dd(_chk.to)+")";}
+        if(_chk.lagging&&_chk.lagging.length)_avHint+=" · ⚠ "+_chk.lagging.slice(0,3).map(x=>x.t).join(", ")+" sin el período más reciente (todas se alinean hasta "+_dd(_chk.to)+")";
+        // la ventana efectiva del análisis (lo pedido, o todo lo disponible si lastN=0)
+        const _effN=(S.lastN&&S.lastN>0)?Math.min(S.lastN,_chk.availRet):_chk.availRet;
+        if(_effN<_perY)_avHint+=" · 💡 se recomienda ≥1 año ("+_perY+" "+_chk.unit+") para β y σ estables — con menos, los retornos se muestran por ventana, no anualizados";}
       else if(_chk.reason)_avHint=" · ⚠ "+_chk.reason;
       else _avHint=" · ⚠ solo "+_chk.availRet+" "+_chk.unit+" con datos de todas"+(S.lastN?(" (pediste "+S.lastN+")"):"")+(_chk.limiting&&_chk.limiting.length?(" · limitan: "+_chk.limiting.slice(0,3).map(x=>x.t).join(", ")):"");}
     form=`<div class="ca-form">
       <label class="ca-f"><span>Nombre del análisis</span><input id="caName" type="text" maxlength="44" placeholder="ej. IPSA · últimos 12 meses" value="${(""+S.name).replace(/"/g,"&quot;")}"></label>
       <div class="ca-f"><span>Periodicidad</span>${seg}</div>
-      <label class="ca-f ca-f-n"><span>Ventana · últimos ${caUnit(S.freq)} (0 = todo el historial)</span><input id="caN" type="number" min="0" step="1" inputmode="numeric" value="${S.lastN||0}"></label>
+      <label class="ca-f ca-f-n"><span>Ventana · últimos ${caUnit(S.freq)} (0 = todo el historial · recomendado ≥1 año)</span><input id="caN" type="number" min="0" step="1" inputmode="numeric" value="${S.lastN||0}"></label>
       <div class="ca-f"><span>Índice de referencia (benchmark)</span>${benchSel}</div>
     </div>
     <div class="note" style="margin:10px 0 0;font-size:11.5px">El <b>benchmark</b> es el índice contra el que se calcula la β y el α de Jensen. La regresión usa <b>un</b> índice; si quieres comparar contra IPSA <i>y</i> IGPA, crea un análisis con cada uno.</div>
@@ -5363,7 +5435,11 @@ function projDelLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String
 function projPrimaryAnalysis(p){const L=projLinks(p);if(L.primary&&L.analyses.map(String).indexOf(String(L.primary))>=0)return String(L.primary);return L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}
 function projSetPrimary(pid,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;projLinks(p).primary=String(id);saveProjects();render();}
 function activateAnalysis(id){if(!id)return false;if(String(id)==="demo"){applyDataset("demo");return true;}if(String(id)==="datos"){return pricedbActivateAnalysis();}if(typeof impsetActivate==="function"&&(IMPSETS||[]).some(s=>String(s.id)===String(id))){impsetActivate(id);return true;}return false;}
-function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;activeId=p.id;saveProjects();syncProj();if(!activateAnalysis(projPrimaryAnalysis(p)))render();}
+function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;activeId=p.id;
+  // estado por-proyecto que NO debe sobrevivir al cambio: un editIdx del proyecto anterior apuntando a un
+  // registro inexistente hacía lanzar a viewInvActive y dejaba la UI congelada (botones sin re-conectar)
+  editIdx=null;invNew=null;invStkSel=null;scenEditId=null;
+  saveProjects();syncProj();if(!activateAnalysis(projPrimaryAnalysis(p)))render();}
 
 /* ===================================================================== */
 /* ============ MÓDULO MONTECARLO (beta) · proyección probabilística ==== */
@@ -5393,17 +5469,26 @@ function mcSimulate(st){
   const mu=st.mu/100, sg=Math.max(0,st.sig/100), dt=1/12;
   const drift=(mu-0.5*sg*sg)*dt, vol=sg*Math.sqrt(dt), contrib=Math.max(0,st.contrib||0);
   const cols=[];for(let t=0;t<=H;t++)cols.push(new Float64Array(N));
-  for(let j=0;j<N;j++){let v=st.v0;cols[0][j]=v;
-    for(let t=1;t<=H;t++){v=v*Math.exp(drift+vol*mcRandn());v+=contrib;if(v<0)v=0;cols[t][j]=v;}}
+  const dd=new Float64Array(N);   // peor retroceso (max drawdown) de CADA trayectoria en el camino
+  for(let j=0;j<N;j++){let v=st.v0,peak=st.v0,worst=0;cols[0][j]=v;
+    for(let t=1;t<=H;t++){v=v*Math.exp(drift+vol*mcRandn());v+=contrib;if(v<0)v=0;cols[t][j]=v;
+      if(v>peak)peak=v;else{const d=1-v/peak;if(d>worst)worst=d;}}
+    dd[j]=worst;}
   const pct=(col,q)=>{const a=Array.prototype.slice.call(col).sort((x,y)=>x-y);const idx=(a.length-1)*q,lo=Math.floor(idx),hi=Math.ceil(idx);return lo===hi?a[lo]:a[lo]+(a[hi]-a[lo])*(idx-lo);};
   const steps=cols.map(col=>{let sum=0;for(let i=0;i<N;i++)sum+=col[i];return {p5:pct(col,.05),p25:pct(col,.25),p50:pct(col,.5),p75:pct(col,.75),p95:pct(col,.95),mean:sum/N};});
   const finalCol=cols[H];const invested=st.v0+contrib*H;
   let nLoss=0,nGoal=0;for(let i=0;i<N;i++){if(finalCol[i]<invested)nLoss++;if(st.goalOn&&st.goal>0&&finalCol[i]>=st.goal)nGoal++;}
+  // distribución por AÑO cumplido (hitos): permite tabla anual y prob. de meta por año sin re-sortear
+  const yearCols={};for(let y=12;y<=H;y+=12)yearCols[y/12]=cols[y];
+  const probDD=th=>{let n=0;for(let i=0;i<N;i++)if(dd[i]>=th)n++;return n/N;};
+  const ddStats={p50:pct(dd,.5),p90:pct(dd,.9),prob10:probDD(0.10),prob20:probDD(0.20),prob30:probDD(0.30)};
   // finalVals expone la distribución terminal: permite recalcular la prob. de meta al cambiar la meta SIN volver a sortear trayectorias
-  return {H,N,steps,invested,probLoss:nLoss/N,probGoal:(st.goalOn&&st.goal>0)?nGoal/N:null,final:steps[H],finalVals:finalCol};
+  return {H,N,steps,invested,probLoss:nLoss/N,probGoal:(st.goalOn&&st.goal>0)?nGoal/N:null,final:steps[H],finalVals:finalCol,yearCols,ddStats};
 }
 /* prob. de alcanzar una meta sobre una simulación ya sorteada (sin re-simular) */
 function mcProbGoal(R,goal){if(!R||!R.finalVals||!(goal>0))return null;let n=0;for(let i=0;i<R.finalVals.length;i++)if(R.finalVals[i]>=goal)n++;return n/R.finalVals.length;}
+/* fracción de trayectorias ≥ meta en una columna de valores (para los hitos por año) */
+function mcColGE(col,goal){if(!col||!(goal>0))return null;let n=0;for(let i=0;i<col.length;i++)if(col[i]>=goal)n++;return n/col.length;}
 /* gráfico de abanico: bandas de percentiles (5–95 y 25–75) + mediana, línea base y meta */
 function svgFan(o){
   const S=o.steps,n=S.length,W=820,H=o.h||340,m={l:76,r:74,t:20,b:46},step=(W-m.l-m.r)/(n-1||1);
@@ -5477,10 +5562,31 @@ function viewMontecarlo(){
     ${tile("Adverso (p5)",fmtCLP(fin.p5),"solo 5% cae bajo esto",MC,red)}
     ${tile("Prob. de pérdida",(R.probLoss*100).toFixed(0)+"%","terminar bajo lo aportado ("+fmtK(invested)+")",MC,R.probLoss>0.4?red:R.probLoss>0.2?amber:green)}
     ${goalTile}</div>`;
+  // riesgo DEL CAMINO (no solo del punto final): el peor retroceso que verías en una trayectoria típica
+  const dd=R.ddStats||{};
+  const riskTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+    ${tile("Caída máx. típica","−"+((dd.p50||0)*100).toFixed(0)+"%","peor retroceso en la trayectoria mediana",MC,amber)}
+    ${tile("Caída máx. (peor 10%)","−"+((dd.p90||0)*100).toFixed(0)+"%","en 1 de cada 10 trayectorias es peor",MC,red)}
+    ${tile("Prob. de ver una caída ≥20%",((dd.prob20||0)*100).toFixed(0)+"%","en algún momento del camino",MC,(dd.prob20||0)>0.5?red:(dd.prob20||0)>0.25?amber:green)}
+    ${tile("Prob. de ver una caída ≥30%",((dd.prob30||0)*100).toFixed(0)+"%","en algún momento del camino",MC,(dd.prob30||0)>0.35?red:(dd.prob30||0)>0.15?amber:green)}</div>`;
   const leg=`<div class="legend"><span><span class="lgdot" style="background:${MC};opacity:.28"></span>Rango 5–95%</span><span><span class="lgdot" style="background:${MC};opacity:.5"></span>Rango 25–75%</span><span><span class="lgdot" style="background:${MC}"></span>Mediana</span>${st.goalOn?`<span><span class="lgdot" style="background:${green}"></span>Meta</span>`:""}</div>`;
   const chart=card("Abanico de proyección","Cada banda es un rango de resultados posibles; la línea central es la mediana. "+(st.contrib>0?("Aporte mensual "+fmtCLP(st.contrib)+". "):"")+R.N+" trayectorias · horizonte "+st.horizonY+" año"+(st.horizonY>1?"s":"")+".",svgFan({steps:R.steps,v0:v0,goal:st.goalOn?st.goal:0,c:MC,h:344}),leg);
-  const note=notecard(`En <b>${st.horizonY} año${st.horizonY>1?"s":""}</b>, partiendo de <b>${fmtCLP(v0)}</b>${st.contrib>0?(" más aportes de "+fmtCLP(st.contrib)+"/mes"):""} con μ ${mu.toFixed(1)}% y σ ${sg.toFixed(1)}% anual: la mitad de los escenarios termina entre <b>${fmtK(fin.p25)}</b> y <b>${fmtK(fin.p75)}</b>, con mediana <b>${fmtCLP(fin.p50)}</b>. En el 5% más adverso el capital cae a <b>${fmtK(fin.p5)}</b> o menos; hay <b>${(R.probLoss*100).toFixed(0)}%</b> de probabilidad de terminar bajo lo aportado. La dispersión crece con el horizonte: a más tiempo, más rango entre el mejor y el peor escenario.${mu<=RF?" Con μ ≤ tasa libre de riesgo, esta proyección es muy conservadora.":""}`);
-  return betaBanner+head+tiles+chart+note;
+  // HITOS POR AÑO: la distribución en cada año cumplido, con prob. de meta si hay meta activa
+  const yrs=Object.keys(R.yearCols||{}).map(Number).sort((a,b)=>a-b);
+  const hitosRows=yrs.map(y=>{const s=R.steps[y*12];const pg=(st.goalOn&&st.goal>0)?mcColGE(R.yearCols[y],st.goal):null;
+    const inv_y=v0+(st.contrib||0)*y*12;const g=s.p50/inv_y-1;
+    return `<tr><td><b>Año ${y}</b></td><td class="r" style="color:${red}">${fmtK(s.p5)}</td><td class="r">${fmtK(s.p25)}</td><td class="r" style="font-weight:800;color:${MC}">${fmtCLP(s.p50)}</td><td class="r">${fmtK(s.p75)}</td><td class="r" style="color:${green}">${fmtK(s.p95)}</td><td class="r" style="color:${col(g*100)}">${(g>=0?"+":"")+(g*100).toFixed(1)}%</td>${st.goalOn?`<td class="r" style="font-weight:700;color:${pg==null?muted:pg>=0.6?green:pg>=0.3?amber:red}">${pg==null?"—":(pg*100).toFixed(0)+"%"}</td>`:""}</tr>`;}).join("");
+  const hitos=yrs.length?card("Hitos por año","La distribución de resultados en cada año cumplido del horizonte"+(st.goalOn?" · última columna: probabilidad de haber alcanzado la meta ese año":""),{html:`<div class="tw"><table><thead><tr><th>Hito</th><th class="r">Adverso (p5)</th><th class="r">p25</th><th class="r">Mediana</th><th class="r">p75</th><th class="r">Optimista (p95)</th><th class="r">Mediana vs aportado</th>${st.goalOn?'<th class="r">Prob. meta</th>':''}</tr></thead><tbody>${hitosRows}</tbody></table></div>`,flush:true}):"";
+  const guia=card("Cómo leer esta proyección","Guía rápida del método y sus límites",`
+    <div class="proj-steps">
+      <div class="pstep"><span class="pstep-n">1</span><div class="pstep-b"><b>Parámetros</b><span>μ (retorno esperado) y σ (riesgo) vienen del <b>proyecto activo</b> — su E(R) CAPM y su volatilidad — o los ajustas a mano. El capital inicial es el valor actual de la cartera.</span></div></div>
+      <div class="pstep"><span class="pstep-n">2</span><div class="pstep-b"><b>Simulación</b><span>Se sortean ${st.paths} trayectorias posibles del capital (modelo GBM log-normal, pasos mensuales). No predice el futuro: muestra el <b>rango</b> de futuros compatibles con μ y σ.</span></div></div>
+      <div class="pstep"><span class="pstep-n">3</span><div class="pstep-b"><b>Lectura</b><span>La <b>mediana</b> es el escenario central (50/50). El rango <b>p25–p75</b> concentra la mitad de los casos. <b>p5/p95</b> son los extremos razonables: no techos ni pisos absolutos.</span></div></div>
+      <div class="pstep"><span class="pstep-n">4</span><div class="pstep-b"><b>Decisiones</b><span>Usa la <b>prob. de meta</b> para calibrar aporte mensual y horizonte, y las <b>caídas del camino</b> para saber qué retrocesos deberías tolerar sin vender.</span></div></div>
+    </div>
+    <div class="note" style="margin-top:12px"><b>Supuestos y límites.</b> μ y σ constantes durante todo el horizonte (los mercados reales tienen ciclos y crisis que este modelo suaviza); retornos log-normales (subestima eventos extremos); aportes constantes a fin de mes; no descuenta comisiones ni impuestos ni inflación. Cambiar la <b>meta</b> no re-sortea las trayectorias; «Volver a simular» sí. Herramienta educativa: no es una promesa de rentabilidad.</div>`);
+  const note=notecard(`En <b>${st.horizonY} año${st.horizonY>1?"s":""}</b>, partiendo de <b>${fmtCLP(v0)}</b>${st.contrib>0?(" más aportes de "+fmtCLP(st.contrib)+"/mes"):""} con μ ${mu.toFixed(1)}% y σ ${sg.toFixed(1)}% anual: la mitad de los escenarios termina entre <b>${fmtK(fin.p25)}</b> y <b>${fmtK(fin.p75)}</b>, con mediana <b>${fmtCLP(fin.p50)}</b>. En el 5% más adverso el capital cae a <b>${fmtK(fin.p5)}</b> o menos; hay <b>${(R.probLoss*100).toFixed(0)}%</b> de probabilidad de terminar bajo lo aportado. En el camino, la trayectoria típica sufre un retroceso máximo de <b>−${((dd.p50||0)*100).toFixed(0)}%</b>. La dispersión crece con el horizonte: a más tiempo, más rango entre el mejor y el peor escenario.${mu<=RF?" Con μ ≤ tasa libre de riesgo, esta proyección es muy conservadora.":""}`);
+  return betaBanner+head+tiles+riskTiles+chart+hitos+note+guia;
 }
 function attachMontecarlo(){
   attachMcHover();
@@ -5728,7 +5834,7 @@ function dropTrailingFlat(rs){let k=0;const n=rs.length;while(n-2-k>=0&&rs[n-1-k
    o con datos ralos (→ se usa el par de períodos consecutivos de siempre). */
 function pdTrailingBase(map,lastD,freq){
   if(freq==="diario")return null;
-  const t0=new Date(lastD+"T00:00:00");if(freq==="semanal")t0.setDate(t0.getDate()-7);else t0.setMonth(t0.getMonth()-1);
+  const t0=new Date(lastD+"T00:00:00");if(freq==="semanal")t0.setDate(t0.getDate()-7);else{const d0=t0.getDate();t0.setMonth(t0.getMonth()-1);if(t0.getDate()!==d0)t0.setDate(0);}   // 31-mar − 1 mes = 28-feb, no 3-mar (sin desborde de fin de mes)
   const tgt=localDay(t0);let base=null;
   for(const d of Object.keys(map).sort()){if(d>lastD)break;if(d<=tgt)base=d;}
   if(base==null||base===lastD)return null;
@@ -5748,14 +5854,17 @@ function seguimientoStats(freq){
   const out=[];
   Object.keys(C.tick).forEach(t=>{
     const rs=dropTrailingFlat(resampleMap(C.tick[t],freq));if(rs.length<2)return;   // ignora arrastres finales (carry-forward): usa el último movimiento real
-    if(!gapOK(rs[rs.length-2].d,rs[rs.length-1].d,freq))return;   // el retorno mostrado es un movimiento real entre dos períodos consecutivos
     const vals=rs.map(x=>x.v);
     // solo retornos entre períodos consecutivos (evita que un hueco se cuente como un período y distorsione la anualización)
     const rets=[];for(let i=1;i<vals.length;i++){if(gapOK(rs[i-1].d,rs[i].d,freq))rets.push(vals[i]/vals[i-1]-1);}
-    // rentabilidad del último período: MÓVIL si hay datos finos (pdTrailingBase); si no, el último par de períodos consecutivos
-    let lastRet=rets[rets.length-1];
+    // rentabilidad del último período: MÓVIL si hay datos finos (pdTrailingBase) y, si no, el último par de
+    // períodos CONSECUTIVOS — en ese ORDEN, el mismo que ipsaSnapshot: el ranking del Home y la tarjeta del
+    // índice aplican reglas idénticas, y una acción con base móvil válida no queda excluida por un hueco
     const lastD=rs[rs.length-1].d,tb=pdTrailingBase(C.tick[t],lastD,freq);
+    let lastRet=null;
     if(tb!=null&&C.tick[t][tb]>0)lastRet=rs[rs.length-1].v/C.tick[t][tb]-1;
+    else if(gapOK(rs[rs.length-2].d,rs[rs.length-1].d,freq)&&rets.length)lastRet=rets[rets.length-1];
+    if(lastRet==null)return;
     out.push({t,name:C.names[t]||t,col:C.cols[t]||"#1E5FD1",ret:lastRet*100,n:vals.length,series:vals,lastDate:lastD});
   });
   return out;
@@ -5768,6 +5877,9 @@ function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;sav
 /* agrega un punto de valoración (precios de cierre) a TODOS los proyectos con seguimiento */
 function applyPlatformPrices(date,ipsa,priceMap){
   if(!validBaseDate(date))return {nProj:0,nCli:0,nSkip:0,invalid:true};   // fecha que no corresponde (fin de semana o futura): no se registra nada
+  // FUENTE ÚNICA DE LA VERDAD: con la fuente automática configurada, el IPSA nunca se ingresa a mano —
+  // un valor manual erróneo ensuciaba el histórico del índice. El índice lo escribe solo la sincronización.
+  if(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)ipsa=null;
   try{pricedbUpsertDay(date,ipsa,priceMap);}catch(e){}   // el cierre diario también alimenta la base del sistema
   let nProj=0,nCli=0,nSkip=0;
   CLIENTS.forEach(c=>{
@@ -5808,7 +5920,7 @@ function platformPricesRender(){
   const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-ppx="${i}" value="${r.price||''}" placeholder="${(r.last!=null&&r.last!=="")?('último '+r.last):'precio'}" aria-label="Precio ${r.t}"></div>`).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones cargadas. Agrega una abajo o carga una planilla en el módulo Datos.</div>`;
   const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · base del sistema</div><div class="cs">Carga los precios de cierre de un día para <b>cualquier acción</b> (las gestiones o no). Las que tengas en cartera actualizan el seguimiento; <b>todas</b> quedan guardadas en la base para análisis y para evaluar cambios de portafolio.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
-    <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label><label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa||''}" placeholder="${S.ipsaLast?('último '+S.ipsaLast):'puntos IPSA'}"></label></div>
+    <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label>${(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)?`<label class="ppx-f"><span>IPSA (puntos)</span><div class="note" style="margin:0;padding:9px 10px">🔒 Lo entrega la fuente automática${S.ipsaLast?(" · último: "+S.ipsaLast):""}</div></label>`:`<label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa||''}" placeholder="${S.ipsaLast?('último '+S.ipsaLast):'puntos IPSA'}"></label>`}</div>
     <div class="ppx-grid">${rows}</div>
     <div class="ppx-add"><input id="ppxAddT" type="text" placeholder="Agregar otra acción (ej. CMPC)" maxlength="14" autocomplete="off"><button class="btn btnu" id="ppxAddBtn">+ Agregar acción</button></div>
     <div class="ppx-foot"><button class="btn" id="ppxCancel">Cancelar</button><button class="btn btn-pri" id="ppxApply">Guardar precios</button></div>`;
