@@ -4368,7 +4368,10 @@ function autopxAutoRun(){try{
 /* ── FUNDAMENTOS (P/U, P/B, dividendos, capitalización, 52 semanas) ──
    Los genera el mismo pipeline de Actions en data/fundamentals.json (junto al closes.json) y se
    sincronizan solos con cada sincronización de cierres. Globales (no por cliente): son datos de mercado. */
-let FDATA=(function(){try{return JSON.parse(localStorage.getItem("inv_fund_v1")||"null");}catch(e){return null;}})();
+/* saneo defensivo: Yahoo a veces trae basura en los .SN (P/B calculado en otra moneda → miles; yield 0
+   cuando NO tiene el dato). Fuera de rango plausible → null y la app muestra "—" en vez de mentir. */
+function fundSanitize(j){try{if(!j||!j.byTicker)return j;Object.keys(j.byTicker).forEach(t=>{const f=j.byTicker[t];const rg=(k,lo,hi)=>{if(f[k]!=null&&!(f[k]>lo&&f[k]<hi))f[k]=null;};rg("pe",0,500);rg("fpe",0,500);rg("pb",0,100);rg("dy",0,30);if(f.dps===0)f.dps=null;});}catch(e){}return j;}
+let FDATA=fundSanitize((function(){try{return JSON.parse(localStorage.getItem("inv_fund_v1")||"null");}catch(e){return null;}})());
 function fundGet(t){return (FDATA&&FDATA.byTicker&&FDATA.byTicker[t])||null;}
 function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
 async function fundSync(manual){
@@ -4377,7 +4380,7 @@ async function fundSync(manual){
   try{
     const res=await fetch(u,{cache:"no-store"});if(!res.ok)throw new Error("HTTP "+res.status);
     const j=await res.json();if(!j||!j.byTicker||typeof j.byTicker!=="object"||!Object.keys(j.byTicker).length)throw new Error("formato inesperado");
-    FDATA=j;try{localStorage.setItem("inv_fund_v1",JSON.stringify(j));}catch(e){}
+    FDATA=fundSanitize(j);try{localStorage.setItem("inv_fund_v1",JSON.stringify(FDATA));}catch(e){}
     if(manual){try{render();}catch(e){}window.alert("Fundamentos actualizados: "+Object.keys(j.byTicker).length+" acciones (al "+((""+(j.updatedAt||"")).slice(0,10)||"—")+").");}
     return j;
   }catch(e){

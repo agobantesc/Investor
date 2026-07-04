@@ -46,6 +46,9 @@ async function quoteBatch(symbols) {
 
 const num = v => (v != null && isFinite(+v)) ? +v : null;
 const rnd = (v, d) => v == null ? null : +v.toFixed(d);
+// SANEO: Yahoo a veces trae basura en los .SN (p.ej. P/B de SQM-B = 3.269 por moneda del valor libro,
+// o yield 0 cuando simplemente no tiene el dato). Fuera de rango plausible → null (la app muestra "—").
+const inRange = (v, lo, hi) => (v != null && v > lo && v < hi) ? v : null;
 
 try {
   const bySym = {}; Object.entries(TICKERS).forEach(([t, s]) => bySym[s] = t);
@@ -59,9 +62,9 @@ try {
     if (dy == null && num(q.trailingAnnualDividendRate) != null && px > 0) dy = q.trailingAnnualDividendRate / px * 100;
     byTicker[t] = {
       name: q.longName || q.shortName || t,
-      px, pe: rnd(num(q.trailingPE), 2), fpe: rnd(num(q.forwardPE), 2),
-      eps: rnd(num(q.epsTrailingTwelveMonths), 2), pb: rnd(num(q.priceToBook), 2),
-      dy: rnd(dy, 2), dps: rnd(num(q.trailingAnnualDividendRate), 2),
+      px, pe: rnd(inRange(num(q.trailingPE), 0, 500), 2), fpe: rnd(inRange(num(q.forwardPE), 0, 500), 2),
+      eps: rnd(num(q.epsTrailingTwelveMonths), 2), pb: rnd(inRange(num(q.priceToBook), 0, 100), 2),
+      dy: rnd(inRange(dy, 0, 30), 2), dps: inRange(rnd(num(q.trailingAnnualDividendRate), 2), 0, Infinity),
       mcap: num(q.marketCap), hi52: num(q.fiftyTwoWeekHigh), lo52: num(q.fiftyTwoWeekLow),
       vol3m: num(q.averageDailyVolume3Month),
     };
