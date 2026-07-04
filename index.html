@@ -1692,7 +1692,7 @@ function viewComparativa(){
   const rows=byS.map(s=>{const a=s.a24;return `<tr><td>${tk(s)}</td><td>${badge(s.s,s.c)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(retOf(s))}</td>
     <td class="tnum num">${p0(a.sig)}</td><td class="tnum num" style="font-weight:800;color:${a.sharpe>=0?green:red}">${a.sharpe.toFixed(2)}</td>
-    <td class="num">${chip(alfaOf(s))}</td><td class="tnum num" style="color:${muted}">${a.r2.toFixed(2)}</td><td class="tnum num" style="color:${muted}">${W?pc(a.ret):pc(a.tot).replace("+","+")}</td></tr>`;}).join("");
+    <td class="num">${chip(alfaOf(s))}</td><td class="tnum num" style="color:${muted}">${a.r2.toFixed(2)}</td><td class="tnum num" style="color:${muted}">${W?pc(a.ret):pc(a.tot)}</td></tr>`;}).join("");
   const mkt=`<tr style="background:var(--soft)"><td style="font-weight:800;color:${indigo}">IPSA</td><td>${badge("mercado",indigo)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">1.00</td><td class="num">${chip(mktRet)}</td><td class="tnum num">${p0(MKT.sig)}</td>
     <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="tnum num" style="color:${muted}">${W?pc(MKT.ret):pc(MKT.tot)}</td></tr>`;
@@ -4364,7 +4364,8 @@ function pricedbToIMP(freq,opts){
   if(assets.length<1)return null;
   const N=assets.length,corr=[];for(let i=0;i<N;i++){corr[i]=[];for(let j=0;j<N;j++)corr[i][j]=i===j?1:impBetaCorr(assets[i].rets.map(x=>x/100),assets[j].rets.map(x=>x/100)).corr;}
   const fromD=ipsaR[run[0]].d,toD=ipsaR[run[run.length-1]].d;
-  return {freq,rf,prima,perYear:PY,window:fromD+" a "+toD+" · base del sistema ("+freq+")",n:run.length-1,labels:run.slice(1),
+  const _mApx=Math.round((run.length-1)/PY*12),_cadN={diario:"diaria",semanal:"semanal",mensual:"mensual"}[freq]||freq;
+  return {freq,rf,prima,perYear:PY,window:(_mApx>=1?(_mApx+" meses · "):"")+fromD+" → "+toD+" · cadencia "+_cadN,n:run.length-1,labels:run.slice(1),
     bench:{name:benchName,prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-rf)/(bs.sigAnn*100):0},assets,corr,dropped:[]};
 }
 /* REGLA 3 · disponibilidad: ¿alcanza la ventana pedida (a la frecuencia) con datos vigentes de TODAS las acciones? */
@@ -4416,7 +4417,7 @@ function pricedbApplyToProjects(){
       allDates.forEach(D=>{if(D<=baseDate)return;
         if(!held.some(t=>px[t]&&px[t][D]!=null))return;
         const ip=pdAsOf(ipsaM,ik,D);
-        if(exIdx[D]!=null){const w=ws[exIdx[D]];if(w.ev)return;w.prices=w.prices||{};let ch=false;held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh&&w.fresh.indexOf(t)<0)w.fresh.push(t);}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}w.ipsaFresh=true;}if(ch)pts++;}   // solo IPSA EXACTO de la base; ch solo si el valor realmente cambió (no re-guardar todo en cada corrida)
+        if(exIdx[D]!=null){const w=ws[exIdx[D]];if(w.ev)return;w.prices=w.prices||{};let ch=false;held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh&&w.fresh.indexOf(t)<0){w.fresh.push(t);ch=true;}}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}if(!w.ipsaFresh){w.ipsaFresh=true;ch=true;}}if(ch)pts++;}   // solo IPSA EXACTO de la base; ch también cuando cambian los stamps fresh/ipsaFresh (antes no se persistían para clientes no activos)
         else{const prices={},freshT=[];held.forEach(t=>{const ex=px[t]&&px[t][D]!=null;const v=ex?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));if(ex)freshT.push(t);prices[t]=(v!=null?v:basePrices[t]);});
           const ipEx=ipsaM[D]!=null;
           ws.push({date:D,ipsa:ipEx?ipsaM[D]:(ip!=null?ip:(ws[0].ipsa||0)),prices,fresh:freshT,ipsaFresh:ipEx});pts++;}   // fresh/ipsaFresh marcan qué es cierre REAL del día: los arrastres (as-of) no vuelven a la base ni generan retornos 0% espurios
@@ -4632,7 +4633,6 @@ function caEnsure(){
   const idxs=caIndexNames(C,"sistema");if(!caState.bench||idxs.indexOf(caState.bench)<0)caState.bench=idxs[0]||"IPSA";
   return C;
 }
-function caUnit(f){return f==="diario"?"días":f==="semanal"?"semanas":"meses";}
 const CA_MIN_MONTHS=12;   // ventana mínima de un análisis: garantiza β/σ estables y una tabla SIEMPRE en retornos anuales
 /* meses → nº de retornos a cada cadencia (~21 días hábiles y ~4,35 semanas por mes) */
 function caMonthsToN(freq,months){return freq==="diario"?Math.round(months*21):freq==="semanal"?Math.round(months*4.345):Math.round(months);}
@@ -4689,7 +4689,10 @@ function viewCrear(){
   const create=card("Gestión de análisis","Aquí gestionas los distintos análisis del proyecto: elige la ventana en meses (mínimo "+CA_MIN_MONTHS+") y las acciones — así siempre hay data para rentabilidades anuales",form);
   const list=analysisList(),cur=currentAnalysisId();
   const savedRows=list.map(a=>{const on=String(a.id)===String(cur),canDel=(a.kind==="import"||a.kind==="demo");
-    const meta=a.kind==="demo"?"IPSA · demo (14 acciones) · sus datos ya están copiados en la base":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones");
+    const _ps=(IMPSETS.find(x=>String(x.id)===String(a.id))||{}).params||null;
+    const _cadN={diario:"diaria",semanal:"semanal",mensual:"mensual"};
+    const _extra=_ps&&_ps.months?(" · "+_ps.months+" meses · cadencia "+(_cadN[_ps.freq]||_ps.freq)):"";
+    const meta=a.kind==="demo"?"IPSA · demo (14 acciones) · sus datos ya están copiados en la base":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones"+_extra);
     const delAttr=a.kind==="demo"?"data-cahidedemo":`data-cadel="${a.id}"`;
     return `<div class="ca-saved ${on?"on":""}"><div class="ca-saved-l"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span>${meta}</span></div><div class="ca-saved-r">${on?'<span class="ca-badge">Activo</span>':`<button class="btn btnu" data-caact="${a.id}">Activar</button>`}${canDel?`<button class="wbtn del" ${delAttr} title="Eliminar análisis">✕</button>`:""}</div></div>`;}).join("");
   const saved=card("Análisis guardados","El análisis activo alimenta Comparativa, Detalle, CAPM, Multifactor y el Constructor · puedes eliminar el IPSA · demo: sus 23 meses ya quedaron en la base",`<div class="ca-savedlist">${savedRows}</div>`);
@@ -6058,11 +6061,20 @@ function ipsaSnapshot(name){
   const C=consolidatedSeries();let map=(name&&name!=="IPSA")?pricedbIdxMap(name):(C.ipsaMap||{});
   if(name&&name!=="IPSA"&&(!map||!Object.keys(map).length))map=C.ipsaMap||{};
   if(!Object.keys(map||{}).length)return null;
+  // convención MÓVIL (rolling, como investing.com): semana = vs ~7 días atrás · mes = vs ~30 días atrás.
+  // NO es "lo que va de la semana/mes" (MTD). Devuelve también la fecha BASE de cada período (tooltip).
   const per=f=>{const rs=dropTrailingFlat(resampleMap(map,f));if(rs.length<2)return null;const b=rs[rs.length-1];
-    const tb=pdTrailingBase(map,b.d,f);if(tb!=null&&map[tb]>0)return (b.v/map[tb]-1)*100;   // período MÓVIL: la semana/mes calendario en curso es parcial
-    const a=rs[rs.length-2];if(a.v<=0||!gapOK(a.d,b.d,f))return null;return (b.v/a.v-1)*100;};
+    const tb=pdTrailingBase(map,b.d,f);if(tb!=null&&map[tb]>0)return {r:(b.v/map[tb]-1)*100,base:tb};   // período MÓVIL: la semana/mes calendario en curso es parcial
+    const a=rs[rs.length-2];if(a.v<=0||!gapOK(a.d,b.d,f))return null;return {r:(b.v/a.v-1)*100,base:a.d};};
   const rsD=dropTrailingFlat(resampleMap(map,"diario"));const lp=rsD.length?rsD[rsD.length-1]:null;if(!lp)return null;   // último valor REAL del índice (ignora arrastres finales)
-  return {name:name||"IPSA",last:lp.v,lastDate:lp.d,dia:per("diario"),semana:per("semanal"),mes:per("mensual")};
+  // 12 meses móviles: base as-of ~1 año atrás (tolerancia 31 días) — null si la base no llega tan atrás
+  let anio=null,anioBase=null;
+  try{const t0=new Date(lp.d+"T00:00:00");t0.setFullYear(t0.getFullYear()-1);const tgt=localDay(t0);let bs=null;
+    for(const d of Object.keys(map).sort()){if(d>lp.d)break;if(d<=tgt)bs=d;}
+    if(bs&&map[bs]>0&&(new Date(tgt+"T00:00:00")-new Date(bs+"T00:00:00"))/864e5<=31){anio=(lp.v/map[bs]-1)*100;anioBase=bs;}}catch(e){}
+  const pd=per("diario"),pw=per("semanal"),pm=per("mensual");
+  return {name:name||"IPSA",last:lp.v,lastDate:lp.d,dia:pd?pd.r:null,semana:pw?pw.r:null,mes:pm?pm.r:null,
+    diaBase:pd?pd.base:null,semanaBase:pw?pw.base:null,mesBase:pm?pm.base:null,anio,anioBase};
 }
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
@@ -6123,7 +6135,8 @@ function viewHome(){
   const _ips=ipsaSnapshot("IPSA");
   const ipsaCard=(()=>{
     if(!_ips)return "";
-    const cell=(lbl,r)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";return `<div class="ipsa-cell"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
+    const _fD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(0,4):"";
+    const cell=(lbl,r,desc,base)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";const tt=desc+(base?(" · base: cierre del "+_fD(base)):"");return `<div class="ipsa-cell" title="${tt}"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
     // curva del índice — usa la RACHA DIARIA consecutiva más reciente (una sola cadencia, como una plataforma pro);
     // si es corta (<10 días), muestra la serie mensual para no dejar el gráfico vacío
     let ipsaChart="";
@@ -6137,8 +6150,8 @@ function viewHome(){
         const labels=monthly?rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4)):rs.map(x=>x.d);
         ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:monthly,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div class="genl" style="margin:6px 0 0;text-align:right">${cap}</div></div>`;}
     }catch(e){}
-    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_ips.lastDate}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia)}${cell("Semana",_ips.semana)}${cell("Mes",_ips.mes)}</div></div>`+ipsaChart;
-    return card("IPSA · índice de referencia","Variación del último día, semana y mes · según los cierres cargados en tu base (— si falta el dato del período)",body);
+    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
+    return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base",body);
   })();
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
   const funds=D.projs.slice().sort((a,b)=>(b.val||0)-(a.val||0));
@@ -6176,12 +6189,13 @@ function viewHome(){
   // (sin duplicar y mostrando hasta MAXBLK en cada columna); el toggle diario/semanal/mensual cambia el período.
   const MAXBLK=9, half=Math.ceil(stats.length/2), bestN=Math.min(MAXBLK,half), worstN=Math.min(MAXBLK,stats.length-bestN);
   const bestArr=byRet.slice(0,bestN), worstArr=byWorst.slice(0,worstN);
-  const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div></div>`;
+  const _stkTT={diario:"Retorno vs el cierre del día hábil anterior",semanal:"Retorno de los últimos ~7 días (móvil)",mensual:"Retorno de los últimos ~30 días (móvil, no lo que va del mes)"};
+  const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}" title="${_stkTT[f]}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div></div>`;
   const stkInner=stats.length?`<div class="stk-cols">
     ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,bestArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}
     ${stkBlock("Peor rentabilidad","retorno "+perPhrase,worstArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}</div>`
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
-  const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} · cada acción con su último dato disponible (y su fecha) · los cierres se cargan en <b>Datos</b> · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
+  const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} (convención móvil, igual que el IPSA de arriba) · cada acción con su último dato disponible (y su fecha) · los cierres se cargan en <b>⚙ Configuración → Datos</b> · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
   return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
