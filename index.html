@@ -4104,6 +4104,31 @@ let AUTOPX_URL=(function(){try{return localStorage.getItem("inv_autopx_url")||""
 function autopxLastInfo(){try{return JSON.parse(localStorage.getItem("inv_autopx_last")||"null");}catch(e){return null;}}
 /* día LOCAL (Chile), no UTC: si fuera UTC, abrir la app en la tarde chilena saltaría el cierre del día */
 function autopxLocalDay(){const x=new Date();return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");}
+/* BACKFILL de la HISTORIA del IPSA desde el navegador (Stooq vía proxies CORS, el mismo camino que ya usa
+   el petróleo de Mercados). Yahoo solo publica el valor del DÍA del ^IPSA, así que la fuente automática
+   mantiene el índice al día pero no puede traer su historia; esto la completa una vez. */
+async function ipsaBackfill(years){
+  years=years||2;
+  const f=x=>""+x.getFullYear()+("0"+(x.getMonth()+1)).slice(-2)+("0"+x.getDate()).slice(-2);
+  const stq="https://stooq.com/q/d/l/?s=%5Eipsa&i=d&d1="+f(new Date(Date.now()-years*365*864e5))+"&d2="+f(new Date());
+  const routes=[stq,"https://corsproxy.io/?url="+encodeURIComponent(stq),"https://api.allorigins.win/raw?url="+encodeURIComponent(stq),"https://thingproxy.freeboard.io/fetch/"+stq];
+  let dates=null,closes=null,err="sin respuesta";
+  for(const u of routes){
+    try{
+      const t=await mktGet(u,"text",10000);
+      const lines=(t||"").trim().split(/\r?\n/);
+      if(lines.length<10||!/^date,/i.test(lines[0])){err="respuesta inesperada de Stooq";continue;}
+      const ds=[],cs=[];
+      for(let i=1;i<lines.length;i++){const c=lines[i].split(",");const d=c[0],v=+c[4];if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&isFinite(v)&&v>0){ds.push(d);cs.push(v);}}
+      if(ds.length>=10){dates=ds;closes=cs;break;}
+      err="CSV con muy pocas filas";
+    }catch(e){err=String((e&&e.message)||e);}
+  }
+  if(!dates)return {ok:false,err};
+  const r=pricedbMergeFiles([{name:"IPSA",src:"IPSA (Stooq)",dates,closes}],"IPSA");
+  const ap=pricedbApplyToProjects();
+  return {ok:true,n:dates.length,from:dates[0],to:dates[dates.length-1],added:r.added,updated:r.updated,nPts:ap.nPts};
+}
 async function autopxSync(manual){
   if(!AUTOPX_URL){if(manual)window.alert("Configura primero la fuente automática de cierres (URL del JSON) en ⚙ Configuración → Datos.");return null;}
   try{
@@ -4662,6 +4687,7 @@ function cfgRender(){
     body=sec("Actualización automática","La base se actualiza sola al abrir la app (una vez al día) desde tu fuente de cierres",
       row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
       row("Sincronizar ahora",_apxTxt,'<button class="btn btn-pri" id="cfgSyncNow">⟳ Sincronizar cierres</button>',1)+
+      row("Completar historia del IPSA","La fuente automática mantiene el índice al día, pero su historia (para β y análisis) se trae una vez desde Stooq",'<button class="btn" id="cfgIpsaFill">🧩 Traer historia del IPSA</button>',1)+
       row("Fuente automática de cierres (URL JSON)","Un JSON público actualizado a diario (GitHub Actions → raw.githubusercontent). Formato: {&quot;days&quot;:[{&quot;date&quot;,&quot;ipsa&quot;,&quot;prices&quot;:{...}}]}",`<input id="cfgAutoPx" placeholder="https://raw.githubusercontent.com/usuario/repo/main/data/closes.json" value="${(""+(AUTOPX_URL||"")).replace(/"/g,"&quot;")}" style="${inStyle}">`,1))+
       sec("Carga manual","Para poblar historia o registrar un día puntual",
         row("Planillas y cierres","Sube CSV/XLSX (diario, semanal o mensual) o ingresa el cierre de un día",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgGoCargar">📈 Cargar planilla</button><button class="btn" id="cfgGoCierre">📝 Cierre diario</button></div>'))+
@@ -4735,6 +4761,12 @@ function cfgRender(){
   const _ou=q("#cfgOilUrl");if(_ou)_ou.onchange=()=>{OIL_URL=(_ou.value||"").trim();try{localStorage.setItem("inv_oil_url",OIL_URL);}catch(e){}if(OIL_URL&&typeof mindFetch==="function")mindFetch();};
   const _apx=q("#cfgAutoPx");if(_apx)_apx.onchange=()=>{AUTOPX_URL=(_apx.value||"").trim();try{localStorage.setItem("inv_autopx_url",AUTOPX_URL);}catch(e){}if(AUTOPX_URL&&confirm("Fuente guardada. ¿Sincronizar los cierres ahora?"))autopxSync(true).finally(()=>cfgRender());};
   const _sn=q("#cfgSyncNow");if(_sn)_sn.onclick=()=>{if(!AUTOPX_URL){window.alert("Primero configura la URL de la fuente automática (campo de abajo).");return;}_sn.disabled=true;_sn.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{try{render();}catch(e){}cfgRender();});};
+  const _if=q("#cfgIpsaFill");if(_if)_if.onclick=()=>{_if.disabled=true;_if.textContent="🧩 Trayendo historia…";
+    ipsaBackfill(2).then(r=>{
+      if(r.ok)window.alert("Historia del IPSA cargada desde Stooq.\n\n• "+r.n+" día(s): "+r.from+" → "+r.to+"\n• "+r.added+" nuevo(s) · "+r.updated+" actualizado(s)\n• Seguimientos: "+r.nPts+" punto(s) aplicados.");
+      else window.alert("No se pudo traer la historia del IPSA ("+r.err+").\n\nAlternativa: descarga el histórico como CSV (Stooq o Investing) y cárgalo con nombre IPSA en Cargar planilla.");
+      try{render();}catch(e){}cfgRender();
+    });};
   const _gb=q("#cfgGoBase");if(_gb)_gb.onclick=()=>cfgGo("datos","base");
   const _gc=q("#cfgGoCargar");if(_gc)_gc.onclick=()=>cfgGo("datos","cargar");
   const _gd=q("#cfgGoCierre");if(_gd)_gd.onclick=()=>cfgGo("datos","cierre");
