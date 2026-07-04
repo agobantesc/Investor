@@ -115,25 +115,27 @@ async function yahooDownloadIpsa() {
 async function ipsaFromStooq() {
   const ms = Date.now(), fmt = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
   const raw = `https://stooq.com/q/d/l/?s=%5Eipsa&i=d&d1=${fmt(ms - rangeSeconds() * 1000)}&d2=${fmt(ms + 86400e3)}`;
-  // Stooq sirve HTML (bloqueo) a las IPs de los runners de Actions: además del acceso directo se intenta
-  // vía proxies CORS públicos (mismo truco que usa la app en el navegador para el petróleo de Stooq).
+  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+  // Stooq sirve HTML (bloqueo) a las IPs de los runners: se intenta directo y vía proxies públicos (el mismo
+  // truco que usa la app en el navegador para el petróleo de Stooq). allorigins /get envuelve en JSON.
   const routes = [
-    raw,
-    raw.replace("stooq.com", "stooq.pl"),
-    "https://api.allorigins.win/raw?url=" + encodeURIComponent(raw),
-    "https://corsproxy.io/?url=" + encodeURIComponent(raw),
+    ["stooq.com", raw, null, null],
+    ["stooq.pl", raw.replace("stooq.com", "stooq.pl"), null, null],
+    ["allorigins", "https://api.allorigins.win/get?url=" + encodeURIComponent(raw), null, (t) => (JSON.parse(t).contents || "")],
+    ["corsproxy", "https://corsproxy.io/?url=" + encodeURIComponent(raw), { Origin: "https://stooq.com", Referer: "https://stooq.com/" }, null],
+    ["codetabs", "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(raw), null, null],
   ];
-  let lastErr = null;
-  for (const url of routes) {
+  const fails = [];
+  for (const [tag, url, xh, unwrap] of routes) {
     try {
-      const res = await fetch(url, { headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-        "Accept": "text/csv,text/plain,*/*" } });
+      const res = await fetch(url, { headers: Object.assign({ "User-Agent": UA, "Accept": "text/csv,text/plain,application/json,*/*" }, xh || {}) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return parseCloseCsv(await res.text(), url.slice(8, 30));
-    } catch (e) { lastErr = e; await new Promise(r => setTimeout(r, 400)); }
+      let txt = await res.text();
+      if (unwrap) txt = unwrap(txt);
+      return parseCloseCsv(txt, tag);
+    } catch (e) { fails.push(`${tag}=${String((e && e.message) || e).slice(0, 60)}`); await new Promise(r => setTimeout(r, 400)); }
   }
-  throw new Error(String((lastErr && lastErr.message) || lastErr));
+  throw new Error(fails.join(" | "));
 }
 const IPSA_SOURCES = [
   ["yahoo ^IPSA range", () => chart(IPSA_SYMBOL)],
