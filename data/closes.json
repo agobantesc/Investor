@@ -1,8 +1,15 @@
 {
- "updatedAt": "2026-07-04T03:39:50.335Z",
- "source": "Yahoo Finance (.SN)",
+ "updatedAt": "2026-07-04T03:45:15.695Z",
+ "source": "Yahoo Finance (.SN) + fuentes IPSA",
+ "ipsaSources": [
+  "yahoo ^IPSA range: 1 día(s)",
+  "yahoo ^IPSA period: 1 día(s)",
+  "yahoo ^SPIPSA: ^SPIPSA: HTTP 404",
+  "yahoo download csv: HTTP 401",
+  "stooq: stooq.pl: respuesta inesperada (<!DOCTYPE html><html><head><meta charset)"
+ ],
  "errors": [
-  "stooq ^IPSA: respuesta inesperada (<!DOCTYPE html><html><head><meta charset)"
+  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA range: 1 día(s) · yahoo ^IPSA period: 1 día(s) · yahoo ^SPIPSA: ^SPIPSA: HTTP 404 · yahoo download csv: HTTP 401 · stooq: stooq.pl: respuesta inesperada (<!DOCTYPE html><html><head><meta charset)"
  ],
  "days": [
   {
