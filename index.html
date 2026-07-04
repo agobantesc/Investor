@@ -1670,19 +1670,8 @@ function attachPriceHover(){
   svg.onmouseleave=()=>{const hv=document.getElementById("dpricehover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
 
-function corrCard(){
-  const N=STOCKS.length;
-  const cz=N<=6?56:N<=8?46:N<=10?38:32,ch=Math.round(cz*0.74),fs=N<=8?12:N<=10?10.5:9.5,hf=N<=8?10:9;
-  let h='<div class="tw" style="display:flex;justify-content:flex-start"><table class="heat"><tr><td></td>'+STOCKS.map(s=>`<td class="hh" style="color:${s.c};font-size:${hf}px;width:${cz}px">${s.t}</td>`).join("")+'</tr>';
-  for(let i=0;i<N;i++){h+=`<tr><td class="rh" style="color:${STOCKS[i].c};font-size:${hf}px">${STOCKS[i].t}</td>`;
-    for(let j=0;j<N;j++){const v=CORR[i][j];h+=`<td><div class="cell" style="width:${cz}px;height:${ch}px;font-size:${fs}px;background:${i===j?'#10306A':heat(v)};color:${i===j?'#fff':(Math.abs(v)>0.5?'#fff':ink)}">${v.toFixed(2)}</div></td>`;}
-    h+='</tr>';}
-  h+='</table></div>';
-  const pr=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)pr.push([CORR[i][j],STOCKS[i].t,STOCKS[j].t]);
-  pr.sort((a,b)=>a[0]-b[0]);
-  h+=`<div class="note" style="margin-top:13px"><b>Diversificación:</b> menor correlación = mejor combinación para reducir riesgo. Mejores pares: ${pr.slice(0,3).map(p=>`<span class="tag">${p[1]} + ${p[2]} = ${p[0].toFixed(2)}</span>`).join(" ")}</div>`;
-  return card("Matriz de correlación","Correlación de retornos mensuales · verde = baja (diversifica), rojo = alta",h);
-}
+// (retirada) la matriz de correlación de Comparativa: la correlación por acción sigue en "Detalle por acción"
+// y el agente la entrega vía get_correlations
 
 function viewComparativa(){
   const sx=niceBounds([0,...STOCKS.map(s=>s.a24.sig)],0.12);sx.min=0;
@@ -1701,7 +1690,7 @@ function viewComparativa(){
     <td class="tnum num" style="color:${accentT};font-weight:700">1.00</td><td class="num">${chip(MKT.ret)}</td><td class="tnum num">${p0(MKT.sig)}</td>
     <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="num">${chip(MKT.tot)}</td></tr>`;
   const tbl=card("Comparativa de candidatas","Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["R²",1],["Total "+winShort(),1]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
-  return marketTiles()+scatter+tbl+corrCard();
+  return marketTiles()+scatter+tbl;
 }
 
 // ===== DETALLE =====
@@ -2634,9 +2623,14 @@ function viewInvActive(){
   const vD=vaRf(252),vW=vaRf(52),vM=vaRf(12),vP=PF.freq==="semanal"?vW:PF.freq==="mensual"?vM:vD;
   const worst=IM.worstRet,breach=worst!=null&&worst<vP.pct;
   const riskKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("VaR 95% ("+fr.u+")",pc(vP.pct*100),"pérdida máx esperada / "+fr.u,indigo,red)}${tile("Peor "+fr.u+" real",worst!=null?pc(worst*100):"—",worst!=null?(breach?"excedió el VaR":"dentro del VaR"):"sin datos",indigo,worst!=null?col(worst*100):muted)}${tile("Pérdida ese "+fr.u+" (CLP)",IM.worstLossCLP!=null?fmtCLP(IM.worstLossCLP):"—","VaR "+fr.u+": "+fmtCLP(-vP.loss),indigo,IM.worstLossCLP!=null?red:muted)}${tile("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):pc(IM.maxDD*100),pc(IM.maxDD*100)+" desde un máximo",indigo,col(IM.maxDD*100))}${tile("Volatilidad realizada",IM.realizedVol!=null?p0(IM.realizedVol):"—",IM.realizedVol!=null?("esperada σ "+p0(PF.sig)):"≥3 registros",indigo,accentT)}</div>`;
-  const fmap={diario:[1,5,21],semanal:[null,1,4],mensual:[null,null,1]}[PF.freq||"diario"];
-  const realLoss=k=>{if(k==null)return null;const v=IM.series;if(v.length<=k)return null;let mn=Infinity;for(let i=0;i+k<v.length;i++)mn=Math.min(mn,v[i+k].val-v[i].val);return mn===Infinity?null:Math.min(mn,0);};
-  const hzD=[["Diario",vD,realLoss(fmap[0])],["Semanal",vW,realLoss(fmap[1])],["Mensual",vM,realLoss(fmap[2])]];
+  // peor caída REAL por horizonte, con ventana de días CALENDARIO (no por nº fijo de registros: con ~1 mes de
+  // seguimiento el conteo fijo de 21 registros dejaba el "peor mensual" en "—" aunque el mes ya se cumplió)
+  const stepLoss=()=>{const v=IM.series;let mn=Infinity;for(let i=1;i<v.length;i++){const d=(v[i].val-(v[i].inflow||0))-v[i-1].val;if(d<mn)mn=d;}return mn===Infinity?null:Math.min(mn,0);};
+  const realLossDays=days=>{const v=IM.series;let mn=Infinity;
+    for(let i=0;i<v.length;i++){const t0=new Date(v[i].date+"T00:00:00").getTime();
+      for(let j=i+1;j<v.length;j++){if(new Date(v[j].date+"T00:00:00").getTime()-t0>days*864e5)break;const d=(v[j].val-(v[j].inflow||0))-v[i].val;if(d<mn)mn=d;}}
+    return mn===Infinity?null:Math.min(mn,0);};
+  const hzD=[["Diario",vD,PF.freq==="diario"?stepLoss():null],["Semanal",vW,realLossDays(7)],["Mensual",vM,realLossDays(31)]];
   const varRows=hzD.map(a=>`<tr><td><b>${a[0]}</b></td><td class="r">${pc(a[1].pct*100)}</td><td class="r" style="color:${red};font-weight:700">${fmtCLP(-a[1].loss)}</td><td class="r" style="font-weight:700;color:${a[2]!=null&&a[2]<0?red:muted}">${a[2]!=null?fmtCLP(a[2]):"—"}</td></tr>`).join("");
   const varTbl=`<div class="tw" style="margin-top:6px"><table><thead><tr><th>Horizonte</th><th class="r">VaR 95%</th><th class="r">Pérdida máx (VaR)</th><th class="r">Peor real (CLP)</th></tr></thead><tbody>${varRows}</tbody></table></div>`;
   const riskNote=`<div class="note" style="margin-top:11px">El <b>VaR 95%</b> es la pérdida máxima esperada en un período normal (salvo 1 de cada 20). ${worst!=null?("Tu peor "+fr.u+" real fue "+pc(worst*100)+" ("+fmtCLP(IM.worstLossCLP)+") → "+(breach?"<b style=\"color:"+red+"\">excedió el VaR "+fr.u+"</b>, un evento de cola":"<b style=\"color:"+green+"\">dentro del VaR</b>")+". "):""}El <b>máximo drawdown</b> (${pc(IM.maxDD*100)}${IM.maxDDCLP?", "+fmtCLP(IM.maxDDCLP):""}) es la peor caída acumulada desde un máximo. El VaR paramétrico asume normalidad y subestima los extremos.</div>`;
@@ -3931,13 +3925,18 @@ function impParseOhlc(text,ticker){
   rows.sort((a,b)=>a[0]<b[0]?-1:1);
   return [{name:ticker,src:ticker,dates:rows.map(r=>r[0]),closes:rows.map(r=>r[1])}];
 }
+/* nombres de columnas de mercado que NUNCA son una acción (OHLC/volumen/variación): si un archivo combinado
+   las trae, son metadatos de un export tipo Stooq/Investing, no tickers — se descartan para que no entren
+   a la base como "acciones" fantasma (Volume, Close, High…). */
+const IMP_BOGUS_COL=/^(open|high|low|close|adj\.? ?close|volume|vol\.?|price|apertura|m[áa]x\.?|m[áa]ximo|m[íi]n\.?|m[íi]nimo|cierre|[úu]ltimo|%? ?var\.?%?)$/i;
 function impParseCombined(text){
   const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
   const delim=(lines[0].split(";").length>lines[0].split(",").length)?";":",",mode=delim===";"?"es":"us";
   const header=impSplit(lines[0],delim).map(s=>s.trim().replace(/^"|"$/g,""));
-  const cols=header.slice(1).filter(h=>h),dates=[],sv={};cols.forEach(c=>sv[c]=[]);
-  for(let i=1;i<lines.length;i++){const cells=impSplit(lines[i],delim);dates.push(impNorm(cells[0]));cols.forEach((c,j)=>sv[c].push(impNum(cells[j+1],mode)));}
-  return cols.map(c=>({name:c,src:c,dates:dates.slice(),closes:sv[c]}));
+  const idx=[];header.slice(1).forEach((h,j)=>{if(h&&!IMP_BOGUS_COL.test(h))idx.push([h,j]);});
+  const dates=[],sv={};idx.forEach(([c])=>sv[c]=[]);
+  for(let i=1;i<lines.length;i++){const cells=impSplit(lines[i],delim);dates.push(impNorm(cells[0]));idx.forEach(([c,j])=>sv[c].push(impNum(cells[j+1],mode)));}
+  return idx.map(([c])=>({name:c,src:c,dates:dates.slice(),closes:sv[c]}));
 }
 async function impInflate(bytes){const ds=new DecompressionStream("deflate-raw");const rs=new Blob([bytes]).stream().pipeThrough(ds);return new Uint8Array(await new Response(rs).arrayBuffer());}
 function impU16(b,o){return b[o]|(b[o+1]<<8);}function impU32(b,o){return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;}
@@ -4043,7 +4042,10 @@ function dropDateData(date){if(!date)return {nBase:0,nProj:0};let nBase=0,nProj=
       "último dato disponible" (REGLA 2) y los retornos del último período. Solo se tocan los puntos del FINAL.
    Idempotente. Devuelve {nWk, nCF, ipsaTo}. */
 function pricedbSanitize(){
-  let nWk=0,nCF=0;
+  let nWk=0,nCF=0,nBogus=0;
+  // 0) "acciones" fantasma con nombre de columna de mercado (Open/Close/Volume/Último…): entraron a la base
+  //    desde una planilla OHLC leída como combinada (antes del parser OHLC). Nunca son tickers reales.
+  Object.keys(PRICEDB.px||{}).forEach(t=>{if(IMP_BOGUS_COL.test((""+t).trim())){delete PRICEDB.px[t];if(PRICEDB.tickers)delete PRICEDB.tickers[t];nBogus++;}});
   // rachas de arrastre al final (≥2 valores idénticos seguidos); un único cierre plano puede ser real y se conserva
   const stripCF=(map)=>{if(!map)return;const ds=Object.keys(map).sort();let k=0,i=ds.length-1;while(i>=1&&map[ds[i]]===map[ds[i-1]]){k++;i--;}if(k>=2){for(let j=ds.length-k;j<ds.length;j++){delete map[ds[j]];nCF++;}}};
   // 1) fin de semana / días no hábiles
@@ -4064,9 +4066,9 @@ function pricedbSanitize(){
     trimGhost(PRICEDB.ipsa||{});
     Object.keys(ix).forEach(k=>trimGhost(ix[k]));
   }
-  if(nWk||nCF||nGhost)savePriceDB();
+  if(nWk||nCF||nGhost||nBogus)savePriceDB();
   const id=Object.keys(PRICEDB.ipsa||{}).sort();
-  return {nWk,nCF,nGhost,ipsaTo:id.length?id[id.length-1]:null};
+  return {nWk,nCF,nGhost,nBogus,ipsaTo:id.length?id[id.length-1]:null};
 }
 function pricedbTickers(){return Object.keys(PRICEDB.px||{});}
 function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s[d]=1);Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>s[d]=1));return Object.keys(s).sort();}
@@ -4502,7 +4504,7 @@ function attachDatos(){
     if(typed==null||typed.trim().toUpperCase()!=="VACIAR"){window.alert("Cancelado. No se vació nada.");return;}
     pricedbWipe();page="base";render();
     window.alert("Base de precios vaciada. Ahora carga tus planillas en Datos → “Cargar planilla” y pulsa “Actualizar sistema”.\n\nSi además quieres reiniciar los seguimientos de las carteras (conservando la compra inicial), usa ⚙ Configuración → “Limpiar sistema”.");};
-  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost)?("Base reparada.\n\n• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
+  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost||r.nBogus)?("Base reparada.\n\n"+(r.nBogus?("• "+r.nBogus+" 'acción(es)' fantasma con nombre de columna (Open/Close/Volume/…) eliminadas.\n"):"")+"• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
     if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
     if(!confirm('⚠ Doble chequeo de seguridad\n\nVas a ELIMINAR definitivamente '+t+' ('+np+' precio[s]) de la base. Esta acción no se puede deshacer.\n\n¿Eliminar '+t+'?'))return;
