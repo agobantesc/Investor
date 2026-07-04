@@ -30,11 +30,14 @@ jobs:
         run: node automation/fetch-closes.mjs
         env:
           RANGE: ${{ github.event.schedule == '0 12 * * 6' && '2y' || github.event.inputs.range || '10d' }}
+      - name: Obtener fundamentos (P/U, P/B, dividendos, capitalización)
+        run: node automation/fetch-fundamentals.mjs   # sale con 0 aunque falle: nunca rompe los cierres
+        continue-on-error: true
       - name: Commit del JSON
         run: |
           git config user.name "closes-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/closes.json
+          git add data/
           git diff --cached --quiet && echo "Sin cambios" || git commit -m "cierres: $(date -u +%F) (${RANGE:-10d})"
           git push
         env:

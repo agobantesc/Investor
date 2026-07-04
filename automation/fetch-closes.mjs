@@ -9,42 +9,7 @@
  * Ajusta el mapa TICKERS si agregas/cambias acciones (clave = ticker en Investor, valor = símbolo Yahoo).
  */
 import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
-
-// Universo IPSA (~30). Clave = ticker en Investor, valor = símbolo Yahoo Finance (.SN = Bolsa de Santiago).
-const TICKERS = {
-  // núcleo (con historial demo en la app)
-  CHILE: "CHILE.SN",
-  SANTANDER: "BSANTANDER.SN",
-  BCI: "BCI.SN",
-  ENELCHILE: "ENELCHILE.SN",
-  COLBUN: "COLBUN.SN",
-  FALABELLA: "FALABELLA.SN",
-  CENCOSUD: "CENCOSUD.SN",
-  COPEC: "COPEC.SN",
-  CMPC: "CMPC.SN",
-  "SQM-B": "SQM-B.SN",
-  CCU: "CCU.SN",
-  ENTEL: "ENTEL.SN",
-  LATAM: "LTM.SN",
-  PARAUCO: "PARAUCO.SN",
-  // resto del IPSA
-  "AGUAS-A": "AGUAS-A.SN",
-  IAM: "IAM.SN",
-  ENELAM: "ENELAM.SN",
-  ECL: "ECL.SN",
-  "ANDINA-B": "ANDINA-B.SN",
-  CONCHATORO: "CONCHATORO.SN",
-  QUINENCO: "QUINENCO.SN",
-  MALLPLAZA: "MALLPLAZA.SN",
-  VAPORES: "VAPORES.SN",
-  RIPLEY: "RIPLEY.SN",
-  SMU: "SMU.SN",
-  SONDA: "SONDA.SN",
-  ITAUCL: "ITAUCL.SN",
-  CAP: "CAP.SN",
-  // Sin símbolo en Yahoo (404): BICECORP (ex Grupo Security) y CENCOSHOPP (Cencosud Shopping).
-  // Siguen en el universo de la app; sus cierres se cargan por planilla si se consiguen.
-};
+import { TICKERS } from "./tickers.mjs";   // universo IPSA compartido con fetch-fundamentals.mjs
 const IPSA_SYMBOL = "^IPSA";
 // Rango a bajar. Por defecto ~2 semanas (rellena días perdidos; la fusión de Investor es por celda, no duplica).
 // Para POBLAR MASIVAMENTE la base una vez, ejecútalo con un rango largo: RANGE=2y node automation/fetch-closes.mjs

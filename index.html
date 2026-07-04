@@ -1547,7 +1547,7 @@ function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div 
 const MODS={
   inicio:{label:"Inicio",tabs:[{id:"home",label:"Resumen general",n:"1"}]},
   datos:{label:"Datos",tabs:[{id:"base",label:"Base de precios",n:"1"},{id:"cargar",label:"Cargar planilla",n:"2"},{id:"cierre",label:"Cierre diario",n:"3"}]},
-  eval:{label:"Análisis",tabs:[{id:"crear",label:"Gestión de análisis",n:"1"},{id:"comparativa",label:"Comparativa",n:"2"},{id:"detalle",label:"Detalle por acción",n:"3"},{id:"capm",label:"CAPM / SML",n:"4"},{id:"multifactor",label:"Multifactor",n:"5"}]},
+  eval:{label:"Análisis",tabs:[{id:"crear",label:"Gestión de análisis",n:"1"},{id:"comparativa",label:"Comparativa",n:"2"},{id:"detalle",label:"Detalle por acción",n:"3"},{id:"capm",label:"CAPM / SML",n:"4"},{id:"multifactor",label:"Multifactor",n:"5"},{id:"fundamentos",label:"Fundamentos",n:"6"}]},
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
@@ -1722,6 +1722,15 @@ function viewDetalle(){
     ${tile("Sharpe",a.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),s.c,a.sharpe>=0?green:red)}
     ${tile("E(R) CAPM",p0(a.er),_W?("exigido en la ventana "+p0(erWin(s.b),2)):"retorno exigido",s.c,indigo)}
     ${_W?tile("α ventana",pc(_alfa),"real − exigido en "+winShort(),s.c,col(_alfa)):tile("α Jensen",pc(a.jensen),"real − exigido",s.c,col(a.jensen))}</div>`;
+  // fundamentos del negocio (si el pipeline ya los trajo): complementan las métricas de precio de arriba
+  const _f=(typeof fundGet==="function")?fundGet(sel):null;
+  const _fpos=(_f&&_f.px!=null&&_f.hi52!=null&&_f.lo52!=null&&_f.hi52>_f.lo52)?Math.max(0,Math.min(1,(_f.px-_f.lo52)/(_f.hi52-_f.lo52))):null;
+  const fTiles=_f?`<div class="tiles" style="margin-top:10px">
+    ${tile("P/U",_f.pe!=null?_f.pe.toLocaleString("es-CL",{maximumFractionDigits:1}):"—",_f.fpe!=null?("forward "+_f.fpe.toLocaleString("es-CL",{maximumFractionDigits:1})):"precio / utilidad",s.c,ink)}
+    ${tile("P/B",_f.pb!=null?_f.pb.toLocaleString("es-CL",{maximumFractionDigits:2}):"—","precio / valor libro",s.c,_f.pb!=null&&_f.pb<1?green:ink)}
+    ${tile("Yield dividendos",_f.dy!=null?_f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—",_f.dps!=null?("$"+_f.dps.toLocaleString("es-CL")+" por acción (12m)"):"últimos 12 meses",s.c,_f.dy>=5?green:ink)}
+    ${tile("Capitalización",fundFmtCap(_f.mcap),"valor bolsa",s.c,ink)}
+    ${tile("Rango 52 semanas",_fpos!=null?(_fpos*100).toFixed(0)+"%":"—",_fpos!=null?("del mínimo ("+(_f.lo52||0).toLocaleString("es-CL")+") al máximo ("+(_f.hi52||0).toLocaleString("es-CL")+")"):"sin datos",s.c,_fpos!=null?(_fpos>=0.5?green:amber):ink)}</div>`:"";
   const xb=niceBounds(MKT.rets,0.1),yb=niceBounds(s.rets,0.1),am=a.alphaR/(DATA.perYear||12);
   const pts=s.rets.map((y,k)=>({x:MKT.rets[k],y:y,c:s.c+"d0",r:5}));
   const line=[{x1:xb.min,y1:am+s.b*xb.min,x2:xb.max,y2:am+s.b*xb.max,c:s.c}];
@@ -1733,7 +1742,7 @@ function viewDetalle(){
   const plab=(/^[a-z]{3}-\d{2}$/i.test(""+DATA.labels[0]))?[prevMonth(DATA.labels[0]),...DATA.labels]:["inicio",...DATA.labels];   // solo el demo usa etiquetas mes-año; en un análisis del usuario son fechas
   const ph=card("Historia del precio",`${s.t} · precio de cierre ${perAdj} · ${s.prices.length} puntos`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
   const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.`);
-  return selbar+tiles+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
+  return selbar+tiles+fTiles+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
 }
 
 // ===== CAPM / SML =====
@@ -1882,6 +1891,44 @@ function propose(){const n=simState.nstocks,p=simState.profile;let pool=[...STOC
   simState.sel={};chosen.forEach((s,i)=>simState.sel[s.t]=+w[i].toFixed(1));fix100();}
 function profHint(p){return p==="conservador"?"Conservador: minimiza volatilidad y β (excluye las más agresivas), reparte en más acciones (4–6) con ponderación inversa al riesgo.":p==="riesgoso"?"Riesgoso: prioriza retorno y α de Jensen (tolera β y σ altos), carteras más concentradas (2–4) con más peso a las de mejor rendimiento.":"Moderado: maximiza la relación riesgo-retorno (Sharpe + α), equilibrio en 3–5 acciones con pesos mezcla Sharpe/equiponderado.";}
 function simMetrics(){return pMetrics(simState.sel);}
+/* ══ OPTIMIZADOR DE PORTAFOLIO (opcional) ══
+   Markowitz SIN venta corta sobre las acciones marcadas del Constructor: usa μ (retorno histórico
+   anualizado de la ventana), σ y la matriz de correlaciones del análisis activo — las mismas cifras
+   que muestra la tabla. Búsqueda determinista por transferencias entre pares (multi-arranque, pasos
+   decrecientes): con N≤30 llega al óptimo práctico en milisegundos y sin dependencias.
+   Es una SUGERENCIA: no toca los pesos hasta que el usuario aprieta "Aplicar". */
+let optState={mode:"sharpe",wmax:40,res:null};
+function optPrep(tickers){
+  const st=tickers.map(t=>STOCKS.find(s=>s.t===t)).filter(Boolean);
+  const n=st.length,mu=st.map(s=>s.a24.ret),cov=[];
+  for(let i=0;i<n;i++){cov[i]=[];for(let j=0;j<n;j++){const ii=TICK.indexOf(st[i].t),jj=TICK.indexOf(st[j].t);const cc=(ii>=0&&jj>=0&&CORR[ii]&&CORR[ii][jj]!=null)?CORR[ii][jj]:(i===j?1:0.4);cov[i][j]=cc*(st[i].a24.sig||0)*(st[j].a24.sig||0);}}   // misma aproximación de covarianza que pMetrics: los números del resultado cuadran con la tabla
+  return {st,mu,cov,n};
+}
+function optObjective(w,P,mode){let r=0,v=0;for(let i=0;i<P.n;i++){r+=w[i]*P.mu[i];const ci=P.cov[i];for(let j=0;j<P.n;j++)v+=w[i]*w[j]*ci[j];}const sg=Math.sqrt(Math.max(1e-12,v));return mode==="minvol"?-sg:(r-RF)/sg;}
+function optimizeWeights(tickers,mode,wmaxPct){
+  const P=optPrep(tickers);if(P.n<2)return null;
+  const wmax=Math.min(1,Math.max((wmaxPct||100)/100,1/P.n+1e-9));   // el tope no puede impedir sumar 100%
+  const proj=w0=>{let x=w0.map(v=>Math.max(0,v));for(let it=0;it<60;it++){const s=x.reduce((a,b)=>a+b,0)||1;x=x.map(v=>v/s);let ex=0,free=0;x.forEach(v=>{if(v>wmax)ex+=v-wmax;else free++;});if(ex<1e-9||!free)break;x=x.map(v=>v>wmax?wmax:v+ex/free);}return x;};
+  const climb=w0=>{const w=proj(w0);let best=optObjective(w,P,mode);
+    for(const d of [0.10,0.05,0.02,0.01,0.005]){let go=true;
+      while(go){go=false;
+        for(let i=0;i<P.n;i++)for(let j=0;j<P.n;j++){if(i===j||w[i]<d-1e-12||w[j]+d>wmax+1e-12)continue;
+          w[i]-=d;w[j]+=d;const o=optObjective(w,P,mode);
+          if(o>best+1e-12){best=o;go=true;}else{w[i]+=d;w[j]-=d;}}}}
+    return {w,obj:best};};
+  // multi-arranque: equiponderado · inverso a σ (min-vol clásico) · concentrado en mejor Sharpe · en mejor μ
+  const eq=Array(P.n).fill(1/P.n);
+  const inv=P.st.map(s=>1/Math.max(1,s.a24.sig));const invT=inv.reduce((a,b)=>a+b,0);
+  const conc=k=>{const w=Array(P.n).fill(0.0001);w[k]=1;return w;};
+  const iSh=P.st.reduce((b,s,i)=>s.a24.sharpe>P.st[b].a24.sharpe?i:b,0);
+  const iMu=P.st.reduce((b,s,i)=>s.a24.ret>P.st[b].a24.ret?i:b,0);
+  let bestR=null;[eq,inv.map(x=>x/invT),conc(iSh),conc(iMu)].forEach(s0=>{const r=climb(s0);if(!bestR||r.obj>bestR.obj)bestR=r;});
+  // a % enteros conservando suma 100 (mayor resto); pesos 0 quedan fuera de la sugerencia
+  const pct=bestR.w.map(x=>x*100),fl=pct.map(Math.floor);let rem=100-fl.reduce((a,b)=>a+b,0);
+  const order=pct.map((x,i)=>[x-fl[i],i]).sort((a,b)=>b[0]-a[0]);for(let k=0;k<rem;k++)fl[order[k%order.length][1]]++;
+  const selW={};P.st.forEach((s,i)=>{if(fl[i]>0)selW[s.t]=fl[i];});
+  return {sel:selW,tickers:tickers.slice().sort()};
+}
 function pMetrics(sel){
   const inc=STOCKS.filter(s=>sel[s.t]!=null);
   const raw=inc.map(s=>Math.max(0,+sel[s.t]||0));const tot=raw.reduce((a,b)=>a+b,0)||1;
@@ -2061,7 +2108,27 @@ function viewSim(){
     `<div class="simhead"><div class="simamt"><span class="l">Monto a invertir (CLP)</span><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="amtinp" value="${simState.amount?simState.amount.toLocaleString('es-CL'):''}" placeholder="Ej: 1.000.000"/></div></div><button class="btn" id="eqw">Equiponderar</button></div><div class="tw cons-tw" style="margin-top:13px"><table class="cons-tbl">${head}<tbody>${rows}</tbody></table></div><div class="simsum">Suma de pesos: <b id="sumv" style="color:${sc}">${sum.toFixed(1)}%</b>${winMode()?` <span style="color:var(--muted)">· *retorno anualizado desde una ventana ${winShort()} (&lt;1 año): referencial</span>`:""}</div>`);
   const edSc=scenEditId!=null?SCEN.find(s=>s.id===scenEditId):null;
   const scenBtns=edSc?`<span class="genl" style="margin:0;color:var(--indigo)">✎ Editando escenario: <b>${edSc.name}</b></span><button class="btn" id="cancelscen">Cancelar</button><button class="btn" id="savescen">Guardar como nuevo</button><button class="btn btn-pri" id="updscen">💾 Actualizar escenario</button>`:`<button class="btn" id="savescen">💾 Guardar escenario</button>`;
-  return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:2px;flex-wrap:wrap;align-items:center">${scenBtns}<button class="btn" id="genpdf">📄 Descargar PDF</button><button class="btn btn-pri" id="applyinv">✓ Aplicar inversión</button></div>`+controls+`<div id="simres">${simResults()}</div>`;
+  // ── Optimizador de pesos (OPCIONAL): sugiere, nunca aplica solo ──
+  const selTk=Object.keys(simState.sel);
+  if(optState.res&&optState.res.tickers.join(",")!==selTk.slice().sort().join(","))optState.res=null;   // la selección cambió: la sugerencia anterior ya no corresponde
+  let optRes="";
+  if(optState.res){
+    const Mo=pMetrics(optState.res.sel),Mc=pMetrics(simState.sel);
+    const chips=Object.keys(optState.res.sel).map(t=>{const st=STOCKS.find(x=>x.t===t)||{c:"#1E5FD1"};return `<span class="altchip" style="border-color:${st.c};color:${st.c};background:${st.c}12">${t} ${optState.res.sel[t]}%</span>`;}).join(" ");
+    const cmp=[["Retorno hist.",Mc.retH,Mo.retH,v=>pc(v),1],["σ (riesgo)",Mc.sig,Mo.sig,v=>p0(v),-1],["Sharpe",Mc.sharpe,Mo.sharpe,v=>v.toFixed(2),1],["β",Mc.bp,Mo.bp,v=>v.toFixed(2),0]];
+    const cmpRows=cmp.map(([l,a,b,f,dir])=>{const better=dir===0?muted:(dir*(b-a)>1e-9?green:dir*(b-a)<-1e-9?red:muted);return `<tr><td><b>${l}</b></td><td class="r tnum">${f(a)}</td><td class="r tnum" style="font-weight:800;color:${better}">${f(b)}</td></tr>`;}).join("");
+    optRes=`<div style="margin-top:13px">${chips}</div>
+      <div class="tw" style="margin-top:11px;max-width:420px"><table><thead><tr><th></th><th class="r">Pesos actuales</th><th class="r">Sugeridos</th></tr></thead><tbody>${cmpRows}</tbody></table></div>
+      <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="optApply">✓ Aplicar estos pesos</button><button class="btn" id="optClear">Descartar</button></div>`;
+  }
+  const optCard=card("Optimizador de pesos · opcional","Markowitz sin venta corta sobre las acciones marcadas (✓): sugiere la combinación eficiente con los μ, σ y correlaciones del análisis activo · no cambia nada hasta que la apliques",
+    `<div class="genrow" style="gap:18px;flex-wrap:wrap;align-items:flex-end">
+      <div><div class="genl">Objetivo</div><div class="pbtns">${[["sharpe","⚡ Máx. Sharpe"],["minvol","🛡 Mín. volatilidad"]].map(([k,l])=>`<button class="pbtn ${optState.mode===k?"on":""}" data-optmode="${k}">${l}</button>`).join("")}</div></div>
+      <div><div class="genl">Peso máx. por acción (%)</div><input id="optWmax" type="number" min="5" max="100" step="5" value="${optState.wmax}" style="width:90px"></div>
+      <button class="btn btn-pri" id="optRun" ${selTk.length<2?'disabled style="opacity:.5;cursor:not-allowed"':""}>Calcular pesos óptimos</button>
+    </div>${selTk.length<2?'<div class="note" style="margin:11px 0 0">Marca al menos 2 acciones en la tabla de arriba.</div>':""}${optRes}
+    <div class="note" style="margin-top:12px;font-size:11px"><b>Máx. Sharpe</b> usa el retorno histórico de la ventana como μ: favorece lo que rindió bien (el pasado no garantiza el futuro). <b>Mín. volatilidad</b> no usa μ y es más robusto. El <b>Asistente de simulación</b> elige <i>qué</i> acciones según tu perfil; esto afina <i>cuánto</i> pesa cada una.</div>`);
+  return `<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:2px;flex-wrap:wrap;align-items:center">${scenBtns}<button class="btn" id="genpdf">📄 Descargar PDF</button><button class="btn btn-pri" id="applyinv">✓ Aplicar inversión</button></div>`+controls+optCard+`<div id="simres">${simResults()}</div>`;
 }
 function simResults(){
   const M=simMetrics();
@@ -2130,6 +2197,12 @@ function attachSim(){
   const ss=document.getElementById("savescen");if(ss)ss.onclick=saveScenario;
   const us=document.getElementById("updscen");if(us)us.onclick=updateScenario;
   const cs=document.getElementById("cancelscen");if(cs)cs.onclick=()=>{scenEditId=null;render();};
+  // optimizador (opcional)
+  document.querySelectorAll("[data-optmode]").forEach(b=>b.onclick=()=>{optState.mode=b.dataset.optmode;optState.res=null;render();});
+  const ow=document.getElementById("optWmax");if(ow)ow.onchange=()=>{optState.wmax=Math.max(5,Math.min(100,parseInt(ow.value,10)||40));optState.res=null;render();};
+  const or_=document.getElementById("optRun");if(or_)or_.onclick=()=>{const tks=Object.keys(simState.sel);if(tks.length<2)return;const r=optimizeWeights(tks,optState.mode,optState.wmax);if(!r){window.alert("No se pudo optimizar con las acciones marcadas.");return;}optState.res=r;render();};
+  const oa=document.getElementById("optApply");if(oa)oa.onclick=()=>{if(!optState.res)return;scenEditId=null;simState.sel=Object.assign({},optState.res.sel);optState.res=null;render();};
+  const oc=document.getElementById("optClear");if(oc)oc.onclick=()=>{optState.res=null;render();};
 }
 function updSimRes(){const el=document.getElementById("simres");if(el){el.innerHTML=simResults();attachProj();attachProjHover();}}
 function updSum(){const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState.sel[t]||0),0);const el=document.getElementById("sumv");if(el){el.textContent=sum.toFixed(1)+"%";el.style.color=Math.abs(sum-100)<0.5?green:amber;}}
@@ -2988,13 +3061,14 @@ function render(){
     else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
     else if(modulo==="perfil") h=viewPerfil();
     else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
+    else if(modulo==="eval"&&page==="fundamentos") h=viewFundamentos();   // los fundamentos vienen del canal remoto: no dependen del análisis activo
     else if(modulo==="eval"&&page!=="crear"&&evalIsEmpty()) h=evalEmpty();   // base limpia + demo oculto: sin datos (no se muestra el demo)
     else if(page==="comparativa") h=viewComparativa();
     else if(page==="detalle") h=viewDetalle();
     else if(page==="capm") h=viewCAPM();
     else if(page==="multifactor") h=viewMultifactor();
     else if(page==="crear") h=viewCrear();
-    if(modulo==="eval"&&page!=="crear"&&!evalIsEmpty()) h=evalMeta()+h;
+    if(modulo==="eval"&&page!=="crear"&&page!=="fundamentos"&&!evalIsEmpty()) h=evalMeta()+h;
   }catch(err){
     try{console.error("render("+modulo+"/"+page+"):",err);}catch(e){}
     h=card("⚠ Esta vista tuvo un problema","La aplicación se recuperó y la navegación sigue funcionando.",
@@ -3013,6 +3087,7 @@ function render(){
     if(modulo==="sim"){ if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
     if(modulo==="inv") attachInv();
     if(modulo==="eval"&&page==="multifactor") attachMultifactor();
+    if(modulo==="eval"&&page==="fundamentos") attachFundamentos();
     if(modulo==="eval"&&page==="crear") attachCrear();
     if(modulo==="perfil") attachPerfil();
     if(modulo==="mercados") attachMercados();
@@ -3407,6 +3482,8 @@ DISCLAIMER: análisis cuantitativo informativo, no asesoría regulada (CMF); la 
 function cpStyleOf(t){const z=MF.z[t],o=[];if(z.value>0.5)o.push("Value");else if(z.value<-0.5)o.push("Growth");const s=stk(t);if(s.b<0.85&&z.lowvol>0)o.push("Defensiva");else if(s.b>1.1)o.push("Agresiva");if(z.quality>0.5)o.push("Alta calidad");if(z.yield>0.6)o.push("Alto dividendo");if(z.momentum>0.7)o.push("Momentum");return o.join(", ")||"Blend";}
 function cpStockBrief(s){const z=MF.z[s.t];const o={ticker:s.t,empresa:s.n,sector:s.s,beta:s.b,retornoVentanaTotal_pct:+(+s.a24.tot).toFixed(2),retornoAnualizado_pct:s.a24.ret,sigma:s.a24.sig,sharpe:s.a24.sharpe,alphaJensen:s.a24.jensen,erCAPM:+s.a24.er.toFixed(2),erMultifactor:+MF.er[s.t].toFixed(2),compositeMF:+MF.comp[s.t].toFixed(2),estilo:cpStyleOf(s.t)};
   if(typeof winMode==="function"&&winMode()){o.alphaVentana_pct=+alphaWin(s).toFixed(2);o.nota="ventana < 1 año: cita retornoVentanaTotal_pct y alphaVentana_pct; el anualizado es proyección referencial, no un retorno obtenido";}
+  const _f=(typeof fundGet==="function")?fundGet(s.t):null;
+  if(_f)o.fundamentos={PU:_f.pe,PU_forward:_f.fpe,PB:_f.pb,yieldDividendos_pct:_f.dy,EPS:_f.eps,capitalizacion_CLP:_f.mcap};
   return o;}
 function cpExposure(sel){const PM=pMetrics(sel);const Z={};MFSTYLE.forEach(k=>Z[k]=+(PM.ws.reduce((a,x)=>a+x.w*MF.z[x.s.t][k],0)).toFixed(2));const erMF=+(PM.ws.reduce((a,x)=>a+x.w*MF.er[x.s.t],0)).toFixed(2);return {PM,Z,erMF};}
 
@@ -4261,6 +4338,7 @@ async function autopxSync(manual){
     const ap=pricedbApplyToProjects();
     const info={at:new Date().toISOString(),day:autopxLocalDay(),added:r.added,updated:r.updated,skipped:r.skipped,lastDate:days[days.length-1].date};
     try{localStorage.setItem("inv_autopx_last",JSON.stringify(info));}catch(e){}
+    try{fundSync(false);}catch(e){}   // los fundamentos viajan por el mismo canal: se refrescan con cada sincronización (sin bloquear)
     if(manual)window.alert("Cierres sincronizados desde la fuente automática.\n\n• "+r.added+" precio(s) nuevo(s) · "+r.updated+" actualizado(s)"+(r.skipped?" · "+r.skipped+" ignorado(s) (fin de semana/futuro)":"")+"\n• Seguimientos: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");
     if(r.added||r.updated){
       // en la sincronización silenciosa no se re-renderiza si estás escribiendo en un formulario (no pisar tu entrada);
@@ -4287,6 +4365,26 @@ function autopxAutoRun(){try{
   }
   autopxSync(false);
 }catch(e){}}
+/* ── FUNDAMENTOS (P/U, P/B, dividendos, capitalización, 52 semanas) ──
+   Los genera el mismo pipeline de Actions en data/fundamentals.json (junto al closes.json) y se
+   sincronizan solos con cada sincronización de cierres. Globales (no por cliente): son datos de mercado. */
+let FDATA=(function(){try{return JSON.parse(localStorage.getItem("inv_fund_v1")||"null");}catch(e){return null;}})();
+function fundGet(t){return (FDATA&&FDATA.byTicker&&FDATA.byTicker[t])||null;}
+function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
+async function fundSync(manual){
+  const u=fundUrl();
+  if(!u){if(manual)window.alert("Configura primero la fuente automática de cierres en ⚙ Configuración → Datos: los fundamentos viajan por el mismo canal (fundamentals.json junto al closes.json).");return null;}
+  try{
+    const res=await fetch(u,{cache:"no-store"});if(!res.ok)throw new Error("HTTP "+res.status);
+    const j=await res.json();if(!j||!j.byTicker||typeof j.byTicker!=="object"||!Object.keys(j.byTicker).length)throw new Error("formato inesperado");
+    FDATA=j;try{localStorage.setItem("inv_fund_v1",JSON.stringify(j));}catch(e){}
+    if(manual){try{render();}catch(e){}window.alert("Fundamentos actualizados: "+Object.keys(j.byTicker).length+" acciones (al "+((""+(j.updatedAt||"")).slice(0,10)||"—")+").");}
+    return j;
+  }catch(e){
+    if(manual)window.alert("No se pudieron traer los fundamentos: "+String((e&&e.message)||e)+"\n\nSe generan en GitHub junto a los cierres (workflow \"Actualizar cierres IPSA\"); corre el workflow una vez o espera la próxima corrida diaria.");
+    return null;
+  }
+}
 function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];savePriceDB();}
 /* resumen para la vista: por ticker -> n puntos, rango, último precio */
 function pricedbSummary(){const out=[];pricedbTickers().forEach(t=>{const ds=Object.keys(PRICEDB.px[t]).sort();if(!ds.length)return;const m=PRICEDB.tickers[t]||{};out.push({t,n:m.n||t,s:m.s||"",c:m.c||"#1E5FD1",b:m.b,np:ds.length,from:ds[0],to:ds[ds.length-1],last:PRICEDB.px[t][ds[ds.length-1]]});});
@@ -4735,6 +4833,45 @@ function attachCrear(){
   document.querySelectorAll("[data-cadel]").forEach(b=>b.onclick=()=>{const s=(IMPSETS||[]).find(x=>String(x.id)===String(b.dataset.cadel));if(confirm('¿Eliminar el análisis "'+(s?s.name:"")+'"? No se puede deshacer.'))impsetDelete(b.dataset.cadel);});
   const _hd=document.querySelector("[data-cahidedemo]");if(_hd)_hd.onclick=()=>{if(confirm('¿Quitar el análisis "IPSA · demo" de la lista? Sus 23 meses de datos ya están en la base del sistema, así que NO se pierden y puedes seguir creando análisis.')){lsSet("inv_demo_hidden",1);if(currentAnalysisId()==="demo"){const _l=(IMPSETS||[])[IMPSETS.length-1];if(_l)activateAnalysis(_l.id);else applyDataset("demo");}render();}};
 }
+/* ===================== FUNDAMENTOS (P/U, P/B, dividendos, capitalización) ===================== */
+function fundFmtCap(v){if(v==null||!isFinite(v))return "—";if(v>=1e12)return "$"+(v/1e12).toLocaleString("es-CL",{maximumFractionDigits:1})+" B";if(v>=1e9)return "$"+Math.round(v/1e9).toLocaleString("es-CL")+" mil M";return "$"+Math.round(v/1e6).toLocaleString("es-CL")+" M";}
+function viewFundamentos(){
+  const by=(FDATA&&FDATA.byTicker)||{};
+  const tks=Object.keys(by).sort();
+  const syncBtn='<button class="btn btn-pri" id="fundSyncBtn">⟳ Traer fundamentos ahora</button>';
+  if(!tks.length){
+    return card("Fundamentos por acción","P/U, P/B, dividendos, capitalización y rango de 52 semanas del universo IPSA",
+      `<div class="note" style="margin:0">Aún no hay fundamentos en este navegador. Se generan <b>automáticamente</b> en GitHub junto a los cierres diarios (archivo <b>fundamentals.json</b>) y se sincronizan solos con cada sincronización de cierres.<br><br>Si el workflow ya corrió al menos una vez desde hoy, tráelos ahora:</div>
+      <div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap">${syncBtn}</div>
+      ${!AUTOPX_URL?'<div class="note" style="margin-top:11px;border-color:var(--red-line)">Requiere la fuente automática configurada (⚙ Configuración → Datos).</div>':''}`);
+  }
+  // mediana de P/U del universo (referencia de "caro/barato" relativa, no absoluta)
+  const pes=tks.map(t=>by[t].pe).filter(v=>v!=null&&isFinite(v)&&v>0).sort((a,b)=>a-b);
+  const peMed=pes.length?pes[Math.floor(pes.length/2)]:null;
+  const esc=s=>(""+(s||"")).replace(/</g,"&lt;");
+  const rows=tks.map(t=>{
+    const f=by[t];const st=(STOCKS||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};
+    const pos=(f.px!=null&&f.hi52!=null&&f.lo52!=null&&f.hi52>f.lo52)?Math.max(0,Math.min(1,(f.px-f.lo52)/(f.hi52-f.lo52))):null;
+    const sig=[];
+    if(f.pe!=null&&peMed&&f.pe<peMed*0.75)sig.push(["P/U bajo vs pares",green]);
+    if(f.pe!=null&&peMed&&f.pe>peMed*1.6)sig.push(["P/U alto vs pares",amber]);
+    if(f.dy!=null&&f.dy>=5)sig.push(["dividendera "+f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%",indigo]);
+    if(f.pb!=null&&f.pb<1)sig.push(["bajo valor libro",green]);
+    if(pos!=null&&pos<=0.15)sig.push(["cerca de mín 52s",amber]);
+    if(pos!=null&&pos>=0.92)sig.push(["en máximos 52s",ink]);
+    const chips=sig.map(([l,c])=>`<span class="badge" style="color:${c};background:${c}14;border:1px solid ${c}33;font-size:9.5px">${l}</span>`).join(" ")||`<span style="color:${faint}">—</span>`;
+    const bar=pos!=null?`<div style="display:flex;align-items:center;gap:7px"><div class="cons-bar" style="width:56px;flex:0 0 auto"><i style="width:${(pos*100).toFixed(0)}%;background:${pos>=0.5?green:amber}"></i></div><span class="tnum" style="font-size:11px;color:${muted}">${(pos*100).toFixed(0)}%</span></div>`:`<span style="color:${faint}">—</span>`;
+    const nm=`<b style="color:${st.c||"#1E5FD1"}">${t}</b> <span style="color:${muted};font-size:10.5px">${esc(f.name).slice(0,26)}</span>`;
+    const fv=(v,d,suf)=>v!=null?`${v.toLocaleString("es-CL",{maximumFractionDigits:d})}${suf||""}`:"—";
+    return {pe:f.pe,html:`<tr><td>${nm}</td><td class="r tnum">${fv(f.px,2)}</td><td class="r tnum" style="font-weight:700;color:${f.pe==null?faint:peMed&&f.pe<peMed?green:ink}">${fv(f.pe,1)}</td><td class="r tnum" style="color:${muted}">${fv(f.fpe,1)}</td><td class="r tnum">${fv(f.pb,2)}</td><td class="r tnum" style="font-weight:700;color:${f.dy>=5?green:f.dy!=null?ink:faint}">${f.dy!=null?f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r tnum" style="color:${muted}">${fv(f.eps,1)}</td><td class="r tnum">${fundFmtCap(f.mcap)}</td><td>${bar}</td><td>${chips}</td></tr>`};
+  }).sort((a,b)=>(a.pe==null?1e9:a.pe)-(b.pe==null?1e9:b.pe)).map(r=>r.html).join("");
+  const tbl=card("Fundamentos por acción",`P/U, P/B, dividendos, capitalización y posición en el rango de 52 semanas · al ${(""+(FDATA.updatedAt||"")).slice(0,10)||"—"} · fuente Yahoo Finance · ordenado por P/U`,
+    {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio</th><th class="r">P/U</th><th class="r">P/U fwd</th><th class="r">P/B</th><th class="r">Yield div.</th><th class="r">EPS</th><th class="r">Capitalización</th><th>52 semanas</th><th>Señales</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true},syncBtn);
+  const guia=card("Cómo leer los fundamentos","Qué mide cada indicador y sus límites",`
+    <div class="note" style="margin:0"><b>P/U</b> (precio/utilidad): cuántos años de utilidad actual "pagas" por la acción — bajo puede ser barato <i>o</i> un problema que el mercado ya castigó. <b>P/U fwd</b> usa la utilidad esperada. <b>P/B</b> (precio/valor libro): bajo 1 la bolsa la valora menos que su patrimonio contable. <b>Yield div.</b>: dividendos de los últimos 12 meses sobre el precio — en Chile las "dividenderas" (bancos, utilities) reparten 4–8%. <b>EPS</b>: utilidad por acción. <b>52 semanas</b>: dónde está el precio dentro de su rango del año (0% = en el mínimo, 100% = en el máximo).<br><br><b>Límites:</b> el P/U no es comparable entre sectores (un banco "barato" y una minera "cara" pueden ser normales para su industria) — la señal "vs pares" compara contra la mediana del IPSA, úsala como <b>punto de partida para investigar</b>, no como veredicto. Estos datos complementan al análisis CAPM/multifactor: aquellos miran el <i>comportamiento</i> del precio; estos, el <i>negocio</i> detrás. No es recomendación de inversión.</div>`);
+  return tbl+guia;
+}
+function attachFundamentos(){const b=document.getElementById("fundSyncBtn");if(b)b.onclick=()=>{b.disabled=true;b.textContent="⟳ Trayendo…";fundSync(true).finally(()=>{try{render();}catch(e){}});};}
 function viewImport(){
   const tmpl=card("Importar acciones para analizar","Carga muchas acciones candidatas, córreles el análisis completo — CAPM, riesgo-retorno, SML, correlaciones — y decide antes de armar tu portafolio",
     `<div class="note" style="margin:0 0 12px">Dos formas de cargar:<br>• <b>Archivos de Investing.com</b> (uno por acción) — tal como los descargas (columnas Date, Price, Open…). Sube <b>varios a la vez</b>; el ticker se toma del nombre del archivo.<br>• <b>Un archivo combinado</b> (CSV/Excel): una columna por acción + una de índice.<br>Elige la <b>periodicidad</b> que descargaste (diario/semanal/mensual). Para β correcto, incluye también el <b>índice</b> (ej. IPSA) como un archivo más; si no, se usa un índice promedio de tus acciones.</div>
