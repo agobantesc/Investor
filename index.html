@@ -1598,10 +1598,13 @@ function heat(v){if(v>=0)return `rgba(14,159,110,${0.12+0.62*Math.min(1,v)})`;re
 // ===== COMPARATIVA =====
 function marketTiles(){
   const t=(l,v,s,c)=>`<div class="mstat"><div class="ml">${l}</div><div class="mv tnum" style="color:${c}">${v}</div><div class="ms">${s}</div></div>`;
+  const ipsaT=winMode()
+    ? t("IPSA · Retorno "+winShort(),pc(MKT.tot),"anualizado (proyección) "+pc(MKT.ret),col(MKT.tot))
+    : t("IPSA · Retorno anual",pc(MKT.ret),"Total "+winShort()+" "+pc(MKT.tot),col(MKT.ret));
   return `<div class="mstats">`+
-    t("IPSA · Retorno anual",pc(MKT.ret),"Total "+winShort()+" "+pc(MKT.tot),col(MKT.ret))+
+    ipsaT+
     t("IPSA · Sharpe",MKT.sharpe.toFixed(2),"Retorno ajustado por riesgo",indigo)+
-    t("Tasa libre de riesgo",p0(RF),"Bono soberano 10 años",ink)+
+    t("Tasa libre de riesgo",p0(RF),winMode()?("en la ventana "+p0(rfWin(),2)):"Bono soberano 10 años",ink)+
     `</div>`;
 }
 function svgLine(o){
@@ -1674,22 +1677,30 @@ function attachPriceHover(){
 // y el agente la entrega vía get_correlations
 
 function viewComparativa(){
+  // modo ventana (< ~1 año): la rentabilidad protagonista es la de la VENTANA (30d→30d, 6m→6m); la
+  // anualizada queda como referencia. El α se prorratea a la ventana para compararlo con ese retorno.
+  const W=winMode();
+  const retOf=s=>W?s.a24.tot:s.a24.ret, alfaOf=s=>W?alphaWin(s):s.a24.jensen, mktRet=W?MKT.tot:MKT.ret, rfY=W?rfWin():RF;
   const sx=niceBounds([0,...STOCKS.map(s=>s.a24.sig)],0.12);sx.min=0;
-  const sy=niceBounds([RF,...STOCKS.map(s=>s.a24.ret),MKT.ret],0.14);
-  const pts=STOCKS.map(s=>({x:s.a24.sig,y:s.a24.ret,c:s.c,label:s.t}));
-  pts.push({x:MKT.sig,y:MKT.ret,c:indigo,label:"IPSA",shape:"diamond",r:8});
-  pts.push({x:0,y:RF,c:muted,label:"Rf",shape:"tri"});
+  const sy=niceBounds([rfY,...STOCKS.map(retOf),mktRet],0.14);
+  const pts=STOCKS.map(s=>({x:s.a24.sig,y:retOf(s),c:s.c,label:s.t}));
+  pts.push({x:MKT.sig,y:mktRet,c:indigo,label:"IPSA",shape:"diamond",r:8});
+  pts.push({x:0,y:rfY,c:muted,label:"Rf",shape:"tri"});
   const leg=`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>IPSA (mercado)</span><span><span class="lgdot" style="background:${muted}"></span>Rf</span></div>`;
-  const scatter=card("Mapa Riesgo–Retorno","Volatilidad anual (X) vs retorno anual (Y) · "+winLong(),svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
+  const scatter=card("Mapa Riesgo–Retorno",(W?("Volatilidad anual (X) vs retorno de la ventana (Y) · "):"Volatilidad anual (X) vs retorno anual (Y) · ")+winLong(),svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:W?("Retorno "+winShort()+" (%)"):"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
   const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
   const rows=byS.map(s=>{const a=s.a24;return `<tr><td>${tk(s)}</td><td>${badge(s.s,s.c)}</td>
-    <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(a.ret)}</td>
+    <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(retOf(s))}</td>
     <td class="tnum num">${p0(a.sig)}</td><td class="tnum num" style="font-weight:800;color:${a.sharpe>=0?green:red}">${a.sharpe.toFixed(2)}</td>
-    <td class="num">${chip(a.jensen)}</td><td class="tnum num" style="color:${muted}">${a.r2.toFixed(2)}</td><td class="num">${chip(a.tot)}</td></tr>`;}).join("");
+    <td class="num">${chip(alfaOf(s))}</td><td class="tnum num" style="color:${muted}">${a.r2.toFixed(2)}</td><td class="tnum num" style="color:${muted}">${W?pc(a.ret):pc(a.tot).replace("+","+")}</td></tr>`;}).join("");
   const mkt=`<tr style="background:var(--soft)"><td style="font-weight:800;color:${indigo}">IPSA</td><td>${badge("mercado",indigo)}</td>
-    <td class="tnum num" style="color:${accentT};font-weight:700">1.00</td><td class="num">${chip(MKT.ret)}</td><td class="tnum num">${p0(MKT.sig)}</td>
-    <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="num">${chip(MKT.tot)}</td></tr>`;
-  const tbl=card("Comparativa de candidatas","Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["R²",1],["Total "+winShort(),1]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
+    <td class="tnum num" style="color:${accentT};font-weight:700">1.00</td><td class="num">${chip(mktRet)}</td><td class="tnum num">${p0(MKT.sig)}</td>
+    <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="tnum num" style="color:${muted}">${W?pc(MKT.ret):pc(MKT.tot)}</td></tr>`;
+  const heads=W
+    ? [["Acción",0],["Sector",0],["β",1],["Ret. "+winShort(),1],["σ anual",1],["Sharpe",1],["α ventana",1],["R²",1],["Anualizado*",1]]
+    : [["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["R²",1],["Total "+winShort(),1]];
+  const tblSub=W?("Ordenadas por Sharpe · regresión vs IPSA · retornos de la VENTANA de "+winLong()+" · * anualizado = proyección referencial, no un retorno obtenido"):"Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA";
+  const tbl=card("Comparativa de candidatas",tblSub,{html:`<div class="tw"><table><thead><tr>${heads.map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
   return marketTiles()+scatter+tbl;
 }
 
@@ -1700,15 +1711,16 @@ function viewDetalle(){
   const perAdj=DATA.perYear===252?"diario":DATA.perYear===52?"semanal":"mensual";
   const perPl=DATA.perYear===252?"diarios":DATA.perYear===52?"semanales":"mensuales";
   const selbar=`<div class="sel">${STOCKS.map(x=>`<button class="selb ${x.t===sel?'on':''}" data-sel="${x.t}" style="${x.t===sel?`background:${x.c};border-color:${x.c}`:''}"><span class="dot" style="background:${x.t===sel?'#fff':x.c}"></span>${x.t}</button>`).join("")}</div>`;
-  const sg=a.jensen>1?"SUBVALORADA":a.jensen<-1?"SOBREVALORADA":"EQUILIBRIO",sgc=a.jensen>1?green:a.jensen<-1?red:muted;
+  const _W=winMode(),_alfa=_W?alphaWin(s):a.jensen;
+  const sg=_alfa>1?"SUBVALORADA":_alfa<-1?"SOBREVALORADA":"EQUILIBRIO",sgc=_alfa>1?green:_alfa<-1?red:muted;
   const tiles=`<div class="tiles">
     ${tile("β regresión",s.b.toFixed(2),s.b<0.8?"defensiva":s.b<1?"moderada":"agresiva",s.c,accentT)}
     ${tile("R²",a.r2.toFixed(2),"sistemático "+(a.r2*100).toFixed(0)+"%",s.c)}
-    ${tile("Retorno anual",pc(a.ret),"total "+winShort()+" "+pc(a.tot),s.c,col(a.ret))}
+    ${_W?tile("Retorno "+winShort(),pc(a.tot),"anualizado (proyección) "+pc(a.ret),s.c,col(a.tot)):tile("Retorno anual",pc(a.ret),"total "+winShort()+" "+pc(a.tot),s.c,col(a.ret))}
     ${tile("Volatilidad σ",p0(a.sig),(a.sig/MKT.sig).toFixed(1)+"× IPSA",s.c)}
     ${tile("Sharpe",a.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),s.c,a.sharpe>=0?green:red)}
-    ${tile("E(R) CAPM",p0(a.er),"retorno exigido",s.c,indigo)}
-    ${tile("α Jensen",pc(a.jensen),"real − exigido",s.c,col(a.jensen))}</div>`;
+    ${tile("E(R) CAPM",p0(a.er),_W?("exigido en la ventana "+p0(erWin(s.b),2)):"retorno exigido",s.c,indigo)}
+    ${_W?tile("α ventana",pc(_alfa),"real − exigido en "+winShort(),s.c,col(_alfa)):tile("α Jensen",pc(a.jensen),"real − exigido",s.c,col(a.jensen))}</div>`;
   const xb=niceBounds(MKT.rets,0.1),yb=niceBounds(s.rets,0.1),am=a.alphaR/(DATA.perYear||12);
   const pts=s.rets.map((y,k)=>({x:MKT.rets[k],y:y,c:s.c+"d0",r:5}));
   const line=[{x1:xb.min,y1:am+s.b*xb.min,x2:xb.max,y2:am+s.b*xb.max,c:s.c}];
@@ -1719,28 +1731,35 @@ function viewDetalle(){
   const mr=card("Retornos "+perPl,`${s.t} vs IPSA · ${winLong()}`,svgLine({vals:s.rets,labels:DATA.labels,c:s.c,cmp:MKT.rets,cmpC:muted,prices:s.prices.slice(1),h:215}),`<div class="legend"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>IPSA</span></div>`);
   const plab=(/^[a-z]{3}-\d{2}$/i.test(""+DATA.labels[0]))?[prevMonth(DATA.labels[0]),...DATA.labels]:["inicio",...DATA.labels];   // solo el demo usa etiquetas mes-año; en un análisis del usuario son fechas
   const ph=card("Historia del precio",`${s.t} · precio de cierre ${perAdj} · ${s.prices.length} puntos`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
-  const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). Retorno anual ${pc(a.ret)} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). α de Jensen ${pc(a.jensen)} → <b>${a.jensen>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β. Señal de valoración: <b style="color:${sgc}">${sg}</b>.`);
+  const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.`);
   return selbar+tiles+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
 }
 
 // ===== CAPM / SML =====
 function viewCAPM(){
   const bmax=Math.max(...STOCKS.map(s=>s.b))*1.18;
-  // dos SML cuando la prima ex-ante (supuesto forward) difiere mucho de la REALIZADA en la ventana: contra la
-  // ex-ante el propio mercado sale con α≠0 (sesga todo a "subvalorada"); la realizada pasa por el mercado (α=0)
-  const primaR=(MKT&&isFinite(MKT.ret))?(MKT.ret-RF):PRIMA;
-  const showR=Math.abs(primaR-PRIMA)>2;
-  const yb=niceBounds([RF,...STOCKS.map(s=>s.a24.ret)].concat(showR?[RF+bmax*primaR]:[]),0.14);
-  const pts=STOCKS.map(s=>({x:s.b,y:s.a24.ret,c:s.c,label:s.t}));
-  const line=[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:indigo,dash:true}].concat(showR?[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*primaR,c:muted,dash:true}]:[]);
-  const smlLeg=showR?`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>SML ex-ante (prima ${p0(PRIMA)})</span><span><span class="lgdot" style="background:${muted}"></span>SML realizada (prima ${p0(primaR)})</span></div>`:"";
-  const chart=card("Security Market Line (SML)","Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:330}),smlLeg);
-  const byJ=[...STOCKS].sort((a,b)=>b.a24.jensen-a.a24.jensen);
-  const rows=byJ.map(s=>{const a=s.a24;const sg=a.jensen>1?"SUBVALORADA":a.jensen<-1?"SOBREVALORADA":"EQUILIBRIO",sc=a.jensen>1?green:a.jensen<-1?red:muted;
+  // MODO VENTANA (< ~1 año): todo el gráfico y la tabla en términos de la VENTANA — retornos reales de la
+  // ventana, SML prorrateada (Rf y prima llevados al lapso del análisis) y α de ventana. Nada anualizado.
+  const W=winMode();
+  const rf0=W?rfWin():RF, prima0=W?primaWin():PRIMA;
+  const retOf=s=>W?s.a24.tot:s.a24.ret, erOf=s=>W?erWin(s.b):s.a24.er, alfaOf=s=>W?alphaWin(s):s.a24.jensen;
+  const mktRet=W?MKT.tot:MKT.ret;
+  // segunda SML con la prima REALIZADA de la ventana: contra la ex-ante el propio mercado sale con α≠0
+  // (sesga todo a "subvalorada"); la realizada pasa por el mercado (α=0)
+  const primaR=isFinite(mktRet)?(mktRet-rf0):prima0;
+  const showR=Math.abs(primaR-prima0)>(W?Math.max(0.5,prima0*0.35):2);
+  const yb=niceBounds([rf0,...STOCKS.map(retOf)].concat(showR?[rf0+bmax*primaR]:[]),0.14);
+  const pts=STOCKS.map(s=>({x:s.b,y:retOf(s),c:s.c,label:s.t}));
+  const line=[{x1:0,y1:rf0,x2:bmax,y2:rf0+bmax*prima0,c:indigo,dash:true}].concat(showR?[{x1:0,y1:rf0,x2:bmax,y2:rf0+bmax*primaR,c:muted,dash:true}]:[]);
+  const smlLeg=showR?`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>SML ex-ante (prima ${p0(prima0,W?2:1)})</span><span><span class="lgdot" style="background:${muted}"></span>SML realizada (prima ${p0(primaR,W?2:1)})</span></div>`:"";
+  const chart=card("Security Market Line (SML)",(W?("En términos de la VENTANA de "+winLong()+" · "):"")+"Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:W?("Retorno real "+winShort()+" (%)"):"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:330}),smlLeg);
+  const byJ=[...STOCKS].sort((a,b)=>alfaOf(b)-alfaOf(a));
+  const rows=byJ.map(s=>{const al=alfaOf(s);const sg=al>1?"SUBVALORADA":al<-1?"SOBREVALORADA":"EQUILIBRIO",sc=al>1?green:al<-1?red:muted;
     return `<tr><td>${tk(s)}</td><td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td>
-    <td class="tnum num" style="color:${indigo};font-weight:600">${p0(a.er)}</td><td class="num">${chip(a.ret)}</td><td class="num">${chip(a.jensen)}</td><td>${badge(sg,sc)}</td></tr>`;}).join("");
-  const tbl=card("Valoración CAPM","E(R) exigido = Rf + β × prima · α de Jensen = retorno real − exigido",{html:`<div class="tw"><table><thead><tr>${[["Acción",0],["β",1],["E(R) CAPM",1],["Retorno real",1],["α Jensen",1],["Señal",0]].map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
-  const note=notecard(`La <b>SML</b> muestra el retorno que el CAPM exige según el β (Rf ${p0(RF)}, prima ${p0(PRIMA)}). Un punto <b>sobre</b> la línea rindió más de lo exigido por su riesgo sistemático (α positivo); <b>bajo</b>, menos.`+(showR?` La línea <b>gris</b> usa la prima <b>realizada</b> de la ventana (mercado ${pc(MKT.ret)} − Rf = ${p0(primaR)}): contra ella el propio mercado queda en la línea (α=0), así que mide quién batió al mercado de verdad; la azul es el supuesto ex-ante que se usa para proyectar E(R) a futuro.`:` Ojo: la ventana fue un mercado muy alcista, por eso varios retornos reales superan ampliamente lo exigido.`));
+    <td class="tnum num" style="color:${indigo};font-weight:600">${p0(erOf(s),W?2:1)}</td><td class="num">${chip(retOf(s))}</td><td class="num">${chip(al)}</td><td>${badge(sg,sc)}</td></tr>`;}).join("");
+  const heads=W?[["Acción",0],["β",1],["Exigido "+winShort(),1],["Real "+winShort(),1],["α ventana",1],["Señal",0]]:[["Acción",0],["β",1],["E(R) CAPM",1],["Retorno real",1],["α Jensen",1],["Señal",0]];
+  const tbl=card("Valoración CAPM",(W?("Exigido y α prorrateados a la ventana de "+winLong()+" · "):"")+"E(R) exigido = Rf + β × prima · α = retorno real − exigido",{html:`<div class="tw"><table><thead><tr>${heads.map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
+  const note=notecard(`La <b>SML</b> muestra el retorno que el CAPM exige según el β${W?(" — aquí <b>prorrateado a la ventana de "+winLong()+"</b> (Rf "+p0(rf0,2)+", prima "+p0(prima0,2)+"), sin anualizar"):" (Rf "+p0(RF)+", prima "+p0(PRIMA)+")"}. Un punto <b>sobre</b> la línea rindió más de lo exigido por su riesgo sistemático (α positivo); <b>bajo</b>, menos.`+(showR?` La línea <b>gris</b> usa la prima <b>realizada</b> de la ventana (mercado ${pc(mktRet)} − Rf = ${p0(primaR,2)}): contra ella el propio mercado queda en la línea (α=0), así que mide quién batió al mercado de verdad; la azul es el supuesto ex-ante.`:"")+(W?` Ventana corta: las señales son indicios, no veredictos.`:""));
   return chart+tbl+note;
 }
 
@@ -3368,7 +3387,9 @@ DISCLAIMER: análisis cuantitativo informativo, no asesoría regulada (CMF); la 
 
 /* ---- helpers de datos ---- */
 function cpStyleOf(t){const z=MF.z[t],o=[];if(z.value>0.5)o.push("Value");else if(z.value<-0.5)o.push("Growth");const s=stk(t);if(s.b<0.85&&z.lowvol>0)o.push("Defensiva");else if(s.b>1.1)o.push("Agresiva");if(z.quality>0.5)o.push("Alta calidad");if(z.yield>0.6)o.push("Alto dividendo");if(z.momentum>0.7)o.push("Momentum");return o.join(", ")||"Blend";}
-function cpStockBrief(s){const z=MF.z[s.t];return {ticker:s.t,empresa:s.n,sector:s.s,beta:s.b,retorno24m:s.a24.ret,sigma:s.a24.sig,sharpe:s.a24.sharpe,alphaJensen:s.a24.jensen,erCAPM:+s.a24.er.toFixed(2),erMultifactor:+MF.er[s.t].toFixed(2),compositeMF:+MF.comp[s.t].toFixed(2),estilo:cpStyleOf(s.t)};}
+function cpStockBrief(s){const z=MF.z[s.t];const o={ticker:s.t,empresa:s.n,sector:s.s,beta:s.b,retornoVentanaTotal_pct:+(+s.a24.tot).toFixed(2),retornoAnualizado_pct:s.a24.ret,sigma:s.a24.sig,sharpe:s.a24.sharpe,alphaJensen:s.a24.jensen,erCAPM:+s.a24.er.toFixed(2),erMultifactor:+MF.er[s.t].toFixed(2),compositeMF:+MF.comp[s.t].toFixed(2),estilo:cpStyleOf(s.t)};
+  if(typeof winMode==="function"&&winMode()){o.alphaVentana_pct=+alphaWin(s).toFixed(2);o.nota="ventana < 1 año: cita retornoVentanaTotal_pct y alphaVentana_pct; el anualizado es proyección referencial, no un retorno obtenido";}
+  return o;}
 function cpExposure(sel){const PM=pMetrics(sel);const Z={};MFSTYLE.forEach(k=>Z[k]=+(PM.ws.reduce((a,x)=>a+x.w*MF.z[x.s.t][k],0)).toFixed(2));const erMF=+(PM.ws.reduce((a,x)=>a+x.w*MF.er[x.s.t],0)).toFixed(2);return {PM,Z,erMF};}
 
 const COPILOT_TOOLS=[
@@ -3877,6 +3898,16 @@ let DATASET="demo";
 /* etiqueta corta de la ventana del análisis activo (n períodos + unidad), para no fijar '24m' en la UI */
 function winShort(){const u=DATA.perYear===252?'d':DATA.perYear===52?'sem':'m';return DATA.n+u;}
 function winLong(){const u=DATA.perYear===252?'días':DATA.perYear===52?'semanas':'meses';return DATA.n+' '+u;}
+/* MODO VENTANA: con un análisis de menos de ~1 año, la rentabilidad protagonista es la de la VENTANA, no la
+   anualizada — anualizar 30 días proyecta "+140% anual" engañosos. σ y Sharpe se mantienen anualizados
+   (convención estándar de riesgo) y el E(R) CAPM sigue anual (es una proyección a futuro); el retorno exigido
+   y el α se prorratean a la ventana para compararlos con el retorno realmente mostrado. */
+function winYears(){return DATA.n/(DATA.perYear||12);}
+function winMode(){return winYears()<0.95;}
+function rfWin(){return (Math.pow(1+RF/100,winYears())-1)*100;}
+function primaWin(){return (Math.pow(1+(RF+PRIMA)/100,winYears())-1)*100-rfWin();}
+function erWin(b){return rfWin()+b*primaWin();}
+function alphaWin(s){return s.a24.tot-erWin(s.b);}
 function setActive(s){
   if(!s||!Array.isArray(s.stocks)||!s.stocks.length){console.warn("setActive: dataset vacío, se ignora");return false;}
   DATA.stocks=s.stocks;DATA.market=s.market;DATA.corr=s.corr;DATA.tickers=s.tickers;DATA.labels=s.labels;DATA.window=s.window;DATA.n=s.n;DATA.rf=s.rf;DATA.prima=s.prima;DATA.perYear=s.perYear;
