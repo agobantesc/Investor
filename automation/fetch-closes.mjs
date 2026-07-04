@@ -114,16 +114,24 @@ async function yahooDownloadIpsa() {
 }
 async function ipsaFromStooq() {
   const ms = Date.now(), fmt = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
-  const q = `s=%5Eipsa&i=d&d1=${fmt(ms - rangeSeconds() * 1000)}&d2=${fmt(ms + 86400e3)}`;
+  const raw = `https://stooq.com/q/d/l/?s=%5Eipsa&i=d&d1=${fmt(ms - rangeSeconds() * 1000)}&d2=${fmt(ms + 86400e3)}`;
+  // Stooq sirve HTML (bloqueo) a las IPs de los runners de Actions: además del acceso directo se intenta
+  // vía proxies CORS públicos (mismo truco que usa la app en el navegador para el petróleo de Stooq).
+  const routes = [
+    raw,
+    raw.replace("stooq.com", "stooq.pl"),
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(raw),
+    "https://corsproxy.io/?url=" + encodeURIComponent(raw),
+  ];
   let lastErr = null;
-  for (const host of ["stooq.com", "stooq.pl"]) {
+  for (const url of routes) {
     try {
-      const res = await fetch(`https://${host}/q/d/l/?${q}`, { headers: {
+      const res = await fetch(url, { headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-        "Accept": "text/csv,text/plain,*/*", "Referer": `https://${host}/q/d/?s=%5Eipsa` } });
+        "Accept": "text/csv,text/plain,*/*" } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return parseCloseCsv(await res.text(), host);
-    } catch (e) { lastErr = e; }
+      return parseCloseCsv(await res.text(), url.slice(8, 30));
+    } catch (e) { lastErr = e; await new Promise(r => setTimeout(r, 400)); }
   }
   throw new Error(String((lastErr && lastErr.message) || lastErr));
 }
