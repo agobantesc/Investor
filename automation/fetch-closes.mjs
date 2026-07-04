@@ -92,38 +92,65 @@ async function chart(symbol, usePeriod) {
 const byDate = {}; // date -> {ipsa, prices:{}}
 const errors = [];
 
-// HISTÓRICO del IPSA vía Stooq (CSV diario). Yahoo NO publica la historia del ^IPSA (solo el último valor):
-// por eso el índice venía con 1 solo día aunque las acciones trajeran 2 años.
-async function ipsaFromStooq() {
-  const ms = Date.now(), day = 86400e3;
-  const fmt = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
-  const url = `https://stooq.com/q/d/l/?s=%5Eipsa&i=d&d1=${fmt(ms - rangeSeconds() * 1000)}&d2=${fmt(ms + day)}`;
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (investor-closes)" } });
-  if (!res.ok) throw new Error(`stooq ^IPSA: HTTP ${res.status}`);
-  const lines = (await res.text()).trim().split(/\r?\n/);
-  if (lines.length < 2 || !/^date,/i.test(lines[0])) throw new Error(`stooq ^IPSA: respuesta inesperada (${lines[0]?.slice(0, 40)})`);
+// HISTÓRICO del IPSA: Yahoo NO publica la historia del ^IPSA vía chart (solo el último valor), así que se
+// intenta una CADENA de fuentes hasta juntar historia; cada intento queda registrado en ipsaSources del JSON.
+function parseCloseCsv(txt, tag) {
+  const lines = (txt || "").trim().split(/\r?\n/);
+  if (lines.length < 2 || !/^date,/i.test(lines[0])) throw new Error(`${tag}: respuesta inesperada (${(lines[0] || "").slice(0, 40)})`);
   const out = {};
   for (let i = 1; i < lines.length; i++) {
-    const c = lines[i].split(","), d = c[0], v = +c[4];   // Date,Open,High,Low,Close[,Volume]
+    const c = lines[i].split(","), d = c[0], v = +c[4];   // Date,Open,High,Low,Close[,...]
     if (/^\d{4}-\d{2}-\d{2}$/.test(d) && isFinite(v) && v > 0) out[d] = +v.toFixed(2);
   }
+  if (!Object.keys(out).length) throw new Error(`${tag}: CSV sin filas válidas`);
   return out;
 }
-try {
-  let ipsa = {};
-  try { ipsa = await chart(IPSA_SYMBOL); } catch (e) { errors.push(String(e.message || e)); }
-  if (Object.keys(ipsa).length < 5) {
+async function yahooDownloadIpsa() {
+  const t2 = Math.floor(Date.now() / 1000), t1 = t2 - rangeSeconds();
+  const res = await fetch(`https://query1.finance.yahoo.com/v7/finance/download/%5EIPSA?period1=${t1}&period2=${t2}&interval=1d&events=history`,
+    { headers: { "User-Agent": "Mozilla/5.0 (investor-closes)" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseCloseCsv(await res.text(), "yahoo dl");
+}
+async function ipsaFromStooq() {
+  const ms = Date.now(), fmt = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
+  const q = `s=%5Eipsa&i=d&d1=${fmt(ms - rangeSeconds() * 1000)}&d2=${fmt(ms + 86400e3)}`;
+  let lastErr = null;
+  for (const host of ["stooq.com", "stooq.pl"]) {
     try {
-      const st = await ipsaFromStooq();
-      ipsa = Object.assign({}, st, ipsa);   // si Yahoo trajo el valor de hoy, ese manda sobre el de Stooq
-      console.log(`IPSA: Stooq aportó ${Object.keys(st).length} día(s) de historia.`);
-    } catch (e) { errors.push(String(e.message || e)); }
+      const res = await fetch(`https://${host}/q/d/l/?${q}`, { headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+        "Accept": "text/csv,text/plain,*/*", "Referer": `https://${host}/q/d/?s=%5Eipsa` } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return parseCloseCsv(await res.text(), host);
+    } catch (e) { lastErr = e; }
+  }
+  throw new Error(String((lastErr && lastErr.message) || lastErr));
+}
+const IPSA_SOURCES = [
+  ["yahoo ^IPSA range", () => chart(IPSA_SYMBOL)],
+  ["yahoo ^IPSA period", () => chart(IPSA_SYMBOL, true)],
+  ["yahoo ^SPIPSA", () => chart("^SPIPSA", true)],
+  ["yahoo download csv", yahooDownloadIpsa],
+  ["stooq", ipsaFromStooq],
+];
+const ipsaSources = [];
+{
+  let ipsa = {};
+  for (const [tag, fn] of IPSA_SOURCES) {
+    try {
+      const got = await fn();
+      ipsaSources.push(`${tag}: ${Object.keys(got).length} día(s)`);
+      ipsa = Object.assign({}, got, ipsa);   // lo ya obtenido (p.ej. el valor de HOY de Yahoo) manda sobre lo nuevo
+      if (Object.keys(ipsa).length >= 10) break;
+    } catch (e) { ipsaSources.push(`${tag}: ${String((e && e.message) || e).slice(0, 90)}`); }
+    await new Promise(r => setTimeout(r, 300));
   }
   const nIpsa = Object.keys(ipsa).length;
   for (const [d, v] of Object.entries(ipsa)) (byDate[d] ??= { date: d, prices: {} }).ipsa = v;
-  console.log(`IPSA: ${nIpsa} día(s).`);
-  if (!nIpsa) errors.push("IPSA: 0 puntos (Yahoo y Stooq fallaron) — el análisis no podrá calcular β sin el índice.");
-} catch (e) { errors.push(String(e.message || e)); }
+  console.log(`IPSA: ${nIpsa} día(s). Fuentes → ${ipsaSources.join(" · ")}`);
+  if (nIpsa < 10) errors.push("IPSA histórico incompleto (" + nIpsa + " día/s) — " + ipsaSources.join(" · "));
+}
 
 for (const [tick, sym] of Object.entries(TICKERS)) {
   try {
@@ -152,5 +179,5 @@ const ipsaDays = days.filter(d => d.ipsa != null).length;
 const tickerSet = new Set();
 days.forEach(d => Object.keys(d.prices || {}).forEach(t => tickerSet.add(t)));
 mkdirSync("data", { recursive: true });
-writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source: "Yahoo Finance (.SN)", errors, days }, null, 1));
+writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source: "Yahoo Finance (.SN) + fuentes IPSA", ipsaSources, errors, days }, null, 1));
 console.log(`OK: ${days.length} día(s) (${days[0].date} → ${days[days.length - 1].date}) · ${tickerSet.size} acciones · IPSA en ${ipsaDays} día(s). Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);
