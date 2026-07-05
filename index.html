@@ -3220,20 +3220,28 @@ const FACTORS=[
 ];
 
 function clampz(z,c){c=c||2.5;return Math.max(-c,Math.min(c,z));}
-/* fundamentos para el MULTIFACTOR: los REALES del pipeline (FDATA) pisan al dataset ilustrativo estático
-   campo a campo. La capitalización real (CLP) se lleva a MM USD (dólar de mindicador, fallback 950) para
-   no mezclar escalas con el dataset estático en el z-score de tamaño. */
+/* ¿hay fundamentos REALES cargados (pipeline)? Si los hay, el análisis del usuario NO debe usar el
+   dataset ilustrativo estático para NADA: un dato que falta queda NEUTRO, no inventado. */
+function hasRealFund(){try{return !!(typeof FDATA!=="undefined"&&FDATA&&FDATA.byTicker&&Object.keys(FDATA.byTicker).length);}catch(e){return false;}}
+/* fundamentos por acción para el MULTIFACTOR. Con datos reales cargados: SOLO los reales (los campos que
+   Yahoo no entrega quedan null → neutros en el z-score, nunca un default arbitrario que sesgue el ranking).
+   Sin fundamentos reales (modo demo): el dataset ilustrativo estático, solo para que el demo no quede vacío.
+   La capitalización real (CLP) se lleva a MM USD (dólar de mindicador, fallback 950). */
 function mfFund(t){
-  const st=FUND[t]||{};
-  let f=null;try{f=(typeof fundGet==="function"&&fundGet(t))||null;}catch(e){}   // en el arranque FDATA aún no se declara (TDZ): usa el estático
-  if(!f)return st;
+  if(!hasRealFund())return FUND[t]||{};   // demo/sin pipeline: dataset ilustrativo (no hay nada real que usar)
+  let f=null;try{f=fundGet(t);}catch(e){}
+  if(!f)return {};   // acción real SIN fundamentos: todo neutro (jamás valores inventados del estático)
   const dolar=(typeof MIND!=="undefined"&&MIND&&MIND.dolar&&isFinite(+MIND.dolar.valor)&&+MIND.dolar.valor>0)?+MIND.dolar.valor:950;
-  const o=Object.assign({},st);
+  const o={};
   ["pb","pe","dy","roe","nm","de","eg"].forEach(k=>{if(f[k]!=null)o[k]=f[k];});
   if(f.mcap!=null)o.mcap=f.mcap/1e6/dolar;
   return o;
 }
+/* z-score robusto a faltantes: la media y la desviación se calculan SOLO con los valores presentes;
+   un valor null queda null (neutro), nunca se le inventa un número que lo mueva en el ranking. */
+function zscoresNull(a){const v=a.filter(x=>x!=null&&isFinite(x));if(v.length<2)return a.map(()=>null);const m=v.reduce((x,y)=>x+y,0)/v.length;const sd=Math.sqrt(v.reduce((x,y)=>x+(y-m)**2,0)/v.length)||1;return a.map(x=>(x!=null&&isFinite(x))?(x-m)/sd:null);}
 function computeFactors(list){
+  // De PRECIOS (siempre reales) vs FUNDAMENTALES (solo cuentan si Yahoo entregó el dato; si no → neutro).
   const raw={mom:[],sig:[],idio:[],lnmc:[],pb:[],pe:[],roe:[],nm:[],de:[],eg:[],dy:[]};
   list.forEach(s=>{
     const f=mfFund(s.t),p=s.prices,n=p.length;
@@ -3241,35 +3249,42 @@ function computeFactors(list){
     raw.mom.push(mom);
     raw.sig.push(s.a24.sig);
     raw.idio.push(s.a24.sig*Math.sqrt(Math.max(0,1-s.a24.r2)));
-    raw.lnmc.push(Math.log(f.mcap||1000));
-    raw.pb.push(f.pb||1); raw.pe.push(f.pe||12);
-    raw.roe.push(f.roe||8); raw.nm.push(f.nm||5);
-    raw.de.push((f.de||0)/(1+(f.de||0))); raw.eg.push(f.eg||0); raw.dy.push(f.dy||0);
+    raw.lnmc.push(f.mcap!=null?Math.log(f.mcap):null);
+    raw.pb.push(f.pb!=null?f.pb:null); raw.pe.push(f.pe!=null?f.pe:null);
+    raw.roe.push(f.roe!=null?f.roe:null); raw.nm.push(f.nm!=null?f.nm:null);
+    raw.de.push(f.de!=null?(f.de/(1+f.de)):null); raw.eg.push(f.eg!=null?f.eg:null); raw.dy.push(f.dy!=null?f.dy:null);
   });
-  const Z={};Object.keys(raw).forEach(k=>Z[k]=zscores(raw[k]));
-  const z={},er={},comp={},attrib={},raws={};
+  const Z={};Object.keys(raw).forEach(k=>Z[k]=(k==="mom"||k==="sig"||k==="idio")?zscores(raw[k]):zscoresNull(raw[k]));
+  // combina sub-z ponderados usando SOLO los presentes (renormaliza el peso); null si no hay ninguno
+  const blend=(parts)=>{let sw=0,sv=0;parts.forEach(([z,w])=>{if(z!=null){sv+=w*z;sw+=w;}});return sw>0?sv/sw:null;};
+  const z={},er={},comp={},attrib={},raws={},cover={};
   list.forEach((s,i)=>{
     const zf={
       momentum:clampz(Z.mom[i]),
       lowvol:clampz(-Z.sig[i]),
       specific:clampz(-Z.idio[i]),
       market:s.b,
-      size:clampz(-Z.lnmc[i]),
-      value:clampz(0.6*(-Z.pb[i])+0.4*(-Z.pe[i])),
-      quality:clampz(0.40*Z.roe[i]+0.25*Z.nm[i]+0.20*(-Z.de[i])+0.15*Z.eg[i]),
-      yield:clampz(Z.dy[i])
+      size:Z.lnmc[i]!=null?clampz(-Z.lnmc[i]):null,
+      value:(()=>{const b=blend([[Z.pb[i],0.6],[Z.pe[i],0.4]]);return b!=null?clampz(-b):null;})(),
+      quality:(()=>{const b=blend([[Z.roe[i],0.40],[Z.nm[i],0.25],[Z.de[i]!=null?-Z.de[i]:null,0.20],[Z.eg[i],0.15]]);return b!=null?clampz(b):null;})(),
+      yield:Z.dy[i]!=null?clampz(Z.dy[i]):null
     };
-    z[s.t]=zf;
-    comp[s.t]=MFSTYLE.reduce((a,k)=>a+zf[k],0)/MFSTYLE.length;
+    // COMPOSITE: promedio de los factores de estilo CON dato (momentum y lowvol siempre; value/quality/size/yield
+    // solo si hay fundamento real). Un factor ausente no suma 0 ficticio: se excluye del promedio.
+    const present=MFSTYLE.filter(k=>zf[k]!=null);
+    comp[s.t]=present.length?present.reduce((a,k)=>a+zf[k],0)/present.length:0;
+    cover[s.t]={n:present.length,fund:["value","quality","size","yield"].filter(k=>zf[k]!=null).length};
+    // para la vista/radar: los factores ausentes se muestran como 0 (neutro), pero NO entran al composite ni al tilt
+    const zdisp={};MFSTYLE.forEach(k=>zdisp[k]=(zf[k]!=null?zf[k]:0));zdisp.specific=zf.specific;zdisp.market=zf.market;
+    z[s.t]=zdisp;
     const base=RF+s.b*PRIMA;
-    const tilt={momentum:zf.momentum*LAMBDA.momentum,value:zf.value*LAMBDA.value,size:zf.size*LAMBDA.size,
-                quality:zf.quality*LAMBDA.quality,lowvol:zf.lowvol*LAMBDA.lowvol,yield:zf.yield*LAMBDA.yield};
+    const tilt={};MFSTYLE.forEach(k=>tilt[k]=(zf[k]!=null?zf[k]:0)*LAMBDA[k]);   // sin dato → sin tilt
     const tsum=MFSTYLE.reduce((a,k)=>a+tilt[k],0);
     er[s.t]=base+tsum;
     attrib[s.t]={rf:RF,market:s.b*PRIMA,base,tilt,total:base+tsum};
     raws[s.t]={mom:raw.mom[i],idio:raw.idio[i]};
   });
-  return {z,er,comp,attrib,raws};
+  return {z,er,comp,attrib,raws,cover};
 }
 let MF=computeFactors(STOCKS);
 
@@ -3348,11 +3363,23 @@ function attribView(t){
 }
 
 let mfSel=STOCKS[0].t, mfProfile="moderado";
+/* resumen de cobertura de fundamentos REALES en el análisis activo (para las notas de honestidad) */
+function mfCoverageNote(){
+  try{
+    if(!hasRealFund())return {real:false,txt:"datos <b>representativos/ilustrativos</b> (modo demo: aún no hay fundamentos reales cargados)"};
+    const N=STOCKS.length;const c=k=>STOCKS.filter(s=>MF.z[s.t]&&MF.z[s.t][k]!==0&&MF.z[s.t][k]!=null).length;
+    const val=c("value"),qua=c("quality"),yld=c("yield");
+    const faltaQ=qua===0;
+    return {real:true,val,qua,yld,N,faltaQ,
+      txt:`datos <b>reales</b> de Yahoo Finance con cobertura parcial — Value en ${val}/${N} acciones, Dividend Yield en ${yld}/${N}, Quality en ${qua}/${N}${faltaQ?" (ROE/márgenes llegan en la próxima corrida del pipeline; hasta entonces Quality queda neutro, no inventado)":""}. Un dato ausente queda <b>neutro</b>, nunca se rellena con un valor arbitrario`};
+  }catch(e){return {real:false,txt:"datos del modelo"};}
+}
 function viewMultifactor(){
   const prof=mfProfile;
-  const disc=`<div class="mfdisc"><span style="font-size:15px">⚠</span><div><b>Modelo multifactor (más allá del CAPM).</b> Extiende tu análisis de un solo factor (β de mercado) a 6 factores de estilo: Momentum, Low-Volatility, Value, Quality, Size y Dividend Yield. Los factores fundamentales (Value, Quality, Size, Yield) usan <b>datos representativos/ilustrativos</b> de 14 empresas reales del IPSA — no son cifras auditadas ni recomendación de inversión.</div></div>`;
+  const _cov=mfCoverageNote();
+  const disc=`<div class="mfdisc"><span style="font-size:15px">${_cov.real?"ℹ":"⚠"}</span><div><b>Modelo multifactor (más allá del CAPM).</b> Extiende tu análisis de un solo factor (β de mercado) a 6 factores de estilo: Momentum, Low-Volatility, Value, Quality, Size y Dividend Yield. Los factores de precio (Momentum, Low-Vol) usan tus cierres reales; los fundamentales (Value, Quality, Size, Yield) usan ${_cov.txt}. No es recomendación de inversión.</div></div>`;
   const legend=`<div class="factbar">`+FACTORS.map(f=>`<div class="factchip" title="${f.desc}"><span class="fd" style="background:${MFCOL[f.key]}"></span>${f.name} <span style="color:var(--faint);font-weight:600">· ${f.cat}</span></div>`).join("")+`</div>`;
-  const introBody=`<div class="genl" style="margin-bottom:9px">Los 6 factores del modelo</div>${legend}<div class="note" style="margin-top:12px">Cada factor se estandariza (z-score transversal sobre las 14 acciones; <b>+z = mejor</b>, winsorizado a ±2,5). El <b>Composite</b> combina los factores; cámbialo por perfil. El <b>E(R) multifactor</b> añade primas de factor sobre el CAPM (modelo tipo APT: λ momentum 3,0% · value 2,5% · size 2,0% · quality 1,5% · low-vol 1,5% · yield 1,0%).</div>`;
+  const introBody=`<div class="genl" style="margin-bottom:9px">Los 6 factores del modelo</div>${legend}<div class="note" style="margin-top:12px">Cada factor se estandariza (z-score transversal sobre las ${STOCKS.length} acciones del análisis; <b>+z = mejor</b>, winsorizado a ±2,5). El <b>Composite</b> promedia solo los factores con dato real de cada acción. El <b>E(R) multifactor</b> añade primas de factor sobre el CAPM (modelo tipo APT: λ momentum 3,0% · value 2,5% · size 2,0% · quality 1,5% · low-vol 1,5% · yield 1,0%).</div>`;
   const intro=card("Análisis multifactor","Por qué una sola métrica (β) no basta · 6 factores de estilo + retorno esperado multifactor",{html:disc+introBody},`<div class="pbtns" id="mfprofbtns">`+[["conservador","Conservador"],["moderado","Moderado"],["riesgoso","Riesgoso"]].map(p=>`<button class="pbtn ${prof===p[0]?"on":""}" data-mfprof="${p[0]}">${p[1]}</button>`).join("")+`</div>`);
 
   // selector + radar + atribución de la acción seleccionada
@@ -3363,7 +3390,7 @@ function viewMultifactor(){
     {label:"IPSA",c:muted,vals:[50,50,50,50,50,50],fill:0.05,dot:false,dash:true,w:1.5},
     {label:s.t,c:s.c,vals:pcts,fill:0.18}
   ]});
-  const radarLeg=`<div class="legend" style="justify-content:center"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>Neutral mercado (z=0)</span></div><div class="note" style="text-align:center;margin-top:4px">Más afuera = mejor en ese factor (z transversal de las 14 acciones)</div>`;
+  const radarLeg=`<div class="legend" style="justify-content:center"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>Neutral mercado (z=0)</span></div><div class="note" style="text-align:center;margin-top:4px">Más afuera = mejor en ese factor (z transversal de las ${STOCKS.length} acciones)</div>`;
   const radarCard=card("Perfil de estilo · "+s.t,`${s.n} · ${s.s} · <span class="stylebadges" style="display:inline-flex;gap:5px;vertical-align:middle">${styleBadges(mfSel)}</span>`,`<div class="radarwrap"><div>${radar}${radarLeg}</div></div>`);
   const attrCard=card("Retorno esperado multifactor · "+s.t,"Descomposición CAPM → multifactor por factor",attribView(mfSel));
 
@@ -6522,7 +6549,8 @@ function viewHome(){
     const scCol=v=>v>=70?green:v>=55?indigo:v>=40?amber:red;
     const row=(r,i)=>`<div class="home-stk" title="α ${r.alpha>=0?"+":""}${r.alpha}pp · Sharpe ${r.sharpe} · β ${r.beta}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">CAPM ${r.capm}${r.mf!=null?" · MF "+r.mf:""}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
     const colA=top.slice(0,5).map((r,i)=>row(r,i)).join(""),colB=top.slice(5).map((r,i)=>row(r,i+5)).join("");
-    return card("Investor Score · Top 10",`La puntuación diaria de Investor (0–100) para las ${sc.n} acciones del sistema — <b>45% CAPM</b> (α y Sharpe a 12 meses) · 30% multifactor · 25% fundamentos · se recalcula cada día con la base, independiente del análisis activo · orientación educativa, no asesoría financiera`,
+    const _fc=sc.rows.filter(r=>r.fund!=null).length;
+    return card("Investor Score · Top 10",`La puntuación diaria de Investor (0–100) para las ${sc.n} acciones del sistema — <b>45% CAPM</b> (α y Sharpe a 12 meses, datos reales) · 30% multifactor · 25% fundamentos (${_fc}/${sc.n} con fundamentos reales; el resto pondera solo CAPM+multifactor, sin inventar datos) · se recalcula cada día con la base, independiente del análisis activo · orientación educativa, no asesoría financiera`,
       `<div class="stk-cols"><div class="stk-block">${colA}</div><div class="stk-block">${colB}</div></div>`);
   })();
   return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+scoreCard+stkCard;
