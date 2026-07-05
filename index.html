@@ -1736,8 +1736,18 @@ function viewDetalle(){
   const line=[{x1:xb.min,y1:am+s.b*xb.min,x2:xb.max,y2:am+s.b*xb.max,c:s.c}];
   const scl=card("Recta Característica (SCL)",`Retorno ${perAdj} de ${s.t} (Y) vs IPSA (X) · pendiente = β ${s.b.toFixed(2)}`,svgScatter({pts,lines:line,xmin:xb.min,xmax:xb.max,ymin:yb.min,ymax:yb.max,xlab:"IPSA (% "+perAdj+")",ylab:s.t+" (% "+perAdj+")",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:300}));
   const i=TICK.indexOf(s.t);
-  const cl=STOCKS.filter(x=>x.t!==s.t).map(x=>{const c=CORR[i][TICK.indexOf(x.t)];return `<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .1rem;border-bottom:1px solid var(--line)">${tk(x)}<span class="tnum" style="font-weight:800;color:${c<0.3?green:c<0.6?amber:red}">${c.toFixed(2)}</span></div>`;}).join("");
-  const corr=card("Correlación con otras","Menor = mejor diversificación",cl);
+  // COMPACTO e independiente del nº de acciones del análisis: con 28 acciones la lista completa se hacía
+  // interminable y desordenaba la vista — se muestran los EXTREMOS útiles para decidir (con quién diversificar
+  // y con quién NO se diversifica), no el listado entero
+  const _oth=STOCKS.filter(x=>x.t!==s.t).map(x=>({x,c:CORR[i][TICK.indexOf(x.t)]})).filter(o=>o.c!=null&&isFinite(o.c)).sort((a,b)=>a.c-b.c);
+  const _cRow=o=>`<div style="display:flex;align-items:center;gap:9px;padding:.42rem .1rem;border-bottom:1px solid var(--line)"><span style="flex:1;min-width:0">${tk(o.x)}</span><div class="cons-bar" style="width:56px;flex:0 0 auto"><i style="width:${Math.max(4,Math.min(100,Math.abs(o.c)*100)).toFixed(0)}%;background:${o.c<0.3?green:o.c<0.6?amber:red}"></i></div><span class="tnum" style="font-weight:800;width:38px;text-align:right;color:${o.c<0.3?green:o.c<0.6?amber:red}">${o.c.toFixed(2)}</span></div>`;
+  let cl;
+  if(_oth.length<=8){cl=_oth.map(_cRow).join("");}
+  else{const nS=6,lows=_oth.slice(0,nS),highs=_oth.slice(-nS).reverse();
+    cl=`<div class="genl" style="margin:0 0 4px">Diversifican mejor (menor ρ)</div>${lows.map(_cRow).join("")}
+        <div class="genl" style="margin:12px 0 4px">Se mueven en bloque (mayor ρ)</div>${highs.map(_cRow).join("")}
+        <div class="note" style="margin-top:10px;font-size:10.5px">Extremos de ${_oth.length} acciones del análisis · la selección completa con correlaciones se trabaja en el Constructor.</div>`;}
+  const corr=card("Correlación con otras","Con quién diversifica "+s.t+" y con quién no · ρ de la ventana",cl);
   const mr=card("Retornos "+perPl,`${s.t} vs IPSA · ${winLong()}`,svgLine({vals:s.rets,labels:DATA.labels,c:s.c,cmp:MKT.rets,cmpC:muted,prices:s.prices.slice(1),h:215}),`<div class="legend"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>IPSA</span></div>`);
   const plab=(/^[a-z]{3}-\d{2}$/i.test(""+DATA.labels[0]))?[prevMonth(DATA.labels[0]),...DATA.labels]:["inicio",...DATA.labels];   // solo el demo usa etiquetas mes-año; en un análisis del usuario son fechas
   const ph=card("Historia del precio",`${s.t} · precio de cierre ${perAdj} · ${s.prices.length} puntos`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
@@ -3036,11 +3046,17 @@ function evalMeta(){
 /* true cuando el módulo Análisis mostraría el DEMO oculto: dataset activo = demo y el usuario limpió (demo oculto).
    En ese caso no hay datos propios que mostrar → estado vacío en vez de la data hardcodeada del demo. */
 function evalIsEmpty(){return !(typeof DATASET!=="undefined"&&DATASET==="import") && !!lsGet("inv_demo_hidden");}
-/* estado vacío del módulo Análisis: no hay set activo (limpiaste la base y el demo está oculto). No muestra datos demo. */
+/* estado vacío del módulo Análisis: no hay análisis ACTIVO. Este módulo trabaja SOLO con los datos del
+   sistema y el análisis activo — la carga de datos (sincronización/planillas) vive en Configuración → Datos,
+   nunca aquí. */
 function evalEmpty(){
-  return card("Análisis · sin datos activos","Limpiaste el sistema: no hay ningún set de análisis activo, así que esta sección está en blanco hasta que cargues tu información.",
-    `<div class="note" style="margin:0">Para analizar acciones, primero <b>carga tus planillas</b> (mensual, semanal o diaria) en <b>Datos → Cargar planilla</b> y pulsa <b>Actualizar sistema</b>. Con eso el sistema arma el análisis (IPSA + tus acciones) a partir de tu propia base, y aquí verás la comparativa, el detalle, CAPM y multifactor con TUS datos —nunca los del demo.</div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-gocargar>📈 Cargar planilla</button><button class="btn" data-go-import>Gestión de análisis</button></div>`);
+  const nBase=(typeof pricedbTickers==="function")?pricedbTickers().length:0;
+  const body=nBase>0
+    ?`<div class="note" style="margin:0">Tu base ya tiene <b>${nBase} acciones</b> con precios: solo falta <b>crear (o activar) un análisis</b> para que Comparativa, Detalle, CAPM, Multifactor y el Constructor se llenen con tus datos. El análisis se construye directamente con la data del sistema.</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-go-import>📊 Crear análisis</button></div>`
+    :`<div class="note" style="margin:0">Aún no hay precios en el sistema. Los cierres llegan solos con la <b>fuente automática</b> y las planillas puntuales se cargan en <b>⚙ Configuración → Datos</b>. Cuando la base tenga datos, crea tu análisis en <b>Gestión de análisis</b>.</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button><button class="btn" data-go-import>Gestión de análisis</button></div>`;
+  return card("Análisis · sin análisis activo","Este módulo funciona con los datos del sistema y el análisis activo · crea uno en Gestión de análisis",body);
 }
 let _lastViewKey="";
 function render(){
@@ -3484,6 +3500,7 @@ function cpStockBrief(s){const z=MF.z[s.t];const o={ticker:s.t,empresa:s.n,secto
   if(typeof winMode==="function"&&winMode()){o.alphaVentana_pct=+alphaWin(s).toFixed(2);o.nota="ventana < 1 año: cita retornoVentanaTotal_pct y alphaVentana_pct; el anualizado es proyección referencial, no un retorno obtenido";}
   const _f=(typeof fundGet==="function")?fundGet(s.t):null;
   if(_f)o.fundamentos={PU:_f.pe,PU_forward:_f.fpe,PB:_f.pb,yieldDividendos_pct:_f.dy,EPS:_f.eps,capitalizacion_CLP:_f.mcap};
+  try{const _sc=(typeof investorScoreOf==="function")?investorScoreOf(s.t):null;if(_sc!=null)o.investorScore=_sc;}catch(e){}
   return o;}
 function cpExposure(sel){const PM=pMetrics(sel);const Z={};MFSTYLE.forEach(k=>Z[k]=+(PM.ws.reduce((a,x)=>a+x.w*MF.z[x.s.t][k],0)).toFixed(2));const erMF=+(PM.ws.reduce((a,x)=>a+x.w*MF.er[x.s.t],0)).toFixed(2);return {PM,Z,erMF};}
 
@@ -3553,7 +3570,7 @@ function cpRunTool(name,input){
       return JSON.stringify(out);
     }
     if(name==="get_correlations"){
-      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo (el usuario limpió el sistema): no hay matriz de correlaciones basada en sus datos. Debe cargar planillas en Datos → Cargar planilla y crear un análisis en Gestión de análisis.";
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo: no hay matriz de correlaciones basada en sus datos. Debe crear un análisis en Gestión de análisis (los datos se sincronizan/cargan en Configuración → Datos).";
       const N=STOCKS.length,pr=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)pr.push([CORR[i][j],STOCKS[i].t,STOCKS[j].t]);pr.sort((a,b)=>a[0]-b[0]);
       const fmt=p=>({par:p[1]+" + "+p[2],correlacion:+p[0].toFixed(2)});
       return JSON.stringify({masDiversificadores:pr.slice(0,5).map(fmt),masCorrelacionados:pr.slice(-5).reverse().map(fmt)});
@@ -3599,7 +3616,7 @@ function cpRunTool(name,input){
     if(name==="get_investor_profile"){if(!invProfile||!invProfile.levels)return "El usuario aún no completó (o debe reevaluar) su perfil de inversionista en el módulo Perfil. Puedes sugerirle hacerlo.";return JSON.stringify({nivel:invProfile.level+"/5",etiqueta:invProfile.label,perfilFactores:invProfile.profile,subniveles:invProfile.levels,subpuntajes:invProfile.scores,retornoRequerido_pct:invProfile.reqCAGR,nota:invProfile.note,instrumentosComplejos:invProfile.complex_ok?"permitidos":"bloqueados (idoneidad)",saaSugerida:invProfile.alloc,guia:invProfile.guideShort});}
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     if(name==="get_multifactor"){
-      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo (el usuario limpió el sistema): el modelo multifactor se calcula sobre SUS datos. Debe cargar planillas en Datos → Cargar planilla y crear un análisis en Gestión de análisis.";
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo: el modelo multifactor se calcula sobre SUS datos. Debe crear un análisis en Gestión de análisis (los datos se sincronizan/cargan en Configuración → Datos).";
       const acc=STOCKS.map(s=>{const z=MF.z[s.t]||{};return {t:s.t,composite:+(+MF.comp[s.t]||0).toFixed(2),erMF_pct:+(+MF.er[s.t]||0).toFixed(2),z:{momentum:+(+z.momentum||0).toFixed(2),lowvol:+(+z.lowvol||0).toFixed(2),value:+(+z.value||0).toFixed(2),quality:+(+z.quality||0).toFixed(2),size:+(+z.size||0).toFixed(2),yield:+(+z.yield||0).toFixed(2)},estilo:cpStyleOf(s.t)};}).sort((a,b)=>b.composite-a.composite);
       const out={primasFactor:LAMBDA,pesosPerfil:invProfile?(PROFILE_W[invProfile.profile]||null):null,acciones:acc};
       if(typeof DATASET!=="undefined"&&DATASET==="import")out.nota="Set importado: Momentum y Low-Vol vienen de tus precios; los factores fundamentales (Value/Quality/Size/Yield) no aplican y quedan neutros.";
@@ -4128,7 +4145,19 @@ let IMPSETS=lsGet("inv_impsets_v1")||[], impActiveId=lsGet("inv_imp_active_id")|
 function autoRf(){return (typeof MIND!=="undefined"&&MIND&&MIND.tpm&&isFinite(MIND.tpm.valor))?+MIND.tpm.valor:null;}
 function impsetAutoName(imp){const ts=imp.assets.map(a=>a.t);return ts.slice(0,3).join(", ")+(ts.length>3?(" +"+(ts.length-3)):"");}
 function impsetActivate(id){const s=IMPSETS.find(x=>x.id===id);if(!s)return;IMP=s.imp;impActiveId=id;lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id",id);applyDataset("import");}
-function impsetDelete(id){const i=IMPSETS.findIndex(x=>x.id===id);if(i<0)return;IMPSETS.splice(i,1);lsSet("inv_impsets_v1",IMPSETS);if(impActiveId===id){if(IMPSETS.length){impsetActivate(IMPSETS[IMPSETS.length-1].id);}else{IMP=null;impActiveId=null;lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);applyDataset("demo");}}else{render();}}
+/* al ELIMINAR un análisis o simulación, se desvincula de TODOS los proyectos (de todos los clientes):
+   sin esto quedaban chips "(no disponible)" en los cuadros de proyectos del Home/Proyectos */
+function purgeLinkEverywhere(kind,id){const s=String(id);
+  try{CLIENTS.forEach(c=>{const projs=clientProjects(c.id)||[];let ch=false;
+    projs.forEach(p=>{const L=p.links;if(!L)return;
+      if(kind==="analysis"){const n=(L.analyses||[]).length;L.analyses=(L.analyses||[]).filter(x=>String(x)!==s);if(L.analyses.length!==n)ch=true;
+        if(String(L.primary)===s){L.primary=L.analyses.length?String(L.analyses[L.analyses.length-1]):null;ch=true;}}
+      else{const n=(L.scenarios||[]).length;L.scenarios=(L.scenarios||[]).filter(x=>String(x)!==s);if(L.scenarios.length!==n)ch=true;}
+    });
+    if(ch)clientSaveProjects(c.id,projs);
+  });}catch(e){}
+}
+function impsetDelete(id){const i=IMPSETS.findIndex(x=>x.id===id);if(i<0)return;IMPSETS.splice(i,1);lsSet("inv_impsets_v1",IMPSETS);purgeLinkEverywhere("analysis",id);if(impActiveId===id){if(IMPSETS.length){impsetActivate(IMPSETS[IMPSETS.length-1].id);}else{IMP=null;impActiveId=null;lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);applyDataset("demo");}}else{render();}}
 function impsetRename(id,name){const s=IMPSETS.find(x=>x.id===id);if(s){s.name=(name||"").trim()||s.name;lsSet("inv_impsets_v1",IMPSETS);}}
 function impCalc(){
   if(impFiles.length<1)return;
@@ -5550,14 +5579,15 @@ function analysisName(id){const a=analysisList().find(x=>x.id===String(id));retu
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
 function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const inv0=p.amount||0;
-  if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,gainNet:0,gainNetPct:0,fees:0,hasData:false,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:null,nrec:(p.weeks||[]).length};
+  const since=(p.weeks&&p.weeks.length&&p.weeks[0].date)||p.date||null;   // inicio del proyecto: fecha de la compra inicial (o de creación si aún no invierte)
+  if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,gainNet:0,gainNetPct:0,fees:0,hasData:false,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:null,nrec:(p.weeks||[]).length,since};
   const L=IM.last,inv=IM.aport,val=L.val,gain=val-inv;
   let fees=0;try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{fees+=brokerFee(x.monto);});}catch(e){}
   const gainNet=gain-fees;
   // α de Jensen REALIZADO (no anualizado, sobre el período transcurrido): retorno real − el exigido por CAPM para la β de la cartera.
   // Va en línea con "Rentab. %" (ambos acumulados a la fecha), así no se infla anualizando un seguimiento corto.
   const reqRet=Math.pow(1+(p.erCapm||0)/100,IM.elapsedYrs||0)-1, alphaReal=L.ret-reqRet;
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:IM.series.map(s=>Math.round(s.val))};});}
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:IM.series.map(s=>Math.round(s.val)),since};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
    mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
@@ -5782,6 +5812,13 @@ function viewProyectos(){
   const guided=(curP&&projIsEmpty(curP))?projGuidedSteps(curP):"";
   const aOpts=analysisList().map(a=>`<option value="${a.id}">${(""+a.name).replace(/</g,"&lt;")} (${a.n})</option>`).join("");
   const sOpts=(SCEN||[]).map(s=>`<option value="${s.id}">${(""+s.name).replace(/</g,"&lt;")}</option>`).join("");
+  // saneo: links a análisis/simulaciones YA ELIMINADOS (de antes del purge automático) se desvinculan solos
+  const _validA=new Set(analysisList().map(a=>String(a.id))),_validS=new Set((SCEN||[]).map(x=>String(x.id)));
+  let _healed=false;
+  all.forEach(({p})=>{const L=projLinks(p);const a0=L.analyses.length,s0=L.scenarios.length;
+    L.analyses=L.analyses.filter(id=>_validA.has(String(id)));L.scenarios=L.scenarios.filter(id=>_validS.has(String(id)));
+    if(L.analyses.length!==a0||L.scenarios.length!==s0){_healed=true;if(L.primary&&!_validA.has(String(L.primary)))L.primary=L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}});
+  if(_healed)try{saveProjects();}catch(e){}
   const cards=all.map(({p,s})=>{const active=p.id===activeId,L=projLinks(p);
     const prim=projPrimaryAnalysis(p);
     const aChips=L.analyses.length?L.analyses.map(id=>{const isP=String(id)===String(prim),act=currentAnalysisId()===String(id);return `<span class="prj-chip an ${isP?"primary":""} ${act?"active":""}"><button class="prj-star" data-primary="${p.id}|${id}" title="${isP?"Análisis vigente del proyecto":"Marcar como vigente"}">${isP?"★":"☆"}</button><button class="prj-go" data-actanalysis="${id}" title="Activar este análisis">${analysisName(id)}</button><button class="prj-x" data-unlink="${p.id}|analysis|${id}">✕</button></span>`;}).join(""):'<span class="prj-none">— sin análisis —</span>';
@@ -5823,7 +5860,7 @@ function attachProyectos(){
   document.querySelectorAll("[data-aren]").forEach(b=>b.onclick=()=>{const id=b.dataset.aren;const a=analysisList().find(x=>x.id===id);const nm=window.prompt("Nuevo nombre del análisis:",a?a.name:"");if(nm!==null&&nm.trim()){impsetRename(id,nm.trim());render();}});
   document.querySelectorAll("[data-scren]").forEach(b=>b.onclick=()=>renameScenario(b.dataset.scren));
   document.querySelectorAll("[data-scload]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scload);if(sc){scenEditId=null;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;modulo="sim";page="constructor";render();}});
-  document.querySelectorAll("[data-scdel]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scdel);if(sc&&confirm('¿Eliminar la simulación "'+sc.name+'"?')){SCEN=SCEN.filter(x=>String(x.id)!==b.dataset.scdel);lsSet("pf_scenarios_v1",SCEN);render();}});
+  document.querySelectorAll("[data-scdel]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scdel);if(sc&&confirm('¿Eliminar la simulación "'+sc.name+'"?')){SCEN=SCEN.filter(x=>String(x.id)!==b.dataset.scdel);lsSet("pf_scenarios_v1",SCEN);purgeLinkEverywhere("scenario",b.dataset.scdel);render();}});
   document.querySelectorAll("[data-clirename]").forEach(inp=>inp.onchange=()=>clientRename(inp.dataset.clirename,inp.value));
   document.querySelectorAll("[data-cliswitch]").forEach(b=>b.onclick=()=>clientSwitch(b.dataset.cliswitch));
   document.querySelectorAll("[data-clidel]").forEach(b=>b.onclick=()=>clientDelete(b.dataset.clidel));
@@ -6185,11 +6222,65 @@ function seedExamples(){
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
+/* ══ INVESTOR SCORE ══
+   Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (base de precios a 12 meses
+   + fundamentos), INDEPENDIENTE del análisis activo. Composición: CAPM 45% (α de Jensen 60% + Sharpe 40%,
+   por percentil dentro del universo) · Multifactor 30% (composite de estilo) · Fundamentos 25% (P/U bajo
+   40% + yield 35% + P/B bajo 25%, solo con lo disponible). Si una acción no tiene fundamentos, se reparte
+   CAPM 60% · MF 40% — el CAPM SIEMPRE pesa ≥40%. Orientación educativa, no asesoría financiera. */
+let _invScore=null;
+function investorScoreCompute(){
+  let tickers=(typeof pricedbTickers==="function")?pricedbTickers():[];
+  if(tickers.length<3||!Object.keys(PRICEDB.ipsa||{}).length)return null;
+  // universo scoreable: ventana de 12 meses común; si alguna acción corta la ventana, se suelta y se reintenta
+  let R=null;
+  for(let it=0;it<4;it++){
+    R=caResolve(12,{tickers,bench:"IPSA"});
+    if(R&&R.ok)break;
+    const lim=(R&&R.chk&&R.chk.limiting)?R.chk.limiting.map(x=>x.t):[];
+    if(!lim.length)return null;
+    tickers=tickers.filter(t=>lim.indexOf(t)<0);
+    if(tickers.length<3)return null;
+  }
+  if(!R||!R.ok)return null;
+  const imp=pricedbToIMP(R.freq,{tickers,lastN:R.lastN,bench:"IPSA"});
+  if(!imp||!imp.assets||imp.assets.length<3)return null;
+  const mf=computeFactors(imp.assets);   // mismas señales de estilo que el módulo Multifactor
+  // percentil 0–100 dentro del universo (mayor = mejor; invert: menor = mejor)
+  const pct=(vals,v,invert)=>{const a=vals.filter(x=>x!=null&&isFinite(x));if(a.length<2||v==null||!isFinite(v))return null;let c=0;a.forEach(x=>{if(invert?x>v:x<v)c++;else if(x===v)c+=0.5;});return Math.round((c-0.5)/(a.length-1)*100);};
+  const alphas=imp.assets.map(s=>s.a24.jensen),sharpes=imp.assets.map(s=>s.a24.sharpe),comps=imp.assets.map(s=>mf.comp[s.t]);
+  const pes=[],dys=[],pbs=[];
+  imp.assets.forEach(s=>{const f=(typeof fundGet==="function"&&fundGet(s.t))||{};pes.push(f.pe);dys.push(f.dy);pbs.push(f.pb);});
+  const or50=v=>v==null?50:v;
+  const rows=imp.assets.map(s=>{
+    const capm=Math.round(0.6*or50(pct(alphas,s.a24.jensen))+0.4*or50(pct(sharpes,s.a24.sharpe)));
+    const mfS=pct(comps,mf.comp[s.t]);
+    const f=(typeof fundGet==="function"&&fundGet(s.t))||{};
+    const parts=[];const add=(v,w)=>{if(v!=null)parts.push([v,w]);};
+    add(pct(pes,f.pe,true),0.40);add(pct(dys,f.dy),0.35);add(pct(pbs,f.pb,true),0.25);
+    let fundS=null;if(parts.length){const tw=parts.reduce((a,x)=>a+x[1],0);fundS=Math.round(parts.reduce((a,x)=>a+x[0]*x[1],0)/tw);}
+    const total=fundS==null?Math.round(0.60*capm+0.40*or50(mfS)):Math.round(0.45*capm+0.30*or50(mfS)+0.25*fundS);
+    return {t:s.t,n:s.n,c:s.c,score:Math.max(0,Math.min(100,total)),capm,mf:mfS,fund:fundS,alpha:+(+s.a24.jensen).toFixed(1),sharpe:+(+s.a24.sharpe).toFixed(2),beta:+(+s.b).toFixed(2)};
+  }).sort((a,b)=>b.score-a.score);
+  return {day:localDay(),window:imp.window,n:rows.length,rows};
+}
+function investorScore(){
+  try{
+    const key=localDay()+"|"+lastBaseDate()+"|"+((typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)||"");
+    if(_invScore&&_invScore.k===key)return _invScore.v;
+    try{const st=JSON.parse(localStorage.getItem("inv_score_v1")||"null");if(st&&st.k===key){_invScore=st;return st.v;}}catch(e){}   // caché diaria: Home instantáneo; se recalcula solo cuando cambia el día, la base o los fundamentos
+    const v=investorScoreCompute();
+    _invScore={k:key,v};
+    try{localStorage.setItem("inv_score_v1",JSON.stringify(_invScore));}catch(e){}
+    return v;
+  }catch(e){return null;}
+}
+function investorScoreOf(t){try{const v=investorScore();if(!v)return null;const r=v.rows.find(x=>x.t===t);return r?r.score:null;}catch(e){return null;}}
 function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[]});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[],since:s.since||null});}catch(e){}});});
   return {clients,T,projs};
 }
 /* serie agregada de patrimonio (alineada por la cola) para el sparkline del hero */
@@ -6295,16 +6386,17 @@ function viewHome(){
   })();
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
   const funds=D.projs.slice().sort((a,b)=>(b.val||0)-(a.val||0));
-  const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
-    if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
+  const _sD=d=>{if(!d)return null;const m=(""+d).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?(m[3]+"/"+m[2]+"/"+m[1].slice(2)):(""+d);};   // inicio del proyecto en corto (dd/mm/aa)
+  const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
+    if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
     const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,40);
-    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span><span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
+    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
-  const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;");
+  const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     const stat=(l,v,c,lc)=>`<div class="fw-stat"><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
-    if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
+    if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${sd?stat("Inicio",sd,null,"ntr"):""}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
     const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,112);
-    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}</div></button>`;};
+    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${sd?stat("Inicio",sd,null,"ntr"):""}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}</div></button>`;};
   const fundsInner=funds.length
     ? (funds.length<=2
       ? `<div class="home-fundgrid n${funds.length}">${funds.map(fundWide).join("")}</div>`
@@ -6337,7 +6429,18 @@ function viewHome(){
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
   const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} (convención móvil, igual que el IPSA de arriba) · cada acción con su último dato disponible (y su fecha) · los cierres se cargan en <b>⚙ Configuración → Datos</b> · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
-  return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
+  // ── INVESTOR SCORE · Top 10 — la puntuación diaria del sistema (independiente del análisis activo) ──
+  const scoreCard=(()=>{
+    let sc=null;try{sc=investorScore();}catch(e){}
+    if(!sc||!sc.rows||sc.rows.length<3)return "";
+    const top=sc.rows.slice(0,10);
+    const scCol=v=>v>=70?green:v>=55?indigo:v>=40?amber:red;
+    const row=(r,i)=>`<div class="home-stk" title="α ${r.alpha>=0?"+":""}${r.alpha}pp · Sharpe ${r.sharpe} · β ${r.beta}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">CAPM ${r.capm}${r.mf!=null?" · MF "+r.mf:""}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
+    const colA=top.slice(0,5).map((r,i)=>row(r,i)).join(""),colB=top.slice(5).map((r,i)=>row(r,i+5)).join("");
+    return card("Investor Score · Top 10",`La puntuación diaria de Investor (0–100) para las ${sc.n} acciones del sistema — <b>45% CAPM</b> (α y Sharpe a 12 meses) · 30% multifactor · 25% fundamentos · se recalcula cada día con la base, independiente del análisis activo · orientación educativa, no asesoría financiera`,
+      `<div class="stk-cols"><div class="stk-block">${colA}</div><div class="stk-block">${colB}</div></div>`);
+  })();
+  return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+scoreCard+stkCard;
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
