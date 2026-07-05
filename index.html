@@ -1757,7 +1757,8 @@ function viewDetalle(){
   const mr=card("Retornos "+perPl,`${s.t} vs IPSA · ${winLong()}`,svgLine({vals:s.rets,labels:DATA.labels,c:s.c,cmp:MKT.rets,cmpC:muted,prices:s.prices.slice(1),h:215}),`<div class="legend"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>IPSA</span></div>`);
   const plab=(/^[a-z]{3}-\d{2}$/i.test(""+DATA.labels[0]))?[prevMonth(DATA.labels[0]),...DATA.labels]:["inicio",...DATA.labels];   // solo el demo usa etiquetas mes-año; en un análisis del usuario son fechas
   const ph=card("Historia del precio",`${s.t} · precio de cierre ${perAdj} · ${s.prices.length} puntos`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
-  const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.`);
+  const _lowR2=a.r2<0.10;   // r² muy bajo: el mercado casi no explica a la acción → β/α poco confiables (mucho riesgo idiosincrático)
+  const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.${_lowR2?` <br><b style="color:${amber}">⚠ R² muy bajo (${(a.r2*100).toFixed(0)}%):</b> el IPSA casi no explica el movimiento de ${s.t} (se mueve por factores propios). Con eso su <b>β y su α son estadísticamente poco confiables</b> — no es un error del cálculo, es una acción de baja correlación con el mercado. El Investor Score lo sabe: amortigua su α para no premiar lo que en el fondo es ruido idiosincrático.`:""}`);
   return selbar+tiles+fTiles+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
 }
 
@@ -4876,14 +4877,16 @@ function caEnsure(){
 const CA_MIN_MONTHS=12;   // ventana mínima de un análisis: garantiza β/σ estables y una tabla SIEMPRE en retornos anuales
 /* meses → nº de retornos a cada cadencia (~21 días hábiles y ~4,35 semanas por mes) */
 function caMonthsToN(freq,months){return freq==="diario"?Math.round(months*21):freq==="semanal"?Math.round(months*4.345):Math.round(months);}
-/* La ventana del análisis se pide SOLO en meses; la cadencia de la regresión NO se elige a mano: se toma la
-   más FINA (diario → semanal → mensual) cuyos datos cubren la ventana con TODAS las acciones elegidas (los
-   feriados largos cortan la corrida diaria consecutiva; entonces se usa la semanal, etc.). Se tolera hasta
-   un 5% menos de lo pedido —sin bajar del mínimo de 12 meses— para no rechazar por días de calendario. */
+/* La ventana del análisis se pide SOLO en meses; la cadencia de la regresión se elige sola: la más FINA
+   (diario→semanal→mensual) que cubra la ventana con TODAS las acciones. Se usa SEMANAL como preferida real
+   (no diario) porque el diario infla la σ ~35% por ruido de microestructura y distorsiona el Sharpe; la
+   semanal da una volatilidad limpia y suficientes puntos para la β. Con baja correlación (p.ej. telecos) la
+   β semanal puede salir ruidosa: eso NO se esconde — el Investor Score amortigua el α por r² y las vistas lo
+   advierten. Tolerancia del 5% para no rechazar por días de calendario. */
 function caResolve(months,opts){
   let short=null,err=null;
-  for(const f of ["diario","semanal","mensual"]){
-    const lastN=caMonthsToN(f,months),perM=f==="diario"?21:f==="semanal"?4.345:1;
+  for(const f of ["semanal","mensual"]){   // el diario queda fuera: su σ inflada empeora el Sharpe de todo el universo
+    const lastN=caMonthsToN(f,months),perM=f==="semanal"?4.345:1;
     const chk=pricedbCheckAnalysis(f,Object.assign({},opts,{lastN}));
     if(chk.jump)return {ok:false,error:chk.reason,chk};   // escalas mezcladas en el índice: problema de datos, no de ventana
     if(chk.ok)return {ok:true,freq:f,lastN,chk};
