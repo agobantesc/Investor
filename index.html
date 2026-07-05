@@ -999,6 +999,10 @@
   .cons-beta{font-weight:800;}
   .cons-shwrap{display:flex;align-items:center;gap:7px;justify-content:flex-end;}
   .cons-bar{width:46px;height:6px;border-radius:4px;background:var(--line);overflow:hidden;flex-shrink:0;}
+  /* tablas ordenables: clic en el encabezado */
+  #main table thead th{cursor:pointer;user-select:none;}
+  #main table thead th.srt-asc::after{content:" ▲";font-size:8.5px;opacity:.8;}
+  #main table thead th.srt-desc::after{content:" ▼";font-size:8.5px;opacity:.8;}
   .cons-bar i{display:block;height:100%;border-radius:4px;}
   .cons-comp{font-weight:800;padding:.12rem .42rem;border-radius:var(--r-pill);font-size:11px;white-space:nowrap;}
   .cons-comp.pos{color:var(--green);background:var(--greenbg);}
@@ -1730,7 +1734,9 @@ function viewDetalle(){
     ${tile("P/B",_f.pb!=null?_f.pb.toLocaleString("es-CL",{maximumFractionDigits:2}):"—","precio / valor libro",s.c,_f.pb!=null&&_f.pb<1?green:ink)}
     ${tile("Yield dividendos",_f.dy!=null?_f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—",_f.dps!=null?("$"+_f.dps.toLocaleString("es-CL")+" por acción (12m)"):"últimos 12 meses",s.c,_f.dy>=5?green:ink)}
     ${tile("Capitalización",fundFmtCap(_f.mcap),"valor bolsa",s.c,ink)}
-    ${tile("Rango 52 semanas",_fpos!=null?(_fpos*100).toFixed(0)+"%":"—",_fpos!=null?("del mínimo ("+(_f.lo52||0).toLocaleString("es-CL")+") al máximo ("+(_f.hi52||0).toLocaleString("es-CL")+")"):"sin datos",s.c,_fpos!=null?(_fpos>=0.5?green:amber):ink)}</div>`:"";
+    ${tile("Rango 52 semanas",_fpos!=null?(_fpos*100).toFixed(0)+"%":"—",_fpos!=null?("del mínimo ("+(_f.lo52||0).toLocaleString("es-CL")+") al máximo ("+(_f.hi52||0).toLocaleString("es-CL")+")"):"sin datos",s.c,_fpos!=null?(_fpos>=0.5?green:amber):ink)}
+    ${_f.roe!=null?tile("ROE",_f.roe.toLocaleString("es-CL",{maximumFractionDigits:1})+"%",(_f.nm!=null?("margen neto "+_f.nm.toLocaleString("es-CL",{maximumFractionDigits:1})+"%"):"rentabilidad del patrimonio"),s.c,_f.roe>=15?green:ink):""}
+    ${(_f.target!=null&&_f.px>0)?tile("Precio objetivo",_f.target.toLocaleString("es-CL",{maximumFractionDigits:0}),"upside "+((_f.target/_f.px-1)*100>=0?"+":"")+((_f.target/_f.px-1)*100).toFixed(1)+"%"+(_f.nAn?(" · "+_f.nAn+" analistas"):""),s.c,(_f.target/_f.px-1)>=0.1?green:(_f.target/_f.px-1)>=0?ink:red):""}</div>`:"";
   const xb=niceBounds(MKT.rets,0.1),yb=niceBounds(s.rets,0.1),am=a.alphaR/(DATA.perYear||12);
   const pts=s.rets.map((y,k)=>({x:MKT.rets[k],y:y,c:s.c+"d0",r:5}));
   const line=[{x1:xb.min,y1:am+s.b*xb.min,x2:xb.max,y2:am+s.b*xb.max,c:s.c}];
@@ -2214,7 +2220,7 @@ function attachSim(){
   const oa=document.getElementById("optApply");if(oa)oa.onclick=()=>{if(!optState.res)return;scenEditId=null;simState.sel=Object.assign({},optState.res.sel);optState.res=null;render();};
   const oc=document.getElementById("optClear");if(oc)oc.onclick=()=>{optState.res=null;render();};
 }
-function updSimRes(){const el=document.getElementById("simres");if(el){el.innerHTML=simResults();attachProj();attachProjHover();}}
+function updSimRes(){const el=document.getElementById("simres");if(el){el.innerHTML=simResults();attachProj();attachProjHover();try{attachTableSort();}catch(e){}}}
 function updSum(){const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState.sel[t]||0),0);const el=document.getElementById("sumv");if(el){el.textContent=sum.toFixed(1)+"%";el.style.color=Math.abs(sum-100)<0.5?green:amber;}}
 
 let simAlts=[];
@@ -3034,6 +3040,54 @@ function attachInv(){
 }
 
 // ===== RENDER =====// ===== RENDER =====// ===== RENDER =====
+/* ── TABLAS ORDENABLES: clic en cualquier encabezado ordena por esa columna (asc ⇄ desc) ──
+   Universal: se engancha a TODAS las tablas renderizadas. Entiende números en ambos formatos que
+   conviven en la app (es-CL "10.821,14" y técnico "1.12"), %, $, × y signos; el texto ordena alfabético.
+   Las filas "Total" quedan siempre al final. El orden es visual (el DOM se reordena con sus listeners). */
+function tableSortNum(raw){
+  let s=(""+(raw||"")).trim().replace(/[−–]/g,"-").replace(/[$%×\s]/g,"");
+  if(s===""||s==="—")return null;
+  if(s.includes(".")&&s.includes(",")){s=s.replace(/\./g,"").replace(",",".");}          // 10.821,14 → 10821.14
+  else if(s.includes(",")){s=s.replace(",",".");}                                        // 4,45 → 4.45
+  else if(/^[+-]?\d{1,3}(\.\d{3})+$/.test(s)){s=s.replace(/\./g,"");}                    // 1.000.000 → 1000000 (grupos de miles)
+  const v=parseFloat(s);return isFinite(v)?v:null;
+}
+function tableSortVal(td){
+  if(!td)return {t:""};
+  const raw=(td.textContent||"").trim();
+  const n=tableSortNum(raw);
+  if(n!=null)return {n};
+  const m=raw.match(/[+-−]?[\d.,]+/);if(m){const x=tableSortNum(m[0]);if(x!=null)return {n:x};}   // celdas mixtas: primer número
+  return {t:raw.toLowerCase()};
+}
+function attachTableSort(){
+  document.querySelectorAll("#main table").forEach(tb=>{
+    const thead=tb.tHead||tb.querySelector("thead");if(!thead||!tb.tBodies.length)return;
+    [...thead.querySelectorAll("th")].forEach((th,ci)=>{
+      if(th._srt)return;th._srt=1;
+      th.addEventListener("click",e=>{
+        if(e.target.closest("button,input,select,a"))return;   // no interferir con controles del encabezado
+        const body=tb.tBodies[0];if(!body)return;
+        const rows=[...body.rows];
+        const data=rows.filter(r=>!/^\s*total\b/i.test((r.cells[0]&&r.cells[0].textContent)||""));
+        const foot=rows.filter(r=>data.indexOf(r)<0);
+        const dir=th._dir==="asc"?"desc":"asc";
+        [...thead.querySelectorAll("th")].forEach(x=>{if(x!==th){x._dir=null;x.classList.remove("srt-asc","srt-desc");}});
+        th._dir=dir;th.classList.toggle("srt-asc",dir==="asc");th.classList.toggle("srt-desc",dir==="desc");
+        data.sort((a,b)=>{
+          const va=tableSortVal(a.cells[ci]),vb=tableSortVal(b.cells[ci]);
+          let c;
+          if(va.n!=null&&vb.n!=null)c=va.n-vb.n;
+          else if(va.n!=null)c=-1;else if(vb.n!=null)c=1;
+          else c=va.t<vb.t?-1:va.t>vb.t?1:0;
+          return dir==="asc"?c:-c;
+        });
+        data.forEach(r=>body.appendChild(r));
+        foot.forEach(r=>body.appendChild(r));   // el Total siempre al final
+      });
+    });
+  });
+}
 function evalMeta(){
   const per=DATA.perYear===252?"días":DATA.perYear===52?"semanas":"meses";
   const isImp=(typeof DATASET!=="undefined"&&DATASET==="import");
@@ -3114,6 +3168,7 @@ function render(){
     if(modulo==="datos") attachDatos();
     if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};const _gc=document.querySelector("[data-gocargar]");if(_gc)_gc.onclick=()=>{modulo="datos";page="cargar";render();};}
     attachScatterAll();
+    attachTableSort();
   }catch(err){try{console.error("attach("+modulo+"/"+page+"):",err);}catch(e){}}
   const _rh=document.querySelector("[data-recover-home]");if(_rh)_rh.onclick=()=>{modulo="inicio";page="home";editIdx=null;invNew=null;render();};
 }
@@ -3165,10 +3220,23 @@ const FACTORS=[
 ];
 
 function clampz(z,c){c=c||2.5;return Math.max(-c,Math.min(c,z));}
+/* fundamentos para el MULTIFACTOR: los REALES del pipeline (FDATA) pisan al dataset ilustrativo estático
+   campo a campo. La capitalización real (CLP) se lleva a MM USD (dólar de mindicador, fallback 950) para
+   no mezclar escalas con el dataset estático en el z-score de tamaño. */
+function mfFund(t){
+  const st=FUND[t]||{};
+  let f=null;try{f=(typeof fundGet==="function"&&fundGet(t))||null;}catch(e){}   // en el arranque FDATA aún no se declara (TDZ): usa el estático
+  if(!f)return st;
+  const dolar=(typeof MIND!=="undefined"&&MIND&&MIND.dolar&&isFinite(+MIND.dolar.valor)&&+MIND.dolar.valor>0)?+MIND.dolar.valor:950;
+  const o=Object.assign({},st);
+  ["pb","pe","dy","roe","nm","de","eg"].forEach(k=>{if(f[k]!=null)o[k]=f[k];});
+  if(f.mcap!=null)o.mcap=f.mcap/1e6/dolar;
+  return o;
+}
 function computeFactors(list){
   const raw={mom:[],sig:[],idio:[],lnmc:[],pb:[],pe:[],roe:[],nm:[],de:[],eg:[],dy:[]};
   list.forEach(s=>{
-    const f=FUND[s.t]||{},p=s.prices,n=p.length;
+    const f=mfFund(s.t),p=s.prices,n=p.length;
     const mom=(n>=14)?(p[n-2]/p[n-14]-1)*100:(p[n-1]/p[0]-1)*100;
     raw.mom.push(mom);
     raw.sig.push(s.a24.sig);
@@ -4399,7 +4467,7 @@ function autopxAutoRun(){try{
    sincronizan solos con cada sincronización de cierres. Globales (no por cliente): son datos de mercado. */
 /* saneo defensivo: Yahoo a veces trae basura en los .SN (P/B calculado en otra moneda → miles; yield 0
    cuando NO tiene el dato). Fuera de rango plausible → null y la app muestra "—" en vez de mentir. */
-function fundSanitize(j){try{if(!j||!j.byTicker)return j;Object.keys(j.byTicker).forEach(t=>{const f=j.byTicker[t];const rg=(k,lo,hi)=>{if(f[k]!=null&&!(f[k]>lo&&f[k]<hi))f[k]=null;};rg("pe",0,500);rg("fpe",0,500);rg("pb",0,100);rg("dy",0,30);if(f.dps===0)f.dps=null;});}catch(e){}return j;}
+function fundSanitize(j){try{if(!j||!j.byTicker)return j;Object.keys(j.byTicker).forEach(t=>{const f=j.byTicker[t];const rg=(k,lo,hi)=>{if(f[k]!=null&&!(f[k]>lo&&f[k]<hi))f[k]=null;};rg("pe",0,500);rg("fpe",0,500);rg("pb",0,100);rg("dy",0,30);rg("roe",-100,200);rg("nm",-100,100);rg("eg",-95,400);rg("rg",-95,400);rg("de",0,25);rg("peg",-50,50);rg("evEbitda",0,200);rg("target",0,Infinity);rg("nAn",0,500);if(f.dps===0)f.dps=null;});}catch(e){}return j;}
 let FDATA=fundSanitize((function(){try{return JSON.parse(localStorage.getItem("inv_fund_v1")||"null");}catch(e){return null;}})());
 function fundGet(t){return (FDATA&&FDATA.byTicker&&FDATA.byTicker[t])||null;}
 function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
@@ -4897,11 +4965,28 @@ function viewFundamentos(){
     const fv=(v,d,suf)=>v!=null?`${v.toLocaleString("es-CL",{maximumFractionDigits:d})}${suf||""}`:"—";
     return {pe:f.pe,html:`<tr><td>${nm}</td><td class="r tnum">${fv(f.px,2)}</td><td class="r tnum" style="font-weight:700;color:${f.pe==null?faint:peMed&&f.pe<peMed?green:ink}">${fv(f.pe,1)}</td><td class="r tnum" style="color:${muted}">${fv(f.fpe,1)}</td><td class="r tnum">${fv(f.pb,2)}</td><td class="r tnum" style="font-weight:700;color:${f.dy>=5?green:f.dy!=null?ink:faint}">${f.dy!=null?f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r tnum" style="color:${muted}">${fv(f.eps,1)}</td><td class="r tnum">${fundFmtCap(f.mcap)}</td><td>${bar}</td><td>${chips}</td></tr>`};
   }).sort((a,b)=>(a.pe==null?1e9:a.pe)-(b.pe==null?1e9:b.pe)).map(r=>r.html).join("");
-  const tbl=card("Fundamentos por acción",`P/U, P/B, dividendos, capitalización y posición en el rango de 52 semanas · al ${(""+(FDATA.updatedAt||"")).slice(0,10)||"—"} · fuente Yahoo Finance · ordenado por P/U`,
+  const tbl=card("Valorización y dividendos",`P/U, P/B, dividendos, capitalización y posición en el rango de 52 semanas · al ${(""+(FDATA.updatedAt||"")).slice(0,10)||"—"} · fuente Yahoo Finance · clic en un encabezado para ordenar`,
     {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio</th><th class="r">P/U</th><th class="r">P/U fwd</th><th class="r">P/B</th><th class="r">Yield div.</th><th class="r">EPS</th><th class="r">Capitalización</th><th>52 semanas</th><th>Señales</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true},syncBtn);
+  // ── CALIDAD, CRECIMIENTO Y CONSENSO (segunda pasada del pipeline: ROE, márgenes, deuda, analistas) ──
+  const hasQ=tks.some(t=>{const f=by[t];return f.roe!=null||f.nm!=null||f.target!=null||f.de!=null||f.peg!=null;});
+  const _recL={strong_buy:["Compra fuerte",green],buy:["Compra",green],overweight:["Sobreponderar",green],hold:["Mantener",amber],neutral:["Neutral",amber],underweight:["Subponderar",red],underperform:["Vender",red],sell:["Vender",red]};
+  let qCard="";
+  if(hasQ){
+    const fvq=(v,d,suf)=>v!=null?(v.toLocaleString("es-CL",{maximumFractionDigits:d})+(suf||"")):"—";
+    const qRows=tks.map(t=>{const f=by[t];const st=(STOCKS||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};
+      const nm=`<b style="color:${st.c||"#1E5FD1"}">${t}</b>`;
+      const up=(f.target!=null&&f.px>0)?((f.target/f.px-1)*100):null;
+      const rec=f.rec&&_recL[f.rec]?_recL[f.rec]:null;
+      return {roe:f.roe,html:`<tr><td>${nm}</td><td class="r tnum" style="font-weight:700;color:${f.roe==null?faint:f.roe>=15?green:ink}">${fvq(f.roe,1,"%")}</td><td class="r tnum">${fvq(f.nm,1,"%")}</td><td class="r tnum" style="color:${f.eg==null?faint:f.eg>=0?green:red}">${f.eg!=null?((f.eg>=0?"+":"")+f.eg.toLocaleString("es-CL",{maximumFractionDigits:1})+"%"):"—"}</td><td class="r tnum" style="color:${f.de==null?faint:f.de>2?amber:ink}">${fvq(f.de,2,"×")}</td><td class="r tnum">${fvq(f.peg,2)}</td><td class="r tnum">${fvq(f.evEbitda,1)}</td><td class="r tnum">${fvq(f.target,0)}</td><td class="r tnum" style="font-weight:800;color:${up==null?faint:up>=10?green:up>=0?ink:red}">${up!=null?((up>=0?"+":"")+up.toFixed(1)+"%"):"—"}</td><td>${rec?`<span class="badge" style="color:${rec[1]};background:${rec[1]}14;border:1px solid ${rec[1]}33;font-size:9.5px">${rec[0]}${f.nAn?" ("+f.nAn+")":""}</span>`:`<span style="color:${faint}">—</span>`}</td></tr>`};
+    }).sort((a,b)=>(b.roe==null?-1e9:b.roe)-(a.roe==null?-1e9:a.roe)).map(r=>r.html).join("");
+    qCard=card("Calidad, crecimiento y consenso","ROE, margen neto, crecimiento de utilidades, deuda, PEG, EV/EBITDA y precio objetivo del consenso de analistas · ordenado por ROE · clic en un encabezado para reordenar",
+      {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">ROE</th><th class="r">Margen neto</th><th class="r">Crec. utilidades</th><th class="r">Deuda/Patrim.</th><th class="r">PEG</th><th class="r">EV/EBITDA</th><th class="r">Precio objetivo</th><th class="r">Upside</th><th>Consenso</th></tr></thead><tbody>${qRows}</tbody></table></div>`,flush:true});
+  }else{
+    qCard=card("Calidad, crecimiento y consenso","ROE, márgenes, deuda y precio objetivo de analistas",`<div class="note" style="margin:0">Estos campos los trae la <b>próxima corrida</b> del workflow (se agregaron a la segunda pasada del pipeline). Corre el workflow en GitHub → Actions o espera la corrida diaria de las 18:05, y luego pulsa <b>⟳ Traer fundamentos ahora</b>.</div>`);
+  }
   const guia=card("Cómo leer los fundamentos","Qué mide cada indicador y sus límites",`
-    <div class="note" style="margin:0"><b>P/U</b> (precio/utilidad): cuántos años de utilidad actual "pagas" por la acción — bajo puede ser barato <i>o</i> un problema que el mercado ya castigó. <b>P/U fwd</b> usa la utilidad esperada. <b>P/B</b> (precio/valor libro): bajo 1 la bolsa la valora menos que su patrimonio contable. <b>Yield div.</b>: dividendos de los últimos 12 meses sobre el precio — en Chile las "dividenderas" (bancos, utilities) reparten 4–8%. <b>EPS</b>: utilidad por acción. <b>52 semanas</b>: dónde está el precio dentro de su rango del año (0% = en el mínimo, 100% = en el máximo).<br><br><b>Límites:</b> el P/U no es comparable entre sectores (un banco "barato" y una minera "cara" pueden ser normales para su industria) — la señal "vs pares" compara contra la mediana del IPSA, úsala como <b>punto de partida para investigar</b>, no como veredicto. Estos datos complementan al análisis CAPM/multifactor: aquellos miran el <i>comportamiento</i> del precio; estos, el <i>negocio</i> detrás. No es recomendación de inversión.</div>`);
-  return tbl+guia;
+    <div class="note" style="margin:0"><b>P/U</b> (precio/utilidad): cuántos años de utilidad actual "pagas" por la acción — bajo puede ser barato <i>o</i> un problema que el mercado ya castigó. <b>P/U fwd</b> usa la utilidad esperada. <b>P/B</b> (precio/valor libro): bajo 1 la bolsa la valora menos que su patrimonio contable. <b>Yield div.</b>: dividendos de los últimos 12 meses sobre el precio — en Chile las "dividenderas" (bancos, utilities) reparten 4–8%. <b>EPS</b>: utilidad por acción. <b>52 semanas</b>: dónde está el precio dentro de su rango del año (0% = en el mínimo, 100% = en el máximo).<br><br><b>ROE</b>: utilidad sobre patrimonio — la "calidad" del negocio (≥15% es alto). <b>Margen neto</b>: cuánto de cada peso vendido queda como utilidad. <b>Crec. utilidades</b>: variación interanual. <b>Deuda/Patrimonio</b>: apalancamiento (en banca es naturalmente alto). <b>PEG</b>: P/U dividido por crecimiento (≈1 es "justo"). <b>Precio objetivo / Upside</b>: consenso de analistas que cubren el papel y distancia contra el precio actual — es una opinión de terceros, no una garantía.<br><br><b>Límites:</b> el P/U no es comparable entre sectores (un banco "barato" y una minera "cara" pueden ser normales para su industria) — la señal "vs pares" compara contra la mediana del IPSA, úsala como <b>punto de partida para investigar</b>, no como veredicto. Estos datos complementan al análisis CAPM/multifactor: aquellos miran el <i>comportamiento</i> del precio; estos, el <i>negocio</i> detrás. Los fundamentos reales también alimentan el módulo <b>Multifactor</b> y el <b>Investor Score</b>. No es recomendación de inversión.</div>`);
+  return tbl+qCard+guia;
 }
 function attachFundamentos(){const b=document.getElementById("fundSyncBtn");if(b)b.onclick=()=>{b.disabled=true;b.textContent="⟳ Trayendo…";fundSync(true).finally(()=>{try{render();}catch(e){}});};}
 function viewImport(){
