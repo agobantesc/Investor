@@ -104,6 +104,13 @@ try {
       f.nAn = inRange(raw(fd.numberOfAnalystOpinions), 0, 500);
       f.peg = rnd(inRange(raw(ks.pegRatio), -50, 50), 2);
       f.evEbitda = rnd(inRange(raw(ks.enterpriseToEbitda), 0, 200), 1);
+      // RELLENO con datos REALES del 2º endpoint cuando el batch no los trajo (sube cobertura sin inventar nada):
+      // P/B directo de defaultKeyStatistics, o derivado de price/bookValue; P/U fwd; margen desde financialData.
+      if (f.pb == null) { let pb = inRange(raw(ks.priceToBook), 0, 100); if (pb == null) { const bv = raw(ks.bookValue); if (bv > 0 && f.px > 0) pb = inRange(f.px / bv, 0, 100); } f.pb = rnd(pb, 2); }
+      if (f.fpe == null) f.fpe = rnd(inRange(raw(ks.forwardPE), 0, 500), 2);
+      if (f.nm == null) f.nm = rnd(inRange(pctOf(ks.profitMargins), -100, 100), 1);
+      // yield desde la tasa de dividendo si el batch no dio el ratio pero sí el monto
+      if (f.dy == null && f.dps != null && f.px > 0) f.dy = rnd(inRange(f.dps / f.px * 100, 0, 30), 2);
       sumOk++;
     } catch (e) { /* sin detalle para este símbolo */ }
     await new Promise(res => setTimeout(res, 300));   // cortesía con la API
