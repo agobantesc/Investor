@@ -3100,6 +3100,17 @@ function evalMeta(){
 /* true cuando el módulo Análisis mostraría el DEMO oculto: dataset activo = demo y el usuario limpió (demo oculto).
    En ese caso no hay datos propios que mostrar → estado vacío en vez de la data hardcodeada del demo. */
 function evalIsEmpty(){return !(typeof DATASET!=="undefined"&&DATASET==="import") && !!lsGet("inv_demo_hidden");}
+/* estado vacío del módulo Simulación: sin análisis real activo NO se muestra el universo demo (evitaba
+   que se armara y APLICARA una inversión sobre precios ilustrativos, presentados como si fueran reales). */
+function simEmpty(){
+  const nBase=(typeof pricedbTickers==="function")?pricedbTickers().length:0;
+  const body=nBase>0
+    ?`<div class="note" style="margin:0">Tu base tiene <b>${nBase} acciones</b> con precios, pero el Constructor necesita un <b>análisis activo</b> (β, retornos y correlaciones) para simular carteras. Créalo y se activa solo.</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-go-import>📊 Crear análisis</button></div>`
+    :`<div class="note" style="margin:0">Aún no hay datos en el sistema para construir carteras. Los cierres llegan con la <b>fuente automática</b> y las planillas se cargan en <b>⚙ Configuración → Datos</b>; luego crea un análisis y vuelve aquí.</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button><button class="btn" data-go-import>Gestión de análisis</button></div>`;
+  return card("Simulación · sin análisis activo","El Constructor y el Asistente trabajan con el análisis activo · no se simula sobre datos ilustrativos",body);
+}
 /* estado vacío del módulo Análisis: no hay análisis ACTIVO. Este módulo trabaja SOLO con los datos del
    sistema y el análisis activo — la carga de datos (sincronización/planillas) vive en Configuración → Datos,
    nunca aquí. */
@@ -3130,7 +3141,7 @@ function render(){
     else if(modulo==="proyectos") h=viewProyectos();
     else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
     else if(modulo==="perfil") h=viewPerfil();
-    else if(modulo==="sim") h=(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim());
+    else if(modulo==="sim") h=(evalIsEmpty()?simEmpty():(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim()));   // sin análisis real activo: NO mostrar el universo demo como si fuera real (no se puede invertir sobre datos ilustrativos)
     else if(modulo==="eval"&&page==="fundamentos") h=viewFundamentos();   // los fundamentos vienen del canal remoto: no dependen del análisis activo
     else if(modulo==="eval"&&page!=="crear"&&evalIsEmpty()) h=evalEmpty();   // base limpia + demo oculto: sin datos (no se muestra el demo)
     else if(page==="comparativa") h=viewComparativa();
@@ -3166,7 +3177,7 @@ function render(){
     if(modulo==="clientes") attachClientes();
     if(modulo==="inicio") attachHome();
     if(modulo==="datos") attachDatos();
-    if(modulo==="eval"){const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};const _gc=document.querySelector("[data-gocargar]");if(_gc)_gc.onclick=()=>{modulo="datos";page="cargar";render();};}
+    {const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};const _gc=document.querySelector("[data-gocargar]");if(_gc)_gc.onclick=()=>{modulo="datos";page="cargar";render();};}   // navegación genérica: también sirve al estado vacío de Simulación
     attachScatterAll();
     attachTableSort();
   }catch(err){try{console.error("attach("+modulo+"/"+page+"):",err);}catch(e){}}
@@ -6378,12 +6389,16 @@ function investorScoreCompute(){
 }
 function investorScore(){
   try{
-    const key=localDay()+"|"+lastBaseDate()+"|"+((typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)||"");
+    // clave: día + última fecha de la base + fundamentos + Nº DE TICKERS (para que agregar/quitar acciones
+    // reviente la caché aunque no cambie la última fecha) + Nº de fechas de IPSA (base más completa)
+    const nTk=(typeof pricedbTickers==="function")?pricedbTickers().length:0;
+    const nIp=(typeof PRICEDB!=="undefined"&&PRICEDB.ipsa)?Object.keys(PRICEDB.ipsa).length:0;
+    const key=localDay()+"|"+lastBaseDate()+"|"+((typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)||"")+"|"+nTk+"|"+nIp;
     if(_invScore&&_invScore.k===key)return _invScore.v;
-    try{const st=JSON.parse(localStorage.getItem("inv_score_v1")||"null");if(st&&st.k===key){_invScore=st;return st.v;}}catch(e){}   // caché diaria: Home instantáneo; se recalcula solo cuando cambia el día, la base o los fundamentos
+    try{const st=JSON.parse(localStorage.getItem("inv_score_v1")||"null");if(st&&st.k===key&&st.v)return (_invScore=st).v;}catch(e){}   // solo sirve caché con RESULTADO (nunca un null rancio que oculte la tarjeta todo el día)
     const v=investorScoreCompute();
     _invScore={k:key,v};
-    try{localStorage.setItem("inv_score_v1",JSON.stringify(_invScore));}catch(e){}
+    if(v)try{localStorage.setItem("inv_score_v1",JSON.stringify(_invScore));}catch(e){}   // no se persiste null: si la base aún no da, se reintenta en el próximo render
     return v;
   }catch(e){return null;}
 }
@@ -6606,4 +6621,3 @@ authInit();
 </script>
 </body>
 </html>
-        
