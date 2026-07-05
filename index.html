@@ -3565,6 +3565,8 @@ MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máxim
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
 
+INVESTOR SCORE — LA RECOMENDACIÓN DE LA PLATAFORMA (piedra angular): el Investor Score (0–100, get_investor_score) es la síntesis de TODO el análisis cuantitativo (riesgo-retorno ajustado, fundamentos reales, tendencia) con un candado de confianza por calidad de datos. **Todo el riesgo relevante YA ESTÁ DESCONTADO en el número**: la volatilidad castiga el Sharpe, el α poco confiable se amortigua, las caídas bajan el bloque de resistencia, la data débil acerca el puntaje al neutro. Por eso, al justificar una acción con buen score: hazlo **con convicción**, explicando POR QUÉ es sólida (sus bloques y métricas fuertes) — NUNCA agregues "peros" que el score ya descontó ("buen puntaje pero es volátil / pero su r² es bajo" está PROHIBIDO: si eso importara, el score ya sería más bajo). Un score alto = la plataforma la recomienda, punto. Solo menciona una advertencia si viene en el campo 'alertas' del score (son materiales y ya bajaron el puntaje: preséntala como contexto, no como contradicción) o si el perfil del usuario no calza (ej. conservador y la acción es de riesgo pese a buen score → dilo). El agua/macro/noticias NO están en el score (irían con ruido): úsalos TÚ como color adicional al justificar, no para contradecir el número. Si te preguntan "¿por qué X tiene buen/mal score?", desglosa sus bloques (riesgo-retorno, fundamentos, tendencia, confianza) con cifras.
+
 HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_projection, get_investor_profile, get_imported_analysis, get_multifactor, get_market_indicators, get_market_news, get_ipsa_snapshot. Sugerencia de arranque por intención (no es un pipeline rígido): análisis de acción → get_stock o list_stocks+get_multifactor; optimización/construcción → get_constructor+get_investor_profile y valida con evaluate_portfolio; diagnóstico → get_performance_summary y luego get_active_portfolio; proyección/futuro/meta/"¿cuánto podría valer?" → get_projection; mercado → get_market_indicators+get_market_news+get_ipsa_snapshot. No llames tools que no aportan a la pregunta.
 
 UNIVERSO: el usuario puede operar e invertir en ~30 acciones del IPSA. Las que no están en el análisis activo llegan como "universo adicional" con β REFERENCIAL sectorial (sin historial cargado): preséntalas siempre como estimación, nunca como métrica calculada, y sugiere cargar sus precios (Datos → Cargar planilla) para tener cifras reales. Si una tool responde "sin análisis activo" (sistema recién limpiado), NO cites estadísticas: guía al usuario a poblar la base y crear su análisis.
@@ -3608,9 +3610,11 @@ function cpStockBrief(s){const z=MF.z[s.t];const o={ticker:s.t,empresa:s.n,secto
   const _f=(typeof fundGet==="function")?fundGet(s.t):null;
   if(_f)o.fundamentos={PU:_f.pe,PU_forward:_f.fpe,PB:_f.pb,yieldDividendos_pct:_f.dy,EPS:_f.eps,capitalizacion_CLP:_f.mcap,ROE_pct:_f.roe,margenNeto_pct:_f.nm,crecUtilidades_pct:_f.eg,precioObjetivo:_f.target,consensoAnalistas:_f.rec};
   try{const d=(typeof investorScoreDetail==="function")?investorScoreDetail(s.t):null;
-    if(d)o.investorScore={score:d.score,bloqueTecnico:d.capm,multifactor:d.mf,fundamentos:d.fund,
-      nota:"Técnico 45% (Sharpe + α amortiguado por r² + Sortino) · Multifactor 30% · Fundamentos 25%. El α se amortigua por r²: con r²≈0 (α no explicado por el mercado) casi no cuenta, para no premiar retorno pasado ruidoso. Rankea por retorno AJUSTADO POR RIESGO, no bruto.",
-      detalle:{alpha_pp:d.alpha,alpha_amortiguado:d.alphaAdj,r2:d.r2,sharpe:d.sharpe,sigma_pct:d.sig,beta:d.beta,upside_analistas_pct:d.upside}};
+    if(d)o.investorScore={score:d.score,ranking_nota:"es la RECOMENDACIÓN de la plataforma: todo el riesgo relevante ya está descontado en el número",
+      bloques:{riesgoRetorno:d.rr,fundamentos:d.fund,tendencia:d.tend},confianza_pct:d.confianza,
+      nota:"Riesgo-retorno 45% (Sharpe + α amortiguado por r² + Sortino + resistencia a caídas) · Fundamentos 30% · Tendencia 25%, todo por percentil del universo; luego un CANDADO DE CONFIANZA acerca el puntaje al neutro si la data es débil. Un score alto significa que las métricas SON buenas Y los datos son sólidos: al justificar, hazlo con convicción y NO agregues 'peros' que el score ya descontó (volatilidad, r² bajo, etc.). Solo menciona una alerta si es material y está en el campo 'alertas'.",
+      detalle:{alpha_pp:d.alpha,alpha_amortiguado:d.alphaAdj,r2:d.r2,sharpe:d.sharpe,sigma_pct:d.sig,caidaMax_pct:d.maxDD,momentum6m_pct:d.mom6m,posicion52sem_pct:d.pos52,upside_analistas_pct:d.upside},
+      alertas:d.alertas||[]};
   }catch(e){}
   return o;}
 function cpExposure(sel){const PM=pMetrics(sel);const Z={};MFSTYLE.forEach(k=>Z[k]=+(PM.ws.reduce((a,x)=>a+x.w*MF.z[x.s.t][k],0)).toFixed(2));const erMF=+(PM.ws.reduce((a,x)=>a+x.w*MF.er[x.s.t],0)).toFixed(2);return {PM,Z,erMF};}
@@ -3626,6 +3630,7 @@ const COPILOT_TOOLS=[
   {name:"evaluate_portfolio",description:"Evalúa una cartera hipotética. Entrega pesos por ticker (en %, suman ~100). Devuelve β, E(R) CAPM, E(R) multifactor, σ, Sharpe, correlación media y exposición factorial. Úsalo para proponer/comparar carteras.",input_schema:{type:"object",properties:{weights:{type:"object",description:"Mapa ticker->peso %, ej. {\"BCI\":40,\"ENELCHILE\":30,\"COLBUN\":30}",additionalProperties:{type:"number"}},amount:{type:"number",description:"Monto a invertir en CLP (opcional)"}},required:["weights"]}},
   {name:"get_projection",description:"Proyección Monte Carlo (probabilística) del capital a futuro: simula trayectorias log-normales (GBM) con el retorno esperado (μ) y el riesgo (σ) del proyecto ACTIVO —o los que le pases— y devuelve, al horizonte pedido: mediana, rango p25–p75, escenario adverso p5, optimista p95, probabilidad de terminar bajo lo aportado y, si das meta, probabilidad de alcanzarla. Es el mismo motor del módulo Montecarlo. Úsalo para '¿cuánto podría valer en X años?', VaR y planificación de metas. Nunca inventes proyecciones: llámalo.",input_schema:{type:"object",properties:{horizonYears:{type:"number",description:"Horizonte en años (default 5)"},monthlyContribution:{type:"number",description:"Aporte mensual en CLP (opcional)"},goal:{type:"number",description:"Meta de capital en CLP (opcional; devuelve prob. de alcanzarla)"},initialCapital:{type:"number",description:"Capital inicial CLP (opcional; default = valor del proyecto activo)"},expectedReturnPct:{type:"number",description:"μ anual en % (opcional; default = E(R) CAPM del proyecto)"},volatilityPct:{type:"number",description:"σ anual en % (opcional; default = σ del proyecto)"}}}},
   {name:"get_investor_profile",description:"Perfil de inversionista del usuario (conservador/moderado/riesgoso) para personalizar recomendaciones.",input_schema:{type:"object",properties:{}}},
+  {name:"get_investor_score",description:"Investor Score (0–100) de TODAS las acciones del sistema — la RECOMENDACIÓN de la plataforma, síntesis de todo el análisis (riesgo-retorno ajustado 45% + fundamentos reales 30% + tendencia 25%) con candado de confianza por calidad de datos. Todo el riesgo relevante YA está descontado en el número. Devuelve el ranking con sub-bloques (riesgo-retorno, fundamentos, tendencia), confianza, métricas (Sharpe, σ, α amortiguado, r², caída máx, momentum) y alertas materiales. Úsalo para '¿qué acción conviene?', '¿por qué X tiene ese puntaje?', o para rankear candidatos. Se recalcula cada día, independiente del análisis activo.",input_schema:{type:"object",properties:{limit:{type:"number",description:"Máximo de acciones (default todas, ordenadas por score desc)"}}}},
   {name:"get_imported_analysis",description:"Si el usuario importó un set de acciones propio, devuelve sus métricas CAPM, benchmark y correlaciones. Vacío si usa el set demo.",input_schema:{type:"object",properties:{}}},
   {name:"get_multifactor",description:"Modelo multifactor de estilo (más allá del CAPM). Por cada acción del set activo: Composite, z-scores de los 6 factores (Momentum, Low-Vol, Value, Quality, Size, Dividend Yield), E(R) multifactor y estilo; más los pesos de factor del perfil. Úsalo para analizar/recomendar con factores, no solo β.",input_schema:{type:"object",properties:{}}},
   {name:"get_market_indicators",description:"Indicadores financieros y macroeconómicos EN VIVO de Chile (mindicador.cl): dólar, euro, cobre, UF, UTM, IPC, tasa de desempleo, Imacec, TPM, bitcoin, más indicadores manuales del usuario (ej. petróleo, S&P 500). Úsalos para contextualizar recomendaciones con el entorno de mercado actual.",input_schema:{type:"object",properties:{}}},
@@ -3725,6 +3730,17 @@ function cpRunTool(name,input){
         nota:"Monte Carlo GBM log-normal; supone μ y σ constantes. Educativo, no es garantía. Detalle visual en el módulo Montecarlo."});
     }
     if(name==="get_investor_profile"){if(!invProfile||!invProfile.levels)return "El usuario aún no completó (o debe reevaluar) su perfil de inversionista en el módulo Perfil. Puedes sugerirle hacerlo.";return JSON.stringify({nivel:invProfile.level+"/5",etiqueta:invProfile.label,perfilFactores:invProfile.profile,subniveles:invProfile.levels,subpuntajes:invProfile.scores,retornoRequerido_pct:invProfile.reqCAGR,nota:invProfile.note,instrumentosComplejos:invProfile.complex_ok?"permitidos":"bloqueados (idoneidad)",saaSugerida:invProfile.alloc,guia:invProfile.guideShort});}
+    if(name==="get_investor_score"){
+      let sc=null;try{sc=investorScore();}catch(e){}
+      if(!sc||!sc.rows||!sc.rows.length)return "El Investor Score aún no se puede calcular: faltan precios o el IPSA en la base (Configuración → Datos / fuente automática). Necesita ≥3 acciones con 12 meses de historia y el índice.";
+      const lim=(input&&input.limit)?Math.max(1,input.limit|0):sc.rows.length;
+      return JSON.stringify({fecha:sc.day,universo:sc.n,ventana:sc.window,
+        nota:"RECOMENDACIÓN de la plataforma. Todo el riesgo relevante YA está descontado en el score: al justificar no agregues 'peros' que el número ya castigó. 45% riesgo-retorno + 30% fundamentos + 25% tendencia, con candado de confianza por calidad de datos.",
+        ranking:sc.rows.slice(0,lim).map((r,i)=>({rank:i+1,ticker:r.t,score:r.score,confianza_pct:r.confianza,
+          bloques:{riesgoRetorno:r.rr,fundamentos:r.fund,tendencia:r.tend},
+          sharpe:r.sharpe,sigma_pct:r.sig,alpha_amortiguado:r.alphaAdj,r2:r.r2,caidaMax_pct:r.maxDD,momentum6m_pct:r.mom6m,upside_analistas_pct:r.upside,
+          alertas:r.alertas}))});
+    }
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     if(name==="get_multifactor"){
       if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo: el modelo multifactor se calcula sobre SUS datos. Debe crear un análisis en Gestión de análisis (los datos se sincronizan/cargan en Configuración → Datos).";
@@ -6352,20 +6368,22 @@ function seedExamples(){
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
-/* ══ INVESTOR SCORE (v2 · riesgo-consciente) ══
+/* ══ INVESTOR SCORE (v3 · piedra angular, riesgo descontado + candado de confianza) ══
    Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
    fundamentos reales), INDEPENDIENTE del análisis activo. Rankea por PERCENTIL dentro del universo.
-   Bloques:
-   • TÉCNICO 45% — retorno AJUSTADO POR RIESGO, no retorno bruto:
-       Sharpe 45% (retorno por unidad de riesgo TOTAL: castiga la σ alta) +
-       α de Jensen 30% AMORTIGUADO por confiabilidad (× r²/(r²+0,05): un α con r²≈0 es ruido, no señal) +
-       Sortino 25% (premia que la volatilidad sea de subida, no de caídas).
-   • MULTIFACTOR 30% — composite de estilo (Low-Vol, Momentum, Value, Quality, Size, Yield) con datos reales.
-   • FUNDAMENTOS 25% — Valorización (P/U + P/B bajos) 30% + Calidad (ROE + margen) 30% + Dividendos 20% +
-       Upside del consenso de analistas 20%; con lo que haya real (lo ausente no cuenta, no se inventa).
-   Sin fundamentos → Técnico 60% · Multifactor 40%. El bloque técnico SIEMPRE pesa ≥40%.
-   Objetivo: proponer buenos candidatos por retorno ajustado por riesgo y confiabilidad, no por retorno
-   pasado alto con volatilidad elevada y alfa estadísticamente débil. Educativo, no asesoría financiera. */
+   Filosofía: TODO riesgo relevante se DESCUENTA dentro del puntaje — no hay "buen score pero ojo…".
+   Bloques (con dato presente):
+   • RIESGO-RETORNO 45% (≥40% siempre): Sharpe 40% + α de Jensen 25% AMORTIGUADO por confiabilidad
+     (× r²/(r²+0,05): un α con r²≈0 es ruido) + Sortino 20% + Resistencia a caídas 15% (1−drawdown máx).
+   • FUNDAMENTOS 30%: Valorización (P/U + P/B) 30% + Calidad (ROE + margen) 30% + Dividendos 20% +
+     Upside del consenso de analistas 20% — solo con dato real, lo ausente no cuenta ni se inventa.
+   • TENDENCIA/MOMENTUM 25%: momentum 6m 45% + posición en el rango 52 semanas 30% + tendencia 1m 25%
+     (evita "atrapar un cuchillo cayendo": una acción barata pero en caída fuerte NO sube por serlo).
+   Luego se aplica un CANDADO DE CONFIANZA: el puntaje se acerca al neutro (50) según la calidad de los
+   datos (nº de observaciones + cobertura de fundamentos + confiabilidad estadística). Así una acción
+   solo llega a un puntaje alto si sus métricas SON buenas Y los datos que las sostienen son sólidos —
+   nunca una recomendación fuerte sobre data débil. NO usa noticias/macro (irían con ruido): eso lo
+   aporta el agente al justificar. Educativo, no asesoría financiera. */
 let _invScore=null;
 function investorScoreCompute(){
   let tickers=(typeof pricedbTickers==="function")?pricedbTickers():[];
@@ -6382,35 +6400,58 @@ function investorScoreCompute(){
   if(!R||!R.ok)return null;
   const imp=pricedbToIMP(R.freq,{tickers,lastN:R.lastN,bench:"IPSA"});
   if(!imp||!imp.assets||imp.assets.length<3)return null;
-  const mf=computeFactors(imp.assets);
+  const nRet=imp.n||((imp.assets[0]&&imp.assets[0].rets&&imp.assets[0].rets.length)||0);
   const pct=(vals,v,invert)=>{const a=vals.filter(x=>x!=null&&isFinite(x));if(a.length<2||v==null||!isFinite(v))return null;let c=0;a.forEach(x=>{if(invert?x>v:x<v)c++;else if(x===v)c+=0.5;});return Math.round((c-0.5)/(a.length-1)*100);};
   const wavg=(parts)=>{let sw=0,sv=0;parts.forEach(([v,w])=>{if(v!=null){sv+=v*w;sw+=w;}});return sw>0?sv/sw:null;};
-  // α AMORTIGUADO por r² (Bayesian shrink): con r²≈0 el α no es explicable por el modelo → se lleva a ~0
-  const alphaAdj=s=>(+s.a24.jensen)*((s.a24.r2||0)/((s.a24.r2||0)+0.05));
-  // Sortino sobre los retornos del período (premia que la volatilidad sea de subida)
-  const sortinoOf=s=>{const rr=(s.rets||[]).map(x=>x/100);if(rr.length<3)return null;const m=rr.reduce((a,b)=>a+b,0)/rr.length;const dd=Math.sqrt(rr.reduce((a,x)=>a+(x<0?x*x:0),0)/rr.length);return dd>1e-9?m/dd:(m>0?5:0);};
-  const sharpes=imp.assets.map(s=>s.a24.sharpe),alphasAdj=imp.assets.map(alphaAdj),sortinos=imp.assets.map(sortinoOf),comps=imp.assets.map(s=>mf.comp[s.t]);
-  // arrays de fundamentos reales
-  const F=t=>((typeof fundGet==="function"&&fundGet(t))||{});
-  const pes=[],pbs=[],dys=[],roes=[],nms=[],ups=[];
-  imp.assets.forEach(s=>{const f=F(s.t);pes.push(f.pe);pbs.push(f.pb);dys.push(f.dy);roes.push(f.roe);nms.push(f.nm);ups.push((f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null);});
   const or50=v=>v==null?50:v;
-  const rows=imp.assets.map(s=>{
-    // TÉCNICO: Sharpe + α amortiguado + Sortino (todos de precios reales, siempre presentes)
-    const capm=Math.round(wavg([[or50(pct(sharpes,s.a24.sharpe)),0.45],[or50(pct(alphasAdj,alphaAdj(s))),0.30],[or50(pct(sortinos,sortinoOf(s))),0.25]]));
-    const mfS=pct(comps,mf.comp[s.t]);
+  const F=t=>((typeof fundGet==="function"&&fundGet(t))||{});
+  // ── métricas por acción (de precios reales, siempre presentes) ──
+  const alphaAdj=s=>(+s.a24.jensen)*((s.a24.r2||0)/((s.a24.r2||0)+0.05));   // α amortiguado por r²
+  const sortinoOf=s=>{const rr=(s.rets||[]).map(x=>x/100);if(rr.length<3)return null;const m=rr.reduce((a,b)=>a+b,0)/rr.length;const dd=Math.sqrt(rr.reduce((a,x)=>a+(x<0?x*x:0),0)/rr.length);return dd>1e-9?m/dd:(m>0?5:0);};
+  const mddOf=s=>{const pr=s.prices||[];if(pr.length<3)return 0;let peak=pr[0],mx=0;for(const v of pr){if(v>peak)peak=v;const d=peak>0?1-v/peak:0;if(d>mx)mx=d;}return mx;};   // caída máx pico-a-valle en la ventana
+  const momOf=s=>{const pr=s.prices||[],n=pr.length;if(n<8)return null;const a=Math.max(0,n-1-Math.min(n-2,26)),b=Math.max(a+1,n-3);return pr[a]>0?(pr[b]/pr[a]-1)*100:null;};   // momentum ~6m saltando el último mes
+  const trendOf=s=>{const pr=s.prices||[],n=pr.length;if(n<5)return null;const a=Math.max(0,n-5);return pr[a]>0?(pr[n-1]/pr[a]-1)*100:null;};   // tendencia ~1 mes
+  const posOf=s=>{const f=F(s.t);if(f.hi52!=null&&f.lo52!=null&&f.hi52>f.lo52&&f.px>0)return Math.max(0,Math.min(1,(f.px-f.lo52)/(f.hi52-f.lo52)))*100;const pr=s.prices||[];if(pr.length<2)return null;const mn=Math.min(...pr),mx=Math.max(...pr);return mx>mn?(pr[pr.length-1]-mn)/(mx-mn)*100:50;};
+  // arrays para percentiles
+  const A=imp.assets;
+  const sharpes=A.map(s=>s.a24.sharpe),alphasAdj=A.map(alphaAdj),sortinos=A.map(sortinoOf),mdds=A.map(mddOf),moms=A.map(momOf),poss=A.map(posOf),trends=A.map(trendOf);
+  const pes=[],pbs=[],dys=[],roes=[],nms=[],ups=[];
+  A.forEach(s=>{const f=F(s.t);pes.push(f.pe);pbs.push(f.pb);dys.push(f.dy);roes.push(f.roe);nms.push(f.nm);ups.push((f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null);});
+  const obsFactor=Math.max(0,Math.min(1,nRet/40));   // ≥40 retornos (~9m semanal) = muestra suficiente
+  const rows=A.map(s=>{
     const f=F(s.t);
-    // FUNDAMENTOS: valorización + calidad + dividendo + upside (solo con dato real)
+    // RIESGO-RETORNO (técnico) — retorno ajustado por riesgo + resistencia a caídas; todo de precios reales
+    const rr=Math.round(wavg([[or50(pct(sharpes,s.a24.sharpe)),0.40],[or50(pct(alphasAdj,alphaAdj(s))),0.25],[or50(pct(sortinos,sortinoOf(s))),0.20],[or50(pct(mdds,mddOf(s),true)),0.15]]));
+    // FUNDAMENTOS — solo con dato real
     const valz=wavg([[pct(pes,f.pe,true),0.6],[pct(pbs,f.pb,true),0.4]]);
     const qualz=wavg([[pct(roes,f.roe),0.6],[pct(nms,f.nm),0.4]]);
     const upv=(f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null;
     const fundS0=wavg([[valz,0.30],[qualz,0.30],[pct(dys,f.dy),0.20],[pct(ups,upv),0.20]]);
     const fundS=fundS0!=null?Math.round(fundS0):null;
-    const total=fundS==null?Math.round(0.60*capm+0.40*or50(mfS)):Math.round(0.45*capm+0.30*or50(mfS)+0.25*fundS);
-    return {t:s.t,n:s.n,c:s.c,score:Math.max(0,Math.min(100,total)),capm,mf:mfS,fund:fundS,
+    // TENDENCIA/MOMENTUM — situación reciente de la acción
+    const trS0=wavg([[pct(moms,momOf(s)),0.45],[pct(poss,posOf(s)),0.30],[pct(trends,trendOf(s)),0.25]]);
+    const trS=trS0!=null?Math.round(trS0):null;
+    // combinación de bloques (renormalizando si falta fundamentos; el técnico siempre ≥40%)
+    const blend=fundS==null
+      ? wavg([[rr,0.60],[or50(trS),0.40]])
+      : wavg([[rr,0.45],[fundS,0.30],[or50(trS),0.25]]);
+    // CANDADO DE CONFIANZA: observaciones + cobertura de fundamentos → acerca al neutro si la data es débil
+    const nFund=[f.pe,f.pb,f.dy,f.roe,f.nm,f.target].filter(x=>x!=null).length;
+    const conf=Math.max(0,Math.min(1, 0.4*obsFactor + 0.6*(nFund/6) ));
+    const confAdj=0.7+0.3*conf;   // shrink máx 30% hacia 50 cuando la data es pobre
+    const total=Math.round(50+(blend-50)*confAdj);
+    // ALERTAS materiales (para el agente) — situaciones que YA bajaron el puntaje; NO son "peros" que lo contradigan
+    const alertas=[];
+    if(trendOf(s)!=null&&trendOf(s)<-12&&(momOf(s)==null||momOf(s)<0))alertas.push("en caída reciente");
+    if(mddOf(s)>0.45)alertas.push("tuvo un drawdown severo en el año");
+    if(nFund<2)alertas.push("fundamentos incompletos (Yahoo no los cubre)");
+    if((s.a24.r2||0)<0.05)alertas.push("baja correlación con el IPSA (β poco confiable, α amortiguado)");
+    return {t:s.t,n:s.n,c:s.c,score:Math.max(0,Math.min(100,total)),
+      rr,fund:fundS,tend:trS,confianza:Math.round(conf*100),
       alpha:+(+s.a24.jensen).toFixed(1),alphaAdj:+alphaAdj(s).toFixed(1),r2:+(+s.a24.r2).toFixed(3),
       sharpe:+(+s.a24.sharpe).toFixed(2),sig:+(+s.a24.sig).toFixed(1),beta:+(+s.b).toFixed(2),
-      roe:f.roe!=null?f.roe:null,upside:upv!=null?+upv.toFixed(1):null};
+      maxDD:+(mddOf(s)*100).toFixed(1),mom6m:momOf(s)!=null?+momOf(s).toFixed(1):null,pos52:posOf(s)!=null?+posOf(s).toFixed(0):null,
+      roe:f.roe!=null?f.roe:null,upside:upv!=null?+upv.toFixed(1):null,alertas};
   }).sort((a,b)=>b.score-a.score);
   return {day:localDay(),window:imp.window,n:rows.length,rows};
 }
@@ -6590,10 +6631,10 @@ function viewHome(){
     if(!sc||!sc.rows||sc.rows.length<3)return "";
     const top=sc.rows.slice(0,10);
     const scCol=v=>v>=70?green:v>=55?indigo:v>=40?amber:red;
-    const row=(r,i)=>`<div class="home-stk" title="Sharpe ${r.sharpe} · σ ${r.sig}% · α ${r.alpha>=0?"+":""}${r.alpha}pp (r² ${r.r2}${r.r2<0.05?" → α poco confiable, amortiguado":""}) · β ${r.beta}${r.upside!=null?" · upside analistas "+(r.upside>=0?"+":"")+r.upside+"%":""}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">Técnico ${r.capm}${r.mf!=null?" · MF "+r.mf:""}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
+    const row=(r,i)=>`<div class="home-stk" title="Sharpe ${r.sharpe} · σ ${r.sig}% · caída máx ${r.maxDD}% · momentum 6m ${r.mom6m!=null?(r.mom6m>=0?"+":"")+r.mom6m+"%":"—"} · confianza ${r.confianza}%${r.alertas&&r.alertas.length?" · "+r.alertas.join("; "):""}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">Riesgo-ret. ${r.rr}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}${r.tend!=null?" · Tend. "+r.tend:""} · conf. ${r.confianza}%</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
     const colA=top.slice(0,5).map((r,i)=>row(r,i)).join(""),colB=top.slice(5).map((r,i)=>row(r,i+5)).join("");
     const _fc=sc.rows.filter(r=>r.fund!=null).length;
-    return card("Investor Score · Top 10",`Puntuación diaria (0–100) de las ${sc.n} acciones del sistema, por retorno <b>ajustado por riesgo</b> — <b>45% técnico</b> (Sharpe + α amortiguado por confiabilidad + Sortino) · 30% multifactor · 25% fundamentos (${_fc}/${sc.n} reales) · pasa el cursor sobre cada acción para ver su riesgo · se recalcula cada día, independiente del análisis activo · educativo, no asesoría financiera`,
+    return card("Investor Score · Top 10",`Puntuación diaria (0–100) de las ${sc.n} acciones del sistema — <b>45% riesgo-retorno</b> (Sharpe + α confiable + Sortino + resistencia a caídas) · 30% fundamentos (${_fc}/${sc.n} reales) · 25% tendencia · con <b>candado de confianza</b> por calidad de datos, así todo riesgo ya está descontado en el número · pasa el cursor para ver el detalle · se recalcula cada día · educativo, no asesoría financiera`,
       `<div class="stk-cols"><div class="stk-block">${colA}</div><div class="stk-block">${colB}</div></div>`);
   })();
   return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+scoreCard+stkCard;
