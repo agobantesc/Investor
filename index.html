@@ -3605,8 +3605,12 @@ function cpStyleOf(t){const z=MF.z[t],o=[];if(z.value>0.5)o.push("Value");else i
 function cpStockBrief(s){const z=MF.z[s.t];const o={ticker:s.t,empresa:s.n,sector:s.s,beta:s.b,retornoVentanaTotal_pct:+(+s.a24.tot).toFixed(2),retornoAnualizado_pct:s.a24.ret,sigma:s.a24.sig,sharpe:s.a24.sharpe,alphaJensen:s.a24.jensen,erCAPM:+s.a24.er.toFixed(2),erMultifactor:+MF.er[s.t].toFixed(2),compositeMF:+MF.comp[s.t].toFixed(2),estilo:cpStyleOf(s.t)};
   if(typeof winMode==="function"&&winMode()){o.alphaVentana_pct=+alphaWin(s).toFixed(2);o.nota="ventana < 1 año: cita retornoVentanaTotal_pct y alphaVentana_pct; el anualizado es proyección referencial, no un retorno obtenido";}
   const _f=(typeof fundGet==="function")?fundGet(s.t):null;
-  if(_f)o.fundamentos={PU:_f.pe,PU_forward:_f.fpe,PB:_f.pb,yieldDividendos_pct:_f.dy,EPS:_f.eps,capitalizacion_CLP:_f.mcap};
-  try{const _sc=(typeof investorScoreOf==="function")?investorScoreOf(s.t):null;if(_sc!=null)o.investorScore=_sc;}catch(e){}
+  if(_f)o.fundamentos={PU:_f.pe,PU_forward:_f.fpe,PB:_f.pb,yieldDividendos_pct:_f.dy,EPS:_f.eps,capitalizacion_CLP:_f.mcap,ROE_pct:_f.roe,margenNeto_pct:_f.nm,crecUtilidades_pct:_f.eg,precioObjetivo:_f.target,consensoAnalistas:_f.rec};
+  try{const d=(typeof investorScoreDetail==="function")?investorScoreDetail(s.t):null;
+    if(d)o.investorScore={score:d.score,bloqueTecnico:d.capm,multifactor:d.mf,fundamentos:d.fund,
+      nota:"Técnico 45% (Sharpe + α amortiguado por r² + Sortino) · Multifactor 30% · Fundamentos 25%. El α se amortigua por r²: con r²≈0 (α no explicado por el mercado) casi no cuenta, para no premiar retorno pasado ruidoso. Rankea por retorno AJUSTADO POR RIESGO, no bruto.",
+      detalle:{alpha_pp:d.alpha,alpha_amortiguado:d.alphaAdj,r2:d.r2,sharpe:d.sharpe,sigma_pct:d.sig,beta:d.beta,upside_analistas_pct:d.upside}};
+  }catch(e){}
   return o;}
 function cpExposure(sel){const PM=pMetrics(sel);const Z={};MFSTYLE.forEach(k=>Z[k]=+(PM.ws.reduce((a,x)=>a+x.w*MF.z[x.s.t][k],0)).toFixed(2));const erMF=+(PM.ws.reduce((a,x)=>a+x.w*MF.er[x.s.t],0)).toFixed(2);return {PM,Z,erMF};}
 
@@ -6345,17 +6349,24 @@ function seedExamples(){
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
-/* ══ INVESTOR SCORE ══
-   Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (base de precios a 12 meses
-   + fundamentos), INDEPENDIENTE del análisis activo. Composición: CAPM 45% (α de Jensen 60% + Sharpe 40%,
-   por percentil dentro del universo) · Multifactor 30% (composite de estilo) · Fundamentos 25% (P/U bajo
-   40% + yield 35% + P/B bajo 25%, solo con lo disponible). Si una acción no tiene fundamentos, se reparte
-   CAPM 60% · MF 40% — el CAPM SIEMPRE pesa ≥40%. Orientación educativa, no asesoría financiera. */
+/* ══ INVESTOR SCORE (v2 · riesgo-consciente) ══
+   Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
+   fundamentos reales), INDEPENDIENTE del análisis activo. Rankea por PERCENTIL dentro del universo.
+   Bloques:
+   • TÉCNICO 45% — retorno AJUSTADO POR RIESGO, no retorno bruto:
+       Sharpe 45% (retorno por unidad de riesgo TOTAL: castiga la σ alta) +
+       α de Jensen 30% AMORTIGUADO por confiabilidad (× r²/(r²+0,05): un α con r²≈0 es ruido, no señal) +
+       Sortino 25% (premia que la volatilidad sea de subida, no de caídas).
+   • MULTIFACTOR 30% — composite de estilo (Low-Vol, Momentum, Value, Quality, Size, Yield) con datos reales.
+   • FUNDAMENTOS 25% — Valorización (P/U + P/B bajos) 30% + Calidad (ROE + margen) 30% + Dividendos 20% +
+       Upside del consenso de analistas 20%; con lo que haya real (lo ausente no cuenta, no se inventa).
+   Sin fundamentos → Técnico 60% · Multifactor 40%. El bloque técnico SIEMPRE pesa ≥40%.
+   Objetivo: proponer buenos candidatos por retorno ajustado por riesgo y confiabilidad, no por retorno
+   pasado alto con volatilidad elevada y alfa estadísticamente débil. Educativo, no asesoría financiera. */
 let _invScore=null;
 function investorScoreCompute(){
   let tickers=(typeof pricedbTickers==="function")?pricedbTickers():[];
   if(tickers.length<3||!Object.keys(PRICEDB.ipsa||{}).length)return null;
-  // universo scoreable: ventana de 12 meses común; si alguna acción corta la ventana, se suelta y se reintenta
   let R=null;
   for(let it=0;it<4;it++){
     R=caResolve(12,{tickers,bench:"IPSA"});
@@ -6368,25 +6379,39 @@ function investorScoreCompute(){
   if(!R||!R.ok)return null;
   const imp=pricedbToIMP(R.freq,{tickers,lastN:R.lastN,bench:"IPSA"});
   if(!imp||!imp.assets||imp.assets.length<3)return null;
-  const mf=computeFactors(imp.assets);   // mismas señales de estilo que el módulo Multifactor
-  // percentil 0–100 dentro del universo (mayor = mejor; invert: menor = mejor)
+  const mf=computeFactors(imp.assets);
   const pct=(vals,v,invert)=>{const a=vals.filter(x=>x!=null&&isFinite(x));if(a.length<2||v==null||!isFinite(v))return null;let c=0;a.forEach(x=>{if(invert?x>v:x<v)c++;else if(x===v)c+=0.5;});return Math.round((c-0.5)/(a.length-1)*100);};
-  const alphas=imp.assets.map(s=>s.a24.jensen),sharpes=imp.assets.map(s=>s.a24.sharpe),comps=imp.assets.map(s=>mf.comp[s.t]);
-  const pes=[],dys=[],pbs=[];
-  imp.assets.forEach(s=>{const f=(typeof fundGet==="function"&&fundGet(s.t))||{};pes.push(f.pe);dys.push(f.dy);pbs.push(f.pb);});
+  const wavg=(parts)=>{let sw=0,sv=0;parts.forEach(([v,w])=>{if(v!=null){sv+=v*w;sw+=w;}});return sw>0?sv/sw:null;};
+  // α AMORTIGUADO por r² (Bayesian shrink): con r²≈0 el α no es explicable por el modelo → se lleva a ~0
+  const alphaAdj=s=>(+s.a24.jensen)*((s.a24.r2||0)/((s.a24.r2||0)+0.05));
+  // Sortino sobre los retornos del período (premia que la volatilidad sea de subida)
+  const sortinoOf=s=>{const rr=(s.rets||[]).map(x=>x/100);if(rr.length<3)return null;const m=rr.reduce((a,b)=>a+b,0)/rr.length;const dd=Math.sqrt(rr.reduce((a,x)=>a+(x<0?x*x:0),0)/rr.length);return dd>1e-9?m/dd:(m>0?5:0);};
+  const sharpes=imp.assets.map(s=>s.a24.sharpe),alphasAdj=imp.assets.map(alphaAdj),sortinos=imp.assets.map(sortinoOf),comps=imp.assets.map(s=>mf.comp[s.t]);
+  // arrays de fundamentos reales
+  const F=t=>((typeof fundGet==="function"&&fundGet(t))||{});
+  const pes=[],pbs=[],dys=[],roes=[],nms=[],ups=[];
+  imp.assets.forEach(s=>{const f=F(s.t);pes.push(f.pe);pbs.push(f.pb);dys.push(f.dy);roes.push(f.roe);nms.push(f.nm);ups.push((f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null);});
   const or50=v=>v==null?50:v;
   const rows=imp.assets.map(s=>{
-    const capm=Math.round(0.6*or50(pct(alphas,s.a24.jensen))+0.4*or50(pct(sharpes,s.a24.sharpe)));
+    // TÉCNICO: Sharpe + α amortiguado + Sortino (todos de precios reales, siempre presentes)
+    const capm=Math.round(wavg([[or50(pct(sharpes,s.a24.sharpe)),0.45],[or50(pct(alphasAdj,alphaAdj(s))),0.30],[or50(pct(sortinos,sortinoOf(s))),0.25]]));
     const mfS=pct(comps,mf.comp[s.t]);
-    const f=(typeof fundGet==="function"&&fundGet(s.t))||{};
-    const parts=[];const add=(v,w)=>{if(v!=null)parts.push([v,w]);};
-    add(pct(pes,f.pe,true),0.40);add(pct(dys,f.dy),0.35);add(pct(pbs,f.pb,true),0.25);
-    let fundS=null;if(parts.length){const tw=parts.reduce((a,x)=>a+x[1],0);fundS=Math.round(parts.reduce((a,x)=>a+x[0]*x[1],0)/tw);}
+    const f=F(s.t);
+    // FUNDAMENTOS: valorización + calidad + dividendo + upside (solo con dato real)
+    const valz=wavg([[pct(pes,f.pe,true),0.6],[pct(pbs,f.pb,true),0.4]]);
+    const qualz=wavg([[pct(roes,f.roe),0.6],[pct(nms,f.nm),0.4]]);
+    const upv=(f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null;
+    const fundS0=wavg([[valz,0.30],[qualz,0.30],[pct(dys,f.dy),0.20],[pct(ups,upv),0.20]]);
+    const fundS=fundS0!=null?Math.round(fundS0):null;
     const total=fundS==null?Math.round(0.60*capm+0.40*or50(mfS)):Math.round(0.45*capm+0.30*or50(mfS)+0.25*fundS);
-    return {t:s.t,n:s.n,c:s.c,score:Math.max(0,Math.min(100,total)),capm,mf:mfS,fund:fundS,alpha:+(+s.a24.jensen).toFixed(1),sharpe:+(+s.a24.sharpe).toFixed(2),beta:+(+s.b).toFixed(2)};
+    return {t:s.t,n:s.n,c:s.c,score:Math.max(0,Math.min(100,total)),capm,mf:mfS,fund:fundS,
+      alpha:+(+s.a24.jensen).toFixed(1),alphaAdj:+alphaAdj(s).toFixed(1),r2:+(+s.a24.r2).toFixed(3),
+      sharpe:+(+s.a24.sharpe).toFixed(2),sig:+(+s.a24.sig).toFixed(1),beta:+(+s.b).toFixed(2),
+      roe:f.roe!=null?f.roe:null,upside:upv!=null?+upv.toFixed(1):null};
   }).sort((a,b)=>b.score-a.score);
   return {day:localDay(),window:imp.window,n:rows.length,rows};
 }
+function investorScoreDetail(t){try{const v=investorScore();return v?v.rows.find(x=>x.t===t)||null:null;}catch(e){return null;}}
 function investorScore(){
   try{
     // clave: día + última fecha de la base + fundamentos + Nº DE TICKERS (para que agregar/quitar acciones
@@ -6562,10 +6587,10 @@ function viewHome(){
     if(!sc||!sc.rows||sc.rows.length<3)return "";
     const top=sc.rows.slice(0,10);
     const scCol=v=>v>=70?green:v>=55?indigo:v>=40?amber:red;
-    const row=(r,i)=>`<div class="home-stk" title="α ${r.alpha>=0?"+":""}${r.alpha}pp · Sharpe ${r.sharpe} · β ${r.beta}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">CAPM ${r.capm}${r.mf!=null?" · MF "+r.mf:""}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
+    const row=(r,i)=>`<div class="home-stk" title="Sharpe ${r.sharpe} · σ ${r.sig}% · α ${r.alpha>=0?"+":""}${r.alpha}pp (r² ${r.r2}${r.r2<0.05?" → α poco confiable, amortiguado":""}) · β ${r.beta}${r.upside!=null?" · upside analistas "+(r.upside>=0?"+":"")+r.upside+"%":""}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">Técnico ${r.capm}${r.mf!=null?" · MF "+r.mf:""}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
     const colA=top.slice(0,5).map((r,i)=>row(r,i)).join(""),colB=top.slice(5).map((r,i)=>row(r,i+5)).join("");
     const _fc=sc.rows.filter(r=>r.fund!=null).length;
-    return card("Investor Score · Top 10",`La puntuación diaria de Investor (0–100) para las ${sc.n} acciones del sistema — <b>45% CAPM</b> (α y Sharpe a 12 meses, datos reales) · 30% multifactor · 25% fundamentos (${_fc}/${sc.n} con fundamentos reales; el resto pondera solo CAPM+multifactor, sin inventar datos) · se recalcula cada día con la base, independiente del análisis activo · orientación educativa, no asesoría financiera`,
+    return card("Investor Score · Top 10",`Puntuación diaria (0–100) de las ${sc.n} acciones del sistema, por retorno <b>ajustado por riesgo</b> — <b>45% técnico</b> (Sharpe + α amortiguado por confiabilidad + Sortino) · 30% multifactor · 25% fundamentos (${_fc}/${sc.n} reales) · pasa el cursor sobre cada acción para ver su riesgo · se recalcula cada día, independiente del análisis activo · educativo, no asesoría financiera`,
       `<div class="stk-cols"><div class="stk-block">${colA}</div><div class="stk-block">${colB}</div></div>`);
   })();
   return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+scoreCard+stkCard;
