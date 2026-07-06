@@ -2570,22 +2570,30 @@ function invMetrics(){
   const t0=new Date(base.date).getTime();
   const addD=(WEEKS.length>1&&WEEKS[1].date===WEEKS[0].date)?864e5:0;
   let aport=base.qty?PF.holdings.reduce((a,hd)=>a+(sh[hd.t]||0)*(base.prices[hd.t]||0),0):PF.amount;
+  // PRIMERA COMPRA de cada acción: para medir su crecimiento desde que se incorporó, no desde el inicio de la
+  // cartera. Las acciones de la compra inicial arrancan en el índice 0; las que se agregan después (compra en
+  // Operar / aporte) arrancan en su fecha de compra. b0 sigue siendo el precio de referencia para rellenos.
+  const firstBuy={};PF.holdings.forEach(hd=>{if((cost[hd.t]||0)>0)firstBuy[hd.t]={idx:0,price:b0[hd.t]};});
   let twr=1,prevVal=null;const series=[],pr=[],mr=[];
   WEEKS.forEach((w,i)=>{
     let inflow=0;
     if(w.ev){
-      if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);sh[t]=(sh[t]||0)+q;cost[t]=(cost[t]||0)+al[t];});inflow=w.ev.amount||0;aport+=inflow;}   // ev.shares = cantidades reales compradas (los aportes antiguos sin shares se derivan del precio)
+      if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);sh[t]=(sh[t]||0)+q;cost[t]=(cost[t]||0)+al[t];if(!firstBuy[t]&&q>0)firstBuy[t]={idx:i,price:al[t]/q};});inflow=w.ev.amount||0;aport+=inflow;}   // ev.shares = cantidades reales compradas (los aportes antiguos sin shares se derivan del precio)
       else if(w.ev.kind==="rebal"&&w.ev.shares){PF.holdings.forEach(hd=>{const old=sh[hd.t]||0,nw=w.ev.shares[hd.t]!=null?w.ev.shares[hd.t]:old,p=w.prices[hd.t]||base.prices[hd.t]||1;if(nw<old)cost[hd.t]=(cost[hd.t]||0)*(old>0?nw/old:1);else if(nw>old)cost[hd.t]=(cost[hd.t]||0)+(nw-old)*p;sh[hd.t]=nw;});}
-      else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;}else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;}}
+      else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;if(sh[tt]<=1e-9)delete firstBuy[tt];}else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;if(!firstBuy[tt]&&qy>0)firstBuy[tt]={idx:i,price:pp};}}
     }
     const val=PF.holdings.reduce((a,hd)=>a+(sh[hd.t]||0)*(w.prices[hd.t]||0),0);
     if(i>0&&prevVal>0){const r=(val-inflow)/prevVal-1;twr*=(1+r);pr.push(r);mr.push(w.ipsa/WEEKS[i-1].ipsa-1);}
     prevVal=val;
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
     series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:w.ipsa/base.ipsa-1,diff:(twr-1)-(w.ipsa/base.ipsa-1),yrs,inflow,ev:w.ev||null});});
-  const stockSeries=PF.holdings.map(hd=>({label:hd.t,c:hd.c,vals:WEEKS.map(w=>+(100*((w.prices[hd.t]||b0[hd.t])/b0[hd.t])).toFixed(2))}));
+  // "Crecimiento por acción": base 100 desde la PRIMERA compra de cada acción (antes de esa fecha, plano en 100,
+  // porque aún no la tenías). Así ENEL, comprada más tarde, no arrastra el crecimiento previo de la cartera.
+  const stockSeries=PF.holdings.map(hd=>{const fb=firstBuy[hd.t],anc=(fb&&fb.price>0)?fb.price:b0[hd.t],fi=fb?fb.idx:0;return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>i<fi?100:+(100*((w.prices[hd.t]||anc)/anc)).toFixed(2))};});
   const lastW=WEEKS[WEEKS.length-1],prevW=WEEKS.length>=2?WEEKS[WEEKS.length-2]:null,last=series[series.length-1];
-  const perStock=PF.holdings.map(hd=>{const cur=lastW.prices[hd.t]||b0[hd.t],shx=sh[hd.t]||0,v=shx*cur,pp=prevW?(prevW.prices[hd.t]||b0[hd.t]):null,gain=v-(cost[hd.t]||0);return {hd,sh:shx,buy:b0[hd.t],cur,val:v,ret:cur/b0[hd.t]-1,dayRet:pp?cur/pp-1:null,gain,contribCum:gain/aport,cost:cost[hd.t]||0};});
+  // retorno por acción = sobre el capital REALMENTE invertido en ella (gain/costo): mide desde su compra, no desde
+  // el inicio de la cartera; buy = costo promedio por acción. Para acciones de la cartera original coincide con cur/b0-1.
+  const perStock=PF.holdings.map(hd=>{const cur=lastW.prices[hd.t]||b0[hd.t],shx=sh[hd.t]||0,v=shx*cur,pp=prevW?(prevW.prices[hd.t]||b0[hd.t]):null,cst=cost[hd.t]||0,gain=v-cst,avg=(shx>0&&cst>0)?cst/shx:b0[hd.t];return {hd,sh:shx,buy:avg,cur,val:v,ret:cst>0?gain/cst:(b0[hd.t]>0?cur/b0[hd.t]-1:0),dayRet:pp?cur/pp-1:null,gain,contribCum:aport>0?gain/aport:0,cost:cst};});
   let betaR=null,corrR=null;
   if(pr.length>=4){const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,mp=mean(pr),mm=mean(mr);let cov=0,vm=0,vp=0;
     for(let i=0;i<pr.length;i++){cov+=(pr[i]-mp)*(mr[i]-mm);vm+=(mr[i]-mm)**2;vp+=(pr[i]-mp)**2;}
@@ -3664,11 +3672,15 @@ function cpRunTool(name,input){
       // "no hay cartera activa" pese a que el usuario sí tiene una.
       if(!PF&&PROJECTS.length){activeId=(PROJECTS.find(p=>(p.weeks||[]).length&&(p.holdings||[]).length)||PROJECTS.find(p=>(p.holdings||[]).length)||PROJECTS[0]).id;try{saveProjects();}catch(e){}syncProj();}
       if(!PROJECTS.length||!PF)return "No hay ningún proyecto de inversión activo. Sugiere armar uno en Simulación → Constructor y aplicarlo.";
+      const _IMw=(function(){try{return invMetrics();}catch(e){return null;}})();
+      const _V=(_IMw&&_IMw.last)?_IMw.last.val:0;
+      const _aw={};if(_IMw&&_V>0)_IMw.perStock.forEach(p=>{_aw[p.hd.t]=+(p.val/_V*100).toFixed(1);});
       const out={nombre:PF.name,aplicada:PF.date,objetivoCLP:PF.amount,capitalRealInvertidoCLP:Math.round(realCap()),betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
-        holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,peso:+(h.w*100).toFixed(1),montoCLP:Math.round(h.monto),beta:h.b}))};
+        notaPesos:"pesoObjetivo = plan (referencia del drift); pesoActual = peso real hoy por valor de mercado. Una acción comprada después de la cartera inicial YA queda incorporada al objetivo y a β/σ.",
+        holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,pesoObjetivo:+(h.w*100).toFixed(1),pesoActual:_aw[h.t]!=null?_aw[h.t]:null,montoCLP:Math.round(h.monto),beta:h.b}))};
       const exp=cpExposure((function(){const s={};PF.holdings.forEach(h=>s[h.t]=+(h.w*100).toFixed(1));return s;})());
       out.exposicionFactorial=exp.Z; out.erMultifactor=exp.erMF; out.correlacionMedia=+exp.PM.corrAvg.toFixed(2);
-      const IM=invMetrics();
+      const IM=_IMw;
       if(IM){const L=IM.last;out.seguimiento={dias:IM.elapsedDays,valorActualCLP:Math.round(L.val),capitalAportadoCLP:Math.round(IM.aport),gananciaPerdidaCLP:Math.round(L.val-IM.aport),
         retornoTWR_pct:+(L.ret*100).toFixed(2),retornoIPSA_pct:+(L.ipsaRet*100).toFixed(2),vsIPSA_pts:+(L.diff*100).toFixed(2),
         betaRealizado:IM.betaR!=null?+IM.betaR.toFixed(2):null,volatilidadRealizada_pct:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,
@@ -5487,7 +5499,8 @@ function opDo(){
   if(!(p>0)){window.alert("Indica el precio por acción (mayor que 0).");return;}
   const last=WEEKS.length?WEEKS[WEEKS.length-1]:null;
   let hd=PF.holdings.find(h=>h.t===t);
-  if(!hd){
+  const isNew=!hd;
+  if(isNew){
     if(side==="sell"){window.alert("No tienes "+t+" en la cartera.");return;}
     const st=operarUniverse().find(x=>x.t===t)||{t,n:t,s:"importada",c:"#1E5FD1",b:1};
     hd={t:st.t,n:st.n||t,s:st.s||"",c:st.c||"#1E5FD1",b:st.b||1,w:0,monto:0};PF.holdings.push(hd);
@@ -5509,6 +5522,23 @@ function opDo(){
   PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);   // mantiene el orden cronológico aunque la operación sea de una fecha anterior
   // NOTA: el precio de la operación NO se escribe en la base de precios (PRICEDB) — es un dato de contabilidad
   // (compra/venta), no un cierre de mercado. Se conserva solo en el libro de operaciones del proyecto (ev:trade).
+  // La operación cambió la composición REAL de la cartera → recalcular sus parámetros (β, σ, E(R), Sharpe, corr)
+  // desde el capital invertido actual, y si es una acción NUEVA, incorporarla al objetivo (para que no salga en
+  // 0% con drift falso). El objetivo del resto se reescala manteniendo su proporción; los montos reflejan el costo real.
+  try{
+    const IM2=invMetrics();
+    if(IM2&&IM2.cost){
+      const costs={};let totC=0;PF.holdings.forEach(h=>{const c=IM2.cost[h.t]||0;costs[h.t]=c;totC+=c;});
+      if(totC>0){
+        if(isNew){const wNew=(costs[t]||0)/totC,others=PF.holdings.filter(h=>h.t!==t),so=others.reduce((a,h)=>a+(h.w||0),0)||1;
+          others.forEach(h=>{h.w=(h.w||0)/so*(1-wNew);});const nh=PF.holdings.find(h=>h.t===t);if(nh)nh.w=+wNew.toFixed(4);}
+        PF.holdings.forEach(h=>{h.monto=Math.round(costs[h.t]||0);});
+        const selPct={};PF.holdings.forEach(h=>{selPct[h.t]=(costs[h.t]||0)/totC*100;});
+        const M=pMetricsUniverse(selPct,x=>{const h=PF.holdings.find(z=>z.t===x);return h?h.b:null;});
+        if(M){PF.bp=+M.bp.toFixed(3);PF.erCapm=+M.erCapm.toFixed(2);PF.sig=+M.sig.toFixed(2);PF.sharpe=+M.sharpe.toFixed(2);PF.corrAvg=+M.corrAvg.toFixed(2);}
+      }
+    }
+  }catch(e){}
   saveProjects();
   opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
   render();
@@ -5790,10 +5820,15 @@ function projSyncReal(p){
   try{const sc=projDefaultScenario(p);if(sc){const i=SCEN.findIndex(s=>String(s.id)===String(sc.id));if(i>=0)SCEN[i]=sc;else SCEN.push(sc);lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
   return true;
 }
-/* pesos REALES ejecutados (desde la compra weeks[0].qty): {sel:{t:%},amount} o null si aún no hay compra real */
+/* pesos REALES de las tenencias ACTUALES (capital invertido por acción, replay de TODAS las operaciones —
+   incluye compras/ventas posteriores a la compra inicial): {sel:{t:%},amount} o null si aún no hay compra real.
+   Antes se derivaba solo de weeks[0].qty, por lo que una acción comprada después (p.ej. ENEL en Operar) NO entraba
+   en β/σ/E(R) del proyecto. Ahora sí. Para carteras sin operaciones posteriores el resultado es idéntico. */
 function projRealSel(p){
   const b0=p&&p.weeks&&p.weeks[0];if(!b0||!b0.qty||!p.holdings||!p.holdings.length)return null;
-  const per={};let tot=0;p.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*((b0.prices&&b0.prices[hd.t])||0);per[hd.t]=m;tot+=m;});
+  let IM=null;try{IM=withProject(p,()=>invMetrics());}catch(e){}
+  const cost=IM&&IM.cost;
+  const per={};let tot=0;p.holdings.forEach(hd=>{const m=cost?(cost[hd.t]||0):((b0.qty[hd.t]||0)*((b0.prices&&b0.prices[hd.t])||0));per[hd.t]=m;tot+=m;});
   if(!(tot>0))return null;
   const sel={};p.holdings.forEach(hd=>{sel[hd.t]=+(per[hd.t]/tot*100).toFixed(4);});
   return {sel,amount:Math.round(tot)};
