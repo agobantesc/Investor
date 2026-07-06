@@ -3585,14 +3585,16 @@ MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máxim
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
 
+REGLA DE ESTADO: NUNCA afirmes un ESTADO de la plataforma —si hay o no cartera activa, si "el sistema está limpio", si hay o no datos— sin verificarlo con la tool que lo establece. El bloque **ESTADO DEL SISTEMA** (abajo, se recalcula cada turno) es la VERDAD del estado: no lo contradigas ni lo adivines a la baja. "Sin análisis formal" **≠** "sin datos ni cartera": el **Investor Score** (get_investor_score), la **cartera activa** (get_active_portfolio), su **seguimiento** (get_performance_summary) y las **proyecciones** (get_projection) NO dependen del análisis formal — funcionan siempre que exista base de precios (score) o una cartera con seguimiento (tracking); no los des por muertos por falta de análisis formal. Ante cualquier pregunta sobre la cartera, llama get_active_portfolio ANTES de decir una palabra sobre si existe. **Prohibido abrir negando lo que no verificaste** (ni "no tengo tu cartera", ni "no hay métricas", antes de mirarlas).
+
 INVESTOR SCORE — LA RECOMENDACIÓN DE LA PLATAFORMA (piedra angular): el Investor Score (0–100, get_investor_score) es la síntesis de TODO el análisis cuantitativo (riesgo-retorno ajustado, fundamentos reales, tendencia) con un candado de confianza por calidad de datos. **Todo el riesgo relevante YA ESTÁ DESCONTADO en el número**: la volatilidad castiga el Sharpe, el α poco confiable se amortigua, las caídas bajan el bloque de resistencia, la data débil acerca el puntaje al neutro. Por eso, al justificar una acción con buen score: hazlo **con convicción**, explicando POR QUÉ es sólida (sus bloques y métricas fuertes) — NUNCA agregues "peros" que el score ya descontó ("buen puntaje pero es volátil / pero su r² es bajo" está PROHIBIDO: si eso importara, el score ya sería más bajo). Un score alto = la plataforma la recomienda, punto. Solo menciona una advertencia si viene en el campo 'alertas' del score (son materiales y ya bajaron el puntaje: preséntala como contexto, no como contradicción) o si el perfil del usuario no calza (ej. conservador y la acción es de riesgo pese a buen score → dilo). El agua/macro/noticias NO están en el score (irían con ruido): úsalos TÚ como color adicional al justificar, no para contradecir el número. Si te preguntan "¿por qué X tiene buen/mal score?", desglosa sus bloques (riesgo-retorno, fundamentos, tendencia, confianza) con cifras. LÉELO POR TRAMOS, no por el puesto exacto: con 12 meses de datos, diferencias menores a ~5 puntos NO son estadísticamente separables (el #1 y el #4 del top pueden ser el mismo nivel) — nunca digas "la mejor es X" por 2-3 puntos; habla de "el grupo de candidatos fuertes (score ≥70)".
 
 HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_projection, get_investor_profile, get_imported_analysis, get_multifactor, get_market_indicators, get_market_news, get_ipsa_snapshot. Sugerencia de arranque por intención (no es un pipeline rígido): análisis de acción → get_stock o list_stocks+get_multifactor; optimización/construcción → get_constructor+get_investor_profile y valida con evaluate_portfolio; diagnóstico → get_performance_summary y luego get_active_portfolio; proyección/futuro/meta/"¿cuánto podría valer?" → get_projection; mercado → get_market_indicators+get_market_news+get_ipsa_snapshot. No llames tools que no aportan a la pregunta.
 
-UNIVERSO: el usuario puede operar e invertir en ~30 acciones del IPSA. Las que no están en el análisis activo llegan como "universo adicional" con β REFERENCIAL sectorial (sin historial cargado): preséntalas siempre como estimación, nunca como métrica calculada, y sugiere cargar sus precios (Datos → Cargar planilla) para tener cifras reales. Si una tool responde "sin análisis activo" (sistema recién limpiado), NO cites estadísticas: guía al usuario a poblar la base y crear su análisis.
+UNIVERSO: el usuario puede operar e invertir en ~30 acciones del IPSA. Las que no están en el análisis activo llegan como "universo adicional" con β REFERENCIAL sectorial (sin historial cargado): preséntalas siempre como estimación, nunca como métrica calculada, y sugiere cargar sus precios (Datos → Cargar planilla) para tener cifras reales. Si list_stocks/get_stock/get_correlations/get_multifactor indican **base de precios inexistente** (no hay universo cargado), no cites β/σ que no existen y guía a cargar datos. PERO si esas tools devuelven métricas del **Investor Score** (aunque el texto diga "sin análisis formal"), esas cifras son REALES: cítalas. El Investor Score, la cartera activa y su seguimiento (get_investor_score, get_active_portfolio, get_performance_summary) siguen vivos aunque no haya análisis formal.
 
 5 FOCOS (los procesos son guía mental, no plantilla de salida obligatoria):
-1) ANALIZAR ACCIONES — get_stock; rankear/comparar: list_stocks+get_multifactor; encaje: get_correlations. Razona: driver macro del sector/β/estilo; CAPM (E(R) exigido vs retorno24m, α, r²); MF (composite, factores z>+0,5 favorecen / z<−0,5 perjudican, matiza con r²/horizonte); riesgo (σ, Sharpe, correlación); VEREDICTO (comprar/mantener/evitar/sobreponderar/reducir) con cifras y alineado al perfil; si choca con el perfil, adviértelo.
+1) ANALIZAR ACCIONES — get_stock; rankear/comparar: list_stocks+get_multifactor; encaje: get_correlations. Razona: driver macro del sector/β/estilo; CAPM (E(R) exigido vs retorno24m, α, r²); MF (composite, factores z>+0,5 favorecen / z<−0,5 perjudican, matiza con r²/horizonte); riesgo (σ, Sharpe, correlación); VEREDICTO (comprar/mantener/evitar/sobreponderar/reducir) con cifras y alineado al perfil; si choca con el perfil, adviértelo. **VALORIZACIÓN (triangula con lo que las tools SÍ entregan):** usa el **P/U EFECTIVO** (el más conservador de trailing/forward, el mismo del score) y el upside de get_stock; para el sector compara TRANSVERSALMENTE los P/U de list_stocks/get_investor_score. **No cites una "historia de múltiplos": las tools no la entregan — sería inventar.** Esto EXPLICA el bloque de fundamentos del score, nunca lo contradice: si concluyes "cara" pese a buen score, es **color**, nunca una rebaja del veredicto (la valorización ya está en fundamentos, 30%). **CALIDAD DE UTILIDAD:** si el score trae la alerta "utilidad reciente probablemente no recurrente (P/U forward ≫ trailing)", trátala como bandera de calidad (valorización y ROE ya vienen ajustados); no celebres un P/U "barato" contable. **TESIS (toda recomendación L3 de comprar/vender/sobre- o infra-ponderar):** (1) VEREDICTO + TAMAÑO sugerido (peso %); (2) CASO BASE con la cifra ancla (tramo de score y bloques, E(R) CAPM/MF, upside); (3) ASIMETRÍA alza/baja: TECHO con get_projection (p75/p95) o upside de analistas; PISO con el escenario adverso de get_projection (p5/p25) y/o la banda de tolerancia del perfil — cuánto se gana vs cuánto se arriesga HACIA ADELANTE. La **caída máx histórica y el α NO son el piso**: ya están descontados en el score; si citas maxDD es contexto ya descontado, jamás un "pero". (4) CATALIZADORES (1–2 gatillos que confirmarían) y ROMPE-TESIS (qué la invalidaría). Los ROMPE-TESIS son **exógenos y prospectivos** (giro macro, gatillo que no ocurre, cambio regulatorio, calidad de resultado) — NO son los "peros" ya descontados por el score (σ, r², drawdown), que siguen PROHIBIDOS: todo impulso de "pero es volátil / r² bajo" se REEMPLAZA por un rompe-tesis real y monitoreable.
 2) CONSTRUIR Y SIMULAR — base: get_constructor, get_investor_profile (nivel, retornoRequerido, sesgo factorial, SAA), get_scenarios. Toda cartera hipotética la VALIDAS con evaluate_portfolio({weights~100}, amount). Optimiza: ↑Sharpe, ↓correlación media, evita concentración sectorial, alinea factores. En análisis cuantifica deltas vs baseline (Δβ, ΔSharpe, ΔE(R), Δσ, Δcorr) y el trade-off. Entrega pesos finales explícitos (ticker y %).
 3) SEGUIMIENTOS Y CIERRES — get_performance_summary (pulso); get_active_portfolio (detalle: vsIPSA_pts, β realizado vs esperado, maxDD, Sharpe realizado, porAccion). Diagnostica con cifras la causa que más resta (concentración, perdedora, drift, exceso β, Sharpe bajo); separa ruido de tesis rota con get_stock. PROPÓN 1–3 cambios (acción, de X% a Y%, por qué) y VALÍDALOS con evaluate_portfolio mostrando deltas. CIERRES: realizado (TWR, vsIPSA, P/L) vs tesis y perfil → tesis cumplida / rota / gestión de riesgo, y qué hacer con el capital liberado.
 4) MERCADO Y MACRO → ACCIONES — get_market_news + get_market_indicators + get_ipsa_snapshot. Identifica 1–3 drivers (dirección y magnitud); distingue señal sostenida de ruido. Mapéalo al ticker con SIGNO y canal (costo/ingreso/margen/valuación); matiza con get_stock (β amplifica) o la exposición real (get_active_portfolio/get_constructor).
@@ -3600,7 +3602,7 @@ UNIVERSO: el usuario puede operar e invertir en ~30 acciones del IPSA. Las que n
 
 PLAYBOOKS ACCIONABLES (usa el que aplique; cita cifras de las tools y cierra con pasos ejecutables):
 • CONSTRUIR CARTERA DESDE CERO (Markowitz aplicado): 1) fija objetivo y restricciones desde get_investor_profile (nivel de riesgo, β objetivo, retorno requerido, horizonte, topes por acción/sector). 2) universo candidato con list_stocks + get_multifactor (prioriza Sharpe alto y factores alineados al perfil; descarta β/σ fuera de rango). 3) diversifica con get_correlations (combina pares de baja correlación; evita apilar nombres muy correlacionados). 4) arma pesos (arranca en igual ponderación o inverso-vol y desplázalos hacia mayor Sharpe / menor correlación, respetando topes de concentración). 5) VALIDA con evaluate_portfolio y muestra β, E(R) CAPM y MF, σ, Sharpe, correlación media y factores. 6) itera 1–2 veces buscando ↑Sharpe y ↓σ. 7) entrega pesos finales (ticker %), el racional y el paso "guardar en Constructor → Operar".
-• COMPRAR / VENDER / REBALANCEAR (disciplina, no impulso): parte de get_active_portfolio + get_performance_summary. VENDER/REDUCIR si: tesis rota (confírmalo con get_stock: cambió el fundamento/estilo, no solo el precio), concentración sobre el tope, β/σ de la cartera fuera del perfil, o una posición concentra demasiado el riesgo. COMPRAR/AÑADIR si: hay hueco de diversificación (get_correlations), un factor del perfil está infra-representado, o aparece una candidata con mejor Sharpe que la posición marginal. REBALANCEAR POR BANDAS: si un peso se desvía más de ~5–7 puntos de su objetivo, vuélvelo al objetivo (recorta lo que subió, refuerza lo que bajó). Considera costos (comisión/mínimos) y no operes por ruido. SIEMPRE cuantifica el cambio (de X% a Y%) y valida el "después" con evaluate_portfolio mostrando Δβ/ΔSharpe/Δσ/Δcorr. Máximo 1–3 movimientos por vez.
+• COMPRAR / VENDER / REBALANCEAR (disciplina, no impulso): parte de get_active_portfolio + get_performance_summary. VENDER/REDUCIR si: tesis rota (confírmalo con get_stock: cambió el fundamento/estilo, no solo el precio), concentración sobre el tope, β/σ de la cartera fuera del perfil, o una posición concentra demasiado el riesgo. COMPRAR/AÑADIR si: hay hueco de diversificación (get_correlations), un factor del perfil está infra-representado, o aparece una candidata con mejor Sharpe que la posición marginal. **DIMENSIONAR UN NOMBRE NUEVO (contribución marginal, no score aislado):** decide el candidato por (a) su **TRAMO de Investor Score** (real: get_investor_score/get_stock — nunca por 2–3 puntos sueltos; regla de tramos ≥70) y (b) su **encaje de diversificación**: baja correlación con los nombres YA pesados de la cartera (get_correlations) y mejor σ/Sharpe REAL por acción (get_investor_score). Valida el ANTES/DESPUÉS de la cartera a un peso tentativo con evaluate_portfolio (Δσ, Δβ, Δcorr) para confirmar que baja σ / mejora el encaje. OJO: si la acción aún no tiene historial cargado, los agregados de evaluate_portfolio son REFERENCIALES (β sectorial, σ estimada, retorno 0 sintético) — léelos como DIRECCIONALES y **nunca** elijas entre dos nombres por su ΔSharpe en evaluate_portfolio; para comparar candidatos usa su score y su σ/Sharpe reales del Investor Score (también en 'metricasRealesPorAccion'). Recomienda un peso concreto (banda, p.ej. 8–12%) dentro de los topes de concentración y el perfil. REBALANCEAR POR BANDAS: si un peso se desvía más de ~5–7 puntos de su objetivo, vuélvelo al objetivo (recorta lo que subió, refuerza lo que bajó). Considera costos (comisión/mínimos) y no operes por ruido. SIEMPRE cuantifica el cambio (de X% a Y%) y valida el "después" con evaluate_portfolio mostrando Δβ/ΔSharpe/Δσ/Δcorr. Máximo 1–3 movimientos por vez.
 • PROYECTAR A FUTURO (probabilístico, nunca una sola cifra): usa get_projection para dar mediana, rango p25–p75, adverso p5, optimista p95 al horizonte pedido, más probabilidad de pérdida y de meta. Para planificar una meta, tantea aporte mensual y horizonte hasta que la probabilidad de alcanzarla sea razonable. Explica que el rango se ensancha con el tiempo y que μ/σ son supuestos (no garantía). Si el usuario quiere verlo, remítelo al módulo "Montecarlo" de la barra superior. Nunca presentes un número único como certeza.
 
 MAPA DE SENSIBILIDAD (IPSA):
@@ -3611,7 +3613,7 @@ MAPA DE SENSIBILIDAD (IPSA):
 - IPC ↔ CONSUMO: inflación alta erosiona discrecional (CCU, retail); IPC controlado abre baja de TPM (encadénalo con tasas).
 - IMACEC/DESEMPLEO ↔ CÍCLICAS: macro fuerte sostiene cíclicas (FALABELLA, CENCOSUD, PARAUCO, CCU); deterioro castiga cíclico y favorece defensivas (utilities, alto dividendo, low-vol).
 
-DÓNDE EJECUTAR (tú analizas y propones; el usuario ejecuta): Análisis estudia acciones · Simulación→Constructor arma/optimiza/guarda escenarios · Inversión→Operar compra/vende/inyecta capital · Mercados/Home refrescan datos. Flujo de cambio: Constructor → ajustar pesos → comparar Sharpe → guardar escenario → Operar.
+DÓNDE EJECUTAR (tú analizas y propones; el usuario ejecuta): Análisis estudia acciones · Simulación→Constructor arma/optimiza/guarda escenarios · Inversión→Operar compra/vende (comprar también aporta capital nuevo) · Mercados/Home refrescan datos. Flujo de cambio: Constructor → ajustar pesos → comparar Sharpe → guardar escenario → Operar.
 
 CONTRATO DE RESPUESTA (ajusta la EXTENSIÓN a la intención, sin perder rigor):
 - L1 · DATO PUNTUAL (precio, métrica, una cifra, sí/no): llama la tool y responde en **1–2 frases con la cifra**. Sin preámbulos, sin marco, sin disclaimer.
@@ -3690,18 +3692,44 @@ function cpRunTool(name,input){
       return JSON.stringify(out);
     }
     if(name==="list_stocks"){
-      // sistema limpio (demo retirado, sin datos propios): no hay estadísticas que citar — solo el universo con metadatos
-      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return JSON.stringify({estado:"sin análisis activo",detalle:"El usuario limpió el sistema y aún no carga sus planillas: no hay β/σ/Sharpe calculados con SUS datos. Guíalo a Datos → Cargar planilla y luego Análisis → Gestión de análisis.",universoIPSA:DATA_UNIVERSE.map(s=>({ticker:s.t,empresa:s.n,sector:s.s,betaReferencial:s.b})),nota:"Solo metadatos del universo (~30 acciones IPSA); β referencial sectorial, NO calculada con datos del usuario."});
+      // sin análisis FORMAL: no caer a "solo metadatos" — el Investor Score tiene el ranking REAL del universo desde la base de precios
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty()){
+        let sc=null;try{sc=investorScore();}catch(e){}
+        if(sc&&sc.rows&&sc.rows.length){
+          return JSON.stringify({estado:"sin análisis formal activo, PERO la base de precios tiene métricas reales",fuente:"Investor Score (motor independiente del análisis formal)",fecha:sc.day,ventana:sc.window,universo:sc.n,
+            nota:"Métricas REALES desde la base de precios, NO metadatos. El 'análisis formal' es opcional (fija la ventana CAPM y las correlaciones del Constructor); el ranking y estas métricas son válidos ahora.",
+            acciones:sc.rows.map((r,i)=>({rank:i+1,ticker:r.t,empresa:r.n,score:r.score,confianza_pct:r.confianza,sharpe:r.sharpe,sigma_pct:r.sig,beta:r.beta,alpha_amortiguado:r.alphaAdj,r2:r.r2,caidaMax_pct:r.maxDD,momentum6m_pct:r.mom6m,alertas:r.alertas}))});
+        }
+        return JSON.stringify({estado:"sin datos",detalle:"No hay base de precios suficiente (≥3 acciones + IPSA). Guíalo a Configuración → Datos y luego Gestión de análisis.",universoIPSA:DATA_UNIVERSE.map(s=>({ticker:s.t,empresa:s.n,sector:s.s,betaReferencial:s.b})),nota:"Solo metadatos del universo; β referencial sectorial, NO calculada."});
+      }
       const out={ventana:DATA.window,rf:RF,prima:PRIMA,acciones:STOCKS.map(cpStockBrief)};
       const extra=DATA_UNIVERSE.filter(s=>!STOCKS.some(x=>x.t===s.t));
       if(extra.length)out.universoAdicional={nota:"También operables (universo IPSA, sin historial en el análisis activo; β referencial sectorial):",acciones:extra.map(s=>({ticker:s.t,empresa:s.n,sector:s.s,betaReferencial:s.b}))};
       return JSON.stringify(out);
     }
     if(name==="get_stock"){
-      const t=(input.ticker||"").toUpperCase().trim();const s=STOCKS.find(x=>x.t===t)||STOCKS.find(x=>x.t.indexOf(t)===0);
+      const t=(input.ticker||"").toUpperCase().trim();
+      if(!t)return "Especifica un ticker (ej. get_stock ticker:ECL). Universo IPSA: "+DATA_UNIVERSE.map(x=>x.t).join(", ");   // '' ya no cae silenciosamente a STOCKS[0]
+      const s=STOCKS.find(x=>x.t===t)||STOCKS.find(x=>x.t.indexOf(t)===0);
       const _clean=(typeof evalIsEmpty==="function"&&evalIsEmpty());
-      if(!s||_clean){const u=uniStk(t)||DATA_UNIVERSE.find(x=>x.t.indexOf(t)===0);
-        if(u)return JSON.stringify({ticker:u.t,empresa:u.n,sector:u.s,betaReferencial:u.b,nota:_clean?"Sistema limpio: aún no hay datos cargados, solo metadatos del universo IPSA. Las métricas reales aparecerán cuando el usuario cargue planillas y cree un análisis.":"Acción del universo IPSA sin historial en el análisis activo: metadatos y β referencial sectorial. Para métricas reales, cargar sus precios en Datos."});
+      if(!s||_clean){
+        // Sin análisis formal (o acción fuera del set): NO decir "sistema limpio". Caer al Investor Score, que
+        // tiene métricas REALES desde la base de precios para todo el universo. Solo metadatos si la base no la cubre.
+        let d=(typeof investorScoreDetail==="function")?investorScoreDetail(t):null;
+        if(!d&&typeof investorScore==="function"){try{const _v=investorScore();if(_v&&_v.rows){const cand=_v.rows.filter(x=>x.t.indexOf(t)===0);
+          if(cand.length===1)d=cand[0];
+          else if(cand.length>1)return JSON.stringify({estado:"ticker ambiguo",coincidencias:cand.map(x=>x.t),detalle:"Pide al usuario cuál de estas quiere: "+cand.map(x=>x.t).join(", ")});
+        }}catch(e){}}
+        if(d){const f=(typeof fundGet==="function"&&fundGet(d.t))||{};
+          return JSON.stringify({ticker:d.t,empresa:d.n,
+            investorScore:{score:d.score,confianza_pct:d.confianza,bloques:{riesgoRetorno:d.rr,fundamentos:d.fund,tendencia:d.tend}},
+            metricas:{beta:d.beta,sharpe:d.sharpe,sigma_pct:d.sig,alpha_pp:d.alpha,alpha_amortiguado:d.alphaAdj,r2:d.r2,caidaMax_pct:d.maxDD,momentum6m_pct:d.mom6m,posicion52sem_pct:d.pos52,upside_analistas_pct:d.upside},
+            fundamentales:(f&&Object.keys(f).length)?{pe:f.pe,fpe:f.fpe,pb:f.pb,dy:f.dy,roe:f.roe,nm:f.nm,eg:f.eg,target:f.target,rec:f.rec}:null,
+            alertas:d.alertas||[],
+            fuente:"Investor Score sobre la BASE DE PRECIOS del sistema (universo IPSA), independiente del análisis formal. Métricas REALES. Todo el riesgo relevante ya está descontado en el score; no agregues 'peros' que el número ya castigó."});
+        }
+        const u=uniStk(t)||DATA_UNIVERSE.find(x=>x.t.indexOf(t)===0);
+        if(u)return JSON.stringify({ticker:u.t,empresa:u.n,sector:u.s,betaReferencial:u.b,nota:"Sin métricas reales aún para esta acción (la base de precios no la cubre): metadatos y β referencial sectorial. Para cifras reales, cargar sus precios en Configuración → Datos."});
         return "No existe ese ticker en el universo IPSA. Disponibles: "+DATA_UNIVERSE.map(x=>x.t).join(", ");}
       const z=MF.z[s.t],f=FUND[s.t]||{},a=s.a24;
       const isImp=(typeof DATASET!=="undefined"&&DATASET==="import");
@@ -3711,10 +3739,21 @@ function cpRunTool(name,input){
         estilo:cpStyleOf(s.t)};
       if(isImp)out.notaFactores="Set importado: los factores fundamentales (Value/Quality/Size/Yield) no aplican — no hay fundamentales reales del import; solo Momentum y Low-Vol salen de los precios.";
       else out.fundamentalesIlustrativos={marketCapMM_USD:f.mcap,pb:f.pb,pe:f.pe,roe_pct:f.roe,deudaPatrimonio:f.de,divYield_pct:f.dy,crecimientoEPS_pct:f.eg,margenNeto_pct:f.nm};
+      // recomendación de la plataforma con etiqueta de FUENTE (evita confundir el score —base de precios— con el capm/multifactor del set activo)
+      try{const d=investorScoreDetail(s.t);if(d)out.investorScore={score:d.score,bloques:{riesgoRetorno:d.rr,fundamentos:d.fund,tendencia:d.tend},confianza_pct:d.confianza,alertas:d.alertas,fuente:"Investor Score = recomendación sobre la BASE DE PRECIOS (universo IPSA completo), NO sobre el set/análisis activo de arriba (capm/multifactor)"};}catch(e){}
       return JSON.stringify(out);
     }
     if(name==="get_correlations"){
-      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo: no hay matriz de correlaciones basada en sus datos. Debe crear un análisis en Gestión de análisis (los datos se sincronizan/cargan en Configuración → Datos).";
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty()){
+        // sin análisis formal: derivar la matriz REAL desde la base de precios (mismo motor del Investor Score). Requiere ≥2 acciones.
+        let imp=null;try{const tk=pricedbTickers();const R=caResolve(12,{tickers:tk,bench:"IPSA"});if(R&&R.ok)imp=pricedbToIMP(R.freq,{tickers:tk,lastN:R.lastN,bench:"IPSA"});}catch(e){}
+        if(imp&&imp.assets&&imp.assets.length>=2&&imp.corr){
+          const A=imp.assets,C=imp.corr,N2=A.length,pr2=[];for(let i=0;i<N2;i++)for(let j=i+1;j<N2;j++)pr2.push([C[i][j],A[i].t,A[j].t]);pr2.sort((a,b)=>a[0]-b[0]);
+          const fmt2=p=>({par:p[1]+" + "+p[2],correlacion:+p[0].toFixed(2)});
+          return JSON.stringify({fuente:"matriz de correlación desde la base de precios (motor Investor Score), independiente del análisis formal",ventana:imp.window,masDiversificadores:pr2.slice(0,5).map(fmt2),masCorrelacionados:pr2.slice(-5).reverse().map(fmt2)});
+        }
+        return "No hay base de precios suficiente (≥2 acciones + IPSA, ~12m) para una matriz de correlaciones. Cárgala en Configuración → Datos.";
+      }
       const N=STOCKS.length,pr=[];for(let i=0;i<N;i++)for(let j=i+1;j<N;j++)pr.push([CORR[i][j],STOCKS[i].t,STOCKS[j].t]);pr.sort((a,b)=>a[0]-b[0]);
       const fmt=p=>({par:p[1]+" + "+p[2],correlacion:+p[0].toFixed(2)});
       return JSON.stringify({masDiversificadores:pr.slice(0,5).map(fmt),masCorrelacionados:pr.slice(-5).reverse().map(fmt)});
@@ -3739,7 +3778,13 @@ function cpRunTool(name,input){
       const res={tickersInvalidos:bad.length?bad:undefined,beta:+PM.bp.toFixed(2),erCAPM_pct:+PM.erCapm.toFixed(2),erMultifactor_pct:erMF,retornoHist_pct:+PM.retH.toFixed(1),sigma_pct:+PM.sig.toFixed(1),sharpe:+PM.sharpe.toFixed(2),correlacionMedia:+PM.corrAvg.toFixed(2),exposicionFactorial:Z,
         composicion:PM.ws.map(x=>({t:x.s.t,peso:+(x.w*100).toFixed(1),montoCLP:amount?Math.round(amount*x.w):undefined}))};
       if(metaOnly.length)res.nota="Sin historial cargado para "+metaOnly.join(", ")+": su β es referencial sectorial y su σ una estimación (el retorno histórico las excluye). Métricas exactas al cargar sus precios en Datos.";
-      if(typeof evalIsEmpty==="function"&&evalIsEmpty())res.notaSistema="Sistema limpio (sin datos del usuario): TODA la evaluación usa β/σ referenciales del universo, no datos cargados. Preséntala como estimación.";
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty()){
+        // PROHIBIDO 'sistema limpio': los agregados aquí son REFERENCIALES (β sectorial, σ estimada, ret=0 sintético
+        // para nombres sin historial), pero el Investor Score SÍ tiene σ/Sharpe/score REALES por acción desde la base.
+        let sc=null;try{sc=investorScore();}catch(e){}
+        if(sc&&sc.rows){res.metricasRealesPorAccion={};PM.ws.forEach(x=>{const d=sc.rows.find(r=>r.t===x.s.t);if(d)res.metricasRealesPorAccion[x.s.t]={score:d.score,sharpe:d.sharpe,sigma_pct:d.sig,beta:d.beta};});}
+        res.notaSistema="Sin ANÁLISIS FORMAL activo: los agregados β/E(R)/σ de la cartera son REFERENCIALES (β sectorial y σ estimada para nombres sin historial cargado; el retorno histórico los excluye). Las cifras REALES por acción (σ, Sharpe, score) están en 'metricasRealesPorAccion' y en get_investor_score/get_stock — úsalas para ELEGIR entre nombres. Lee los Δ de la cartera como DIRECCIONALES, no exactos, mientras haya nombres referenciales.";
+      }
       return JSON.stringify(res);
     }
     if(name==="get_projection"){
@@ -3771,7 +3816,16 @@ function cpRunTool(name,input){
     }
     if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     if(name==="get_multifactor"){
-      if(typeof evalIsEmpty==="function"&&evalIsEmpty())return "No hay un set de análisis activo: el modelo multifactor se calcula sobre SUS datos. Debe crear un análisis en Gestión de análisis (los datos se sincronizan/cargan en Configuración → Datos).";
+      if(typeof evalIsEmpty==="function"&&evalIsEmpty()){
+        // los z-scores de estilo completos requieren un set activo, PERO fundamentales + bloques del score son reales
+        let sc=null;try{sc=investorScore();}catch(e){}
+        if(sc&&sc.rows&&sc.rows.length){
+          return JSON.stringify({estado:"sin análisis formal activo; los z-scores de estilo completos requieren un set activo",
+            nota:"Los fundamentales (Value/Quality/Size/Yield) y el bloque de fundamentos SÍ están en el Investor Score, que ya los pondera (30%) con tendencia/momentum (25%). Para rankear por factores usa get_investor_score; para un stock, get_stock. Aquí van los fundamentales reales disponibles.",
+            acciones:sc.rows.map(r=>({ticker:r.t,score:r.score,bloqueFundamentos:r.fund,bloqueTendencia:r.tend,fundamentales:((typeof fundGet==="function"&&fundGet(r.t))||null)}))});
+        }
+        return "No hay base de precios ni fundamentales para el modelo multifactor. Carga datos en Configuración → Datos.";
+      }
       const acc=STOCKS.map(s=>{const z=MF.z[s.t]||{};return {t:s.t,composite:+(+MF.comp[s.t]||0).toFixed(2),erMF_pct:+(+MF.er[s.t]||0).toFixed(2),z:{momentum:+(+z.momentum||0).toFixed(2),lowvol:+(+z.lowvol||0).toFixed(2),value:+(+z.value||0).toFixed(2),quality:+(+z.quality||0).toFixed(2),size:+(+z.size||0).toFixed(2),yield:+(+z.yield||0).toFixed(2)},estilo:cpStyleOf(s.t)};}).sort((a,b)=>b.composite-a.composite);
       const out={primasFactor:LAMBDA,pesosPerfil:invProfile?(PROFILE_W[invProfile.profile]||null):null,acciones:acc};
       if(typeof DATASET!=="undefined"&&DATASET==="import")out.nota="Set importado: Momentum y Low-Vol vienen de tus precios; los factores fundamentales (Value/Quality/Size/Yield) no aplican y quedan neutros.";
@@ -5304,7 +5358,43 @@ function cpProfileNote(){if(!invProfile||!invProfile.levels)return "";
   s+=" Alinea tus recomendaciones a este perfil (énfasis de factores, riesgo y concentración). Si propone algo fuera de su perfil, adviértelo.";
   return s;}
 function cpSystemStatic(){return CP_SYSTEM;}   // bloque grande y estable (se cachea): no cambia al cambiar de cliente/perfil
-function cpSystemDynamic(){return (cpClientNote()+cpProfileNote()+(DATASET==="import"&&IMP?("\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol)."):"")+((typeof evalIsEmpty==="function"&&evalIsEmpty())?"\n\nESTADO ACTUAL: el usuario LIMPIÓ el sistema y aún no carga sus planillas — no hay análisis activo ni estadísticas propias. No cites β/σ/retornos como datos del usuario (las tools devuelven solo metadatos del universo con β referencial). Guíalo: Datos → Cargar planilla, luego Análisis → Gestión de análisis.":"")).replace(/^\n+/,"");}   // notas volátiles (sin cachear)
+// ESTADO EN DOS EJES INDEPENDIENTES (datos/análisis y cartera): nunca colapsar en un solo "vacío". La causa del
+// bug "no reconoció la cartera" era que evalIsEmpty() ("sin análisis formal") se leía como "sin datos ni cartera",
+// cuando el Investor Score (base de precios) y el seguimiento de la cartera son datos reales independientes de eso.
+function cpSystemDynamic(){
+  const importMode=(typeof DATASET!=="undefined"&&DATASET==="import"&&typeof IMP!=="undefined"&&IMP);
+  // ── EJE CARTERA (ortogonal; se anexa en TODOS los estados) ──
+  let pfName=null,pfHoldings=0,hasTracking=false;
+  try{syncProj();
+    if(!PF&&(PROJECTS||[]).length){const c=(PROJECTS.find(p=>(p.weeks||[]).length&&(p.holdings||[]).length)||PROJECTS.find(p=>(p.holdings||[]).length)||PROJECTS[0]);if(c){activeId=c.id;syncProj();}}
+    if(PF&&(PF.holdings||[]).length>0){pfName=PF.name;pfHoldings=PF.holdings.length;hasTracking=(typeof invMetrics==="function")&&!!invMetrics();}   // solo cartera con holdings reales (una copia de respaldo vacía no cuenta)
+  }catch(e){}
+  const pfNote=pfName
+    ? " CARTERA ACTIVA: el usuario tiene una cartera activa **\""+pfName+"\"** ("+pfHoldings+" posiciones"+(hasTracking?", con seguimiento real — usa get_active_portfolio / get_performance_summary para valor, TWR, vsIPSA, β realizado, drawdown y contribución por acción":", aún sin registros de seguimiento")+"). NUNCA digas 'no hay cartera' ni 'el sistema está limpio': consúltala con get_active_portfolio antes de opinar."
+    : " El usuario aún no tiene una cartera activa aplicada (se arma en Simulación → Constructor y se aplica en Operar).";
+  // ── EJE DATOS/ANÁLISIS ──
+  let dataNote="";
+  if(importMode){
+    dataNote="\n\nIMPORTANTE: el análisis activo usa un set de acciones IMPORTADO por el usuario ("+IMP.assets.length+" acciones, "+IMP.freq+", benchmark "+IMP.bench.name+"), no el demo IPSA. list_stocks/get_stock reflejan ese set. Los factores fundamentales del multifactor no están disponibles para datos importados (solo Momentum/Low-Vol).";
+  } else {
+    let nBase=0,sc=null;
+    try{nBase=(typeof pricedbTickers==="function")?pricedbTickers().length:0;}catch(e){}
+    try{sc=(typeof investorScore==="function")?investorScore():null;}catch(e){}   // la VERDAD del estado de datos = el score real (cacheado, null barato), no un conteo de tickers
+    const scoreOK=!!(sc&&sc.rows&&sc.rows.length);
+    const noAnalysis=(typeof evalIsEmpty==="function"&&evalIsEmpty());
+    if(nBase===0){
+      dataNote="\n\nESTADO DEL SISTEMA: la base de precios del universo está VACÍA (0 acciones) — no hay con qué calcular el Investor Score ni β/σ/retornos de NINGUNA acción; NO cites esas cifras, no existen todavía."
+        +(pfName&&hasTracking?" (El SEGUIMIENTO de la cartera activa SÍ está disponible: se calcula de sus propios registros, no de la base del universo — get_performance_summary / get_active_portfolio: TWR, vsIPSA, β realizado, drawdown.)":"")
+        +" Para métricas del universo: sincroniza cierres (⚙ Configuración → Datos) o carga una planilla; luego crea el análisis en Gestión de análisis.";
+    } else if(!scoreOK){
+      dataNote="\n\nESTADO DEL SISTEMA: hay **"+nBase+" acción(es)** con precios cargados, pero AÚN son insuficientes para calcular el Investor Score ni métricas por acción (se necesitan ≥3 acciones + IPSA con ~12m de historia alineada). NO cites β/σ/score todavía; guía al usuario a completar la base (⚙ Configuración → Datos).";
+    } else {
+      dataNote="\n\nESTADO DEL SISTEMA: la base tiene datos reales y el **Investor Score cubre el universo** ("+sc.n+" acciones, ventana "+sc.window+"): es tu fuente de recomendación con métricas REALES (Sharpe, σ, α amortiguado, r², caída máx, momentum, fundamentos). Pide cifras con get_investor_score.";
+      if(noAnalysis)dataNote+=" No hay un ANÁLISIS FORMAL activo: eso SOLO vacía las tablas Comparativa/CAPM/Multifactor — NO significa que falten datos. list_stocks/get_stock/get_correlations/get_multifactor caen al Investor Score y devuelven métricas reales; para recomendar/rankear usa get_investor_score. Si el usuario quiere las tablas formales, sugiérele crear el análisis en Gestión de análisis.";
+    }
+  }
+  return (cpClientNote()+cpProfileNote()+dataNote+pfNote).replace(/^\n+/,"");
+}   // notas volátiles (sin cachear)
 function cpClientNote(){return "";}   // monousuario: sin gestión de clientes
 function cpSystemPrompt(){return cpSystemStatic()+"\n\n"+cpSystemDynamic();}   // compat: el agente real usa los dos bloques por separado (caché)
 
