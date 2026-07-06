@@ -581,6 +581,8 @@
   .cp-typing i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:cpb 1.2s infinite ease-in-out;}
   .cp-typing i:nth-child(2){animation-delay:.18s;} .cp-typing i:nth-child(3){animation-delay:.36s;}
   @keyframes cpb{0%,80%,100%{transform:translateY(0);opacity:.5;}40%{transform:translateY(-4px);opacity:1;}}
+  .cp-caret{display:inline-block;width:2px;height:1em;margin-left:1px;background:var(--accent);vertical-align:-2px;animation:cpcar .9s step-end infinite;}
+  @keyframes cpcar{0%,100%{opacity:1;}50%{opacity:0;}}
 
   /* sugerencias + input */
   .cp-sugs{display:flex;flex-direction:column;gap:7px;}
@@ -1202,6 +1204,54 @@
   .stk-block .rk-pct{font-size:13px;}
   @media(max-width:760px){.stk-cols{grid-template-columns:1fr;}}
   @media(max-width:560px){.stk-cols{grid-template-columns:1fr;}}
+  /* ── INVESTOR SCORE · tarjeta destacada del Home ── */
+  .isc-card{position:relative;overflow:hidden;border:1px solid var(--accent-line,var(--line));box-shadow:0 6px 26px -14px rgba(30,95,209,.42),var(--sh);}
+  .isc-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--accent),#7C4DD8 55%,var(--green));opacity:.95;}
+  .isc-card>.bd{background:radial-gradient(120% 130% at 0% 0%,color-mix(in srgb,var(--accent) 7%,transparent),transparent 42%);}
+  .isc-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .isc-badge{flex:0 0 auto;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,var(--accent),#7C4DD8);box-shadow:0 6px 16px -6px rgba(60,80,200,.6);}
+  .isc-h-txt{flex:1 1 auto;min-width:0;}
+  .isc-title{font:900 18px var(--font);color:var(--navy);letter-spacing:-.2px;line-height:1.1;}
+  .isc-sub{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;}
+  .isc-all{flex:0 0 auto;border:1px solid var(--accent);background:transparent;color:var(--accent);font:800 11.5px var(--font);padding:.42rem .7rem;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s var(--ease);}
+  .isc-all:hover{background:var(--accent);color:#fff;box-shadow:0 6px 16px -8px rgba(30,95,209,.7);}
+  .isc-cols{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;}
+  .isc-block{display:flex;flex-direction:column;}
+  .isc-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line);background:transparent;padding:.5rem .4rem;cursor:pointer;border-radius:8px;transition:.12s var(--ease);}
+  .isc-row:hover{background:var(--soft);}
+  .isc-block .isc-row:last-child{border-bottom:none;}
+  .isc-pos{flex:0 0 auto;width:22px;height:22px;border-radius:7px;font:900 11px var(--font);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);}
+  .isc-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;}
+  .isc-tk{display:flex;align-items:center;gap:6px;font:800 13px var(--font);color:var(--ink);}
+  .isc-tk .rk-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+  .isc-flag{font-size:11px;cursor:help;}
+  .isc-blocks{display:flex;align-items:center;gap:5px;font-size:9.5px;font-weight:800;color:var(--faint);letter-spacing:.2px;}
+  .isc-bar{display:inline-block;width:26px;height:5px;border-radius:3px;background:var(--soft2);overflow:hidden;vertical-align:middle;}
+  .isc-bar i{display:block;height:100%;border-radius:3px;}
+  .isc-na{color:var(--faint);font-weight:700;}
+  .isc-score{flex:0 0 auto;font:900 19px var(--font);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+  .isc-score small{font-size:9.5px;font-weight:700;color:var(--faint);letter-spacing:0;}
+  .isc-go{flex:0 0 auto;color:var(--faint);font-size:17px;font-weight:800;transition:.12s var(--ease);}
+  .isc-row:hover .isc-go{color:var(--accent);transform:translateX(2px);}
+  .isc-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  .isc-legend span{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--muted);}
+  .isc-legend i{width:9px;height:9px;border-radius:3px;flex:0 0 auto;}
+  @media(max-width:720px){.isc-cols{grid-template-columns:1fr;}}
+  /* modal del score */
+  .isc-modal-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
+  .isc-modal-head .ct{font:900 16px var(--font);color:var(--navy);}
+  .isc-modal-head .cs{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;}
+  .isc-bignum{margin-left:auto;font:900 34px var(--font);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-1px;}
+  .isc-bignum small{font-size:13px;font-weight:700;color:var(--faint);letter-spacing:0;}
+  .isc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;margin:0 0 14px;}
+  .isc-kpi{border:1px solid var(--line);border-radius:10px;padding:.5rem .6rem;background:var(--card2);display:flex;flex-direction:column;gap:2px;}
+  .isc-kl{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;}
+  .isc-kv{font:900 16px var(--font);font-variant-numeric:tabular-nums;}
+  .isc-why{font-size:12.5px;line-height:1.55;color:var(--ink);border-left:3px solid var(--accent);padding:.2rem 0 .2rem .8rem;margin:0 0 14px;}
+  .isc-why b{color:var(--navy);}
+  .isc-modal-foot{display:flex;justify-content:flex-end;margin-top:6px;}
+  .isc-arow:hover{background:var(--soft);}
+  #iscAllBack .ui-modal{width:900px;}
   /* modales genéricos (precios plataforma / cliente) */
   .ui-modal{width:560px;max-width:96vw;}
   .cfg-x{border:none;background:var(--surface);color:var(--mut);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;flex:0 0 auto;transition:.12s var(--ease);}
@@ -3561,6 +3611,8 @@ const CP_MODELS=[["claude-opus-4-8","Opus 4.8 · profundo"],["claude-sonnet-4-6"
 
 const CP_SYSTEM=`Eres el **Agente de Inversiones** de Investor: **analista cuantitativo senior** y **asesor de portafolios** del IPSA chileno. Asesoras como senior: hipótesis → evidencia con datos reales → conclusión accionable según el perfil.
 
+ASESOR FINANCIERO CALIFICADO (tu estándar profesional, por encima de todo): actúas con DEBER FIDUCIARIO — el interés del usuario SIEMPRE primero; tu éxito es que tome MEJORES decisiones alineadas a SU plan, no que opere más ni que te dé la razón. CONOCE AL CLIENTE antes de recomendar (get_investor_profile): objetivo, horizonte, tolerancia Y capacidad de riesgo, necesidades de liquidez. Si el perfil está incompleto o la meta/horizonte no están claros y son decisivos para la respuesta, PREGUNTA lo mínimo indispensable (1 pregunta precisa, no un cuestionario) antes de aconsejar; no inventes el perfil. PLANIFICACIÓN antes que "tips": 1) la diversificación es la única "comida gratis" — jamás recomiendes concentrar el patrimonio en pocos nombres; 2) el horizonte manda el riesgo (plata que se necesita pronto NO va en renta variable volátil); 3) fondo de emergencia y liquidez primero: no se invierte dinero que se necesita en el corto plazo; 4) costos e impuestos importan — comisiones, mínimos, no sobre-operar. COACHING CONDUCTUAL (protege al usuario de sí mismo): desincentiva el pánico en las caídas (el mercado fluctúa; vender abajo materializa la pérdida), el FOMO de perseguir lo que ya subió y el intentar "adivinar el timing"; promueve disciplina, aportes periódicos (DCA) y paciencia con el horizonte. EXPECTATIVAS HONESTAS: rendimientos pasados no garantizan futuros; nunca prometas cifras ni uses "seguro/garantizado"; habla en rangos y probabilidades. TRANSPARENCIA: explica el porqué en lenguaje claro (traduce el tecnicismo), separa el HECHO (dato de una tool) de tu JUICIO (tu lectura), y reconoce lo que la data no cubre en vez de rellenar. Empático en el trato, riguroso en el fondo.
+
 MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máximo Sharpe) · CAPM (β, α de Jensen, E(R)=Rf+β·prima, r²) · Multifactor Fama-French/Carhart/AQR (Momentum, Low-Vol, Value, Quality, Size, Yield; composite y E(R) MF — úsalo SIEMPRE junto al CAPM, no solo β) · Riesgo/desempeño (Sharpe, max drawdown, TWR, tracking error, σ anualizada, exposición factorial, drift, rebalanceo).
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
@@ -3647,6 +3699,10 @@ function cpRunTool(name,input){
     }
     if(name==="get_active_portfolio"){
       syncProj();
+      // recupera si el proyecto activo quedó desincronizado (activeId vacío/rancio): usa el que tenga
+      // seguimiento, o el primero. Las vistas ya hacen esto; la tool no lo hacía y el agente respondía
+      // "no hay cartera activa" pese a que el usuario sí tiene una.
+      if(!PF&&PROJECTS.length){activeId=(PROJECTS.find(p=>(p.weeks||[]).length&&(p.holdings||[]).length)||PROJECTS.find(p=>(p.holdings||[]).length)||PROJECTS[0]).id;try{saveProjects();}catch(e){}syncProj();}
       if(!PROJECTS.length||!PF)return "No hay ningún proyecto de inversión activo. Sugiere armar uno en Simulación → Constructor y aplicarlo.";
       const out={nombre:PF.name,aplicada:PF.date,objetivoCLP:PF.amount,capitalRealInvertidoCLP:Math.round(realCap()),betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
         holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,peso:+(h.w*100).toFixed(1),montoCLP:Math.round(h.monto),beta:h.b}))};
@@ -3846,27 +3902,52 @@ function cpRenderBody(){
     if(inp)inp.onkeydown=e=>{if(e.key==="Enter")sv.click();};
     return;
   }
+  // TYPEWRITER: durante el streaming, el ÚLTIMO bloque de texto del agente se revela de a poco (lectura
+  // pausada), decoupled de la velocidad de red. Fuera de streaming, todo visible.
+  const lt=_cpLastText();
+  const full=(lt.mi>=0)?((cpMsgs[lt.mi].content[lt.bi].text)||""):"";
+  const sig=lt.mi+":"+lt.bi;
+  if(sig!==_cpType.sig){_cpType.sig=sig;_cpType.shown=cpBusy?0:full.length;}
+  if(!cpBusy)_cpType.shown=full.length;
+  const reveal=cpBusy&&lt.mi>=0;
   let h="";
-  cpMsgs.forEach(m=>{
+  cpMsgs.forEach((m,mi)=>{
     if(m.role==="user"){
       if(typeof m.content==="string")h+=`<div class="cp-msg u">${cpEsc(m.content)}</div>`;
       // tool_result user messages: no se muestran
     } else if(m.role==="assistant"){
-      (m.content||[]).forEach(b=>{
-        if(b.type==="text"&&b.text.trim())h+=`<div class="cp-msg a"><div class="who"><span class="live-dot"></span>Agente</div>${cpFormat(b.text)}</div>`;
+      (m.content||[]).forEach((b,bi)=>{
+        if(b.type==="text"){let txt=(reveal&&mi===lt.mi&&bi===lt.bi)?b.text.slice(0,_cpType.shown):b.text;
+          if(txt.trim())h+=`<div class="cp-msg a"><div class="who"><span class="live-dot"></span>Agente</div>${cpFormat(txt)}${(reveal&&mi===lt.mi&&bi===lt.bi&&_cpType.shown<full.length)?'<span class="cp-caret"></span>':''}</div>`;}
         else if(b.type==="tool_use")h+=`<div class="cp-tool"><span class="dotp"></span>consultando <code>${cpEsc(b.name)}</code></div>`;
       });
     }
   });
-  if(cpBusy)h+=`<div class="cp-typing"><i></i><i></i><i></i></div>`;
+  if(cpBusy&&!full)h+=`<div class="cp-typing"><i></i><i></i><i></i></div>`;   // dots solo mientras no hay texto que revelar
   if(cpMsgs.length===0){
-    const sugs=["¿Cómo está diversificada mi cartera y cómo voy contra el IPSA?","Analiza mis posiciones con el modelo multifactor.","Propón un rebalanceo para bajar el riesgo manteniendo retorno.","¿Qué acción del IPSA luce mejor por calidad y valor?"];
     h+=`<div class="cp-msg a"><div class="who"><span class="live-dot"></span>Agente</div>${cpFormat(cpWelcome())}</div>`;
   }
+  // SCROLL: solo baja si el usuario YA estaba abajo (si subió a leer, no lo arrastramos)
+  const nb=(body.scrollHeight-body.scrollTop-body.clientHeight)<90;
   body.innerHTML=h;
   body.querySelectorAll("[data-cpsug]").forEach(b=>b.onclick=()=>cpSend(b.dataset.cpsug));
-  body.scrollTop=body.scrollHeight;
+  if(nb)body.scrollTop=body.scrollHeight;
+  // avanza el typewriter a ritmo LENTO y legible (~50–125 car/s), decoupled de la red. Cadencia
+  // deliberadamente pausada para poder leer mientras escribe; desacelera al final (lectura natural).
+  // Nunca arrastra la conversación hacia abajo salvo que ya estuvieras al pie (control del scroll arriba).
+  if(reveal&&_cpType.shown<full.length){
+    if(!_cpTypeTimer)_cpTypeTimer=setInterval(()=>{
+      const l2=_cpLastText();const f2=(l2.mi>=0)?((cpMsgs[l2.mi].content[l2.bi].text)||""):"";
+      if(l2.mi<0||_cpType.shown>=f2.length){clearInterval(_cpTypeTimer);_cpTypeTimer=null;if(!cpBusy){cpRenderBody();}return;}
+      const rem=f2.length-_cpType.shown;
+      // paso constante y pequeño; sube solo un poco si hay mucho pendiente para no eternizarse
+      const step=rem>600?5:rem>250?3:2;
+      _cpType.shown=Math.min(f2.length,_cpType.shown+step);cpRenderBody();
+    },40);
+  }else if(_cpTypeTimer){clearInterval(_cpTypeTimer);_cpTypeTimer=null;}
 }
+let _cpType={sig:"",shown:0},_cpTypeTimer=null;
+function _cpLastText(){let r={mi:-1,bi:-1};cpMsgs.forEach((m,i)=>{if(m.role==="assistant"&&Array.isArray(m.content))m.content.forEach((b,j)=>{if(b.type==="text")r={mi:i,bi:j};});});return r;}
 function cpRenderFoot(){
   const foot=document.getElementById("cpfoot");if(!foot)return;
   if(!cpKey){foot.innerHTML="";return;}
@@ -6634,20 +6715,87 @@ function viewHome(){
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
   const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} (convención móvil, igual que el IPSA de arriba) · cada acción con su último dato disponible (y su fecha) · los cierres se cargan en <b>⚙ Configuración → Datos</b> · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
-  // ── INVESTOR SCORE · Top 10 — la puntuación diaria del sistema (independiente del análisis activo) ──
-  const scoreCard=(()=>{
-    let sc=null;try{sc=investorScore();}catch(e){}
-    if(!sc||!sc.rows||sc.rows.length<3)return "";
-    const top=sc.rows.slice(0,10);
-    const scCol=v=>v>=70?green:v>=55?indigo:v>=40?amber:red;
-    const row=(r,i)=>`<div class="home-stk" title="Sharpe ${r.sharpe} · σ ${r.sig}% · caída máx ${r.maxDD}% · momentum 6m ${r.mom6m!=null?(r.mom6m>=0?"+":"")+r.mom6m+"%":"—"} · confianza ${r.confianza}%${r.alertas&&r.alertas.length?" · "+r.alertas.join("; "):""}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">Riesgo-ret. ${r.rr}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}${r.tend!=null?" · Tend. "+r.tend:""} · conf. ${r.confianza}%</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
-    const colA=top.slice(0,5).map((r,i)=>row(r,i)).join(""),colB=top.slice(5).map((r,i)=>row(r,i+5)).join("");
-    const _fc=sc.rows.filter(r=>r.fund!=null).length;
-    const tramoNota=`<div class="note" style="margin:11px 0 0;font-size:11px">Léelo por <b>tramos</b>, no por el puesto exacto: con 12 meses de datos, diferencias menores a ~5 puntos NO son significativas (son estadísticamente el mismo nivel). Verde ≥70 = candidatos fuertes · azul 55–69 = sólidos · ámbar 40–54 = neutros · rojo &lt;40 = evitar. El puntaje ya descuenta todo el riesgo relevante.</div>`;
-    return card("Investor Score · Top 10",`Puntuación diaria (0–100) de las ${sc.n} acciones del sistema — <b>45% riesgo-retorno</b> (Sharpe + α confiable + Sortino + resistencia a caídas) · 30% fundamentos (${_fc}/${sc.n} reales) · 25% tendencia · con <b>candado de confianza</b> por calidad de datos, así todo riesgo ya está descontado en el número · pasa el cursor para ver el detalle · se recalcula cada día · educativo, no asesoría financiera`,
-      `<div class="stk-cols"><div class="stk-block">${colA}</div><div class="stk-block">${colB}</div></div>`+tramoNota);
-  })();
-  return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+scoreCard+stkCard;
+  const scoreCard=investorScoreCard();
+  return greetStrip+hero+tiles+ipsaCard+scoreCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
+}
+/* color por tramo del score */
+function iscCol(v){return v>=70?green:v>=55?indigo:v>=40?amber:red;}
+function iscTier(v){return v>=70?"Candidato fuerte":v>=55?"Sólido":v>=40?"Neutro":"Evitar";}
+/* ── TARJETA INVESTOR SCORE (Home) · destacada, con Top 10, botón "ver todas" y filas clicables ── */
+function investorScoreCard(){
+  let sc=null;try{sc=investorScore();}catch(e){}
+  if(!sc||!sc.rows||sc.rows.length<3)return "";
+  const top=sc.rows.slice(0,10);
+  const bar=(v,col)=>`<span class="isc-bar"><i style="width:${Math.max(3,Math.min(100,v||0))}%;background:${col}"></i></span>`;
+  const row=(r,i)=>{const col=iscCol(r.score);
+    return `<button class="isc-row" data-scoredet="${r.t}" title="Ver por qué ${r.t} tiene ${r.score}">
+      <span class="isc-pos" style="background:${i<3?col:'var(--soft2)'};color:${i<3?'#fff':'var(--muted)'}">${i+1}</span>
+      <span class="isc-main"><span class="isc-tk"><span class="rk-dot" style="background:${r.c}"></span>${r.t}${r.alertas&&r.alertas.length?' <span class="isc-flag" title="'+r.alertas.join('; ').replace(/"/g,"&quot;")+'">⚠</span>':''}</span>
+        <span class="isc-blocks">RR ${bar(r.rr,indigo)} · F ${r.fund!=null?bar(r.fund,"#0E8C5E"):'<span class="isc-na">—</span>'} · T ${r.tend!=null?bar(r.tend,"#A8700C"):'<span class="isc-na">—</span>'}</span></span>
+      <span class="isc-score" style="color:${col}">${r.score}<small>/100</small></span>
+      <span class="isc-go">›</span></button>`;};
+  const colA=top.slice(0,5).map((r,i)=>row(r,i)).join(""),colB=top.slice(5).map((r,i)=>row(r,i+5)).join("");
+  const _fc=sc.rows.filter(r=>r.fund!=null).length;
+  const head=`<div class="isc-head">
+      <div class="isc-badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 5.5L20 8.2l-4.2 3.9 1.1 5.7L12 15.6 7.1 17.8l1.1-5.7L4 8.2l5.6-.7z"/></svg></div>
+      <div class="isc-h-txt"><div class="isc-title">Investor Score</div><div class="isc-sub">Las mejores alternativas del IPSA según Investor · ${sc.n} acciones · actualizado ${(""+sc.day).slice(8,10)}/${(""+sc.day).slice(5,7)}</div></div>
+      <button class="isc-all" data-scoreall>Ver las ${sc.n} →</button></div>`;
+  const legend=`<div class="isc-legend"><span><i style="background:${green}"></i>≥70 fuerte</span><span><i style="background:${indigo}"></i>55–69 sólido</span><span><i style="background:${amber}"></i>40–54 neutro</span><span><i style="background:${red}"></i>&lt;40 evitar</span></div>`;
+  const nota=`<div class="note" style="margin:10px 0 0;font-size:10.5px">Síntesis diaria: <b>45% riesgo-retorno</b> + 30% fundamentos (${_fc}/${sc.n} reales) + 25% tendencia, con candado de confianza. Todo el riesgo ya está descontado. <b>Léelo por tramos</b>: diferencias menores a ~5 puntos no son significativas. Clic en una acción para ver por qué. Educativo, no asesoría financiera.</div>`;
+  return `<div class="card isc-card"><div class="bd">${head}<div class="isc-cols"><div class="isc-block">${colA}</div><div class="isc-block">${colB}</div></div>${legend}${nota}</div></div>`;
+}
+/* explicación DETERMINÍSTICA (sin IA) de por qué una acción tiene su score */
+function scoreWhy(r){
+  const P=[];const q=v=>v>=75?"muy alto":v>=60?"alto":v>=45?"medio":v>=30?"bajo":"muy bajo";
+  P.push(`<b>${r.t}</b> obtiene <b style="color:${iscCol(r.score)}">${r.score}/100</b> (${iscTier(r.score)}), con una confianza de datos del <b>${r.confianza}%</b>.`);
+  // riesgo-retorno
+  const rrTxt=[];
+  rrTxt.push(`Sharpe ${r.sharpe} (retorno por unidad de riesgo)`);
+  if(r.alphaAdj>1)rrTxt.push(`α confiable +${r.alphaAdj}pp sobre lo exigido`);else if(r.alphaAdj<-1)rrTxt.push(`α ${r.alphaAdj}pp bajo lo exigido`);
+  rrTxt.push(`σ ${r.sig}% y caída máxima ${r.maxDD}% en el año`);
+  P.push(`<b>Riesgo-retorno (${r.rr}/100, ${q(r.rr)}):</b> ${rrTxt.join(" · ")}.`);
+  // fundamentos
+  if(r.fund!=null){const ft=[];if(r.roe!=null)ft.push(`ROE ${r.roe.toLocaleString("es-CL",{maximumFractionDigits:1})}%`);if(r.upside!=null)ft.push(`upside de analistas ${r.upside>=0?"+":""}${r.upside}%`);
+    P.push(`<b>Fundamentos (${r.fund}/100, ${q(r.fund)}):</b> valorización, calidad y consenso${ft.length?" — "+ft.join(", "):""}.`);}
+  else P.push(`<b>Fundamentos:</b> sin datos de Yahoo para esta acción → se pondera solo riesgo-retorno y tendencia (sin inventar).`);
+  // tendencia
+  if(r.tend!=null)P.push(`<b>Tendencia (${r.tend}/100, ${q(r.tend)}):</b> momentum 6m ${r.mom6m!=null?(r.mom6m>=0?"+":"")+r.mom6m+"%":"—"} · ${r.pos52!=null?"a "+r.pos52+"% del rango de 52 semanas":"posición 52s s/d"}.`);
+  // veredicto
+  const v=r.score>=70?`Investor la <b style="color:${green}">recomienda como candidato fuerte</b>: buen retorno ajustado por riesgo respaldado por datos sólidos.`
+    :r.score>=55?`Investor la considera una <b style="color:${indigo}">alternativa sólida</b>, sin ser de las primeras.`
+    :r.score>=40?`Perfil <b style="color:${amber}">neutro</b>: no destaca ni por bien ni por mal frente al resto.`
+    :`Investor <b style="color:${red}">sugiere evitarla</b> hoy: sus métricas quedan bajo el resto del universo.`;
+  P.push(v);
+  if(r.alertas&&r.alertas.length)P.push(`<b style="color:${amber}">Nota:</b> ${r.alertas.join(". ")}. Esto <b>ya está descontado</b> en el puntaje.`);
+  return P.map(x=>`<p style="margin:0 0 9px">${x}</p>`).join("");
+}
+function scoreDetailModal(t){
+  let sc=null;try{sc=investorScore();}catch(e){}
+  const r=sc&&sc.rows.find(x=>x.t===t);if(!r)return;
+  const col=iscCol(r.score);
+  const kpi=(l,v,c)=>`<div class="isc-kpi"><span class="isc-kl">${l}</span><span class="isc-kv" style="color:${c||"var(--ink)"}">${v}</span></div>`;
+  const inner=`<div class="isc-modal-head"><div><div class="ct" style="display:flex;align-items:center;gap:9px"><span class="rk-dot" style="width:12px;height:12px;background:${r.c}"></span>${r.t} · <span style="color:${r.c}">${(""+r.n).replace(/</g,"&lt;")}</span></div><div class="cs">Por qué Investor le da este puntaje</div></div>
+      <div class="isc-bignum" style="color:${col}">${r.score}<small>/100</small></div>
+      <button class="cfg-x" id="iscX" aria-label="Cerrar">✕</button></div>
+    <div class="isc-kpis">${kpi("Riesgo-retorno",r.rr,iscCol(r.rr))}${kpi("Fundamentos",r.fund!=null?r.fund:"—",r.fund!=null?iscCol(r.fund):"var(--muted)")}${kpi("Tendencia",r.tend!=null?r.tend:"—",r.tend!=null?iscCol(r.tend):"var(--muted)")}${kpi("Confianza",r.confianza+"%",r.confianza>=70?green:amber)}</div>
+    <div class="isc-why">${scoreWhy(r)}</div>
+    <div class="isc-kpis" style="margin-top:4px">${kpi("Sharpe",r.sharpe,r.sharpe>=1?green:r.sharpe>=0?"var(--ink)":red)}${kpi("Volatilidad σ",r.sig+"%")}${kpi("Caída máx",r.maxDD+"%",r.maxDD>28?amber:"var(--ink)")}${kpi("β",r.beta)}${r.upside!=null?kpi("Upside analistas",(r.upside>=0?"+":"")+r.upside+"%",r.upside>=10?green:r.upside>=0?"var(--ink)":red):""}</div>
+    <div class="isc-modal-foot"><button class="btn" id="iscMore" data-t="${r.t}">Ver análisis completo de ${r.t} →</button></div>`;
+  const back=modalShell("iscBack",inner,"Investor Score · "+r.t);
+  back.querySelector("#iscX").onclick=()=>modalCloseId("iscBack");
+  const mb=back.querySelector("#iscMore");if(mb)mb.onclick=()=>{modalCloseId("iscBack");sel=r.t;modulo="eval";page="detalle";render();};
+}
+function scoreAllModal(){
+  let sc=null;try{sc=investorScore();}catch(e){}
+  if(!sc||!sc.rows)return;
+  const rows=sc.rows.map((r,i)=>{const col=iscCol(r.score);
+    return `<tr class="isc-arow" data-scoredet="${r.t}" style="cursor:pointer"><td class="tnum">${i+1}</td><td><b style="color:${r.c}">${r.t}</b> <span style="color:var(--muted);font-size:10.5px">${(""+r.n).slice(0,22)}</span></td><td class="r tnum" style="font-weight:800;color:${col}">${r.score}</td><td class="r tnum">${r.rr}</td><td class="r tnum">${r.fund!=null?r.fund:"—"}</td><td class="r tnum">${r.tend!=null?r.tend:"—"}</td><td class="r tnum">${r.confianza}%</td><td class="r tnum">${r.sharpe}</td><td class="r tnum">${r.upside!=null?(r.upside>=0?"+":"")+r.upside+"%":"—"}</td><td>${r.alertas&&r.alertas.length?'<span title="'+r.alertas.join("; ").replace(/"/g,"&quot;")+'" style="color:'+amber+'">⚠</span>':""}</td></tr>`;}).join("");
+  const inner=`<div class="isc-modal-head"><div><div class="ct">Investor Score · las ${sc.n} acciones</div><div class="cs">Ranking completo · clic en una acción para ver por qué · encabezados ordenables</div></div><button class="cfg-x" id="iscAllX" aria-label="Cerrar">✕</button></div>
+    <div class="tw" style="max-height:60vh;overflow:auto"><table><thead><tr><th>#</th><th>Acción</th><th class="r">Score</th><th class="r">R-Ret</th><th class="r">Fund</th><th class="r">Tend</th><th class="r">Conf</th><th class="r">Sharpe</th><th class="r">Upside</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const back=modalShell("iscAllBack",inner,"Investor Score completo");
+  back.querySelector("#iscAllX").onclick=()=>modalCloseId("iscAllBack");
+  back.querySelectorAll("[data-scoredet]").forEach(el=>el.onclick=()=>{modalCloseId("iscAllBack");scoreDetailModal(el.dataset.scoredet);});
+  try{attachTableSort();}catch(e){}
 }
 function attachHome(){
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
@@ -6657,6 +6805,8 @@ function attachHome(){
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
   document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
+  document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
+  {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
   try{attachMultiHover("ipsahome");}catch(e){}
   document.querySelectorAll("[data-newsretry]").forEach(b=>b.onclick=()=>{try{newsFetch(true);}catch(e){}});
   const _wx=document.querySelector("[data-welcomehide]");if(_wx)_wx.onclick=()=>{try{localStorage.setItem("inv_welcome_hide","1");}catch(e){}render();};
