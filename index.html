@@ -3565,7 +3565,7 @@ MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máxim
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
 
-INVESTOR SCORE — LA RECOMENDACIÓN DE LA PLATAFORMA (piedra angular): el Investor Score (0–100, get_investor_score) es la síntesis de TODO el análisis cuantitativo (riesgo-retorno ajustado, fundamentos reales, tendencia) con un candado de confianza por calidad de datos. **Todo el riesgo relevante YA ESTÁ DESCONTADO en el número**: la volatilidad castiga el Sharpe, el α poco confiable se amortigua, las caídas bajan el bloque de resistencia, la data débil acerca el puntaje al neutro. Por eso, al justificar una acción con buen score: hazlo **con convicción**, explicando POR QUÉ es sólida (sus bloques y métricas fuertes) — NUNCA agregues "peros" que el score ya descontó ("buen puntaje pero es volátil / pero su r² es bajo" está PROHIBIDO: si eso importara, el score ya sería más bajo). Un score alto = la plataforma la recomienda, punto. Solo menciona una advertencia si viene en el campo 'alertas' del score (son materiales y ya bajaron el puntaje: preséntala como contexto, no como contradicción) o si el perfil del usuario no calza (ej. conservador y la acción es de riesgo pese a buen score → dilo). El agua/macro/noticias NO están en el score (irían con ruido): úsalos TÚ como color adicional al justificar, no para contradecir el número. Si te preguntan "¿por qué X tiene buen/mal score?", desglosa sus bloques (riesgo-retorno, fundamentos, tendencia, confianza) con cifras.
+INVESTOR SCORE — LA RECOMENDACIÓN DE LA PLATAFORMA (piedra angular): el Investor Score (0–100, get_investor_score) es la síntesis de TODO el análisis cuantitativo (riesgo-retorno ajustado, fundamentos reales, tendencia) con un candado de confianza por calidad de datos. **Todo el riesgo relevante YA ESTÁ DESCONTADO en el número**: la volatilidad castiga el Sharpe, el α poco confiable se amortigua, las caídas bajan el bloque de resistencia, la data débil acerca el puntaje al neutro. Por eso, al justificar una acción con buen score: hazlo **con convicción**, explicando POR QUÉ es sólida (sus bloques y métricas fuertes) — NUNCA agregues "peros" que el score ya descontó ("buen puntaje pero es volátil / pero su r² es bajo" está PROHIBIDO: si eso importara, el score ya sería más bajo). Un score alto = la plataforma la recomienda, punto. Solo menciona una advertencia si viene en el campo 'alertas' del score (son materiales y ya bajaron el puntaje: preséntala como contexto, no como contradicción) o si el perfil del usuario no calza (ej. conservador y la acción es de riesgo pese a buen score → dilo). El agua/macro/noticias NO están en el score (irían con ruido): úsalos TÚ como color adicional al justificar, no para contradecir el número. Si te preguntan "¿por qué X tiene buen/mal score?", desglosa sus bloques (riesgo-retorno, fundamentos, tendencia, confianza) con cifras. LÉELO POR TRAMOS, no por el puesto exacto: con 12 meses de datos, diferencias menores a ~5 puntos NO son estadísticamente separables (el #1 y el #4 del top pueden ser el mismo nivel) — nunca digas "la mejor es X" por 2-3 puntos; habla de "el grupo de candidatos fuertes (score ≥70)".
 
 HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, list_stocks, get_stock, get_correlations, get_scenarios, get_constructor, evaluate_portfolio, get_projection, get_investor_profile, get_imported_analysis, get_multifactor, get_market_indicators, get_market_news, get_ipsa_snapshot. Sugerencia de arranque por intención (no es un pipeline rígido): análisis de acción → get_stock o list_stocks+get_multifactor; optimización/construcción → get_constructor+get_investor_profile y valida con evaluate_portfolio; diagnóstico → get_performance_summary y luego get_active_portfolio; proyección/futuro/meta/"¿cuánto podría valer?" → get_projection; mercado → get_market_indicators+get_market_news+get_ipsa_snapshot. No llames tools que no aportan a la pregunta.
 
@@ -6415,16 +6415,24 @@ function investorScoreCompute(){
   // arrays para percentiles
   const A=imp.assets;
   const sharpes=A.map(s=>s.a24.sharpe),alphasAdj=A.map(alphaAdj),sortinos=A.map(sortinoOf),mdds=A.map(mddOf),moms=A.map(momOf),poss=A.map(posOf),trends=A.map(trendOf);
-  const pes=[],pbs=[],dys=[],roes=[],nms=[],ups=[];
-  A.forEach(s=>{const f=F(s.t);pes.push(f.pe);pbs.push(f.pb);dys.push(f.dy);roes.push(f.roe);nms.push(f.nm);ups.push((f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null);});
+  // ¿la utilidad reciente parece NO RECURRENTE? Forward P/U MUCHO mayor que trailing = la utilidad base va a
+  // caer (p.ej. revalorización contable IFRS de un operador de malls): NO tratarla como "barata" ni "rentable".
+  const nonRecOf=f=>(f.fpe!=null&&f.pe!=null&&f.pe>0&&f.fpe>f.pe*2.5);
+  // P/U EFECTIVO = el más CONSERVADOR (mayor) de trailing y forward: solo es "barata" si lo es en ambos
+  const epeOf=f=>{if(f.pe!=null&&f.fpe!=null)return Math.max(f.pe,f.fpe);return f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null);};
+  const pbs=[],dys=[],nms=[],ups=[],epes=[],roesEff=[];
+  A.forEach(s=>{const f=F(s.t);pbs.push(f.pb);dys.push(f.dy);nms.push(f.nm);epes.push(epeOf(f));
+    roesEff.push(nonRecOf(f)?null:f.roe);   // ROE se descarta si la utilidad no es recurrente (no contar dos veces la misma ganancia contable)
+    ups.push((f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null);});
   const obsFactor=Math.max(0,Math.min(1,nRet/40));   // ≥40 retornos (~9m semanal) = muestra suficiente
   const rows=A.map(s=>{
     const f=F(s.t);
     // RIESGO-RETORNO (técnico) — retorno ajustado por riesgo + resistencia a caídas; todo de precios reales
     const rr=Math.round(wavg([[or50(pct(sharpes,s.a24.sharpe)),0.40],[or50(pct(alphasAdj,alphaAdj(s))),0.25],[or50(pct(sortinos,sortinoOf(s))),0.20],[or50(pct(mdds,mddOf(s),true)),0.15]]));
-    // FUNDAMENTOS — solo con dato real
-    const valz=wavg([[pct(pes,f.pe,true),0.6],[pct(pbs,f.pb,true),0.4]]);
-    const qualz=wavg([[pct(roes,f.roe),0.6],[pct(nms,f.nm),0.4]]);
+    // FUNDAMENTOS — solo con dato real; valorización con P/U EFECTIVO (conservador), ROE sin utilidades no recurrentes
+    const _nonRec=nonRecOf(f);
+    const valz=wavg([[pct(epes,epeOf(f),true),0.6],[pct(pbs,f.pb,true),0.4]]);
+    const qualz=wavg([[pct(roesEff,_nonRec?null:f.roe),0.6],[pct(nms,f.nm),0.4]]);
     const upv=(f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null;
     const fundS0=wavg([[valz,0.30],[qualz,0.30],[pct(dys,f.dy),0.20],[pct(ups,upv),0.20]]);
     const fundS=fundS0!=null?Math.round(fundS0):null;
@@ -6443,7 +6451,8 @@ function investorScoreCompute(){
     // ALERTAS materiales (para el agente) — situaciones que YA bajaron el puntaje; NO son "peros" que lo contradigan
     const alertas=[];
     if(trendOf(s)!=null&&trendOf(s)<-12&&(momOf(s)==null||momOf(s)<0))alertas.push("en caída reciente");
-    if(mddOf(s)>0.45)alertas.push("tuvo un drawdown severo en el año");
+    if(mddOf(s)>0.28)alertas.push("tuvo un drawdown importante en el año");
+    if(_nonRec)alertas.push("utilidad reciente probablemente no recurrente (P/U forward ≫ trailing): valorización y ROE ajustados");
     if(nFund<2)alertas.push("fundamentos incompletos (Yahoo no los cubre)");
     if((s.a24.r2||0)<0.05)alertas.push("baja correlación con el IPSA (β poco confiable, α amortiguado)");
     return {t:s.t,n:s.n,c:s.c,score:Math.max(0,Math.min(100,total)),
@@ -6634,8 +6643,9 @@ function viewHome(){
     const row=(r,i)=>`<div class="home-stk" title="Sharpe ${r.sharpe} · σ ${r.sig}% · caída máx ${r.maxDD}% · momentum 6m ${r.mom6m!=null?(r.mom6m>=0?"+":"")+r.mom6m+"%":"—"} · confianza ${r.confianza}%${r.alertas&&r.alertas.length?" · "+r.alertas.join("; "):""}"><span class="stk-pos">${i+1}</span><span class="rk-dot" style="background:${r.c}"></span><span class="rk-body"><span class="rk-name">${r.t}</span><span class="rk-cli">Riesgo-ret. ${r.rr}${r.fund!=null?" · Fund. "+r.fund:" · sin fund."}${r.tend!=null?" · Tend. "+r.tend:""} · conf. ${r.confianza}%</span></span><span class="rk-pct" style="color:${scCol(r.score)};font-size:17px">${r.score}</span></div>`;
     const colA=top.slice(0,5).map((r,i)=>row(r,i)).join(""),colB=top.slice(5).map((r,i)=>row(r,i+5)).join("");
     const _fc=sc.rows.filter(r=>r.fund!=null).length;
+    const tramoNota=`<div class="note" style="margin:11px 0 0;font-size:11px">Léelo por <b>tramos</b>, no por el puesto exacto: con 12 meses de datos, diferencias menores a ~5 puntos NO son significativas (son estadísticamente el mismo nivel). Verde ≥70 = candidatos fuertes · azul 55–69 = sólidos · ámbar 40–54 = neutros · rojo &lt;40 = evitar. El puntaje ya descuenta todo el riesgo relevante.</div>`;
     return card("Investor Score · Top 10",`Puntuación diaria (0–100) de las ${sc.n} acciones del sistema — <b>45% riesgo-retorno</b> (Sharpe + α confiable + Sortino + resistencia a caídas) · 30% fundamentos (${_fc}/${sc.n} reales) · 25% tendencia · con <b>candado de confianza</b> por calidad de datos, así todo riesgo ya está descontado en el número · pasa el cursor para ver el detalle · se recalcula cada día · educativo, no asesoría financiera`,
-      `<div class="stk-cols"><div class="stk-block">${colA}</div><div class="stk-block">${colB}</div></div>`);
+      `<div class="stk-cols"><div class="stk-block">${colA}</div><div class="stk-block">${colB}</div></div>`+tramoNota);
   })();
   return greetStrip+hero+tiles+ipsaCard+fundsCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+scoreCard+stkCard;
 }
