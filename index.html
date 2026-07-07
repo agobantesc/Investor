@@ -4788,7 +4788,9 @@ function pricedbApplyToProjects(){
       allDates.forEach(D=>{if(D<=baseDate)return;
         if(!held.some(t=>px[t]&&px[t][D]!=null))return;
         const ip=pdAsOf(ipsaM,ik,D);
-        if(exIdx[D]!=null){const w=ws[exIdx[D]];if(w.ev)return;w.prices=w.prices||{};let ch=false;held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh&&w.fresh.indexOf(t)<0){w.fresh.push(t);ch=true;}}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}if(!w.ipsaFresh){w.ipsaFresh=true;ch=true;}}if(ch)pts++;}   // solo IPSA EXACTO de la base; ch también cuando cambian los stamps fresh/ipsaFresh (antes no se persistían para clientes no activos)
+        if(exIdx[D]!=null){const w=ws[exIdx[D]];w.prices=w.prices||{};let ch=false;   // OJO: los registros de OPERACIÓN (w.ev) también se valorizan al cierre real del día — antes se saltaban y el seguimiento del día de la compra quedaba con precios arrastrados/desactualizados. El ev (acciones, precio de transacción) queda intacto: los precios del día son solo para VALORIZAR.
+          if(!w.fresh)w.fresh=[];
+          held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh.indexOf(t)<0){w.fresh.push(t);ch=true;}}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}if(!w.ipsaFresh){w.ipsaFresh=true;ch=true;}}if(ch)pts++;}   // solo IPSA EXACTO de la base; ch también cuando cambian los stamps fresh/ipsaFresh (antes no se persistían para clientes no activos)
         else{const prices={},freshT=[];held.forEach(t=>{const ex=px[t]&&px[t][D]!=null;const v=ex?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));if(ex)freshT.push(t);prices[t]=(v!=null?v:basePrices[t]);});
           const ipEx=ipsaM[D]!=null;
           ws.push({date:D,ipsa:ipEx?ipsaM[D]:(ip!=null?ip:(ws[0].ipsa||0)),prices,fresh:freshT,ipsaFresh:ipEx});pts++;}   // fresh/ipsaFresh marcan qué es cierre REAL del día: los arrastres (as-of) no vuelven a la base ni generan retornos 0% espurios
@@ -5611,11 +5613,21 @@ function opDo(){
   // si ya hay una valoración (no-operación) en esa fecha —p.ej. de una carga masiva del módulo Datos— reutiliza sus precios y reemplázala por la operación (evita fechas duplicadas)
   const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev);
   if(sameIdx>=0){const sw=PF.weeks[sameIdx];basePrices=sw.prices||basePrices;if(sw.ipsa!=null)ipsa=sw.ipsa;PF.weeks.splice(sameIdx,1);}
-  // el precio de la TRANSACCIÓN no pisa el cierre de mercado del día: si lo hiciera, las acciones que YA
-  // tenías se revalorizarían a tu precio de operación e inyectarían un retorno falso en el TWR y la β realizada.
-  // Solo se usa como precio del día si el papel no tiene cierre conocido (posición nueva sin historial).
-  const prices=Object.assign({},basePrices);if(prices[t]==null)prices[t]=p;
-  PF.weeks.push({date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}});
+  // PRECIOS DE MERCADO del día de la operación: se prefieren los cierres REALES de la base para ESA fecha (todas
+  // las tenencias + IPSA), no se arrastran los del último registro — así el seguimiento queda valorizado al cierre
+  // del día de la compra. Si la base aún no tiene ese día, se arrastra el último conocido (y al sincronizar el
+  // cierre, pricedbApplyToProjects lo actualiza). El precio de la TRANSACCIÓN NO pisa el cierre (revalorizaría en
+  // falso lo que ya tenías): solo se usa como precio del día si el papel no tiene cierre conocido (posición nueva).
+  const prices=Object.assign({},basePrices);
+  const fresh=[];
+  try{const C=consolidatedSeries();if(C){
+    PF.holdings.forEach(h=>{const mp=C.tick[h.t];if(mp&&mp[date]!=null){prices[h.t]=mp[date];if(fresh.indexOf(h.t)<0)fresh.push(h.t);}});
+    const mpt=C.tick[t];if(mpt&&mpt[date]!=null){prices[t]=mpt[date];if(fresh.indexOf(t)<0)fresh.push(t);}
+    if(C.ipsaMap&&C.ipsaMap[date]!=null)ipsa=C.ipsaMap[date];
+  }}catch(e){}
+  if(prices[t]==null)prices[t]=p;   // acción nueva sin cierre en la base: usa el precio de la operación como valor del día
+  const _wk={date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}};if(fresh.length)_wk.fresh=fresh;
+  PF.weeks.push(_wk);
   PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);   // mantiene el orden cronológico aunque la operación sea de una fecha anterior
   // NOTA: el precio de la operación NO se escribe en la base de precios (PRICEDB) — es un dato de contabilidad
   // (compra/venta), no un cierre de mercado. Se conserva solo en el libro de operaciones del proyecto (ev:trade).
