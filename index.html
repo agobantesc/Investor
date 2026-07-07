@@ -1524,20 +1524,25 @@ function svgMulti(o){
   const showBadge=o.badge!==false&&o.series.length<=4&&o.series[0]&&o.series[0].vals.length>1;
   const bf=o.yfmt||o.ttfmt||(v=>(+v).toFixed(1));
   const m={l:56,r:showBadge?92:30,t:18,b:48},n=o.labels.length,step=(W-m.l-m.r)/(n-1);
-  const all=o.series.reduce((a,s)=>a.concat(s.vals),[]);const bd=niceBounds(all,0.08);
+  const all=o.series.reduce((a,s)=>a.concat(s.vals),[]).filter(v=>v!=null&&isFinite(v));const bd=niceBounds(all,0.08);   // null = tramo sin dato (p.ej. una acción antes de comprarla): se ignora en los límites y la línea empieza donde hay dato
   const X=i=>m.l+step*i,Y=v=>H-m.b-(v-bd.min)/(bd.max-bd.min)*(H-m.t-m.b);
   let g="";
   for(let i=0;i<=4;i++){const v=bd.min+(bd.max-bd.min)*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}">${(o.yfmt||(z=>z.toFixed(0)))(v)}</text>`;}
   if(bd.min<100&&bd.max>100){const z=Y(100);g+=`<line x1="${m.l}" y1="${z.toFixed(1)}" x2="${W-m.r}" y2="${z.toFixed(1)}" stroke="${AC}" stroke-width="1.2" stroke-dasharray="3 4"/>`;}
-  if(o.area&&o.series[0]){const s0=o.series[0],PA=s0.vals.map((v,i)=>[X(i),Y(v)]),gid="mga"+(o.id||"x");const da="M"+X(0).toFixed(1)+" "+Y(bd.min).toFixed(1)+" "+PA.map(p=>"L"+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ")+" L"+X(PA.length-1).toFixed(1)+" "+Y(bd.min).toFixed(1)+" Z";g+=`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${s0.c}" stop-opacity="0.22"/><stop offset="100%" stop-color="${s0.c}" stop-opacity="0.02"/></linearGradient></defs><path d="${da}" fill="url(#${gid})"/>`;}
-  o.series.forEach(s=>{const P=s.vals.map((v,i)=>[X(i),Y(v)]);const d=P.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
-    g+=`<path d="${d}" fill="none" stroke="${s.c}" stroke-width="${s.w||(s.dash?2:2.1)}" ${s.dash?'stroke-dasharray="7 5" stroke-linecap="round"':''} stroke-linejoin="round" stroke-linecap="round" opacity="${s.op||(s.dash?0.8:0.88)}"/>`;
-    const last=P[P.length-1];g+=`<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.6" fill="${s.c}" stroke="#fff" stroke-width="1.6"/>`;});
+  if(o.area&&o.series[0]){const s0=o.series[0];let fi=0;while(fi<s0.vals.length&&(s0.vals[fi]==null||!isFinite(s0.vals[fi])))fi++;   // primer índice con dato: el área empieza ahí (soporta series que arrancan más tarde)
+    const PA=[];for(let i=fi;i<s0.vals.length;i++){const v=s0.vals[i];if(v==null||!isFinite(v))continue;PA.push([X(i),Y(v)]);}
+    if(PA.length){const gid="mga"+(o.id||"x");const da="M"+X(fi).toFixed(1)+" "+Y(bd.min).toFixed(1)+" "+PA.map(p=>"L"+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ")+" L"+PA[PA.length-1][0].toFixed(1)+" "+Y(bd.min).toFixed(1)+" Z";g+=`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${s0.c}" stop-opacity="0.22"/><stop offset="100%" stop-color="${s0.c}" stop-opacity="0.02"/></linearGradient></defs><path d="${da}" fill="url(#${gid})"/>`;}}
+  o.series.forEach(s=>{let d="",started=false;
+    s.vals.forEach((v,i)=>{if(v==null||!isFinite(v)){started=false;return;}d+=(started?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1)+" ";started=true;});   // salta los null: la línea se corta y reanuda donde vuelve a haber dato
+    g+=`<path d="${d.trim()}" fill="none" stroke="${s.c}" stroke-width="${s.w||(s.dash?2:2.1)}" ${s.dash?'stroke-dasharray="7 5" stroke-linecap="round"':''} stroke-linejoin="round" stroke-linecap="round" opacity="${s.op||(s.dash?0.8:0.88)}"/>`;
+    let li=-1;for(let i=s.vals.length-1;i>=0;i--){if(s.vals[i]!=null&&isFinite(s.vals[i])){li=i;break;}}   // punto final en el último dato real
+    if(li>=0)g+=`<circle cx="${X(li).toFixed(1)}" cy="${Y(s.vals[li]).toFixed(1)}" r="3.6" fill="${s.c}" stroke="#fff" stroke-width="1.6"/>`;});
   if(showBadge){
     // pastillas con el último valor de cada serie, separadas verticalmente para no solaparse
-    const ys=o.series.map((s,k)=>({k,y:Math.max(m.t+9,Math.min(H-m.b-9,Y(s.vals[s.vals.length-1])))})).sort((a,b)=>a.y-b.y);
+    const _lv=s=>{for(let i=s.vals.length-1;i>=0;i--)if(s.vals[i]!=null&&isFinite(s.vals[i]))return s.vals[i];return bd.min;};
+    const ys=o.series.map((s,k)=>({k,y:Math.max(m.t+9,Math.min(H-m.b-9,Y(_lv(s))))})).sort((a,b)=>a.y-b.y);
     for(let i=1;i<ys.length;i++){if(ys[i].y-ys[i-1].y<19)ys[i].y=ys[i-1].y+19;}
-    ys.forEach(({k,y})=>{const s=o.series[k];const txt=(""+bf(s.vals[s.vals.length-1])).slice(0,10);
+    ys.forEach(({k,y})=>{const s=o.series[k];const txt=(""+bf(_lv(s))).slice(0,10);
       g+=`<g><rect x="${(W-m.r+6).toFixed(1)}" y="${(y-9).toFixed(1)}" width="${m.r-12}" height="18" rx="5" fill="${s.c}" opacity="0.94"/><text x="${(W-m.r+6+(m.r-12)/2).toFixed(1)}" y="${(y+3.6).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff">${txt}</text></g>`;});
   }
   const fmtLbl=lb=>(/^\d{4}-\d{2}-\d{2}$/.test(lb)?lb.slice(8,10)+"/"+lb.slice(5,7):lb);
@@ -1546,7 +1551,7 @@ function svgMulti(o){
   if(o.flatx||dateLike){const kk=Math.max(1,Math.ceil(n/(o.flatx?13:9)));o.labels.forEach((lb,i)=>{if((i%kk===0&&(n-1-i)>=kk*0.6)||i===n-1)g+=`<text x="${X(i).toFixed(1)}" y="${H-m.b+18}" text-anchor="middle" font-size="11" fill="${muted}">${fmtLbl(lb)}</text>`;});}
   else {const kk=Math.max(1,Math.ceil(n/8));o.labels.forEach((lb,i)=>{if((i%kk===0&&(n-1-i)>=kk*0.6)||i===n-1)g+=`<text x="${X(i).toFixed(1)}" y="${H-m.b+16}" text-anchor="end" font-size="10.5" fill="${muted}" transform="rotate(-38 ${X(i).toFixed(1)} ${H-m.b+16})">${fmtLbl(lb)}</text>`;});}
   if(o.xlabel)g+=`<text x="${m.l+(W-m.l-m.r)/2}" y="${H-4}" text-anchor="middle" font-size="12" font-weight="600" fill="${muted}">${o.xlabel}</text>`;
-  if(o.id){window["__mg_"+o.id]={series:o.series,labels:o.labels,unit:o.unit||"",yfmt:o.yfmt||null,ttfmt:o.ttfmt||null,delta:o.delta||false,flows:o.flows||null,xs:o.series[0].vals.map((_,i)=>X(i)),pys:o.series.map(s=>s.vals.map(v=>Y(v))),mt:m.t,mb:m.b,H};return `<svg id="${o.id}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${o.id}hover"></g></svg>`;}
+  if(o.id){window["__mg_"+o.id]={series:o.series,labels:o.labels,unit:o.unit||"",yfmt:o.yfmt||null,ttfmt:o.ttfmt||null,delta:o.delta||false,flows:o.flows||null,xs:o.series[0].vals.map((_,i)=>X(i)),pys:o.series.map(s=>s.vals.map(v=>(v==null||!isFinite(v))?null:Y(v))),mt:m.t,mb:m.b,H};return `<svg id="${o.id}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${o.id}hover"></g></svg>`;}
   return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
 }
 function svgProj(o){
@@ -2108,12 +2113,12 @@ function attachMultiHover(id){
     const hx=g.xs[bi].toFixed(1);
     const hv=document.getElementById(id+"hover");
     let dots=`<line x1="${hx}" y1="${g.mt}" x2="${hx}" y2="${g.H-g.mb}" stroke="${AC}" stroke-width="1" stroke-dasharray="3 3"/>`;
-    g.series.forEach((s,k)=>{dots+=`<circle cx="${hx}" cy="${g.pys[k][bi].toFixed(1)}" r="4.5" fill="${s.c}" stroke="#fff" stroke-width="2"/>`;});
+    g.series.forEach((s,k)=>{const yv=g.pys[k][bi];if(yv==null)return;dots+=`<circle cx="${hx}" cy="${yv.toFixed(1)}" r="4.5" fill="${s.c}" stroke="#fff" stroke-width="2"/>`;});
     if(hv)hv.innerHTML=dots;
     let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
     const tf=g.ttfmt||(v=>fmtCLP(v));
     let dext="";
-    if(g.delta){if(bi>0){const v0=g.series[0].vals[bi-1],v1=g.series[0].vals[bi],dv=v1-v0;
+    if(g.delta){if(bi>0&&g.series[0].vals[bi-1]!=null&&g.series[0].vals[bi]!=null){const v0=g.series[0].vals[bi-1],v1=g.series[0].vals[bi],dv=v1-v0;
       const fl=g.flows?(g.flows[bi]||0):0;   // aporte/retiro del período (compra/venta de acciones)
       if(fl!==0){const dret=dv-fl,dp=v0?dret/v0*100:0,dc2=dret>=0?green:red,fc=fl>=0?"var(--accent)":amber;
         // el salto total se descompone: cuánto es CAPITAL (compra/venta) y cuánto es RENTABILIDAD real del período
@@ -2123,7 +2128,7 @@ function attachMultiHover(id){
       else {const dp=v0?dv/v0*100:0,dc2=dv>=0?green:red;
         dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:${dc2};font-weight:800">${dv>=0?"▲ +":"▼ −"}${fmtCLP(Math.abs(dv))} <span style="font-weight:700">(${pc(dp)})</span></span><span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">vs registro anterior (${g.labels[bi-1]})</span>`;}}
       else dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:var(--faint);font-weight:600;font-size:10.5px">punto inicial · compra</span>`;}
-    tt.innerHTML=`<b>${g.unit} ${g.labels[bi]}</b>`+g.series.map(s=>`<span style="color:${s.c};font-weight:800;display:block">${(""+s.label).replace(/&/g,"&amp;").replace(/</g,"&lt;")}: ${tf(s.vals[bi])}</span>`).join("")+dext;
+    tt.innerHTML=`<b>${g.unit} ${g.labels[bi]}</b>`+g.series.map(s=>{const vv=s.vals[bi];if(vv==null||!isFinite(vv))return "";return `<span style="color:${s.c};font-weight:800;display:block">${(""+s.label).replace(/&/g,"&amp;").replace(/</g,"&lt;")}: ${tf(vv)}</span>`;}).join("")+dext;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
@@ -2601,9 +2606,10 @@ function invMetrics(){
     prevVal=val;
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
     series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:w.ipsa/base.ipsa-1,diff:(twr-1)-(w.ipsa/base.ipsa-1),yrs,inflow,ev:w.ev||null});});
-  // "Crecimiento por acción": base 100 desde la PRIMERA compra de cada acción (antes de esa fecha, plano en 100,
-  // porque aún no la tenías). Así ENEL, comprada más tarde, no arrastra el crecimiento previo de la cartera.
-  const stockSeries=PF.holdings.map(hd=>{const fb=firstBuy[hd.t],anc=(fb&&fb.price>0)?fb.price:b0[hd.t],fi=fb?fb.idx:0;return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>i<fi?100:+(100*((w.prices[hd.t]||anc)/anc)).toFixed(2))};});
+  // "Crecimiento por acción": base 100 desde la PRIMERA compra de cada acción. Antes de esa fecha va en null,
+  // por lo que la línea NO existe (svgMulti la dibuja recién desde la compra): ENEL, comprada más tarde, arranca
+  // en su fecha de incorporación y no arrastra el crecimiento previo de la cartera. Estándar para cualquier acción.
+  const stockSeries=PF.holdings.map(hd=>{const fb=firstBuy[hd.t],anc=(fb&&fb.price>0)?fb.price:b0[hd.t],fi=fb?fb.idx:0;return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>i<fi?null:+(100*((w.prices[hd.t]||anc)/anc)).toFixed(2))};});
   const lastW=WEEKS[WEEKS.length-1],prevW=WEEKS.length>=2?WEEKS[WEEKS.length-2]:null,last=series[series.length-1];
   // retorno por acción = sobre el capital REALMENTE invertido en ella (gain/costo): mide desde su compra, no desde
   // el inicio de la cartera; buy = costo promedio por acción. Para acciones de la cartera original coincide con cur/b0-1.
@@ -2718,6 +2724,9 @@ function viewInv(){
   return viewInvActive();
 }
 function viewInvActive(){
+  // REPARA el objetivo de acciones incorporadas después (0% → drift falso) ANTES de leer métricas y dibujar el
+  // drift. Persiste una sola vez (idempotente): tras repararlas, la nueva acción tiene su objetivo real.
+  try{if(projFixTargets(PF)){saveProjects();}}catch(e){}
   const IM=invMetrics();
   // CONSISTENCIA: β/E(R) CAPM/σ del proyecto SIEMPRE reflejan las tenencias REALES actuales (capital invertido).
   // opDo ya los recalcula al operar; esto cubre cualquier otra ruta (borrar registro, restaurar respaldo, cargar
@@ -2880,6 +2889,7 @@ function viewOperar(){
   syncProj();
   if(!PROJECTS.length) return viewInv();
   if(!PF){activeId=PROJECTS[0].id;syncProj();}
+  try{if(projFixTargets(PF)){saveProjects();}}catch(e){}   // repara objetivo de acciones incorporadas después (0%) — mismo criterio que el seguimiento
   const fr=FREQ[PF.freq||"diario"];
   const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
@@ -4626,10 +4636,13 @@ async function ipsaBackfill(years){
   const ap=pricedbApplyToProjects();
   return {ok:true,n:dates.length,from:dates[0],to:dates[dates.length-1],added:r.added,updated:r.updated,nPts:ap.nPts};
 }
-async function autopxSync(manual){
+async function autopxSync(manual,bust){
   if(!AUTOPX_URL){if(manual)window.alert("Configura primero la fuente automática de cierres (URL del JSON) en ⚙ Configuración → Datos.");return null;}
   try{
-    const res=await fetch(AUTOPX_URL,{cache:"no-store"});
+    // bust: añade un parámetro anti-caché — necesario justo tras forzar la regeneración (raw.githubusercontent
+    // sirve por CDN y puede entregar el archivo viejo unos minutos). En la sync normal no hace falta.
+    const url=bust?(AUTOPX_URL+(AUTOPX_URL.indexOf("?")>=0?"&":"?")+"_="+Date.now()):AUTOPX_URL;
+    const res=await fetch(url,{cache:"no-store"});
     if(!res.ok)throw new Error("HTTP "+res.status);
     const j=await res.json();
     const days=(Array.isArray(j)?j:(j.days||[j])).filter(d=>d&&d.date);
@@ -4675,6 +4688,68 @@ function autopxAutoRun(){try{
   }
   autopxSync(false);
 }catch(e){}}
+/* ── FORZAR ACTUALIZACIÓN: dispara la regeneración de cierres en GitHub Actions (Yahoo) y sincroniza, sin esperar
+   la corrida automática de las 22:05 UTC. Con un token de GitHub (opcional, ⚙ Configuración → Datos) es de un
+   clic: dispara el workflow_dispatch, espera a que termine y sincroniza el closes.json fresco. Sin token, abre la
+   pestaña Actions para que el usuario pulse «Run workflow» y luego use «⟳ Sincronizar cierres». ── */
+let AUTOPX_GH=(function(){try{return localStorage.getItem("inv_autopx_gh")||"";}catch(e){return "";}})();
+const AUTOPX_WF="update-closes.yml";
+function autopxRepoInfo(){   // deriva owner/repo desde la URL de la fuente (primeros dos segmentos, no ambiguos).
+  // La RAMA no se parsea de la URL: en un raw, rama y ruta son ambiguas si la rama tiene "/" (p.ej.
+  // claude/foo-bar). Para disparar el workflow se usa la rama por defecto del repo (API), no la URL.
+  if(!AUTOPX_URL)return null;
+  let m=AUTOPX_URL.match(/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\//i);
+  if(m)return {owner:m[1],repo:m[2]};
+  m=AUTOPX_URL.match(/github\.com\/([^/]+)\/([^/]+)\/(?:raw|blob)\//i);
+  if(m)return {owner:m[1],repo:m[2]};
+  m=AUTOPX_URL.match(/github\.com\/([^/]+)\/([^/]+)/i);
+  if(m)return {owner:m[1],repo:m[2].replace(/\.git$/,"")};
+  return null;
+}
+function autopxActionsUrl(){const r=autopxRepoInfo();return r?("https://github.com/"+r.owner+"/"+r.repo+"/actions/workflows/"+AUTOPX_WF):"";}
+async function autopxForce(onProgress){
+  const prog=m=>{try{if(onProgress)onProgress(m);}catch(e){}};
+  if(!AUTOPX_URL){window.alert("Configura primero la fuente automática de cierres (URL del JSON) en ⚙ Configuración → Datos.");return null;}
+  const r=autopxRepoInfo();
+  if(!r){window.alert("No pude identificar tu repositorio desde la URL de la fuente.\n\nUsa la URL raw de GitHub del closes.json (raw.githubusercontent.com/usuario/repo/rama/…) en ⚙ Configuración → Datos.");return null;}
+  const tok=AUTOPX_GH;
+  if(!tok){
+    // sin token: no puedo disparar el workflow por ti — abro la página de Actions para que lo hagas manualmente
+    if(window.confirm("Para traer los cierres de HOY antes de la corrida automática (22:05 UTC) hay que regenerar el archivo en GitHub Actions (baja de Yahoo).\n\nSin un token de GitHub no puedo dispararlo por ti. Voy a abrir la página del workflow: pulsa «Run workflow», espera 1–2 minutos y luego usa «⟳ Sincronizar cierres».\n\n(Para hacerlo de un clic, pega un token de GitHub en ⚙ Configuración → Datos.)\n\n¿Abrir GitHub Actions ahora?")){
+      const url=autopxActionsUrl();if(url)window.open(url,"_blank","noopener");else window.alert("No pude construir la URL de Actions.");
+    }
+    return null;
+  }
+  const api="https://api.github.com/repos/"+r.owner+"/"+r.repo;
+  const H={Authorization:"Bearer "+tok,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
+  try{
+    const t0=Date.now();
+    // rama por defecto del repo: el dispatch corre sobre ella (donde vive el workflow). Evita la ambigüedad de
+    // ramas con "/" que no se pueden parsear de la URL raw.
+    let ref="main";try{const rp=await fetch(api,{headers:H,cache:"no-store"});if(rp.ok){const jb=await rp.json();if(jb&&jb.default_branch)ref=jb.default_branch;}}catch(e){}
+    prog("Disparando GitHub Actions…");
+    const disp=await fetch(api+"/actions/workflows/"+AUTOPX_WF+"/dispatches",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},H),body:JSON.stringify({ref,inputs:{range:"10d"}})});
+    if(disp.status!==204&&!disp.ok){let msg="HTTP "+disp.status;try{const jb=await disp.json();if(jb&&jb.message)msg=jb.message;}catch(e){}throw new Error(msg);}
+    prog("Esperando la corrida (Yahoo)…");
+    let done=false,concl=null;
+    for(let i=0;i<40;i++){   // hasta ~4 min (40 × 6s)
+      await new Promise(res=>setTimeout(res,6000));
+      const rr=await fetch(api+"/actions/workflows/"+AUTOPX_WF+"/runs?per_page=5&event=workflow_dispatch",{headers:H,cache:"no-store"});
+      if(!rr.ok)continue;
+      const jr=await rr.json(),runs=(jr&&jr.workflow_runs)||[];
+      const fresh=runs.find(x=>new Date(x.created_at).getTime()>=t0-60000);   // la corrida creada por este dispatch
+      if(fresh){prog("Corrida: "+fresh.status+"…");if(fresh.status==="completed"){done=true;concl=fresh.conclusion;break;}}
+    }
+    if(!done)throw new Error("la corrida no terminó a tiempo — revísala en GitHub Actions y luego «⟳ Sincronizar cierres»");
+    if(concl!=="success")throw new Error("la corrida terminó en '"+concl+"' — revísala en GitHub Actions");
+    prog("Sincronizando cierres…");
+    await new Promise(res=>setTimeout(res,4000));   // respiro para que el CDN de raw sirva el archivo recién commiteado
+    return await autopxSync(true,true);
+  }catch(e){
+    window.alert("No se pudo forzar la actualización: "+((e&&e.message)||e)+"\n\nPuedes dispararla a mano en GitHub Actions ("+(autopxActionsUrl()||"pestaña Actions del repo")+") y luego «⟳ Sincronizar cierres».");
+    return null;
+  }
+}
 /* ── FUNDAMENTOS (P/U, P/B, dividendos, capitalización, 52 semanas) ──
    Los genera el mismo pipeline de Actions en data/fundamentals.json (junto al closes.json) y se
    sincronizan solos con cada sincronización de cierres. Globales (no por cliente): son datos de mercado. */
@@ -4968,11 +5043,12 @@ function datosBase(){
   const maint=card("Mantenimiento de datos","Acciones puntuales sobre la base.",`<div class="datos-maint">
     <button class="btn" data-dgo="cierre">📝 Cierre diario manual</button>
     <button class="btn" data-dsync title="Trae los cierres desde tu fuente automática (JSON diario) y los fusiona en la base">⟳ Sincronizar cierres</button>
+    <button class="btn" data-dforce title="Regenera los cierres del día en GitHub Actions (Yahoo) y sincroniza — sin esperar la corrida automática de las 22:05">⚡ Forzar actualización</button>
     <button class="btn" data-dfix>🔧 Reparar base</button>
     <button class="btn" data-dwipe style="color:var(--red);border-color:var(--red-line)">🗑 Vaciar base de precios</button>
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:5px 7px"><button class="btn" data-ddaydel>Quitar este día</button></span>
     <span class="datos-freq" style="margin-left:auto"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span>
-    </div><div class="helpline" style="margin:10px 0 0"><b>Sincronizar cierres</b>: ${_apxTxt}. <b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. <b>Vaciar base de precios</b> deja la base en blanco para recargar planillas como fuente única (no borra proyectos). El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
+    </div><div class="helpline" style="margin:10px 0 0"><b>Sincronizar cierres</b>: ${_apxTxt}. <b>Forzar actualización</b> regenera los cierres de hoy en GitHub Actions y sincroniza (no espera la corrida de las 22:05; de un clic si guardas un token en ⚙ Configuración → Datos). <b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. <b>Vaciar base de precios</b> deja la base en blanco para recargar planillas como fuente única (no borra proyectos). El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
   return intro+tbl+maint;
 }
 function datosCargar(){
@@ -5008,6 +5084,7 @@ function attachDatos(){
   document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
   const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);}catch(e){}render();window.alert("Sistema actualizado con los datos cargados.\n\nSeguimientos: "+r.nPts+" punto(s) en "+r.nProj+" cartera(s). El Home, los análisis y los rankings ya reflejan la base.");};
   const dsy=document.querySelector("[data-dsync]");if(dsy)dsy.onclick=()=>{dsy.disabled=true;dsy.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{dsy.disabled=false;render();});};
+  const dfc=document.querySelector("[data-dforce]");if(dfc)dfc.onclick=()=>{const dsy2=document.querySelector("[data-dsync]");if(dsy2)dsy2.disabled=true;dfc.disabled=true;const t0=dfc.textContent;autopxForce(m=>{dfc.textContent="⚡ "+m;}).finally(()=>{dfc.disabled=false;dfc.textContent=t0;render();});};
   document.querySelectorAll("[data-dcov]").forEach(b=>b.onclick=()=>{datosCovTab=b.dataset.dcov;lsSet("inv_datos_covtab",datosCovTab);render();});
   const ddd=document.querySelector("[data-ddaydel]");if(ddd)ddd.onclick=()=>{const inp=document.querySelector("[data-ddaydate]"),date=inp&&inp.value;if(!date){window.alert("Elige una fecha.");return;}if(!confirm("Quitar TODOS los datos del "+date+" (precios de la base y cierres de las carteras de ese día).\n\nSe conserva la compra inicial si cae ese día. ¿Continuar?"))return;const r=dropDateData(date);render();window.alert("Listo. Quitados "+r.nBase+" dato(s) de la base y "+r.nProj+" registro(s) del "+date+" en las carteras.");};
   const dwp=document.querySelector("[data-dwipe]");if(dwp)dwp.onclick=()=>{
@@ -5303,7 +5380,8 @@ function cfgRender(){
       row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
       row("Sincronizar ahora",_apxTxt,'<button class="btn btn-pri" id="cfgSyncNow">⟳ Sincronizar cierres</button>',1)+
       row("Completar historia del IPSA","La fuente automática mantiene el índice al día, pero su historia (para β y análisis) se trae una vez desde Stooq",'<button class="btn" id="cfgIpsaFill">🧩 Traer historia del IPSA</button>',1)+
-      row("Fuente automática de cierres (URL JSON)","Un JSON público actualizado a diario (GitHub Actions → raw.githubusercontent). Formato: {&quot;days&quot;:[{&quot;date&quot;,&quot;ipsa&quot;,&quot;prices&quot;:{...}}]}",`<input id="cfgAutoPx" placeholder="https://raw.githubusercontent.com/usuario/repo/main/data/closes.json" value="${(""+(AUTOPX_URL||"")).replace(/"/g,"&quot;")}" style="${inStyle}">`,1))+
+      row("Fuente automática de cierres (URL JSON)","Un JSON público actualizado a diario (GitHub Actions → raw.githubusercontent). Formato: {&quot;days&quot;:[{&quot;date&quot;,&quot;ipsa&quot;,&quot;prices&quot;:{...}}]}",`<input id="cfgAutoPx" placeholder="https://raw.githubusercontent.com/usuario/repo/main/data/closes.json" value="${(""+(AUTOPX_URL||"")).replace(/"/g,"&quot;")}" style="${inStyle}">`,1)+
+      row("Token de GitHub (opcional)","Hace que «⚡ Forzar actualización» (en Datos) sea de un clic: dispara la corrida y sincroniza. Usa un <b>fine-grained PAT</b> con permiso <b>Actions: Read and write</b> sobre tu repo. Se guarda solo en este navegador. Sin token, el botón abre la pestaña Actions para dispararlo a mano.",`<input id="cfgGhTok" type="password" autocomplete="off" placeholder="${AUTOPX_GH?'•••••••• guardado · pega uno nuevo para reemplazar':'github_pat_… (opcional)'}" value="" style="${inStyle}">`+(AUTOPX_GH?` <button class="btn" id="cfgGhClr" style="margin-top:8px">Quitar token</button>`:""),1))+
       sec("Carga manual","Para poblar historia o registrar un día puntual",
         row("Planillas y cierres","Sube CSV/XLSX (diario, semanal o mensual) o ingresa el cierre de un día",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgGoCargar">📈 Cargar planilla</button><button class="btn" id="cfgGoCierre">📝 Cierre diario</button></div>'))+
       sec("Otros","",
@@ -5375,6 +5453,8 @@ function cfgRender(){
   const rfl=q("#cfgRstFile"),_rs=q("#cfgRst");if(_rs&&rfl){_rs.onclick=()=>rfl.click();rfl.onchange=ev=>{if(ev.target.files[0]){importBackup(ev.target.files[0]);cfgClose();}};}
   const _ou=q("#cfgOilUrl");if(_ou)_ou.onchange=()=>{OIL_URL=(_ou.value||"").trim();try{localStorage.setItem("inv_oil_url",OIL_URL);}catch(e){}if(OIL_URL&&typeof mindFetch==="function")mindFetch();};
   const _apx=q("#cfgAutoPx");if(_apx)_apx.onchange=()=>{AUTOPX_URL=(_apx.value||"").trim();try{localStorage.setItem("inv_autopx_url",AUTOPX_URL);}catch(e){}if(AUTOPX_URL&&confirm("Fuente guardada. ¿Sincronizar los cierres ahora?"))autopxSync(true).finally(()=>cfgRender());};
+  const _gh=q("#cfgGhTok");if(_gh)_gh.onchange=()=>{const v=(_gh.value||"").trim();if(!v)return;AUTOPX_GH=v;try{localStorage.setItem("inv_autopx_gh",AUTOPX_GH);}catch(e){}_gh.value="";cfgRender();window.alert("Token de GitHub guardado en este navegador.\n\nAhora «⚡ Forzar actualización» (en Datos) dispara la corrida y sincroniza de un clic.");};
+  const _ghc=q("#cfgGhClr");if(_ghc)_ghc.onclick=()=>{AUTOPX_GH="";try{localStorage.removeItem("inv_autopx_gh");}catch(e){}cfgRender();};
   const _sn=q("#cfgSyncNow");if(_sn)_sn.onclick=()=>{if(!AUTOPX_URL){window.alert("Primero configura la URL de la fuente automática (campo de abajo).");return;}_sn.disabled=true;_sn.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{try{render();}catch(e){}cfgRender();});};
   const _if=q("#cfgIpsaFill");if(_if)_if.onclick=()=>{_if.disabled=true;_if.textContent="🧩 Trayendo historia…";
     ipsaBackfill(2).then(r=>{
@@ -5972,6 +6052,26 @@ function projSyncReal(p){
   try{const M=pMetricsUniverse(sel.sel,t=>{const hd=p.holdings.find(h=>h.t===t);return hd?hd.b:null;});
     if(M){p.bp=+M.bp.toFixed(3);p.erCapm=+M.erCapm.toFixed(2);p.sig=+M.sig.toFixed(2);p.sharpe=+M.sharpe.toFixed(2);p.corrAvg=+M.corrAvg.toFixed(2);}}catch(e){}
   try{const sc=projDefaultScenario(p);if(sc){const i=SCEN.findIndex(s=>String(s.id)===String(sc.id));if(i>=0)SCEN[i]=sc;else SCEN.push(sc);lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
+  return true;
+}
+/* REPARA el objetivo de acciones incorporadas DESPUÉS de crear la cartera (compradas en Operar) que quedaron con
+   0% objetivo → drift falso alto. Le asigna como peso objetivo su costo real / costo total, y reescala el resto de
+   las tenencias manteniendo su proporción relativa. Solo actúa si hay una tenencia con capital invertido pero
+   objetivo ≤0 (p.ej. ENEL comprada más tarde). Idempotente: una vez reparado devuelve false. Deja los montos
+   objetivo en el costo real. No inventa datos: si aún no hay compra registrada (costo 0) no toca nada. */
+function projFixTargets(p){
+  if(!p||!p.holdings||!p.holdings.length)return false;
+  let IM=null;try{IM=withProject(p,()=>invMetrics());}catch(e){}
+  const cost=IM&&IM.cost;if(!cost)return false;
+  let totC=0;p.holdings.forEach(h=>{totC+=cost[h.t]||0;});
+  if(!(totC>0))return false;
+  const broken=p.holdings.filter(h=>(cost[h.t]||0)>0&&(h.w||0)<=1e-9);
+  if(!broken.length)return false;
+  const wBroken=broken.reduce((a,h)=>a+(cost[h.t]||0)/totC,0);
+  const good=p.holdings.filter(h=>(h.w||0)>1e-9),sg=good.reduce((a,h)=>a+(h.w||0),0)||1;
+  good.forEach(h=>{h.w=(h.w||0)/sg*(1-wBroken);});   // el resto conserva su proporción, reescalado al espacio libre
+  broken.forEach(h=>{h.w=+((cost[h.t]||0)/totC).toFixed(4);});
+  p.holdings.forEach(h=>{h.monto=Math.round(cost[h.t]||0);});
   return true;
 }
 /* pesos REALES de las tenencias ACTUALES (capital invertido por acción, replay de TODAS las operaciones —
