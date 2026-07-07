@@ -2600,7 +2600,17 @@ function invMetrics(){
   const lastW=WEEKS[WEEKS.length-1],prevW=WEEKS.length>=2?WEEKS[WEEKS.length-2]:null,last=series[series.length-1];
   // retorno por acción = sobre el capital REALMENTE invertido en ella (gain/costo): mide desde su compra, no desde
   // el inicio de la cartera; buy = costo promedio por acción. Para acciones de la cartera original coincide con cur/b0-1.
-  const perStock=PF.holdings.map(hd=>{const cur=lastW.prices[hd.t]||b0[hd.t],shx=sh[hd.t]||0,v=shx*cur,pp=prevW?(prevW.prices[hd.t]||b0[hd.t]):null,cst=cost[hd.t]||0,gain=v-cst,avg=(shx>0&&cst>0)?cst/shx:b0[hd.t];return {hd,sh:shx,buy:avg,cur,val:v,ret:cst>0?gain/cst:(b0[hd.t]>0?cur/b0[hd.t]-1:0),dayRet:pp?cur/pp-1:null,gain,contribCum:aport>0?gain/aport:0,cost:cst};});
+  // Δ del período por acción: EXIGE cierre REAL en ambas semanas (esta y la anterior) para ESA acción — nunca se
+  // arrastra un precio (carry-forward) ni se usa b0. Una acción recién comprada (aún sin cierre previo propio) o
+  // con precio arrastrado devuelve null → la tabla muestra "—" en vez de un 0,00% o un % falso.
+  // fresh AUSENTE = semana antigua/compra inicial (precios reales por construcción) → se confía; fresh PRESENTE
+  // pero sin el ticker = ese precio es arrastre → se desconfía.
+  const freshOK=(w,t)=>w?(w.fresh?w.fresh.indexOf(t)>=0:true):false;
+  const perStock=PF.holdings.map(hd=>{const cur=lastW.prices[hd.t]||b0[hd.t],shx=sh[hd.t]||0,v=shx*cur,cst=cost[hd.t]||0,gain=v-cst,avg=(shx>0&&cst>0)?cst/shx:b0[hd.t];
+    const cP=lastW.prices[hd.t],pP=prevW?prevW.prices[hd.t]:null;
+    const dayRet=(prevW&&cP>0&&pP>0&&freshOK(lastW,hd.t)&&freshOK(prevW,hd.t))?cP/pP-1:null;
+    const openedLast=!!(firstBuy[hd.t]&&firstBuy[hd.t].idx===WEEKS.length-1);   // comprada en el último registro
+    return {hd,sh:shx,buy:avg,cur,val:v,ret:cst>0?gain/cst:(b0[hd.t]>0?cur/b0[hd.t]-1:0),dayRet,openedLast,gain,contribCum:aport>0?gain/aport:0,cost:cst};});
   let betaR=null,corrR=null;
   if(pr.length>=4){const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,mp=mean(pr),mm=mean(mr);let cov=0,vm=0,vp=0;
     for(let i=0;i<pr.length;i++){cov+=(pr[i]-mp)*(mr[i]-mm);vm+=(mr[i]-mm)**2;vp+=(pr[i]-mp)**2;}
@@ -2702,13 +2712,23 @@ function viewInv(){
 }
 function viewInvActive(){
   const IM=invMetrics();
+  // CONSISTENCIA: β/E(R) CAPM/σ del proyecto SIEMPRE reflejan las tenencias REALES actuales (capital invertido).
+  // opDo ya los recalcula al operar; esto cubre cualquier otra ruta (borrar registro, restaurar respaldo, cargar
+  // demo) para que el header, las tarjetas CAPM y el agente muestren lo MISMO. Solo en memoria (no persiste aquí).
+  try{if(IM&&IM.cost){const costs={};let totC=0;PF.holdings.forEach(h=>{const c=IM.cost[h.t]||0;costs[h.t]=c;totC+=c;});
+    if(totC>0){const selPct={};PF.holdings.forEach(h=>{selPct[h.t]=(costs[h.t]||0)/totC*100;});
+      const M=pMetricsUniverse(selPct,x=>{const h=PF.holdings.find(z=>z.t===x);return h?h.b:null;});
+      if(M){PF.bp=+M.bp.toFixed(3);PF.erCapm=+M.erCapm.toFixed(2);PF.sig=+M.sig.toFixed(2);PF.sharpe=+M.sharpe.toFixed(2);PF.corrAvg=+M.corrAvg.toFixed(2);}}
+  }}catch(e){}
   const fr=FREQ[PF.freq||"diario"];
   const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",
     `<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const _b0=WEEKS[0];
-  const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;const bp=per.reduce((a,x)=>a+(x.m/tot)*x.hd.b,0);return {per,tot,bp};})():null;
-  const chips=(_real?_real.per.map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
-  const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(_real.bp||0).toFixed(2)} · σ ${(PF.sig||0).toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`;
+  // _real.tot = capital de la COMPRA INICIAL (weeks[0].qty) — se mantiene como referencia "capital real vs objetivo"
+  // (PF.amount = plan). β/E(R)/σ, en cambio, se leen de PF.* (tenencias ACTUALES), coherente con opDo y el agente.
+  const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;return {per,tot};})():null;
+  const chips=(_real?_real.per.filter(x=>x.m>1e-9).map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
+  const _sub=_real?`Aplicada el ${PF.date} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`:`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`;
   const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   if(editIdx!=null&&!WEEKS[editIdx])editIdx=null;   // el índice en edición puede quedar de otro proyecto: nunca editar un registro inexistente
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
@@ -2760,10 +2780,12 @@ function viewInvActive(){
     :`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:13px">${IM.perStock.map(p=>tileC("Retorno "+p.hd.t,pc(p.ret*100),(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),p.hd.c,col(p.ret*100))).join("")}</div>`;
   const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Base 100 desde la compra · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Base 100 desde la compra · evolución de cada acción · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeries,labels:dates,h:280,id:"invstk",unit:"",ttfmt:ret100,area:!!invStkSel}),stkBtns):"";
   const psSorted=[...IM.perStock].sort((a,b)=>b.contribCum-a.contribCum);
-  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?chip(p.dayRet*100):"—"}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
+  const _todayBadge=`<span class="altchip" style="border-color:var(--accent);color:var(--accent);padding:1px 5px;font-size:8.5px;margin-left:5px" title="La compraste en este último registro: su Δ es el movimiento de mercado de la acción, no afecta el P/L del día (la compra se netea como aporte).">comprada hoy</span>`;
+  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?chip(p.dayRet*100):'<span style="color:var(--faint)" title="Sin cierre real en ambos períodos para esta acción (recién comprada o precio arrastrado): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
   const bestS=psSorted[0],worstS=psSorted[psSorted.length-1];
+  const _srcNote=(IM.prevDate&&WEEKS.length>=2)?`<div class="note" style="margin-top:8px;font-size:10.5px">Δ ${fr.u} = cierre <b>${IM.prevDate}</b> → <b>${WEEKS[WEEKS.length-1].date}</b> · fuente: base de precios del proyecto (Yahoo/planilla). Puede diferir del feed de tu bróker (BTG usa otro proveedor de datos): pequeñas diferencias de centavos son normales.</div>`:"";
   const psNote=`<div class="note" style="margin-top:11px">Mayor aporte al retorno: <b style="color:${bestS.hd.c}">${bestS.hd.t}</b> (${pc(bestS.contribCum*100)}). Mayor lastre: <b style="color:${worstS.hd.c}">${worstS.hd.t}</b> (${pc(worstS.contribCum*100)}). La <b>contribución</b> = ganancia de la acción ÷ capital invertido; suma el retorno total de la cartera.</div>`;
-  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${psNote}</div>`,flush:true});
+  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
   // SECCIÓN 2 · portafolio vs IPSA
   const evoSeries=[{label:"Portafolio",c:indigo,vals:IM.series.map(s=>+(100*(1+s.ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:IM.series.map(s=>+(100*(1+s.ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
   const evoChart=nd>=2?card("2 · Portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
@@ -2772,14 +2794,15 @@ function viewInvActive(){
   // SECCIÓN 3 · CAPM
   const capmVals=IM.series.map(s=>+(IM.series[0].val*Math.pow(1+PF.erCapm/100,s.yrs)).toFixed(0));
   const cseries=[{label:"Valor real",c:indigo,vals:IM.series.map(s=>+s.val.toFixed(0)),w:2.6,op:1},{label:"Esperado CAPM",c:"#0E8C5E",vals:capmVals,dash:true}];
+  const _shortWin=(IM.elapsedDays<30||IM.nret<5);   // muestra corta: el alpha realizado es ruido, no una lectura estable
   const capmKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">
     ${tile("Retorno real",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}
     ${tile("Exigido CAPM",pc(reqRet*100),"prorrateado al período",indigo,indigo)}
-    ${tile("Alpha realizado",pc(alphaReal*100),alphaReal>=0?"batiendo lo exigido":"bajo lo exigido",indigo,col(alphaReal*100))}
-    ${tile("β esperado (CAPM)",PF.bp.toFixed(2),"de la cartera aplicada",indigo,accentT)}
+    ${tile("Alpha realizado",pc(alphaReal*100),_shortWin?"muestra corta · referencial":(alphaReal>=0?"batiendo lo exigido":"bajo lo exigido"),indigo,col(alphaReal*100))}
+    ${tile("β esperado (CAPM)",PF.bp.toFixed(2),"sobre el capital invertido actual",indigo,accentT)}
     ${tile("β realizado",IM.betaR!=null?IM.betaR.toFixed(2):"—",IM.betaR!=null?((IM.betaR>PF.bp?"más sensible":"menos sensible")+" que lo esperado"):"≥5 registros para calcular",indigo,accentT)}</div>`;
   const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real del portafolio vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual)",svgMulti({series:cseries,labels:dates,h:310,yfmt:fmtK,id:"invcapm",unit:""}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM</span></div>`):"";
-  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")} No es recomendación de inversión.`);
+  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} No es recomendación de inversión.`);
   const rows=IM.series.map((s,i)=>{const pv=i>0?IM.series[i-1]:null;const dpo=pv&&pv.val>0?((s.val-(s.inflow||0))/pv.val-1):null;const dip=pv?((1+s.ipsaRet)/(1+pv.ipsaRet)-1):null;const evLab=s.ev?(s.ev.kind==="inject"?"Aporte":s.ev.kind==="trade"?(s.ev.side==="sell"?"Venta":"Compra"):"Rebalanceo"):null;return `<tr><td><b>${i===0?"Compra":fr.pf+i}</b>${evLab?` <span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33">${evLab}</span>`:""}</td><td>${s.date}</td><td class="r" style="font-weight:700">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?chip(dpo*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?chip(dip*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${chip(s.ipsaRet*100)}</td><td class="r">${chip(s.diff*100)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar">✕</button></td></tr>`;}).join("");
   const tbl=card("Historial de seguimiento",nd+" registro"+(nd>1?"s":"")+" "+fr.adj+" · editable · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
   const vaRf=(pY)=>{const sp=(PF.sig/100)/Math.sqrt(pY),mp=Math.pow(1+PF.erCapm/100,1/pY)-1,v=mp-1.645*sp;return {pct:v,loss:L.val*Math.max(0,-v)};};
@@ -3040,7 +3063,7 @@ function attachInv(){
     saveProjects();render();
   };
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;const _ev=WEEKS[i]&&WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra"):"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";if(window.confirm(_msg)){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;saveProjects();render();}});
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;const _ev=WEEKS[i]&&WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra"):"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";if(window.confirm(_msg)){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;if(_ev){try{projSyncReal(PF);}catch(e){}}saveProjects();render();}});
   document.querySelectorAll("[data-godatos]").forEach(b=>b.onclick=()=>{modulo="datos";page=b.dataset.godatos;render();});
   document.querySelectorAll("[data-invtab]").forEach(b=>b.onclick=()=>{page=b.dataset.invtab;render();});
   document.querySelectorAll("[data-gomod]").forEach(b=>b.onclick=()=>{modulo=b.dataset.gomod;if(modulo==="proyectos")page="hub";render();});
@@ -5619,14 +5642,16 @@ function opDo(){
   // cierre, pricedbApplyToProjects lo actualiza). El precio de la TRANSACCIÓN NO pisa el cierre (revalorizaría en
   // falso lo que ya tenías): solo se usa como precio del día si el papel no tiene cierre conocido (posición nueva).
   const prices=Object.assign({},basePrices);
-  const fresh=[];
+  const fresh=[];let _ipFresh=false;
   try{const C=consolidatedSeries();if(C){
     PF.holdings.forEach(h=>{const mp=C.tick[h.t];if(mp&&mp[date]!=null){prices[h.t]=mp[date];if(fresh.indexOf(h.t)<0)fresh.push(h.t);}});
     const mpt=C.tick[t];if(mpt&&mpt[date]!=null){prices[t]=mpt[date];if(fresh.indexOf(t)<0)fresh.push(t);}
-    if(C.ipsaMap&&C.ipsaMap[date]!=null)ipsa=C.ipsaMap[date];
+    if(C.ipsaMap&&C.ipsaMap[date]!=null){ipsa=C.ipsaMap[date];_ipFresh=true;}
   }}catch(e){}
   if(prices[t]==null)prices[t]=p;   // acción nueva sin cierre en la base: usa el precio de la operación como valor del día
-  const _wk={date,prices,ipsa,ev:{kind:"trade",t,side,shares:qty,price:p}};if(fresh.length)_wk.fresh=fresh;
+  // fresh SIEMPRE se estampa (aunque vacío): marca qué precios son cierre REAL del día vs arrastre. Un arreglo
+  // vacío = ningún cierre real ese día → los Δ del período de esas acciones se muestran "—" (no un % arrastrado).
+  const _wk={date,prices,ipsa,fresh,ev:{kind:"trade",t,side,shares:qty,price:p}};if(_ipFresh)_wk.ipsaFresh=true;
   PF.weeks.push(_wk);
   PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);   // mantiene el orden cronológico aunque la operación sea de una fecha anterior
   // NOTA: el precio de la operación NO se escribe en la base de precios (PRICEDB) — es un dato de contabilidad
