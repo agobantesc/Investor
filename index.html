@@ -1546,7 +1546,7 @@ function svgMulti(o){
   if(o.flatx||dateLike){const kk=Math.max(1,Math.ceil(n/(o.flatx?13:9)));o.labels.forEach((lb,i)=>{if((i%kk===0&&(n-1-i)>=kk*0.6)||i===n-1)g+=`<text x="${X(i).toFixed(1)}" y="${H-m.b+18}" text-anchor="middle" font-size="11" fill="${muted}">${fmtLbl(lb)}</text>`;});}
   else {const kk=Math.max(1,Math.ceil(n/8));o.labels.forEach((lb,i)=>{if((i%kk===0&&(n-1-i)>=kk*0.6)||i===n-1)g+=`<text x="${X(i).toFixed(1)}" y="${H-m.b+16}" text-anchor="end" font-size="10.5" fill="${muted}" transform="rotate(-38 ${X(i).toFixed(1)} ${H-m.b+16})">${fmtLbl(lb)}</text>`;});}
   if(o.xlabel)g+=`<text x="${m.l+(W-m.l-m.r)/2}" y="${H-4}" text-anchor="middle" font-size="12" font-weight="600" fill="${muted}">${o.xlabel}</text>`;
-  if(o.id){window["__mg_"+o.id]={series:o.series,labels:o.labels,unit:o.unit||"",yfmt:o.yfmt||null,ttfmt:o.ttfmt||null,delta:o.delta||false,xs:o.series[0].vals.map((_,i)=>X(i)),pys:o.series.map(s=>s.vals.map(v=>Y(v))),mt:m.t,mb:m.b,H};return `<svg id="${o.id}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${o.id}hover"></g></svg>`;}
+  if(o.id){window["__mg_"+o.id]={series:o.series,labels:o.labels,unit:o.unit||"",yfmt:o.yfmt||null,ttfmt:o.ttfmt||null,delta:o.delta||false,flows:o.flows||null,xs:o.series[0].vals.map((_,i)=>X(i)),pys:o.series.map(s=>s.vals.map(v=>Y(v))),mt:m.t,mb:m.b,H};return `<svg id="${o.id}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${o.id}hover"></g></svg>`;}
   return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
 }
 function svgProj(o){
@@ -2113,8 +2113,15 @@ function attachMultiHover(id){
     let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
     const tf=g.ttfmt||(v=>fmtCLP(v));
     let dext="";
-    if(g.delta){if(bi>0){const v0=g.series[0].vals[bi-1],v1=g.series[0].vals[bi],dv=v1-v0,dp=v0?dv/v0*100:0,dc2=dv>=0?green:red;
-      dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:${dc2};font-weight:800">${dv>=0?"▲ +":"▼ −"}${fmtCLP(Math.abs(dv))} <span style="font-weight:700">(${pc(dp)})</span></span><span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">vs registro anterior (${g.labels[bi-1]})</span>`;}
+    if(g.delta){if(bi>0){const v0=g.series[0].vals[bi-1],v1=g.series[0].vals[bi],dv=v1-v0;
+      const fl=g.flows?(g.flows[bi]||0):0;   // aporte/retiro del período (compra/venta de acciones)
+      if(fl!==0){const dret=dv-fl,dp=v0?dret/v0*100:0,dc2=dret>=0?green:red,fc=fl>=0?"var(--accent)":amber;
+        // el salto total se descompone: cuánto es CAPITAL (compra/venta) y cuánto es RENTABILIDAD real del período
+        dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:var(--ink);font-weight:800">${dv>=0?"▲ +":"▼ −"}${fmtCLP(Math.abs(dv))} total <span style="font-weight:600;color:var(--faint);font-size:10px">vs ${g.labels[bi-1]}</span></span>`
+          +`<span style="display:block;color:${fc};font-weight:700;font-size:10.5px">${fl>=0?"↳ aporte +":"↳ retiro −"}${fmtCLP(Math.abs(fl))} · ${fl>=0?"compra":"venta"} de acciones</span>`
+          +`<span style="display:block;color:${dc2};font-weight:800;font-size:11px">↳ rentabilidad ${dret>=0?"+":"−"}${fmtCLP(Math.abs(dret))} (${pc(dp)})</span>`;}
+      else {const dp=v0?dv/v0*100:0,dc2=dv>=0?green:red;
+        dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:${dc2};font-weight:800">${dv>=0?"▲ +":"▼ −"}${fmtCLP(Math.abs(dv))} <span style="font-weight:700">(${pc(dp)})</span></span><span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">vs registro anterior (${g.labels[bi-1]})</span>`;}}
       else dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:var(--faint);font-weight:600;font-size:10.5px">punto inicial · compra</span>`;}
     tt.innerHTML=`<b>${g.unit} ${g.labels[bi]}</b>`+g.series.map(s=>`<span style="color:${s.c};font-weight:800;display:block">${(""+s.label).replace(/&/g,"&amp;").replace(/</g,"&lt;")}: ${tf(s.vals[bi])}</span>`).join("")+dext;
     placeTip(tt,e);};
@@ -2763,13 +2770,13 @@ function viewInvActive(){
       ${tile("Retorno acumulado",pc(L.ret*100),"desde la compra",indigo,col(L.ret*100))}
       ${tile("Rentabilidad IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}
       ${tile("vs IPSA",pc(L.diff*100),L.diff>=0?"superando al mercado":"bajo el mercado",indigo,col(L.diff*100))}
-      ${tile("Capital aportado",fmtCLP(IM.aport),IM.aport>PF.amount?("inicial "+fmtCLP(PF.amount)+" + aportes"):"capital invertido",indigo,ink)}
+      ${(()=>{const _ri=_real?_real.tot:(realCap()||PF.amount);return tile("Capital aportado",fmtCLP(IM.aport),IM.aport>_ri+1?("inicial "+fmtCLP(_ri)+" + aportes"):"capital realmente invertido",indigo,ink);})()}
     </div></div></div>`;
   const ret100=v=>((v>=100?"+":"")+(v-100).toFixed(2)+"%");
   const dates=IM.series.map(s=>s.date);
   // SECCIÓN 1 · valor en el tiempo
   const valSeries=[{label:"Valor",c:indigo,vals:IM.series.map(s=>+s.val.toFixed(0)),w:2.8,op:1}];
-  const valChart=nd>=2?card("1 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP) desde la compra · pasa el mouse para ver el valor por día",svgMulti({series:valSeries,labels:dates,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true}))
+  const valChart=nd>=2?card("1 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP) desde la compra · pasa el mouse: en los días de compra/venta el salto se separa en <b>aporte</b> (capital) y <b>rentabilidad</b> real",svgMulti({series:valSeries,labels:dates,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true,flows:IM.series.map(s=>Math.round(s.inflow||0))}))
     :card("1 · Valor de la inversión en el tiempo","Aún no hay suficientes registros",`<div class="note" style="border:none;background:none;margin:0">Ingresa al menos <b>2 registros</b> (incluida la compra) para ver la evolución del valor.</div>`);
   let stkSeries=IM.stockSeries;
   if(invStkSel){const f=IM.stockSeries.filter(s=>s.label===invStkSel);if(f.length)stkSeries=f;else invStkSel=null;}
@@ -2791,8 +2798,18 @@ function viewInvActive(){
   const evoChart=nd>=2?card("2 · Portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
   const ipsaTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">${tile("Retorno portafolio",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}${tile("Retorno IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}${tile("Diferencia",pc(L.diff*100),L.diff>=0?"a favor del portafolio":"en contra",indigo,col(L.diff*100))}</div>`;
   const verdict=nd>=1?`<div class="card" style="background:linear-gradient(180deg,#F7FAFF,#fff)"><div class="bd"><div class="note" style="border:none;background:none;margin:0;font-size:14px">Tu portafolio rinde <b style="color:${col(L.ret*100)}">${pc(L.ret*100)}</b> vs el IPSA <b style="color:${col(L.ipsaRet*100)}">${pc(L.ipsaRet*100)}</b> → ${L.diff>=0?`<b style="color:${green}">supera al mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`:`<b style="color:${red}">va bajo el mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`} en estos ${days} días.</div></div></div>`:"";
-  // SECCIÓN 3 · CAPM
-  const capmVals=IM.series.map(s=>+(IM.series[0].val*Math.pow(1+PF.erCapm/100,s.yrs)).toFixed(0));
+  // SECCIÓN 3 · CAPM — curva EXIGIDA money-weighted: parte del valor real inicial, crece al retorno exigido y
+  // ESCALONA por cada aporte/retiro (compra/venta de acciones). Así el "salto" por comprar ENEL se refleja en
+  // AMBAS curvas (real y exigida) y la brecha entre ellas es solo la RENTABILIDAD sobre lo exigido, no el capital.
+  // La tasa se RECALCULA desde cada operación (ev.erCapm sellado): antes usa el exigido de la cartera inicial.
+  let _initEr=PF.erCapm;   // retorno exigido de la composición INICIAL (antes de operar)
+  try{if(_real&&_real.tot>0){const _sp={};_real.per.forEach(x=>{_sp[x.hd.t]=x.m/_real.tot*100;});const _Mi=pMetricsUniverse(_sp,x=>{const h=PF.holdings.find(z=>z.t===x);return h?h.b:null;});if(_Mi)_initEr=_Mi.erCapm;}}catch(e){}
+  const capmVals=[];let _rate=_initEr/100;
+  IM.series.forEach((s,i)=>{
+    if(i===0)capmVals.push(Math.round(s.val));
+    else{const dt=Math.max(0,s.yrs-IM.series[i-1].yrs);capmVals.push(Math.round(capmVals[i-1]*Math.pow(1+_rate,dt)+(s.inflow||0)));
+      if(s.ev&&s.ev.erCapm!=null)_rate=s.ev.erCapm/100;}   // desde la operación: el exigido usa la tasa de la cartera resultante
+  });
   const cseries=[{label:"Valor real",c:indigo,vals:IM.series.map(s=>+s.val.toFixed(0)),w:2.6,op:1},{label:"Esperado CAPM",c:"#0E8C5E",vals:capmVals,dash:true}];
   const _shortWin=(IM.elapsedDays<30||IM.nret<5);   // muestra corta: el alpha realizado es ruido, no una lectura estable
   const capmKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">
@@ -2801,7 +2818,7 @@ function viewInvActive(){
     ${tile("Alpha realizado",pc(alphaReal*100),_shortWin?"muestra corta · referencial":(alphaReal>=0?"batiendo lo exigido":"bajo lo exigido"),indigo,col(alphaReal*100))}
     ${tile("β esperado (CAPM)",PF.bp.toFixed(2),"sobre el capital invertido actual",indigo,accentT)}
     ${tile("β realizado",IM.betaR!=null?IM.betaR.toFixed(2):"—",IM.betaR!=null?((IM.betaR>PF.bp?"más sensible":"menos sensible")+" que lo esperado"):"≥5 registros para calcular",indigo,accentT)}</div>`;
-  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real del portafolio vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual)",svgMulti({series:cseries,labels:dates,h:310,yfmt:fmtK,id:"invcapm",unit:""}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM</span></div>`):"";
+  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual) · la curva exigida <b>incluye tus aportes</b> (compras) y se recalcula desde cada operación — así la brecha es solo rentabilidad, no capital",svgMulti({series:cseries,labels:dates,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:IM.series.map(s=>Math.round(s.inflow||0))}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div>`):"";
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} No es recomendación de inversión.`);
   const rows=IM.series.map((s,i)=>{const pv=i>0?IM.series[i-1]:null;const dpo=pv&&pv.val>0?((s.val-(s.inflow||0))/pv.val-1):null;const dip=pv?((1+s.ipsaRet)/(1+pv.ipsaRet)-1):null;const evLab=s.ev?(s.ev.kind==="inject"?"Aporte":s.ev.kind==="trade"?(s.ev.side==="sell"?"Venta":"Compra"):"Rebalanceo"):null;return `<tr><td><b>${i===0?"Compra":fr.pf+i}</b>${evLab?` <span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33">${evLab}</span>`:""}</td><td>${s.date}</td><td class="r" style="font-weight:700">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?chip(dpo*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?chip(dip*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${chip(s.ipsaRet*100)}</td><td class="r">${chip(s.diff*100)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar">✕</button></td></tr>`;}).join("");
   const tbl=card("Historial de seguimiento",nd+" registro"+(nd>1?"s":"")+" "+fr.adj+" · editable · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
@@ -5669,7 +5686,10 @@ function opDo(){
         PF.holdings.forEach(h=>{h.monto=Math.round(costs[h.t]||0);});
         const selPct={};PF.holdings.forEach(h=>{selPct[h.t]=(costs[h.t]||0)/totC*100;});
         const M=pMetricsUniverse(selPct,x=>{const h=PF.holdings.find(z=>z.t===x);return h?h.b:null;});
-        if(M){PF.bp=+M.bp.toFixed(3);PF.erCapm=+M.erCapm.toFixed(2);PF.sig=+M.sig.toFixed(2);PF.sharpe=+M.sharpe.toFixed(2);PF.corrAvg=+M.corrAvg.toFixed(2);}
+        if(M){PF.bp=+M.bp.toFixed(3);PF.erCapm=+M.erCapm.toFixed(2);PF.sig=+M.sig.toFixed(2);PF.sharpe=+M.sharpe.toFixed(2);PF.corrAvg=+M.corrAvg.toFixed(2);
+          // sella en la operación el retorno exigido (y β) de la cartera RESULTANTE: la curva "Esperado CAPM" del
+          // seguimiento usa esta tasa DESDE este día en adelante (el CAPM se recalcula desde la compra/venta).
+          _wk.ev.erCapm=PF.erCapm;_wk.ev.bp=PF.bp;}
       }
     }
   }catch(e){}
