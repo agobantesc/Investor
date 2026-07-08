@@ -5799,7 +5799,18 @@ function ledger(){
   const base=WEEKS[0],sh={},avg={},tx=[],realized=[];
   function buy(date,t,qq,pp,tipo){if(!(qq>0))return;const old=sh[t]||0,oc=(avg[t]||0)*old;sh[t]=old+qq;avg[t]=(oc+qq*pp)/sh[t];tx.push({date,t,side:"buy",shares:qq,price:pp,monto:qq*pp,tipo});}
   function sell(date,t,qq,pp,tipo){const old=sh[t]||0,s=Math.min(qq,old);if(s<=1e-9)return;const cb=(avg[t]||0)*s,proceeds=s*pp,gain=proceeds-cb;sh[t]=old-s;tx.push({date,t,side:"sell",shares:s,price:pp,monto:proceeds,tipo,cost:cb,gain});realized.push({date,t,shares:s,price:pp,cost:cb,gain});}
-  PF.holdings.forEach(hd=>{let p=base.prices[hd.t];if(p==null){const fw=WEEKS.find(w=>w.prices[hd.t]!=null);p=fw?fw.prices[hd.t]:null;}if(p==null||!(p>0))return;const q=(base.qty&&base.qty[hd.t]!=null)?base.qty[hd.t]:(hd.monto/p);buy(base.date,hd.t,q,p,"Compra inicial");});   // mismo fallback de precio base que invMetrics: sin él, una venta posterior saldría con costo 0 y ganancia inflada
+  // Compra inicial = SOLO las acciones que YA estaban en la cartera al inicio (weeks[0]). Una acción incorporada
+  // DESPUÉS (comprada en Operar, p.ej. ENEL) NO estaba en la compra inicial: su adquisición se registra en su
+  // propio ev:trade más abajo. Sintetizarle aquí una "Compra inicial" desde hd.monto la contaría DOS veces
+  // (inflando el capital aportado y volviendo negativa la rentabilidad consolidada del Home). Mismo criterio que
+  // invMetrics: solo cuenta al inicio si está en base.qty o en base.prices (inB); si no, su compra viene de un ev.
+  PF.holdings.forEach(hd=>{
+    const hasQty=base.qty&&base.qty[hd.t]!=null,inB=base.prices[hd.t]!=null;
+    if(!hasQty&&!inB)return;   // no estaba al inicio: se incorpora por un ev posterior, no acá
+    let p=base.prices[hd.t];if(p==null){const fw=WEEKS.find(w=>w.prices[hd.t]!=null);p=fw?fw.prices[hd.t]:null;}   // fallback de precio como invMetrics: sin él una venta posterior saldría con costo 0
+    if(p==null||!(p>0))return;
+    const q=hasQty?base.qty[hd.t]:(hd.monto/p);buy(base.date,hd.t,q,p,"Compra inicial");
+  });
   for(let i=1;i<WEEKS.length;i++){const w=WEEKS[i];if(!w.ev)continue;
     if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);buy(w.date,t,q,q>0?al[t]/q:0,"Aporte");});}
     else if(w.ev.kind==="trade"){const t=w.ev.t,p=w.ev.price||w.prices[t]||1;if(w.ev.side==="sell")sell(w.date,t,+w.ev.shares,p,"Venta");else buy(w.date,t,+w.ev.shares,p,"Compra");}
