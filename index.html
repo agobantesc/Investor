@@ -1888,9 +1888,10 @@ function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));return tru
 (function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Administración",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
 let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Administración",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Administración",color:"#1E5FD1"}];}})();
 (function(){try{if(localStorage.getItem("inv_mig_admin_v1"))return;localStorage.setItem("inv_mig_admin_v1","1");const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}}catch(e){}})();
-// arranque limpio por defecto: el análisis "IPSA · demo" queda oculto hasta que el usuario cargue sus datos
-// (el demo sigue disponible como universo canónico interno y vía "Proyectos de prueba", pero no se muestra como datos propios)
-(function(){try{if(lsGet("inv_demo_hidden")==null)lsSet("inv_demo_hidden",1);}catch(e){}})();
+// El set de análisis "IPSA · demo" y los "Proyectos de prueba" se RETIRARON: Investor trabaja solo con datos
+// reales (base de precios + IPSA que carga el usuario). El objeto DATA queda solo como andamiaje interno del
+// universo IPSA (lista de tickers y β sectorial de respaldo), nunca se muestra ni se siembra en la base.
+(function(){try{lsSet("inv_demo_hidden",1);}catch(e){}})();   // siempre oculto → evalIsEmpty muestra estado vacío hasta que cargues datos reales
 const CLIENT_PAL=["#1E5FD1","#0E8C5E","#DB2777","#7C3AED","#D9730D","#0891B2","#CA8A04","#CE2F3B"];
 function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));return true;}catch(e){saveWarn();return false;}}
 function activeClientObj(){return CLIENTS.find(x=>x.id===activeClient)||CLIENTS[0];}
@@ -2601,19 +2602,7 @@ function buildDemo(cfg){
   const oSel={};holdings.forEach(hd=>{oSel[hd.t]=+(hd.w*100).toFixed(1);});
   return {id:Date.now()+Math.floor(Math.random()*100000),name:cfg.name,date:new Date().toLocaleDateString("es-CL"),amount:cfg.amount,bp,erCapm,sig,sharpe,corrAvg,freq:cfg.freq,origSim:{sel:oSel,amount:cfg.amount},holdings,weeks};
 }
-function seedDemos(){
-  const cfgs=[
-    {name:"Demo diario · agresivo",pick:["BCI","SQM-B","PARAUCO"],w:[0.4,0.3,0.3],amount:3000000,freq:"diario",n:30,seed:99173,drift:0.0022,vol:0.014},
-    {name:"Demo semanal · balanceado",pick:["CHILE","FALABELLA","ENELCHILE","LATAM"],w:[0.3,0.25,0.25,0.2],amount:8000000,freq:"semanal",n:24,seed:50021,drift:0.0035,vol:0.022},
-    {name:"Demo mensual · gran capital",pick:["CHILE","BCI","ENELCHILE","SANTANDER","FALABELLA"],w:[0.25,0.2,0.2,0.2,0.15],amount:50000000,freq:"mensual",n:18,seed:71449,drift:0.007,vol:0.028}
-  ];
-  let last=null,added=0;
-  cfgs.forEach(cfg=>{if(PROJECTS.some(p=>p.name===cfg.name))return;const pr=buildDemo(cfg);if(pr){PROJECTS.push(pr);last=pr.id;added++;}});
-  if(last){activeId=last;}
-  editIdx=null;saveProjects();syncProj();
-  if(!added)window.alert("Los proyectos de prueba ya existen.");
-  modulo="inv";page="seguimiento";render();
-}
+function seedDemos(){window.alert("Los proyectos de prueba se retiraron: Investor trabaja solo con datos reales.\n\nCrea tu cartera en Proyectos → ➕ Nueva inversión, o cárgala en Simulación → Constructor.");}
 function invMetrics(){
   if(!PF||!WEEKS.length)return null;
   const base=WEEKS[0],sh={},cost={},b0={};PF.holdings.forEach(hd=>{let bp=base.prices[hd.t];if(bp==null){const fw=WEEKS.find(w=>w.prices[hd.t]!=null);bp=fw?fw.prices[hd.t]:0;}b0[hd.t]=bp||1;const inB=base.prices[hd.t]!=null;if(base.qty&&base.qty[hd.t]!=null){sh[hd.t]=base.qty[hd.t];cost[hd.t]=base.qty[hd.t]*(base.prices[hd.t]||b0[hd.t]);}else{sh[hd.t]=inB?hd.monto/base.prices[hd.t]:0;cost[hd.t]=inB?hd.monto:0;}});
@@ -2745,7 +2734,7 @@ function viewInv(){
   syncProj();
   if(!PROJECTS.length) return `<div class="locked"><div class="lbadge"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
     <div style="font-size:19px;font-weight:800;color:var(--navy)">Módulo de Inversión</div>
-    <div class="note" style="max-width:560px;margin:13px auto 0;border:none;background:none">Aún no hay proyectos de inversión. Ve a <b>Proyectos</b> y pulsa <b>➕ Nueva inversión</b> para crear tu primera cartera (eliges acciones y monto), o ármala en <b>Simulación → Constructor</b>.</div><div style="margin-top:18px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap"><button class="btn btn-pri" data-gomod="proyectos">📁 Ir a Proyectos</button><button class="btn" id="loaddemo">🧪 Cargar proyectos de prueba</button></div></div>`;
+    <div class="note" style="max-width:560px;margin:13px auto 0;border:none;background:none">Aún no hay proyectos de inversión. Ve a <b>Proyectos</b> y pulsa <b>➕ Nueva inversión</b> para crear tu primera cartera (eliges acciones y monto), o ármala en <b>Simulación → Constructor</b>.</div><div style="margin-top:18px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap"><button class="btn btn-pri" data-gomod="proyectos">📁 Ir a Proyectos</button></div></div>`;
   if(!PF){activeId=PROJECTS[0].id;syncProj();}
   if(projIsEmpty(PF)){   // proyecto sin inversión definida: guía o formulario
     const bar=card("Proyectos de inversión","Gestiona cada proyecto por separado · crea o activa proyectos en el módulo Proyectos.",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${(""+p.name).replace(/</g,"&lt;")} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" data-gomod="proyectos">📁 Proyectos</button>`);
@@ -2769,7 +2758,7 @@ function viewInvActive(){
   }}catch(e){}
   const fr=FREQ[PF.freq||"diario"];
   const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",
-    `<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
+    `<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const _b0=WEEKS[0];
   // _real.tot = capital de la COMPRA INICIAL (weeks[0].qty) — se mantiene como referencia "capital real vs objetivo"
   // (PF.amount = plan). β/E(R)/σ, en cambio, se leen de PF.* (tenencias ACTUALES), coherente con opDo y el agente.
@@ -2945,7 +2934,7 @@ function viewOperar(){
   if(!PF){activeId=PROJECTS[0].id;syncProj();}
   try{if(projFixTargets(PF)){saveProjects();}}catch(e){}   // repara objetivo de acciones incorporadas después (0%) — mismo criterio que el seguimiento
   const fr=FREQ[PF.freq||"diario"];
-  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button> <button class="btn" id="loaddemo">🧪 Proyectos de prueba</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
+  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
   const summary=card(PF.name,`Aplicada el ${PF.date} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const IM=invMetrics();
@@ -4376,9 +4365,12 @@ function setActive(s){
 }
 function impToActive(){const A=IMP.assets;return {stocks:A,market:{ret:IMP.bench.ret,sig:IMP.bench.sig,tot:IMP.bench.tot,rets:IMP.bench.rets,sharpe:IMP.bench.sharpe},corr:IMP.corr,tickers:A.map(a=>a.t),labels:IMP.labels,window:IMP.window+" · benchmark "+IMP.bench.name,n:IMP.n,rf:IMP.rf,prima:IMP.prima,perYear:IMP.perYear};}
 function applyDataset(which){
-  if(which==="import"&&IMP){setActive(impToActive());DATASET="import";lsSet("inv_dataset_active","import");}
-  else{setActive(DEMO);DATASET="demo";lsSet("inv_dataset_active","demo");}
-  render();
+  if(which==="import"&&IMP){setActive(impToActive());DATASET="import";lsSet("inv_dataset_active","import");render();return;}
+  // El set demo se retiró. Sin import activo, se usa la BASE REAL si tiene datos suficientes; si no, estado vacío
+  // (evalIsEmpty muestra "sin análisis" y pide cargar datos). Nunca se activa un set de ejemplo.
+  try{if(typeof pricedbToIMP==="function"){const _imp=pricedbToIMP(typeof pricedbFreq!=="undefined"?pricedbFreq:"diario");
+    if(_imp&&_imp.assets&&_imp.assets.length>=3){IMP=_imp;impActiveId="datos";lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id","datos");setActive(impToActive());DATASET="import";lsSet("inv_dataset_active","import");render();return;}}}catch(e){}
+  DATASET="none";lsSet("inv_dataset_active","none");render();
 }
 
 /* ---------------- IMPORTAR ACCIONES (multi-archivo, formato Investing) ---------------- */
@@ -4904,8 +4896,9 @@ function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];s
 /* resumen para la vista: por ticker -> n puntos, rango, último precio */
 function pricedbSummary(){const out=[];pricedbTickers().forEach(t=>{const ds=Object.keys(PRICEDB.px[t]).sort();if(!ds.length)return;const m=PRICEDB.tickers[t]||{};out.push({t,n:m.n||t,s:m.s||"",c:m.c||"#1E5FD1",b:m.b,np:ds.length,from:ds[0],to:ds[ds.length-1],last:PRICEDB.px[t][ds[ds.length-1]]});});
   out.sort((a,b)=>a.t<b.t?-1:1);const id=Object.keys(PRICEDB.ipsa||{});return {rows:out,ipsaN:id.length,ipsaFrom:id.length?id.sort()[0]:null,ipsaTo:id.length?id.sort()[id.length-1]:null};}
-/* copia el universo demo IPSA (14 acciones × 23 meses + IPSA) a la base, sin pisar datos ya cargados */
-function pricedbSeedDemo(){
+/* RETIRADO: el set demo ya no existe. La base solo se puebla con datos REALES (planillas / sync automático). */
+function pricedbSeedDemo(){return 0;}
+function pricedbSeedDemo_OLD(){
   try{
     const labs=(typeof DATA!=="undefined"&&DATA.labels)?DATA.labels:null;if(!labs||!labs.length)return 0;
     const dts=labs.map(labelToDate);let n=0;
@@ -5317,7 +5310,7 @@ function viewCrear(){
     const meta=a.kind==="demo"?"IPSA · demo (14 acciones) · sus datos ya están copiados en la base":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones"+_extra);
     const delAttr=a.kind==="demo"?"data-cahidedemo":`data-cadel="${a.id}"`;
     return `<div class="ca-saved ${on?"on":""}"><div class="ca-saved-l"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span>${meta}</span></div><div class="ca-saved-r">${on?'<span class="ca-badge">Activo</span>':`<button class="btn btnu" data-caact="${a.id}">Activar</button>`}${canDel?`<button class="wbtn del" ${delAttr} title="Eliminar análisis">✕</button>`:""}</div></div>`;}).join("");
-  const saved=card("Análisis guardados","El análisis activo alimenta Comparativa, Detalle, CAPM, Multifactor y el Constructor · puedes eliminar el IPSA · demo: sus 23 meses ya quedaron en la base",`<div class="ca-savedlist">${savedRows}</div>`);
+  const saved=card("Análisis guardados","El análisis activo alimenta Comparativa, Detalle, CAPM, Multifactor y el Constructor · se crean desde tu base de datos real (acciones + IPSA)",`<div class="ca-savedlist">${savedRows}</div>`);
   return create+saved;
 }
 function attachCrear(){
@@ -5505,7 +5498,7 @@ function cfgRender(){
     const estado=nT?(`<b>${nT}</b> acciones · IPSA ${S.ipsaN?("hasta <b>"+S.ipsaTo+"</b>"):"<b>sin datos</b>"} · ${S.ipsaN||0} fechas del índice`):"Base vacía · carga planillas o configura la fuente automática";
     const _apxI=(typeof autopxLastInfo==="function")?autopxLastInfo():null;
     const _apxTxt=AUTOPX_URL?(_apxI?(_apxI.error?("última sync: error ("+(""+_apxI.at).slice(0,10)+")"):("última sync: "+(""+_apxI.at).slice(0,16).replace("T"," ")+" · datos hasta "+(_apxI.lastDate||"—"))):"aún sin sincronizar"):"configura la URL de abajo para activarla";
-    const ds=DATASET==="import"&&IMP?`Importado (${IMP.assets.length} acciones)`:"Demo · IPSA";
+    const ds=DATASET==="import"&&IMP?((impActiveId==="datos"?"Base del sistema":"Importado")+" ("+IMP.assets.length+" acciones)"):"Sin análisis activo (crea uno desde tu base)";
     body=sec("Actualización automática","La base se actualiza sola al abrir la app (una vez al día) desde tu fuente de cierres",
       row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
       row("Sincronizar ahora",_apxTxt,'<button class="btn btn-pri" id="cfgSyncNow">⟳ Sincronizar cierres</button>',1)+
@@ -5515,7 +5508,7 @@ function cfgRender(){
       sec("Carga manual","Para poblar historia o registrar un día puntual",
         row("Planillas y cierres","Sube CSV/XLSX (diario, semanal o mensual) o ingresa el cierre de un día",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgGoCargar">📈 Cargar planilla</button><button class="btn" id="cfgGoCierre">📝 Cierre diario</button></div>'))+
       sec("Otros","",
-        row("Set de análisis activo",ds,IMP?`<div class="cfg-seg"><button class="${DATASET!=="import"?"on":""}" data-ds="demo">Demo</button><button class="${DATASET==="import"?"on":""}" data-ds="import">Importado</button></div>`:'<span class="cfg-sub">Se crea en Análisis → Gestión de análisis</span>')+
+        row("Análisis activo",ds,'<span class="cfg-sub">Se gestiona en Análisis → Gestión de análisis (desde tu base de datos real)</span>')+
         row("Fuente de petróleo (URL JSON)","Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.",`<input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="${inStyle}">`,1));
   }else if(cfgTab==="respaldo"){
     const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
@@ -6164,7 +6157,7 @@ function currentAnalysisId(){
   return "demo";
 }
 /* la base del sistema (Datos) NO es un análisis: los análisis se crean a partir de ella (Crear análisis). Lista: demo + análisis guardados */
-function analysisList(){const out=[];if(!lsGet("inv_demo_hidden"))out.push({id:"demo",name:"IPSA · demo",kind:"demo",n:(typeof DEMO!=="undefined"&&DEMO.stocks)?DEMO.stocks.length:14});(IMPSETS||[]).forEach(s=>out.push({id:String(s.id),name:s.name,kind:"import",n:(s.imp&&s.imp.assets)?s.imp.assets.length:0}));return out;}
+function analysisList(){const out=[];(IMPSETS||[]).forEach(s=>out.push({id:String(s.id),name:s.name,kind:"import",n:(s.imp&&s.imp.assets)?s.imp.assets.length:0}));return out;}   // el set "IPSA · demo" se retiró: los análisis se crean desde la base real
 /* el pseudo-análisis "datos" (base en vivo) ya no se ofrece: si quedó activo, conviértelo en un análisis guardado con nombre */
 function analysisMigrateDatos(){try{if(impActiveId==="datos"&&IMP){const nm="Análisis "+(IMP.freq||"")+" · "+(((IMP.assets&&IMP.assets.length)||0))+" acc.";const id="s"+Date.now()+Math.floor(Math.random()*1000);IMPSETS.push({id,name:nm,date:(IMP.window||""),imp:IMP});impActiveId=id;lsSet("inv_impsets_v1",IMPSETS);lsSet("inv_imp_active_id",id);}}catch(e){}}
 function analysisName(id){const a=analysisList().find(x=>x.id===String(id));return a?a.name:"(no disponible)";}
