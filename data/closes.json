@@ -1,14 +1,16 @@
 {
- "updatedAt": "2026-07-09T15:31:00.669Z",
+ "updatedAt": "2026-07-09T15:36:10.216Z",
  "source": "Yahoo Finance (.SN) + fuentes IPSA",
  "ipsaSources": [
   "yahoo ^IPSA hoy: 1 día(s)",
-  "yahoo crumb ^IPSA: HTTP 401",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inespera",
+  "marketwatch spipsa: HTTP 401",
+  "investing 40802: HTTP 403",
+  "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor",
   "yahoo ^IPSA period: 1 día(s)"
  ],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA hoy: 1 día(s) · yahoo crumb ^IPSA: HTTP 401 · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inespera · yahoo ^IPSA period: 1 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 1 día(s)"
  ],
  "days": [
   {
