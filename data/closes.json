@@ -1,15 +1,14 @@
 {
- "updatedAt": "2026-07-08T23:16:45.131Z",
+ "updatedAt": "2026-07-09T15:31:00.669Z",
  "source": "Yahoo Finance (.SN) + fuentes IPSA",
  "ipsaSources": [
-  "yahoo ^IPSA range: 1 día(s)",
-  "yahoo ^IPSA period: 1 día(s)",
-  "yahoo ^SPIPSA: ^SPIPSA: HTTP 404",
-  "yahoo download csv: HTTP 401",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTYPE html><html><head> | stooq.pl=stooq.pl"
+  "yahoo ^IPSA hoy: 1 día(s)",
+  "yahoo crumb ^IPSA: HTTP 401",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inespera",
+  "yahoo ^IPSA period: 1 día(s)"
  ],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA range: 1 día(s) · yahoo ^IPSA period: 1 día(s) · yahoo ^SPIPSA: ^SPIPSA: HTTP 404 · yahoo download csv: HTTP 401 · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTYPE html><html><head> | stooq.pl=stooq.pl"
+  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA hoy: 1 día(s) · yahoo crumb ^IPSA: HTTP 401 · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inespera · yahoo ^IPSA period: 1 día(s)"
  ],
  "days": [
   {
@@ -16473,11 +16472,11 @@
     "ANDINA-B": 4555,
     "CONCHATORO": 845,
     "QUINENCO": 4000,
-    "MALLPLAZA": 3894.9,
+    "MALLPLAZA": 3998.9,
     "VAPORES": 44.19,
     "RIPLEY": 380.37,
     "SMU": 132.7,
-    "SONDA": 320,
+    "SONDA": 316.61,
     "ITAUCL": 19765,
     "CAP": 6280.5
    },
