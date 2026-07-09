@@ -85,44 +85,78 @@ function parseCloseCsv(txt, tag) {
   if (!Object.keys(out).length) throw new Error(`${tag}: CSV sin filas válidas`);
   return out;
 }
-async function yahooDownloadIpsa() {
+const BUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+// Yahoo protege el endpoint de historia (v7/download) con cookie + crumb. Se obtiene la cookie de una página de
+// Yahoo y luego el crumb ligado a ella; con eso, download SÍ entrega la historia real del ^IPSA (que el chart no da).
+let _yCookie = null, _yCrumb = null;
+async function yahooAuth() {
+  if (_yCookie && _yCrumb) return;
+  for (const u of ["https://fc.yahoo.com/", "https://finance.yahoo.com/", "https://finance.yahoo.com/quote/%5EIPSA/history"]) {
+    try {
+      const r = await fetch(u, { headers: { "User-Agent": BUA, "Accept": "text/html,*/*" }, redirect: "follow" });
+      const sc = r.headers.get("set-cookie");
+      if (sc) { const c = sc.split(/,(?=[^;,]+=)/).map(s => s.split(";")[0].trim()).filter(Boolean).join("; "); if (c) { _yCookie = c; break; } }
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, 200));
+  }
+  if (!_yCookie) throw new Error("sin cookie Yahoo");
+  for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+    try {
+      const rc = await fetch(`https://${host}/v1/test/getcrumb`, { headers: { "User-Agent": BUA, "Cookie": _yCookie, "Accept": "text/plain" } });
+      const cr = (await rc.text()).trim();
+      if (cr && cr.length <= 40 && !/[<>{}]/.test(cr)) { _yCrumb = cr; return; }
+    } catch (e) {}
+  }
+  throw new Error("sin crumb Yahoo");
+}
+async function yahooCrumbDownload(symbol) {
+  await yahooAuth();
   const t2 = Math.floor(Date.now() / 1000), t1 = t2 - rangeSeconds();
-  const res = await fetch(`https://query1.finance.yahoo.com/v7/finance/download/%5EIPSA?period1=${t1}&period2=${t2}&interval=1d&events=history`,
-    { headers: { "User-Agent": "Mozilla/5.0 (investor-closes)" } });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return parseCloseCsv(await res.text(), "yahoo dl");
+  let last = "";
+  for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+    try {
+      const url = `https://${host}/v7/finance/download/${encodeURIComponent(symbol)}?period1=${t1}&period2=${t2}&interval=1d&events=history&crumb=${encodeURIComponent(_yCrumb)}`;
+      const res = await fetch(url, { headers: { "User-Agent": BUA, "Cookie": _yCookie, "Accept": "text/csv,*/*" } });
+      if (!res.ok) { last = `HTTP ${res.status}`; continue; }
+      return parseCloseCsv(await res.text(), "yahoo crumb");
+    } catch (e) { last = String((e && e.message) || e).slice(0, 50); }
+  }
+  throw new Error(last || "download falló");
 }
 async function ipsaFromStooq() {
   const ms = Date.now(), fmt = (t) => new Date(t).toISOString().slice(0, 10).replace(/-/g, "");
   const raw = `https://stooq.com/q/d/l/?s=%5Eipsa&i=d&d1=${fmt(ms - rangeSeconds() * 1000)}&d2=${fmt(ms + 86400e3)}`;
-  const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-  // Stooq sirve HTML (bloqueo) a las IPs de los runners: se intenta directo y vía proxies públicos (el mismo
-  // truco que usa la app en el navegador para el petróleo de Stooq). allorigins /get envuelve en JSON.
+  // Stooq sirve HTML (bloqueo) a las IPs de los runners: se intenta directo y vía VARIOS proxies públicos (el mismo
+  // truco que usa la app en el navegador). allorigins /get y whateverorigin envuelven en JSON; /raw es texto plano.
   const routes = [
     ["stooq.com", raw, null, null],
     ["stooq.pl", raw.replace("stooq.com", "stooq.pl"), null, null],
-    ["allorigins", "https://api.allorigins.win/get?url=" + encodeURIComponent(raw), null, (t) => (JSON.parse(t).contents || "")],
-    ["corsproxy", "https://corsproxy.io/?url=" + encodeURIComponent(raw), { Origin: "https://stooq.com", Referer: "https://stooq.com/" }, null],
+    ["allorigins/raw", "https://api.allorigins.win/raw?url=" + encodeURIComponent(raw), null, null],
+    ["allorigins/get", "https://api.allorigins.win/get?url=" + encodeURIComponent(raw), null, (t) => (JSON.parse(t).contents || "")],
     ["codetabs", "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(raw), null, null],
+    ["corsproxy", "https://corsproxy.io/?url=" + encodeURIComponent(raw), { Origin: "https://stooq.com", Referer: "https://stooq.com/" }, null],
+    ["thingproxy", "https://thingproxy.freeboard.io/fetch/" + raw, null, null],
+    ["whateverorigin", "https://www.whateverorigin.org/get?url=" + encodeURIComponent(raw), null, (t) => { try { return JSON.parse(t).contents || ""; } catch (e) { return ""; } }],
   ];
   const fails = [];
   for (const [tag, url, xh, unwrap] of routes) {
     try {
-      const res = await fetch(url, { headers: Object.assign({ "User-Agent": UA, "Accept": "text/csv,text/plain,application/json,*/*" }, xh || {}) });
+      const res = await fetch(url, { headers: Object.assign({ "User-Agent": BUA, "Accept": "text/csv,text/plain,application/json,*/*" }, xh || {}) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       let txt = await res.text();
       if (unwrap) txt = unwrap(txt);
       return parseCloseCsv(txt, tag);
-    } catch (e) { fails.push(`${tag}=${String((e && e.message) || e).slice(0, 60)}`); await new Promise(r => setTimeout(r, 400)); }
+    } catch (e) { fails.push(`${tag}=${String((e && e.message) || e).slice(0, 40)}`); await new Promise(r => setTimeout(r, 300)); }
   }
   throw new Error(fails.join(" | "));
 }
+// Orden: primero el valor de HOY (chart, fiable), luego las fuentes de HISTORIA real (crumb + Stooq). El merge
+// conserva lo ya obtenido (el valor de hoy) sobre lo nuevo, así nunca se pierde el cierre del día.
 const IPSA_SOURCES = [
-  ["yahoo ^IPSA range", () => chart(IPSA_SYMBOL)],
-  ["yahoo ^IPSA period", () => chart(IPSA_SYMBOL, true)],
-  ["yahoo ^SPIPSA", () => chart("^SPIPSA", true)],
-  ["yahoo download csv", yahooDownloadIpsa],
+  ["yahoo ^IPSA hoy", () => chart(IPSA_SYMBOL)],
+  ["yahoo crumb ^IPSA", () => yahooCrumbDownload("^IPSA")],
   ["stooq", ipsaFromStooq],
+  ["yahoo ^IPSA period", () => chart(IPSA_SYMBOL, true)],
 ];
 const ipsaSources = [];
 {
