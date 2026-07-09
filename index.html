@@ -4592,7 +4592,15 @@ function pricedbSanitize(){
   //   vecinos es un dato de otra escala/fuente (el índice no se mueve así en un día → se hunde y rebota) → se
   //   elimina. Cubre la mezcla de fuentes (p.ej. un valor demo colado en una fecha que la planilla no cubrió).
   let nOut=0;
-  const dropOutliers=(map)=>{if(!map)return;const ds=Object.keys(map).sort();for(let i=1;i<ds.length-1;i++){const v=+map[ds[i]],a=+map[ds[i-1]],b=+map[ds[i+1]];if(!(v>0&&a>0&&b>0))continue;const ra=v/a,rb=v/b;if((ra<0.6&&rb<0.6)||(ra>1.7&&rb>1.7)){delete map[ds[i]];nOut++;}}};
+  // Compara cada punto con la MEDIANA de su vecindad (±10 puntos): robusto a BLOQUES contiguos de otra escala
+  // (p.ej. 4 días seguidos de Investing a media escala), no solo picos sueltos. Umbral 0.6×/1.7× = mov. imposible
+  // para un índice (se hunde 40%+ y rebota) → dato de otra fuente. Un cambio real de mercado nunca dispara esto.
+  const _med=(arr)=>{if(!arr.length)return 0;const s=arr.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+  const dropOutliers=(map)=>{if(!map)return;const ds=Object.keys(map).sort(),vs=ds.map(d=>+map[d]),W=10;
+    for(let i=0;i<ds.length;i++){const v=vs[i];if(!(v>0))continue;const win=[];
+      for(let j=Math.max(0,i-W);j<Math.min(ds.length,i+W+1);j++){if(j!==i&&vs[j]>0)win.push(vs[j]);}
+      if(win.length<4)continue;const med=_med(win);
+      if(med>0&&(v<0.6*med||v>1.7*med)){delete map[ds[i]];nOut++;}}};
   dropOutliers(PRICEDB.ipsa);
   Object.keys(ix).forEach(k=>dropOutliers(ix[k]));
   // 3) IPSA/índice FANTASMA por delante del mercado: solo se recorta un valor posterior al último cierre de
