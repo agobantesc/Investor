@@ -1810,7 +1810,7 @@ function viewDetalle(){
   const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.${_lowR2?` <br><b style="color:${amber}">⚠ R² muy bajo (${(a.r2*100).toFixed(0)}%):</b> el IPSA casi no explica el movimiento de ${s.t} (se mueve por factores propios). Con eso su <b>β y su α son estadísticamente poco confiables</b> — no es un error del cálculo, es una acción de baja correlación con el mercado. El Investor Score lo sabe: amortigua su α para no premiar lo que en el fondo es ruido idiosincrático.`:""}`);
   // VALOR INTRÍNSECO Y MARGEN DE SEGURIDAD — ¿hay espacio para ganar antes de comprar? Usa la β de la regresión
   // para el retorno exigido. Si no hay datos suficientes (sin dividendos/utilidad/target), no se muestra (no inventa).
-  const _iv=(typeof intrinsicValue==="function")?intrinsicValue(sel,{beta:s.b}):null;
+  const _iv=(typeof intrinsicValue==="function")?intrinsicValue(sel,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;
   let ivCard="";
   if(_iv){
     const ml=mosLabel(_iv.mos),mc=({green,red,amber,ink})[ml.cls]||ink,mosPct=_iv.mos*100;
@@ -1830,7 +1830,7 @@ function viewDetalle(){
       ${tile("Retorno exigido r",(_iv.r*100).toFixed(1)+"%","CAPM · Rf "+(+RF).toFixed(1)+"% + β "+_iv.beta.toFixed(2)+"·"+(+PRIMA).toFixed(1)+"%"+(_iv.g!=null?(" · g "+(_iv.g*100).toFixed(1)+"%"):""),s.c,indigo)}</div>`;
     const met=_iv.methods.map(m=>m.name+" $"+fmt(m.val)).join(" · ");
     const ivNote=notecard(`Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.`);
-    ivCard=card("Valor intrínseco y margen de seguridad","¿Hay espacio para ganar? Compara lo que "+s.t+" vale (dividendos, múltiplos y target de analistas) con su precio de mercado",bar+ivTiles+ivNote);
+    ivCard=card("Valor intrínseco y margen de seguridad","¿Hay espacio para ganar? Compara lo que "+s.t+" vale (dividendos, múltiplos y target de analistas) con su último cierre de la base",bar+ivTiles+ivNote);
   }
   return selbar+tiles+rrTiles+fTiles+ivCard+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
 }
@@ -3823,7 +3823,7 @@ function cpRunTool(name,input){
       else out.fundamentalesIlustrativos={marketCapMM_USD:f.mcap,pb:f.pb,pe:f.pe,roe_pct:f.roe,deudaPatrimonio:f.de,divYield_pct:f.dy,crecimientoEPS_pct:f.eg,margenNeto_pct:f.nm};
       // recomendación de la plataforma con etiqueta de FUENTE (evita confundir el score —base de precios— con el capm/multifactor del set activo)
       try{const d=investorScoreDetail(s.t);if(d)out.investorScore={score:d.score,bloques:{riesgoRetorno:d.rr,fundamentos:d.fund,tendencia:d.tend},confianza_pct:d.confianza,alertas:d.alertas,fuente:"Investor Score = recomendación sobre la BASE DE PRECIOS (universo IPSA completo), NO sobre el set/análisis activo de arriba (capm/multifactor)"};}catch(e){}
-      try{const iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b}):null;if(iv)out.valorizacion=valorizacionJSON(iv);}catch(e){}
+      try{const iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;if(iv)out.valorizacion=valorizacionJSON(iv);}catch(e){}
       return JSON.stringify(out);
     }
     if(name==="get_correlations"){
@@ -4808,7 +4808,13 @@ function intrinsicValue(t,ctx){
   let beta=(ctx.beta!=null&&isFinite(ctx.beta))?ctx.beta:(f.beta!=null&&isFinite(f.beta)?f.beta:1);
   beta=Math.max(0.2,Math.min(2.2,beta));
   let r=(rf+beta*pr)/100;r=Math.max(0.05,Math.min(0.25,r));   // retorno exigido (CAPM), acotado a un rango sensato
+  // px = precio de los FUNDAMENTOS (para EPS/dividendo, internamente consistente con P/U). pxNow = precio ACTUAL
+  // de comparación para el margen de seguridad: el ÚLTIMO CIERRE de la base de precios (fuente única y más fresca);
+  // si el llamador ya lo tiene (ctx.px) se usa; si no, lastKnownPrice; y como último recurso el px de fundamentos.
   const px=f.px,eps=(f.pe!=null&&f.pe>0)?px/f.pe:null;
+  let pxNow=(ctx.px!=null&&isFinite(ctx.px)&&ctx.px>0)?+ctx.px:null;
+  if(pxNow==null){try{const lk=(typeof lastKnownPrice==="function")?lastKnownPrice(t):null;if(lk!=null&&lk!==""&&+lk>0)pxNow=+lk;}catch(e){}}
+  if(pxNow==null||!(pxNow>0))pxNow=px;
   const anchors=[];let lo=Infinity,hi=-Infinity,g=null;
   const band=v=>{if(v!=null&&isFinite(v)&&v>0){lo=Math.min(lo,v);hi=Math.max(hi,v);}};
   // 1) DDM / Gordon: valor = dividendo perpetuo (piso sin crecimiento) → con crecimiento sustentable (techo)
@@ -4829,8 +4835,8 @@ function intrinsicValue(t,ctx){
   let sw=0,sv=0;anchors.forEach(a=>{sv+=a.val*a.w;sw+=a.w;});const value=sw>0?sv/sw:null;
   if(value==null||!isFinite(value)||value<=0)return null;
   if(lo===Infinity)lo=value;if(hi===-Infinity)hi=value;
-  const mos=(value-px)/value;   // margen de seguridad: >0 subvalorada (hay margen), <0 cara
-  return {value,lo,hi,px,mos,r,g,beta,methods:anchors.map(a=>({name:a.name,val:Math.round(a.val)})),n:anchors.length};
+  const mos=(value-pxNow)/value;   // margen de seguridad: valor intrínseco vs PRECIO ACTUAL (>0 hay margen, <0 cara)
+  return {value,lo,hi,px:pxNow,mos,r,g,beta,methods:anchors.map(a=>({name:a.name,val:Math.round(a.val)})),n:anchors.length};
 }
 /* etiqueta/color del margen de seguridad para la UI (umbrales prudentes) */
 function mosLabel(mos){if(mos==null)return {txt:"—",cls:"ink"};if(mos>=0.20)return {txt:"margen amplio",cls:"green"};if(mos>=0.08)return {txt:"algo de margen",cls:"green"};if(mos>=-0.05)return {txt:"precio justo",cls:"ink"};if(mos>=-0.18)return {txt:"algo cara",cls:"amber"};return {txt:"cara",cls:"red"};}
@@ -6848,7 +6854,7 @@ function investorScoreCompute(){
   // y el sub-componente de value cae de vuelta a P/U+P/B (no se inventa nada).
   const _epv=epes.filter(x=>x!=null&&isFinite(x)&&x>0).slice().sort((a,b)=>a-b);
   const medEPE=_epv.length>=3?(_epv.length%2?_epv[(_epv.length-1)/2]:(_epv[_epv.length/2-1]+_epv[_epv.length/2])/2):null;
-  const ivs=A.map(s=>{try{return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,medPE:medEPE}):null;}catch(e){return null;}});
+  const ivs=A.map(s=>{try{const _px=(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null;return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,medPE:medEPE,px:_px}):null;}catch(e){return null;}});
   const moss=ivs.map(iv=>iv?iv.mos*100:null);   // margen de seguridad en % (mayor = más barata = mejor value)
   const obsFactor=Math.max(0,Math.min(1,nRet/40));   // ≥40 retornos (~9m semanal) = muestra suficiente
   const rows=A.map((s,si)=>{
