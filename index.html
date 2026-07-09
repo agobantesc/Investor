@@ -1834,7 +1834,9 @@ function viewDetalle(){
       ${tile("Margen de seguridad",(mosPct>=0?"+":"")+mosPct.toFixed(1)+"%",ml.txt+" · precio $"+fmt(_iv.px),s.c,mc)}
       ${tile("Retorno exigido r",(_iv.r*100).toFixed(1)+"%","CAPM · Rf "+(+RF).toFixed(1)+"% + β "+_iv.beta.toFixed(2)+"·"+(+PRIMA).toFixed(1)+"%"+(_iv.g!=null?(" · g "+(_iv.g*100).toFixed(1)+"%"):""),s.c,indigo)}</div>`;
     const met=_iv.methods.map(m=>m.name+" $"+fmt(m.val)).join(" · ");
-    const ivNote=notecard(`Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.`);
+    const _disp=_iv.disp||0;
+    const _fiab=_disp>0.6?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> los ${_iv.n} métodos discrepan bastante (banda ancha). Tómalo como una referencia gruesa, no un número fino.`:"";
+    const ivNote=notecard(`Valor central = <b>mediana</b> de las anclas (robusta a un método extremo). Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.${_fiab}`);
     ivCard=card("Valor intrínseco y margen de seguridad","¿Hay espacio para ganar? Compara lo que "+s.t+" vale (dividendos, múltiplos y target de analistas) con su último cierre de la base",bar+ivTiles+ivNote);
   }
   return selbar+tiles+rrTiles+fTiles+ivCard+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
@@ -4861,16 +4863,21 @@ function intrinsicValue(t,ctx){
   // 3) precio objetivo de analistas
   if(f.target!=null&&f.target>0){band(f.target);anchors.push({name:"Target analistas",val:f.target,w:0.2});}
   if(!anchors.length)return null;
-  let sw=0,sv=0;anchors.forEach(a=>{sv+=a.val*a.w;sw+=a.w;});const value=sw>0?sv/sw:null;
+  // Valor central = MEDIANA de las anclas (robusta): así una sola ancla extrema —p.ej. el DDM, estructuralmente
+  // conservador en bancos de alto payout— NO arrastra la estimación. Con 3 anclas toma la del medio; con 2, el
+  // promedio; con 1, ella misma. Mucho más fiel que un promedio ponderado que un outlier puede dominar.
+  const cv=anchors.map(a=>a.val).slice().sort((a,b)=>a-b),mi=Math.floor(cv.length/2);
+  const value=cv.length%2?cv[mi]:(cv[mi-1]+cv[mi])/2;
   if(value==null||!isFinite(value)||value<=0)return null;
   if(lo===Infinity)lo=value;if(hi===-Infinity)hi=value;
+  const disp=value>0?(hi-lo)/value:0;   // dispersión de las anclas: alto = poco fiable (los métodos no coinciden)
   const mos=(value-pxNow)/value;   // margen de seguridad: valor intrínseco vs PRECIO ACTUAL (>0 hay margen, <0 cara)
-  return {value,lo,hi,px:pxNow,mos,r,g,beta,methods:anchors.map(a=>({name:a.name,val:Math.round(a.val)})),n:anchors.length};
+  return {value,lo,hi,px:pxNow,mos,disp,r,g,beta,methods:anchors.map(a=>({name:a.name,val:Math.round(a.val)})),n:anchors.length};
 }
 /* etiqueta/color del margen de seguridad para la UI (umbrales prudentes) */
 function mosLabel(mos){if(mos==null)return {txt:"—",cls:"ink"};if(mos>=0.20)return {txt:"margen amplio",cls:"green"};if(mos>=0.08)return {txt:"algo de margen",cls:"green"};if(mos>=-0.05)return {txt:"precio justo",cls:"ink"};if(mos>=-0.18)return {txt:"algo cara",cls:"amber"};return {txt:"cara",cls:"red"};}
 /* resumen de valorización para el agente (get_stock): valor intrínseco, banda, margen de seguridad y regla sin-peros */
-function valorizacionJSON(iv){if(!iv)return null;return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no una señal de timing. YA está reflejado en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR, no una rebaja del veredicto. Es una BANDA estimada, no un precio exacto."};}
+function valorizacionJSON(iv){if(!iv)return null;const disp=iv.disp||0;const fiab=disp>0.6?"baja (las anclas discrepan mucho: trátalo como referencia gruesa)":disp>0.35?"media":"alta";return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),fiabilidad:fiab,dispersion:+disp.toFixed(2),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Valor central = MEDIANA de las anclas (robusta a un método extremo). Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no timing. YA está en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR. Es una BANDA estimada; si 'fiabilidad' es baja, los métodos no coinciden y hay que tomarlo con cautela."};}
 function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
 async function fundSync(manual){
   const u=fundUrl();
@@ -6881,8 +6888,9 @@ function investorScoreCompute(){
   // VALORIZACIÓN: margen de seguridad por acción (valor intrínseco vs precio). El P/U de referencia del múltiplo
   // justo es la mediana efectiva del universo. Si una acción no tiene datos para ninguna ancla, su mos queda null
   // y el sub-componente de value cae de vuelta a P/U+P/B (no se inventa nada).
-  const _epv=epes.filter(x=>x!=null&&isFinite(x)&&x>0).slice().sort((a,b)=>a-b);
-  const medEPE=_epv.length>=3?(_epv.length%2?_epv[(_epv.length-1)/2]:(_epv[_epv.length/2-1]+_epv[_epv.length/2])/2):null;
+  // P/U de referencia = mediana del UNIVERSO COMPLETO (fairPE), NO del subconjunto del análisis: así el valor
+  // intrínseco de una acción es el MISMO en el score, en Detalle y en el agente (consistencia auditada).
+  const medEPE=(typeof fairPE==="function")?fairPE(true):null;
   const ivs=A.map(s=>{try{const _px=(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null;return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,medPE:medEPE,px:_px}):null;}catch(e){return null;}});
   const moss=ivs.map(iv=>iv?iv.mos*100:null);   // margen de seguridad en % (mayor = más barata = mejor value)
   const obsFactor=Math.max(0,Math.min(1,nRet/40));   // ≥40 retornos (~9m semanal) = muestra suficiente
