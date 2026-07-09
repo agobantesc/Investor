@@ -1735,17 +1735,22 @@ function viewComparativa(){
   const leg=`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>IPSA (mercado)</span><span><span class="lgdot" style="background:${muted}"></span>Rf</span></div>`;
   const scatter=card("Mapa Riesgo–Retorno",(W?("Volatilidad anual (X) vs retorno de la ventana (Y) · "):"Volatilidad anual (X) vs retorno anual (Y) · ")+winLong(),svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:W?("Retorno "+winShort()+" (%)"):"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
   const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
+  // MARGEN DE SEGURIDAD por acción: valor intrínseco vs último cierre. Verde = cotiza BAJO su valor (hay margen).
+  const mosCell=s=>{let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;}catch(e){}
+    if(!iv)return `<td class="tnum num" style="color:${muted}">—</td>`;
+    const ml=mosLabel(iv.mos),mc=({green,red,amber,ink})[ml.cls]||ink;
+    return `<td class="tnum num" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(iv.value).toLocaleString("es-CL")} · banda $${Math.round(iv.lo).toLocaleString("es-CL")}–$${Math.round(iv.hi).toLocaleString("es-CL")} · ${ml.txt}">${(iv.mos>=0?"+":"")+(iv.mos*100).toFixed(0)+"%"}</td>`;};
   const rows=byS.map(s=>{const a=s.a24;return `<tr><td>${tk(s)}</td><td>${badge(s.s,s.c)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(retOf(s))}</td>
     <td class="tnum num">${p0(a.sig)}</td><td class="tnum num" style="font-weight:800;color:${a.sharpe>=0?green:red}">${a.sharpe.toFixed(2)}</td>
-    <td class="num">${chip(alfaOf(s))}</td><td class="tnum num" style="color:${muted}">${a.r2.toFixed(2)}</td><td class="tnum num" style="color:${muted}">${W?pc(a.ret):pc(a.tot)}</td></tr>`;}).join("");
+    <td class="num">${chip(alfaOf(s))}</td>${mosCell(s)}<td class="tnum num" style="color:${muted}">${a.r2.toFixed(2)}</td><td class="tnum num" style="color:${muted}">${W?pc(a.ret):pc(a.tot)}</td></tr>`;}).join("");
   const mkt=`<tr style="background:var(--soft)"><td style="font-weight:800;color:${indigo}">IPSA</td><td>${badge("mercado",indigo)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">1.00</td><td class="num">${chip(mktRet)}</td><td class="tnum num">${p0(MKT.sig)}</td>
-    <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="tnum num" style="color:${muted}">${W?pc(MKT.ret):pc(MKT.tot)}</td></tr>`;
+    <td class="tnum num" style="font-weight:800;color:${green}">${MKT.sharpe.toFixed(2)}</td><td class="num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">—</td><td class="tnum num" style="color:${muted}">1.00</td><td class="tnum num" style="color:${muted}">${W?pc(MKT.ret):pc(MKT.tot)}</td></tr>`;
   const heads=W
-    ? [["Acción",0],["Sector",0],["β",1],["Ret. "+winShort(),1],["σ anual",1],["Sharpe",1],["α ventana",1],["R²",1],["Anualizado*",1]]
-    : [["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["R²",1],["Total "+winShort(),1]];
-  const tblSub=W?("Ordenadas por Sharpe · regresión vs IPSA · retornos de la VENTANA de "+winLong()+" · * anualizado = proyección referencial, no un retorno obtenido"):"Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA";
+    ? [["Acción",0],["Sector",0],["β",1],["Ret. "+winShort(),1],["σ anual",1],["Sharpe",1],["α ventana",1],["Mrg. seg.",1],["R²",1],["Anualizado*",1]]
+    : [["Acción",0],["Sector",0],["β",1],["Ret. anual",1],["σ",1],["Sharpe",1],["α Jensen",1],["Mrg. seg.",1],["R²",1],["Total "+winShort(),1]];
+  const tblSub=(W?("Ordenadas por Sharpe · regresión vs IPSA · retornos de la VENTANA de "+winLong()+" · * anualizado = proyección referencial, no un retorno obtenido"):"Ordenadas por Sharpe (retorno ajustado por riesgo) · regresión vs IPSA")+" · Mrg. seg. = valor intrínseco vs precio (verde = bajo su valor, hay margen)";
   const tbl=card("Comparativa de candidatas",tblSub,{html:`<div class="tw"><table><thead><tr>${heads.map(([h,n])=>`<th class="${n?'num ':''}ntr">${h}</th>`).join("")}</tr></thead><tbody>${rows}${mkt}</tbody></table></div>`,flush:true});
   return marketTiles()+scatter+tbl;
 }
@@ -2909,6 +2914,20 @@ function compraPreview(){
 }
 // El formulario de "inyectar capital" se retiró de Operar por redundante con Comprar (una compra ya suma
 // capital nuevo). Los eventos ev.kind==="inject" YA guardados se siguen calculando y mostrando (compat).
+/* indicador de valorización al comprar: ¿el precio que voy a pagar queda sobre o bajo el valor intrínseco?
+   Usa el PRECIO INGRESADO (lo que vas a pagar), no el último cierre — así ves si estás pagando de más. */
+function opValHTML(t,price){
+  if(!t)return "";
+  let iv=null;try{const hd=PF&&PF.holdings&&PF.holdings.find(h=>h.t===t);let bt=hd?hd.b:null;if(bt==null&&typeof uniStk==="function"){const u=uniStk(t);if(u)bt=u.b;}iv=(typeof intrinsicValue==="function")?intrinsicValue(t,bt!=null?{beta:bt}:{}):null;}catch(e){}
+  if(!iv)return `<div class="op-val-in" style="color:var(--muted)">Sin valor intrínseco para ${t} (fundamentos insuficientes para estimarlo).</div>`;
+  const fmt=v=>Math.round(v).toLocaleString("es-CL");
+  const base=`Valor intrínseco <b>$${fmt(iv.value)}</b> <span style="color:var(--muted)">· banda $${fmt(iv.lo)}–$${fmt(iv.hi)}</span>`;
+  const P=parseFloat(price);
+  if(!(P>0))return `<div class="op-val-in">${base} · ingresa el precio para ver si compras sobre o bajo el valor.</div>`;
+  const mos=(iv.value-P)/iv.value,ml=mosLabel(mos),mc=({green,red,amber,ink})[ml.cls]||ink;
+  const verb=mos>=0?"BAJO":"SOBRE",pct=Math.abs(mos*100).toFixed(1);
+  return `<div class="op-val-in">${base}<br><span style="color:${mc};font-weight:800">A $${fmt(P)} compras un ${pct}% ${verb} el valor intrínseco</span> <span style="color:var(--muted)">(${ml.txt})</span></div>`;
+}
 function viewOperar(){
   syncProj();
   if(!PROJECTS.length) return viewInv();
@@ -2940,6 +2959,7 @@ function viewOperar(){
       <div><label class="genl" for="opprice">Precio por acción (CLP)</label><input type="number" step="any" id="opprice" value="${priceVal}" placeholder="${lastPrice||"precio"}" aria-label="Precio por acción en pesos"></div>
       <div><label class="genl" for="opdate">Fecha</label><input type="date" id="opdate" value="${opState.date||localDay()}" aria-label="Fecha de la operación"></div>
     </div>
+    ${opState.side==="buy"?`<div id="opval" class="op-val" style="margin-top:12px;padding:11px 13px;border:1px solid var(--line2);border-radius:11px;background:var(--soft);font-size:12.5px;line-height:1.5">${opValHTML(osel,priceVal)}</div>`:""}
     <div class="op-foot"><div class="op-amt">${opState.side==="sell"?"Monto a recibir":"Monto a invertir"}: <b>${omonto>0?fmtCLP(omonto):"—"}</b></div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
   const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Comprar también sirve para <b>aportar capital nuevo</b>: cada compra suma el monto al capital aportado y recalcula el valor de la cartera y el drift — sin que cuente como rentabilidad.",opBody+`<div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
   return projbar+summary+opCard;
@@ -3128,7 +3148,7 @@ function attachInv(){
   const _ot=document.getElementById("optkr");if(_ot)_ot.onchange=()=>{opState.tkr=_ot.value;opState.price="";render();};
   function _opAmt(){const q=parseFloat(opState.qty),p=parseFloat(opState.price);const m=(q>0&&p>0)?q*p:0;const el=document.querySelector(".op-amt b");if(el)el.textContent=m>0?fmtCLP(m):"—";}
   const _oq=document.getElementById("opqty");if(_oq)_oq.oninput=()=>{opState.qty=_oq.value;_opAmt();};
-  const _op=document.getElementById("opprice");if(_op)_op.oninput=()=>{opState.price=_op.value;_opAmt();};
+  const _op=document.getElementById("opprice");if(_op)_op.oninput=()=>{opState.price=_op.value;_opAmt();const _ov=document.getElementById("opval");if(_ov&&opState.side==="buy"){const _t=(document.getElementById("optkr")||{}).value||opState.tkr;_ov.innerHTML=opValHTML(_t,_op.value);}};
   const _od=document.getElementById("opdate");if(_od)_od.onchange=()=>{opState.date=_od.value;};
   const _odo=document.getElementById("opdo");if(_odo)_odo.onclick=opDo;
   const _crep=document.getElementById("contabreport");if(_crep)_crep.onclick=genContabReport;
