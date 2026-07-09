@@ -1808,7 +1808,31 @@ function viewDetalle(){
   const ph=card("Historia del precio",`${s.t} · precio de cierre ${perAdj} · ${s.prices.length} puntos`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
   const _lowR2=a.r2<0.10;   // r² muy bajo: el mercado casi no explica a la acción → β/α poco confiables (mucho riesgo idiosincrático)
   const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.${_lowR2?` <br><b style="color:${amber}">⚠ R² muy bajo (${(a.r2*100).toFixed(0)}%):</b> el IPSA casi no explica el movimiento de ${s.t} (se mueve por factores propios). Con eso su <b>β y su α son estadísticamente poco confiables</b> — no es un error del cálculo, es una acción de baja correlación con el mercado. El Investor Score lo sabe: amortigua su α para no premiar lo que en el fondo es ruido idiosincrático.`:""}`);
-  return selbar+tiles+rrTiles+fTiles+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
+  // VALOR INTRÍNSECO Y MARGEN DE SEGURIDAD — ¿hay espacio para ganar antes de comprar? Usa la β de la regresión
+  // para el retorno exigido. Si no hay datos suficientes (sin dividendos/utilidad/target), no se muestra (no inventa).
+  const _iv=(typeof intrinsicValue==="function")?intrinsicValue(sel,{beta:s.b}):null;
+  let ivCard="";
+  if(_iv){
+    const ml=mosLabel(_iv.mos),mc=({green,red,amber,ink})[ml.cls]||ink,mosPct=_iv.mos*100;
+    const fmt=v=>Math.round(v).toLocaleString("es-CL");
+    const scMin=Math.min(_iv.lo,_iv.px)*0.96,scMax=Math.max(_iv.hi,_iv.px)*1.04,rg=(scMax-scMin)||1,X=v=>Math.max(0,Math.min(100,(v-scMin)/rg*100));
+    const bandL=X(_iv.lo),bandW=Math.max(1.5,X(_iv.hi)-X(_iv.lo)),valX=X(_iv.value),pxX=X(_iv.px);
+    const bar=`<div style="position:relative;height:58px;margin:16px 6px 8px">
+      <div style="position:absolute;top:26px;left:0;right:0;height:8px;border-radius:5px;background:var(--line2)"></div>
+      <div style="position:absolute;top:26px;left:${bandL.toFixed(1)}%;width:${bandW.toFixed(1)}%;height:8px;border-radius:5px;background:${s.c}40;border:1px solid ${s.c}" title="banda de valor intrínseco"></div>
+      <div style="position:absolute;top:20px;left:${valX.toFixed(1)}%;width:2px;height:20px;background:${s.c};transform:translateX(-1px)"></div>
+      <div style="position:absolute;top:6px;left:${valX.toFixed(1)}%;transform:translateX(-50%);font:800 10px var(--font);color:${s.c};white-space:nowrap">valor $${fmt(_iv.value)}</div>
+      <div style="position:absolute;top:36px;left:${pxX.toFixed(1)}%;transform:translateX(-50%);color:${mc};font-size:12px;line-height:1">▲</div>
+      <div style="position:absolute;top:46px;left:${pxX.toFixed(1)}%;transform:translateX(-50%);font:800 10px var(--font);color:${mc};white-space:nowrap">precio $${fmt(_iv.px)}</div></div>`;
+    const ivTiles=`<div class="tiles">
+      ${tile("Valor intrínseco","$"+fmt(_iv.value),"banda $"+fmt(_iv.lo)+" – $"+fmt(_iv.hi),s.c,ink)}
+      ${tile("Margen de seguridad",(mosPct>=0?"+":"")+mosPct.toFixed(1)+"%",ml.txt+" · precio $"+fmt(_iv.px),s.c,mc)}
+      ${tile("Retorno exigido r",(_iv.r*100).toFixed(1)+"%","CAPM · Rf "+(+RF).toFixed(1)+"% + β "+_iv.beta.toFixed(2)+"·"+(+PRIMA).toFixed(1)+"%"+(_iv.g!=null?(" · g "+(_iv.g*100).toFixed(1)+"%"):""),s.c,indigo)}</div>`;
+    const met=_iv.methods.map(m=>m.name+" $"+fmt(m.val)).join(" · ");
+    const ivNote=notecard(`Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.`);
+    ivCard=card("Valor intrínseco y margen de seguridad","¿Hay espacio para ganar? Compara lo que "+s.t+" vale (dividendos, múltiplos y target de analistas) con su precio de mercado",bar+ivTiles+ivNote);
+  }
+  return selbar+tiles+rrTiles+fTiles+ivCard+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
 }
 
 // ===== CAPM / SML =====
@@ -3651,7 +3675,7 @@ HERRAMIENTAS: get_active_portfolio, get_performance_summary, get_portfolios, lis
 UNIVERSO: el usuario puede operar e invertir en ~30 acciones del IPSA. Las que no están en el análisis activo llegan como "universo adicional" con β REFERENCIAL sectorial (sin historial cargado): preséntalas siempre como estimación, nunca como métrica calculada, y sugiere cargar sus precios (Datos → Cargar planilla) para tener cifras reales. Si list_stocks/get_stock/get_correlations/get_multifactor indican **base de precios inexistente** (no hay universo cargado), no cites β/σ que no existen y guía a cargar datos. PERO si esas tools devuelven métricas del **Investor Score** (aunque el texto diga "sin análisis formal"), esas cifras son REALES: cítalas. El Investor Score, la cartera activa y su seguimiento (get_investor_score, get_active_portfolio, get_performance_summary) siguen vivos aunque no haya análisis formal.
 
 5 FOCOS (los procesos son guía mental, no plantilla de salida obligatoria):
-1) ANALIZAR ACCIONES — get_stock; rankear/comparar: list_stocks+get_multifactor; encaje: get_correlations. Razona: driver macro del sector/β/estilo; CAPM (E(R) exigido vs retorno24m, α, r²); MF (composite, factores z>+0,5 favorecen / z<−0,5 perjudican, matiza con r²/horizonte); riesgo (σ, Sharpe, correlación); VEREDICTO (comprar/mantener/evitar/sobreponderar/reducir) con cifras y alineado al perfil; si choca con el perfil, adviértelo. **VALORIZACIÓN (triangula con lo que las tools SÍ entregan):** usa el **P/U EFECTIVO** (el más conservador de trailing/forward, el mismo del score) y el upside de get_stock; para el sector compara TRANSVERSALMENTE los P/U de list_stocks/get_investor_score. **No cites una "historia de múltiplos": las tools no la entregan — sería inventar.** Esto EXPLICA el bloque de fundamentos del score, nunca lo contradice: si concluyes "cara" pese a buen score, es **color**, nunca una rebaja del veredicto (la valorización ya está en fundamentos, 30%). **CALIDAD DE UTILIDAD:** si el score trae la alerta "utilidad reciente probablemente no recurrente (P/U forward ≫ trailing)", trátala como bandera de calidad (valorización y ROE ya vienen ajustados); no celebres un P/U "barato" contable. **TESIS (toda recomendación L3 de comprar/vender/sobre- o infra-ponderar):** (1) VEREDICTO + TAMAÑO sugerido (peso %); (2) CASO BASE con la cifra ancla (tramo de score y bloques, E(R) CAPM/MF, upside); (3) ASIMETRÍA alza/baja: TECHO con get_projection (p75/p95) o upside de analistas; PISO con el escenario adverso de get_projection (p5/p25) y/o la banda de tolerancia del perfil — cuánto se gana vs cuánto se arriesga HACIA ADELANTE. La **caída máx histórica y el α NO son el piso**: ya están descontados en el score; si citas maxDD es contexto ya descontado, jamás un "pero". (4) CATALIZADORES (1–2 gatillos que confirmarían) y ROMPE-TESIS (qué la invalidaría). Los ROMPE-TESIS son **exógenos y prospectivos** (giro macro, gatillo que no ocurre, cambio regulatorio, calidad de resultado) — NO son los "peros" ya descontados por el score (σ, r², drawdown), que siguen PROHIBIDOS: todo impulso de "pero es volátil / r² bajo" se REEMPLAZA por un rompe-tesis real y monitoreable.
+1) ANALIZAR ACCIONES — get_stock; rankear/comparar: list_stocks+get_multifactor; encaje: get_correlations. Razona: driver macro del sector/β/estilo; CAPM (E(R) exigido vs retorno24m, α, r²); MF (composite, factores z>+0,5 favorecen / z<−0,5 perjudican, matiza con r²/horizonte); riesgo (σ, Sharpe, correlación); VEREDICTO (comprar/mantener/evitar/sobreponderar/reducir) con cifras y alineado al perfil; si choca con el perfil, adviértelo. **VALORIZACIÓN (usa el bloque 'valorizacion' de get_stock):** trae el **valor intrínseco** (banda), el **margen de seguridad %** (colchón entre valor y precio) y el retorno exigido r — triangulado con DDM (dividendos), múltiplo justo del universo y target de analistas. Es el ancla de PRECIO de la tesis: margen positivo = hay espacio para ganar comprando bajo su valor (a qué precio entrar); margen negativo = pagas de más. Complementa con el P/U EFECTIVO y la comparación transversal de P/U de list_stocks. Cita la BANDA, no un precio exacto (es estimación). **No cites una "historia de múltiplos": las tools no la entregan — sería inventar.** El margen de seguridad YA está en el bloque fundamentos del score: si una acción de score alto sale cara, es COLOR, nunca un "pero" que rebaje el veredicto. Esto EXPLICA el bloque de fundamentos del score, nunca lo contradice: si concluyes "cara" pese a buen score, es **color**, nunca una rebaja del veredicto (la valorización ya está en fundamentos, 30%). **CALIDAD DE UTILIDAD:** si el score trae la alerta "utilidad reciente probablemente no recurrente (P/U forward ≫ trailing)", trátala como bandera de calidad (valorización y ROE ya vienen ajustados); no celebres un P/U "barato" contable. **TESIS (toda recomendación L3 de comprar/vender/sobre- o infra-ponderar):** (1) VEREDICTO + TAMAÑO sugerido (peso %); (2) CASO BASE con la cifra ancla (tramo de score y bloques, E(R) CAPM/MF, upside); (3) ASIMETRÍA alza/baja: TECHO con get_projection (p75/p95) o upside de analistas; PISO con el escenario adverso de get_projection (p5/p25) y/o la banda de tolerancia del perfil — cuánto se gana vs cuánto se arriesga HACIA ADELANTE. La **caída máx histórica y el α NO son el piso**: ya están descontados en el score; si citas maxDD es contexto ya descontado, jamás un "pero". (4) CATALIZADORES (1–2 gatillos que confirmarían) y ROMPE-TESIS (qué la invalidaría). Los ROMPE-TESIS son **exógenos y prospectivos** (giro macro, gatillo que no ocurre, cambio regulatorio, calidad de resultado) — NO son los "peros" ya descontados por el score (σ, r², drawdown), que siguen PROHIBIDOS: todo impulso de "pero es volátil / r² bajo" se REEMPLAZA por un rompe-tesis real y monitoreable.
 2) CONSTRUIR Y SIMULAR — base: get_constructor, get_investor_profile (nivel, retornoRequerido, sesgo factorial, SAA), get_scenarios. Toda cartera hipotética la VALIDAS con evaluate_portfolio({weights~100}, amount). Optimiza: ↑Sharpe, ↓correlación media, evita concentración sectorial, alinea factores. En análisis cuantifica deltas vs baseline (Δβ, ΔSharpe, ΔE(R), Δσ, Δcorr) y el trade-off. Entrega pesos finales explícitos (ticker y %).
 3) SEGUIMIENTOS Y CIERRES — get_performance_summary (pulso); get_active_portfolio (detalle: vsIPSA_pts, β realizado vs esperado, maxDD, Sharpe realizado, porAccion). Diagnostica con cifras la causa que más resta (concentración, perdedora, drift, exceso β, Sharpe bajo); separa ruido de tesis rota con get_stock. PROPÓN 1–3 cambios (acción, de X% a Y%, por qué) y VALÍDALOS con evaluate_portfolio mostrando deltas. CIERRES: realizado (TWR, vsIPSA, P/L) vs tesis y perfil → tesis cumplida / rota / gestión de riesgo, y qué hacer con el capital liberado.
 4) MERCADO Y MACRO → ACCIONES — get_market_news + get_market_indicators + get_ipsa_snapshot. Identifica 1–3 drivers (dirección y magnitud); distingue señal sostenida de ruido. Mapéalo al ticker con SIGNO y canal (costo/ingreso/margen/valuación); matiza con get_stock (β amplifica) o la exposición real (get_active_portfolio/get_constructor).
@@ -3782,6 +3806,7 @@ function cpRunTool(name,input){
             investorScore:{score:d.score,confianza_pct:d.confianza,bloques:{riesgoRetorno:d.rr,fundamentos:d.fund,tendencia:d.tend}},
             metricas:{beta:d.beta,sharpe:d.sharpe,sigma_pct:d.sig,alpha_pp:d.alpha,alpha_amortiguado:d.alphaAdj,r2:d.r2,caidaMax_pct:d.maxDD,momentum6m_pct:d.mom6m,posicion52sem_pct:d.pos52,upside_analistas_pct:d.upside},
             fundamentales:(f&&Object.keys(f).length)?{pe:f.pe,fpe:f.fpe,pb:f.pb,dy:f.dy,roe:f.roe,nm:f.nm,eg:f.eg,target:f.target,rec:f.rec}:null,
+            valorizacion:(function(){try{const iv=(typeof intrinsicValue==="function")?intrinsicValue(d.t,{beta:d.beta}):null;return valorizacionJSON(iv);}catch(e){return null;}})(),
             alertas:d.alertas||[],
             fuente:"Investor Score sobre la BASE DE PRECIOS del sistema (universo IPSA), independiente del análisis formal. Métricas REALES. Todo el riesgo relevante ya está descontado en el score; no agregues 'peros' que el número ya castigó."});
         }
@@ -3798,6 +3823,7 @@ function cpRunTool(name,input){
       else out.fundamentalesIlustrativos={marketCapMM_USD:f.mcap,pb:f.pb,pe:f.pe,roe_pct:f.roe,deudaPatrimonio:f.de,divYield_pct:f.dy,crecimientoEPS_pct:f.eg,margenNeto_pct:f.nm};
       // recomendación de la plataforma con etiqueta de FUENTE (evita confundir el score —base de precios— con el capm/multifactor del set activo)
       try{const d=investorScoreDetail(s.t);if(d)out.investorScore={score:d.score,bloques:{riesgoRetorno:d.rr,fundamentos:d.fund,tendencia:d.tend},confianza_pct:d.confianza,alertas:d.alertas,fuente:"Investor Score = recomendación sobre la BASE DE PRECIOS (universo IPSA completo), NO sobre el set/análisis activo de arriba (capm/multifactor)"};}catch(e){}
+      try{const iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b}):null;if(iv)out.valorizacion=valorizacionJSON(iv);}catch(e){}
       return JSON.stringify(out);
     }
     if(name==="get_correlations"){
@@ -4758,6 +4784,58 @@ async function autopxForce(onProgress){
 function fundSanitize(j){try{if(!j||!j.byTicker)return j;Object.keys(j.byTicker).forEach(t=>{const f=j.byTicker[t];const rg=(k,lo,hi)=>{if(f[k]!=null&&!(f[k]>lo&&f[k]<hi))f[k]=null;};rg("pe",0,500);rg("fpe",0,500);rg("pb",0,100);rg("dy",0,30);rg("roe",-100,200);rg("nm",-100,100);rg("eg",-95,400);rg("rg",-95,400);rg("de",0,25);rg("peg",-50,50);rg("evEbitda",0,200);rg("target",0,Infinity);rg("nAn",0,500);if(f.dps===0)f.dps=null;});}catch(e){}return j;}
 let FDATA=fundSanitize((function(){try{return JSON.parse(localStorage.getItem("inv_fund_v1")||"null");}catch(e){return null;}})());
 function fundGet(t){return (FDATA&&FDATA.byTicker&&FDATA.byTicker[t])||null;}
+/* ── VALORIZACIÓN INTRÍNSECA (margen de seguridad) ──
+   Estima cuánto VALE una acción por fundamentos y lo compara con su precio → MARGEN DE SEGURIDAD (¿hay espacio
+   para ganar?). Triangula hasta 3 anclas con DATOS REALES (nunca inventa): (1) DDM/Gordon con dividendos y el
+   retorno exigido r = CAPM (Rf + β·PRIMA) que Investor ya usa; (2) múltiplo justo = P/U de referencia del
+   universo × utilidad por acción; (3) precio objetivo de analistas. Devuelve una BANDA (no un punto, para no dar
+   falsa precisión) y el margen de seguridad. Si no alcanza para ninguna ancla, devuelve null (la UI muestra "—").
+   Gordon exige g<r: g (crecimiento) se acota a rangos prudentes; r también. NO es señal de timing: dice si el
+   PRECIO de hoy es atractivo, no el momento táctico. */
+function fairPE(excludeNonRec){   // P/U EFECTIVO de referencia = mediana del universo con fundamentos (múltiplo justo)
+  const tk=(typeof pricedbTickers==="function")?pricedbTickers():[];
+  const src=tk.length?tk:Object.keys((FDATA&&FDATA.byTicker)||{});const vals=[];
+  src.forEach(t=>{const f=fundGet(t);if(!f)return;const epe=(f.pe!=null&&f.fpe!=null)?Math.max(f.pe,f.fpe):(f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null));
+    if(epe==null||!(epe>0))return;if(excludeNonRec&&f.fpe!=null&&f.pe!=null&&f.pe>0&&f.fpe>f.pe*2.5)return;vals.push(epe);});
+  if(vals.length<3)return null;vals.sort((a,b)=>a-b);const m=Math.floor(vals.length/2);
+  return vals.length%2?vals[m]:(vals[m-1]+vals[m])/2;
+}
+function intrinsicValue(t,ctx){
+  const f=(typeof fundGet==="function")?fundGet(t):null;
+  if(!f||!(f.px>0))return null;
+  ctx=ctx||{};
+  const rf=(typeof RF==="number"&&isFinite(RF))?RF:5.5,pr=(typeof PRIMA==="number"&&isFinite(PRIMA))?PRIMA:6;
+  let beta=(ctx.beta!=null&&isFinite(ctx.beta))?ctx.beta:(f.beta!=null&&isFinite(f.beta)?f.beta:1);
+  beta=Math.max(0.2,Math.min(2.2,beta));
+  let r=(rf+beta*pr)/100;r=Math.max(0.05,Math.min(0.25,r));   // retorno exigido (CAPM), acotado a un rango sensato
+  const px=f.px,eps=(f.pe!=null&&f.pe>0)?px/f.pe:null;
+  const anchors=[];let lo=Infinity,hi=-Infinity,g=null;
+  const band=v=>{if(v!=null&&isFinite(v)&&v>0){lo=Math.min(lo,v);hi=Math.max(hi,v);}};
+  // 1) DDM / Gordon: valor = dividendo perpetuo (piso sin crecimiento) → con crecimiento sustentable (techo)
+  const D0=(f.dps!=null&&f.dps>0)?f.dps:((f.dy!=null&&f.dy>0)?f.dy/100*px:null);
+  if(D0!=null&&D0>0){
+    const payout=(eps!=null&&eps>0)?Math.max(0,Math.min(1,D0/eps)):null;
+    let gEst=null;if(f.roe!=null&&payout!=null)gEst=f.roe/100*(1-payout);else if(f.eg!=null)gEst=f.eg/100;
+    if(gEst!=null)g=Math.max(0,Math.min(gEst,r-0.02,0.06));   // g<r con holgura (r−g≥2%) y techo prudente 6%
+    const vNo=D0/r,vGr=(g!=null&&g>0)?D0*(1+g)/(r-g):vNo;
+    band(vNo);band(vGr);anchors.push({name:"DDM (dividendos)",val:(vNo+vGr)/2,w:0.5});
+  }
+  // 2) múltiplo justo: si cotizara al P/U de referencia del universo
+  const medPE=(ctx.medPE!=null&&ctx.medPE>0)?ctx.medPE:fairPE(true);
+  if(medPE!=null&&eps!=null&&eps>0){const vM=medPE*eps;band(vM);anchors.push({name:"Múltiplo justo (P/U universo)",val:vM,w:0.3});}
+  // 3) precio objetivo de analistas
+  if(f.target!=null&&f.target>0){band(f.target);anchors.push({name:"Target analistas",val:f.target,w:0.2});}
+  if(!anchors.length)return null;
+  let sw=0,sv=0;anchors.forEach(a=>{sv+=a.val*a.w;sw+=a.w;});const value=sw>0?sv/sw:null;
+  if(value==null||!isFinite(value)||value<=0)return null;
+  if(lo===Infinity)lo=value;if(hi===-Infinity)hi=value;
+  const mos=(value-px)/value;   // margen de seguridad: >0 subvalorada (hay margen), <0 cara
+  return {value,lo,hi,px,mos,r,g,beta,methods:anchors.map(a=>({name:a.name,val:Math.round(a.val)})),n:anchors.length};
+}
+/* etiqueta/color del margen de seguridad para la UI (umbrales prudentes) */
+function mosLabel(mos){if(mos==null)return {txt:"—",cls:"ink"};if(mos>=0.20)return {txt:"margen amplio",cls:"green"};if(mos>=0.08)return {txt:"algo de margen",cls:"green"};if(mos>=-0.05)return {txt:"precio justo",cls:"ink"};if(mos>=-0.18)return {txt:"algo cara",cls:"amber"};return {txt:"cara",cls:"red"};}
+/* resumen de valorización para el agente (get_stock): valor intrínseco, banda, margen de seguridad y regla sin-peros */
+function valorizacionJSON(iv){if(!iv)return null;return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no una señal de timing. YA está reflejado en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR, no una rebaja del veredicto. Es una BANDA estimada, no un precio exacto."};}
 function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
 async function fundSync(manual){
   const u=fundUrl();
@@ -6765,14 +6843,23 @@ function investorScoreCompute(){
   A.forEach(s=>{const f=F(s.t);pbs.push(f.pb);dys.push(f.dy);nms.push(f.nm);epes.push(epeOf(f));
     roesEff.push(nonRecOf(f)?null:f.roe);   // ROE se descarta si la utilidad no es recurrente (no contar dos veces la misma ganancia contable)
     ups.push((f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null);});
+  // VALORIZACIÓN: margen de seguridad por acción (valor intrínseco vs precio). El P/U de referencia del múltiplo
+  // justo es la mediana efectiva del universo. Si una acción no tiene datos para ninguna ancla, su mos queda null
+  // y el sub-componente de value cae de vuelta a P/U+P/B (no se inventa nada).
+  const _epv=epes.filter(x=>x!=null&&isFinite(x)&&x>0).slice().sort((a,b)=>a-b);
+  const medEPE=_epv.length>=3?(_epv.length%2?_epv[(_epv.length-1)/2]:(_epv[_epv.length/2-1]+_epv[_epv.length/2])/2):null;
+  const ivs=A.map(s=>{try{return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,medPE:medEPE}):null;}catch(e){return null;}});
+  const moss=ivs.map(iv=>iv?iv.mos*100:null);   // margen de seguridad en % (mayor = más barata = mejor value)
   const obsFactor=Math.max(0,Math.min(1,nRet/40));   // ≥40 retornos (~9m semanal) = muestra suficiente
-  const rows=A.map(s=>{
+  const rows=A.map((s,si)=>{
     const f=F(s.t);
     // RIESGO-RETORNO (técnico) — retorno ajustado por riesgo + resistencia a caídas; todo de precios reales
     const rr=Math.round(wavg([[or50(pct(sharpes,s.a24.sharpe)),0.40],[or50(pct(alphasAdj,alphaAdj(s))),0.25],[or50(pct(sortinos,sortinoOf(s))),0.20],[or50(pct(mdds,mddOf(s),true)),0.15]]));
     // FUNDAMENTOS — solo con dato real; valorización con P/U EFECTIVO (conservador), ROE sin utilidades no recurrentes
     const _nonRec=nonRecOf(f);
-    const valz=wavg([[pct(epes,epeOf(f),true),0.6],[pct(pbs,f.pb,true),0.4]]);
+    // VALUE = margen de seguridad (valor intrínseco vs precio, la señal de "barata" más directa) + P/U + P/B.
+    // Si no hay margen de seguridad (sin datos), wavg lo descarta y value cae a P/U(0,3)+P/B(0,2) renormalizado.
+    const valz=wavg([[pct(moss,moss[si],false),0.5],[pct(epes,epeOf(f),true),0.3],[pct(pbs,f.pb,true),0.2]]);
     const qualz=wavg([[pct(roesEff,_nonRec?null:f.roe),0.6],[pct(nms,f.nm),0.4]]);
     const upv=(f.target!=null&&f.px>0)?(f.target/f.px-1)*100:null;
     const fundS0=wavg([[valz,0.30],[qualz,0.30],[pct(dys,f.dy),0.20],[pct(ups,upv),0.20]]);
@@ -6794,6 +6881,7 @@ function investorScoreCompute(){
     if(trendOf(s)!=null&&trendOf(s)<-12&&(momOf(s)==null||momOf(s)<0))alertas.push("en caída reciente");
     if(mddOf(s)>0.28)alertas.push("tuvo un drawdown importante en el año");
     if(_nonRec)alertas.push("utilidad reciente probablemente no recurrente (P/U forward ≫ trailing): valorización y ROE ajustados");
+    if(moss[si]!=null&&moss[si]<=-15)alertas.push("cotiza sobre su valor intrínseco estimado (margen de seguridad negativo)");
     if(nFund<2)alertas.push("fundamentos incompletos (Yahoo no los cubre)");
     if((s.a24.r2||0)<0.05)alertas.push("baja correlación con el IPSA (β poco confiable, α amortiguado)");
     return {t:s.t,n:s.n,c:s.c,score:Math.max(0,Math.min(100,total)),
@@ -6801,7 +6889,9 @@ function investorScoreCompute(){
       alpha:+(+s.a24.jensen).toFixed(1),alphaAdj:+alphaAdj(s).toFixed(1),r2:+(+s.a24.r2).toFixed(3),
       sharpe:+(+s.a24.sharpe).toFixed(2),sig:+(+s.a24.sig).toFixed(1),beta:+(+s.b).toFixed(2),
       maxDD:+(mddOf(s)*100).toFixed(1),mom6m:momOf(s)!=null?+momOf(s).toFixed(1):null,pos52:posOf(s)!=null?+posOf(s).toFixed(0):null,
-      roe:f.roe!=null?f.roe:null,upside:upv!=null?+upv.toFixed(1):null,alertas};
+      roe:f.roe!=null?f.roe:null,upside:upv!=null?+upv.toFixed(1):null,
+      mos:moss[si]!=null?+moss[si].toFixed(1):null,intrinsic:ivs[si]?Math.round(ivs[si].value):null,intrinsicLo:ivs[si]?Math.round(ivs[si].lo):null,intrinsicHi:ivs[si]?Math.round(ivs[si].hi):null,
+      alertas};
   }).sort((a,b)=>b.score-a.score);
   return {day:localDay(),window:imp.window,n:rows.length,rows};
 }
