@@ -4596,6 +4596,13 @@ function pricedbSanitize(){
   stripCF(PRICEDB.ipsa);
   Object.keys(PRICEDB.px||{}).forEach(t=>stripCF(PRICEDB.px[t]));
   Object.keys(ix).forEach(k=>stripCF(ix[k]));
+  // 2.5) ATÍPICOS de ESCALA en el IPSA/índice: un punto que cae bajo el 60% (o salta sobre 170%) de AMBOS
+  //   vecinos es un dato de otra escala/fuente (el índice no se mueve así en un día → se hunde y rebota) → se
+  //   elimina. Cubre la mezcla de fuentes (p.ej. un valor demo colado en una fecha que la planilla no cubrió).
+  let nOut=0;
+  const dropOutliers=(map)=>{if(!map)return;const ds=Object.keys(map).sort();for(let i=1;i<ds.length-1;i++){const v=+map[ds[i]],a=+map[ds[i-1]],b=+map[ds[i+1]];if(!(v>0&&a>0&&b>0))continue;const ra=v/a,rb=v/b;if((ra<0.6&&rb<0.6)||(ra>1.7&&rb>1.7)){delete map[ds[i]];nOut++;}}};
+  dropOutliers(PRICEDB.ipsa);
+  Object.keys(ix).forEach(k=>dropOutliers(ix[k]));
   // 3) IPSA/índice FANTASMA por delante del mercado: solo se recorta un valor posterior al último cierre de
   //    las acciones cuando REPITE exactamente el valor anterior (firma del arrastre, p.ej. el 29/06 fantasma).
   //    Un valor DISTINTO por delante es legítimo: el índice suele publicarse antes que todos los cierres.
@@ -4606,9 +4613,9 @@ function pricedbSanitize(){
     trimGhost(PRICEDB.ipsa||{});
     Object.keys(ix).forEach(k=>trimGhost(ix[k]));
   }
-  if(nWk||nCF||nGhost||nBogus)savePriceDB();
+  if(nWk||nCF||nGhost||nBogus||nOut)savePriceDB();
   const id=Object.keys(PRICEDB.ipsa||{}).sort();
-  return {nWk,nCF,nGhost,nBogus,ipsaTo:id.length?id[id.length-1]:null};
+  return {nWk,nCF,nGhost,nBogus,nOut,ipsaTo:id.length?id[id.length-1]:null};
 }
 function pricedbTickers(){return Object.keys(PRICEDB.px||{});}
 function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s[d]=1);Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>s[d]=1));return Object.keys(s).sort();}
@@ -4906,9 +4913,11 @@ function pricedbSeedDemo(){
       PRICEDB.px[s.t]=PRICEDB.px[s.t]||{};
       if(!PRICEDB.tickers[s.t])PRICEDB.tickers[s.t]={n:s.n||s.t,s:s.s||"",c:s.c||"#1E5FD1",b:s.b};
       const m=Math.min(pr.length,dts.length),off=pr.length-m;for(let i=0;i<m;i++){const v=pr[off+i];if(v>0&&isFinite(v)&&PRICEDB.px[s.t][dts[i]]==null){PRICEDB.px[s.t][dts[i]]=+v;n++;}}});
-    // IPSA reconstruido desde los retornos del mercado; ancla el último valor del demo al IPSA más antiguo de los proyectos para que conecten en escala
+    // IPSA reconstruido desde los retornos del mercado; ancla el último valor del demo al IPSA más antiguo de los
+    // proyectos para que conecten en escala. NO rellena si ya hay historia REAL del IPSA (≥30 puntos): rellenar
+    // huecos de una planilla real con valores demo a otra escala mezcla fuentes y hunde las β. Mejor un hueco que un dato falso.
     const mk=(typeof MKT!=="undefined"&&MKT&&MKT.rets&&MKT.rets.length)?MKT.rets:((DATA.market&&DATA.market.rets)||null);
-    if(mk&&mk.length){let anchor=8000;try{const im=consolidatedSeries().ipsaMap||{},pd=Object.keys(im).sort();if(pd.length)anchor=im[pd[0]];}catch(e){}
+    if(mk&&mk.length&&Object.keys(PRICEDB.ipsa||{}).length<30){let anchor=8000;try{const im=consolidatedSeries().ipsaMap||{},pd=Object.keys(im).sort();if(pd.length)anchor=im[pd[0]];}catch(e){}
       const m=Math.min(mk.length,dts.length),lvl=new Array(m);lvl[m-1]=anchor;for(let i=m-1;i>0;i--)lvl[i-1]=lvl[i]/(1+(mk[i]||0)/100);
       for(let i=0;i<m;i++){if(PRICEDB.ipsa[dts[i]]==null){PRICEDB.ipsa[dts[i]]=+lvl[i].toFixed(2);n++;}}}
     if(n)savePriceDB();return n;
@@ -5149,7 +5158,7 @@ function datosBase(){
   const tabSeg=`<div class="home-seg" role="tablist" aria-label="Cadencia">${["diario","semanal","mensual"].map(f=>{const n=COV.filter(c=>c[FK[f]].n>=2).length;return `<button data-dcov="${f}" role="tab" class="${datosCovTab===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}${n?` <span style="opacity:.6">${n}</span>`:""}</button>`;}).join("")}</div>`;
   const covList=COV.filter(c=>c[fk].n>=2).sort((a,b)=>b[fk].n-a[fk].n);   // aparece en la pestaña solo si tiene ≥2 períodos consecutivos (una cadencia real, no un punto suelto)
   const meta=t=>(PRICEDB.tickers&&PRICEDB.tickers[t])||{};
-  const covRows=covList.map(c=>{const isIp=c.t==="__IPSA__";const sct=isIp?"Índice":(meta(c.t).s||"—");return `<tr><td><b style="color:${c.col}">${isIp?"IPSA":c.t}</b>${c.primary===datosCovTab?' <span class="badge pos" style="font-size:8px">principal</span>':""}</td><td>${sct}</td><td class="r">${c[fk].n}</td><td>${c[fk].from} → ${c[fk].to}</td>${isIp?'<td></td>':`<td class="r"><button class="wbtn del" data-ddel="${c.t}" title="Quitar de la base">✕</button></td>`}</tr>`;}).join("");
+  const covRows=covList.map(c=>{const isIp=c.t==="__IPSA__";const sct=isIp?"Índice":(meta(c.t).s||"—");return `<tr><td><b style="color:${c.col}">${isIp?"IPSA":c.t}</b>${c.primary===datosCovTab?' <span class="badge pos" style="font-size:8px">principal</span>':""}</td><td>${sct}</td><td class="r">${c[fk].n}</td><td>${c[fk].from} → ${c[fk].to}</td>${isIp?'<td class="r"><button class="wbtn del" data-ddelipsa title="Quitar el IPSA de la base (para recargarlo de una sola fuente)">✕</button></td>':`<td class="r"><button class="wbtn del" data-ddel="${c.t}" title="Quitar de la base">✕</button></td>`}</tr>`;}).join("");
   const covTable=empty?`<div class="note" style="margin:0">Tu base está vacía. Usa <b>Cargar planilla</b> o el <b>Cierre diario</b> para empezar.</div>`
     :(covList.length?`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Períodos seguidos</th><th>Rango (${datosCovTab})</th><th></th></tr></thead><tbody>${covRows}</tbody></table></div>`
       :`<div class="note" style="margin:0">Ninguna acción tiene una racha <b>${datosCovTab}</b> reciente (períodos consecutivos). Prueba otra pestaña o carga más cierres a esa cadencia.</div>`);
@@ -5214,7 +5223,8 @@ function attachDatos(){
     if(typed==null||typed.trim().toUpperCase()!=="VACIAR"){window.alert("Cancelado. No se vació nada.");return;}
     pricedbWipe();page="base";render();
     window.alert("Base de precios vaciada. Ahora carga tus planillas en Datos → “Cargar planilla” y pulsa “Actualizar sistema”.\n\nSi además quieres reiniciar los seguimientos de las carteras (conservando la compra inicial), usa ⚙ Configuración → “Limpiar sistema”.");};
-  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost||r.nBogus)?("Base reparada.\n\n"+(r.nBogus?("• "+r.nBogus+" 'acción(es)' fantasma con nombre de columna (Open/Close/Volume/…) eliminadas.\n"):"")+"• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
+  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost||r.nBogus||r.nOut)?("Base reparada.\n\n"+(r.nBogus?("• "+r.nBogus+" 'acción(es)' fantasma con nombre de columna (Open/Close/Volume/…) eliminadas.\n"):"")+(r.nOut?("• "+r.nOut+" valor(es) atípico(s) de escala del IPSA/índice (picos de otra fuente) eliminados.\n"):"")+"• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
+  const ddi=document.querySelector("[data-ddelipsa]");if(ddi)ddi.onclick=()=>{const n=Object.keys(PRICEDB.ipsa||{}).length;if(!n){window.alert("El IPSA ya está vacío en la base.");return;}if(!confirm("Quitar los "+n+" valores del IPSA de la base (no toca las acciones ni tus carteras).\n\nÚsalo para recargar la historia del índice de UNA sola fuente (planilla de Investing/Stooq) y evitar escalas mezcladas.\n\n¿Continuar?"))return;PRICEDB.ipsa={};savePriceDB();render();window.alert("IPSA quitado de la base. Ahora recarga tu planilla IPSA en “Cargar planilla” (renómbrala IPSA.csv). El valor diario del índice se seguirá acumulando solo.");};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
     if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
     if(!confirm('⚠ Doble chequeo de seguridad\n\nVas a ELIMINAR definitivamente '+t+' ('+np+' precio[s]) de la base. Esta acción no se puede deshacer.\n\n¿Eliminar '+t+'?'))return;
