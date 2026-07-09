@@ -150,11 +150,52 @@ async function ipsaFromStooq() {
   }
   throw new Error(fails.join(" | "));
 }
-// Orden: primero el valor de HOY (chart, fiable), luego las fuentes de HISTORIA real (crumb + Stooq). El merge
-// conserva lo ya obtenido (el valor de hoy) sobre lo nuevo, así nunca se pierde el cierre del día.
+async function ipsaFromMarketWatch() {
+  // MarketWatch descarga CSV histórico de índices. S&P/CLX IPSA = "spipsa" (countrycode=cl). Fecha MM/DD/YYYY.
+  const mm = (d) => `${("0" + (d.getMonth() + 1)).slice(-2)}/${("0" + d.getDate()).slice(-2)}/${d.getFullYear()}`;
+  const p1 = new Date(Date.now() - rangeSeconds() * 1000), p2 = new Date();
+  const url = `https://www.marketwatch.com/investing/index/spipsa/downloaddatapartial?countrycode=cl&startdate=${encodeURIComponent(mm(p1) + " 00:00:00")}&enddate=${encodeURIComponent(mm(p2) + " 23:59:59")}&frequency=p1d&csvdownload=true&downloadpartial=false&newdates=false`;
+  const res = await fetch(url, { headers: { "User-Agent": BUA, "Accept": "text/csv,*/*", "Referer": "https://www.marketwatch.com/investing/index/spipsa?countrycode=cl" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const lines = (await res.text()).trim().split(/\r?\n/), out = {};
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/); if (c.length < 5) continue;
+    const m = /^"?(\d{2})\/(\d{2})\/(\d{4})/.exec(c[0]), v = +(("" + c[4]).replace(/["\s,]/g, ""));
+    if (m && isFinite(v) && v > 0) out[`${m[3]}-${m[1]}-${m[2]}`] = +v.toFixed(2);
+  }
+  if (!Object.keys(out).length) throw new Error("CSV MW sin filas");
+  return out;
+}
+async function ipsaFromInvesting() {
+  // API no oficial de investing.com. pair_id del S&P/CLX IPSA = 40802. Devuelve [ts_ms, o, h, l, c, ...].
+  const url = `https://api.investing.com/api/financialdata/40802/historical/chart/?interval=P1D&pointscount=520`;
+  const res = await fetch(url, { headers: { "User-Agent": BUA, "Accept": "application/json", "domain-id": "www", "Referer": "https://www.investing.com/indices/ipsa-historical-data" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json(), data = j && j.data; if (!Array.isArray(data)) throw new Error("sin data");
+  const out = {};
+  for (const row of data) { const c = +row[4]; if (!isFinite(c) || c <= 0) continue; out[new Date(row[0]).toISOString().slice(0, 10)] = +c.toFixed(2); }
+  if (!Object.keys(out).length) throw new Error("investing sin filas");
+  return out;
+}
+async function ipsaFromTwelveData() {
+  // Fuente REAL de respaldo con API key gratuita (opcional): secret TWELVEDATA_KEY en GitHub. Si no está, se salta.
+  const key = process.env.TWELVEDATA_KEY; if (!key) throw new Error("sin TWELVEDATA_KEY (opcional)");
+  const res = await fetch(`https://api.twelvedata.com/time_series?symbol=IPSA&interval=1day&outputsize=800&apikey=${encodeURIComponent(key)}`, { headers: { "User-Agent": BUA } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json(), vals = j && j.values; if (!Array.isArray(vals)) throw new Error((j && j.message) ? String(j.message).slice(0, 50) : "sin values");
+  const out = {};
+  for (const r of vals) { const d = r.datetime, c = +r.close; if (/^\d{4}-\d{2}-\d{2}/.test(d || "") && isFinite(c) && c > 0) out[d.slice(0, 10)] = +c.toFixed(2); }
+  if (!Object.keys(out).length) throw new Error("TD sin filas");
+  return out;
+}
+// Orden: primero el valor de HOY (chart, fiable), luego las fuentes de HISTORIA real. El merge conserva lo ya
+// obtenido (el valor de hoy) sobre lo nuevo, así nunca se pierde el cierre del día. Yahoo dejó de servir historia
+// de índices (chart=1 día, download=401), por eso se priorizan MarketWatch / investing.com / Twelve Data / Stooq.
 const IPSA_SOURCES = [
   ["yahoo ^IPSA hoy", () => chart(IPSA_SYMBOL)],
-  ["yahoo crumb ^IPSA", () => yahooCrumbDownload("^IPSA")],
+  ["marketwatch spipsa", ipsaFromMarketWatch],
+  ["investing 40802", ipsaFromInvesting],
+  ["twelvedata IPSA", ipsaFromTwelveData],
   ["stooq", ipsaFromStooq],
   ["yahoo ^IPSA period", () => chart(IPSA_SYMBOL, true)],
 ];
@@ -167,7 +208,7 @@ const ipsaSources = [];
       ipsaSources.push(`${tag}: ${Object.keys(got).length} día(s)`);
       ipsa = Object.assign({}, got, ipsa);   // lo ya obtenido (p.ej. el valor de HOY de Yahoo) manda sobre lo nuevo
       if (Object.keys(ipsa).length >= 10) break;
-    } catch (e) { ipsaSources.push(`${tag}: ${String((e && e.message) || e).slice(0, 90)}`); }
+    } catch (e) { ipsaSources.push(`${tag}: ${String((e && e.message) || e).slice(0, 180)}`); }
     await new Promise(r => setTimeout(r, 300));
   }
   const nIpsa = Object.keys(ipsa).length;
