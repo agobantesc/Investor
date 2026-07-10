@@ -2822,14 +2822,18 @@ function viewInvActive(){
   const compraMode=isFirst||editIdx===0;
   const pv=t=>ed?(ed.prices[t]||""):"";
   const qv=t=>(ed&&ed.qty)?(ed.qty[t]||""):"";
-  const priceInputs=PF.holdings.map(hd=>{if(compraMode){return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">obj ${fmtCLP(PF.amount*hd.w)}</span></div><div class="simw" style="gap:6px"><span>$</span><input type="number" step="any" class="pinp" data-pt="${hd.t}" value="${pv(hd.t)}" placeholder="precio" style="width:92px"><span style="color:${muted}">×</span><input type="number" step="any" class="qinp" data-qt="${hd.t}" value="${qv(hd.t)}" placeholder="acciones" style="width:84px"></div></div>`;}return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">${hd.n}</span></div><div class="simw"><span>$</span><input type="number" step="any" class="pinp" data-pt="${hd.t}" value="${pv(hd.t)}" placeholder="cierre"></div></div>`;}).join("");
+  // compra inicial: se ingresa CANTIDAD + MONTO TOTAL por acción (los datos de la cartola de la corredora,
+  // para cuadrar al peso); el precio por acción se DERIVA = monto/cantidad. Al editar, el monto se pre-carga
+  // desde precio×cantidad guardados.
+  const mv=t=>{const q=parseFloat(qv(t)),p=parseFloat(pv(t));return (q>0&&p>0)?Math.round(q*p):"";};
+  const priceInputs=PF.holdings.map(hd=>{if(compraMode){return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">obj ${fmtCLP(PF.amount*hd.w)}</span></div><div class="simw" style="gap:6px"><input type="number" step="any" class="qinp" data-qt="${hd.t}" value="${qv(hd.t)}" placeholder="acciones" style="width:84px"><span style="color:${muted}">×</span><span>$</span><input type="number" step="any" class="minp" data-mt="${hd.t}" value="${mv(hd.t)}" placeholder="monto total" style="width:110px"></div></div>`;}return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">${hd.n}</span></div><div class="simw"><span>$</span><input type="number" step="any" class="pinp" data-pt="${hd.t}" value="${pv(hd.t)}" placeholder="cierre"></div></div>`;}).join("");
   const freqBar=card("Periodicidad de registro","Cambia cada cuánto registras los precios. Al pasar a una periodicidad mayor (ej. diario→semanal), reorganizo tus registros previos conservando uno por período.",`<div class="pbtns">`+[["diario","Diario"],["semanal","Semanal"],["mensual","Mensual"]].map(([k,l])=>`<button class="pbtn ${(PF.freq||"diario")===k?"on":""}" data-setfreq="${k}">${l}</button>`).join("")+`</div>`);
   const ftitle=editing?("Editar "+(editIdx===0?"compra":fr.u+" "+editIdx)):(isFirst?"Registrar compra ("+fr.u+" inicial)":"Ingresar "+fr.u+" "+WEEKS.length);
-  const fsub=editing?"Modifica los precios o la fecha y guarda los cambios":(isFirst?"Precio de compra y nº de acciones por papel (el monto invertido se calcula) + IPSA del día":"Precios de cierre "+fr.per+" y valor del IPSA");
+  const fsub=editing?"Modifica los precios o la fecha y guarda los cambios":(isFirst?"Cantidad de acciones y MONTO total invertido por papel (los de tu corredora — el precio se deriva) + IPSA del día":"Precios de cierre "+fr.per+" y valor del IPSA");
   const banner=editing?`<div class="note" style="margin-bottom:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">Editando ${editIdx===0?"la compra":fr.det+" "+editIdx}. <a id="canceledit" style="color:var(--indigo);cursor:pointer;font-weight:800">✕ Cancelar edición</a></div>`:"";
   const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:localDay()}"></div><div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div></div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo · y si compras sobre/bajo el valor intrínseco (columna «vs valor»: verde = bajo su valor)</div><div id="compraprev" style="margin-top:6px"></div>':''}${(editing&&ed.ev&&ed.ev.kind==="trade")?`<div class="genl" style="margin-top:15px">✎ Operación de este registro · <b style="color:${ed.ev.side==="sell"?"var(--red)":"var(--green)"}">${ed.ev.side==="sell"?"VENTA":"COMPRA"} de ${ed.ev.t}</b></div>
-      <div class="simhead" style="margin-top:6px"><div><div class="genl">Cantidad (acciones)</div><input type="number" step="any" id="evqty" value="${ed.ev.shares}"></div><div><div class="genl">Precio de la transacción ($)</div><input type="number" step="any" id="evprice" value="${ed.ev.price}"></div></div>
-      <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>precio</b> de la operación, corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}<div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button>${(editing&&editIdx!==0)?`<button class="btn" id="delw" style="color:var(--red);border-color:var(--red-line)">🗑 Eliminar este registro${(ed&&ed.ev)?" y su operación":""}</button>`:""}</div>`);
+      <div class="simhead" style="margin-top:6px"><div><div class="genl">Cantidad (acciones)</div><input type="number" step="any" id="evqty" value="${ed.ev.shares}"></div><div><div class="genl">Monto total de la operación ($)</div><input type="number" step="any" id="evmonto" value="${Math.round((+ed.ev.shares||0)*(+ed.ev.price||0))}"></div></div>
+      <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>monto</b> de la operación (usa los de tu corredora — el precio por acción se deriva; hoy: ${fmtP(+ed.ev.price||0)}), corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}<div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button>${(editing&&editIdx!==0)?`<button class="btn" id="delw" style="color:var(--red);border-color:var(--red-line)">🗑 Eliminar este registro${(ed&&ed.ev)?" y su operación":""}</button>`:""}</div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
   if(!IM) return (seg||histPg)?(projbar+summary+notecard("Aún no hay datos registrados. Ve a la pestaña <b>Ingresar datos</b> para registrar la compra inicial y los precios de cada "+fr.u+".")):(projbar+summary+freqBar+form+notecard("Registra la <b>compra inicial</b> (precios de compra de cada acción y el IPSA del día en que invertiste) para comenzar el seguimiento."));
@@ -2960,7 +2964,7 @@ function viewInvActive(){
 function compraPreview(){
   if(!PF)return "";let tot=0;
   let medPE=null;try{medPE=(typeof fairPE==="function")?fairPE(true):null;}catch(e){}   // P/U de referencia una vez (no por acción)
-  const rows=PF.holdings.map(hd=>{const pe=document.querySelector('.pinp[data-pt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const p=pe?(parseFloat(pe.value)||0):0,q=qe?(parseFloat(qe.value)||0):0,m=p*q;tot+=m;const obj=PF.amount*hd.w,d=m-obj;
+  const rows=PF.holdings.map(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?(parseFloat(me.value)||0):0,q=qe?(parseFloat(qe.value)||0):0,p=(q>0&&m>0)?m/q:0;tot+=m;const obj=PF.amount*hd.w,d=m-obj;
     let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(hd.t,{beta:hd.b,medPE}):null;}catch(e){}
     return {hd,m,q,p,obj,d,iv};});
   const dT=tot-PF.amount;
@@ -2971,7 +2975,7 @@ function compraPreview(){
     const mos=(r.iv.value-r.p)/r.iv.value,ml=mosLabel(mos),mc=({green,red,amber,ink})[ml.cls]||ink;
     return `<td class="r" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(r.iv.value).toLocaleString("es-CL")} · banda $${Math.round(r.iv.lo).toLocaleString("es-CL")}–$${Math.round(r.iv.hi).toLocaleString("es-CL")} · ${ml.txt}">${(mos>=0?"+":"")+(mos*100).toFixed(0)+"%"}</td>`;};
   const rws=rows.map(r=>`<tr><td>${tk(r.hd)}</td><td class="r">${r.q?r.q.toLocaleString("es-CL"):"—"}</td><td class="r" style="color:${muted}">${r.p?fmtP(r.p):"—"}</td>${valCell(r)}<td class="r" style="font-weight:700">${r.m?fmtCLP(r.m):"—"}</td><td class="r">${fmtCLP(r.obj)}</td><td class="r" style="color:${!r.m?muted:(Math.abs(r.d)<1?muted:(r.d>=0?green:red))}">${r.m?((r.d>=0?"+":"−")+fmtCLP(Math.abs(r.d))):""}</td></tr>`).join("");
-  return `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">vs valor</th><th class="r">Monto invertido</th><th class="r">Objetivo</th><th class="r">Δ</th></tr></thead><tbody>${rws}<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td></td><td></td><td class="r">${tot?fmtCLP(tot):"—"}</td><td class="r">${fmtCLP(PF.amount)}</td><td class="r" style="color:${!tot?muted:(Math.abs(dT)<1?muted:(dT>=0?green:red))}">${tot?((dT>=0?"+":"−")+fmtCLP(Math.abs(dT))):""}</td></tr></tbody></table></div>`;
+  return `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio (derivado)</th><th class="r">vs valor</th><th class="r">Monto invertido</th><th class="r">Objetivo</th><th class="r">Δ</th></tr></thead><tbody>${rws}<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td></td><td></td><td class="r">${tot?fmtCLP(tot):"—"}</td><td class="r">${fmtCLP(PF.amount)}</td><td class="r" style="color:${!tot?muted:(Math.abs(dT)<1?muted:(dT>=0?green:red))}">${tot?((dT>=0?"+":"−")+fmtCLP(Math.abs(dT))):""}</td></tr></tbody></table></div>`;
 }
 // El formulario de "inyectar capital" se retiró de Operar por redundante con Comprar (una compra ya suma
 // capital nuevo). Los eventos ev.kind==="inject" YA guardados se siguen calculando y mostrando (compat).
@@ -3001,7 +3005,7 @@ function viewOperar(){
   const IM=invMetrics();
   if(!IM)return projbar+summary+notecard("Primero registra la <b>compra inicial</b> en la pestaña <b>Ingresar datos</b>. Luego podrás comprar y vender aquí.");
   const L=IM.last,V=L.val,lastW=WEEKS[WEEKS.length-1];
-  if(opState.pid!==activeId)opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
+  if(opState.pid!==activeId)opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",monto:"",date:""};
   const posRows=IM.perStock.map(p=>{const aw=V>0?p.val/V*100:0,tw=p.hd.w*100,dr=aw-tw,drc=Math.abs(dr)<1.5?muted:(dr>0?red:green);return `<tr><td>${tk(p.hd)}</td><td class="r">${p.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(p.cur)}</td><td class="r">${fmtCLP(p.val)}</td><td class="r">${aw.toFixed(1)}%</td><td class="r" style="color:${muted}">${tw.toFixed(1)}%</td><td class="r" style="color:${drc};font-weight:700">${(dr>=0?"+":"")}${dr.toFixed(1)} pts</td></tr>`;}).join("");
   const posTable=`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio últ.</th><th class="r">Valor</th><th class="r">Peso actual</th><th class="r">Objetivo</th><th class="r">Drift</th></tr></thead><tbody>${posRows}</tbody></table></div>`;
   const UNI=operarUniverse();   // universo libre: IPSA completo + holdings (independiente del análisis)
@@ -3011,17 +3015,19 @@ function viewOperar(){
   if(opState.tkr&&tkrOpts.indexOf(opState.tkr)<0)opState.tkr=null;
   const osel=opState.tkr||tkrOpts[0]||"";
   const lastPrice=(lastW.prices[osel]!=null?lastW.prices[osel]:"");
-  const priceVal=opState.price!==""?opState.price:lastPrice;
-  const omonto=(parseFloat(opState.qty)>0&&parseFloat(priceVal)>0)?(parseFloat(opState.qty)*parseFloat(priceVal)):0;
+  // se ingresa CANTIDAD + MONTO TOTAL (como la cartola de la corredora, para cuadrar al peso);
+  // el precio por acción se DERIVA = monto/cantidad y se muestra en vivo
+  const _oq0=parseFloat(opState.qty),_om0=parseFloat(opState.monto);
+  const derPrice=(_oq0>0&&_om0>0)?_om0/_oq0:null;
   const opBody=`<div class="op-form"><div class="op-side" role="group" aria-label="Tipo de operación"><button type="button" class="opbtn buy ${opState.side==="buy"?"on":""}" data-opside="buy" aria-pressed="${opState.side==="buy"}">Comprar</button><button type="button" class="opbtn sell ${opState.side==="sell"?"on":""}" data-opside="sell" aria-pressed="${opState.side==="sell"}">Vender</button></div>
     <div class="op-grid">
       <div><label class="genl" for="optkr">Acción</label><select id="optkr" aria-label="Acción a operar">${tkrOpts.length?tkrOpts.map(t=>{const st=UNI.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones para vender</option>'}</select></div>
       <div><label class="genl" for="opqty">Cantidad (acciones)</label><input type="number" step="any" id="opqty" value="${opState.qty}" placeholder="Ej: 100" aria-label="Cantidad de acciones"></div>
-      <div><label class="genl" for="opprice">Precio por acción (CLP)</label><input type="number" step="any" id="opprice" value="${priceVal}" placeholder="${lastPrice||"precio"}" aria-label="Precio por acción en pesos"></div>
+      <div><label class="genl" for="opmonto">Monto total ${opState.side==="sell"?"recibido":"invertido"} (CLP)</label><input type="number" step="any" id="opmonto" value="${opState.monto||""}" placeholder="el de tu corredora" aria-label="Monto total de la operación en pesos"></div>
       <div><label class="genl" for="opdate">Fecha</label><input type="date" id="opdate" value="${opState.date||localDay()}" aria-label="Fecha de la operación"></div>
     </div>
-    ${opState.side==="buy"?`<div id="opval" class="op-val" style="margin-top:12px;padding:11px 13px;border:1px solid var(--line2);border-radius:11px;background:var(--soft);font-size:12.5px;line-height:1.5">${opValHTML(osel,priceVal)}</div>`:""}
-    <div class="op-foot"><div class="op-amt">${opState.side==="sell"?"Monto a recibir":"Monto a invertir"}: <b>${omonto>0?fmtCLP(omonto):"—"}</b></div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
+    ${opState.side==="buy"?`<div id="opval" class="op-val" style="margin-top:12px;padding:11px 13px;border:1px solid var(--line2);border-radius:11px;background:var(--soft);font-size:12.5px;line-height:1.5">${opValHTML(osel,derPrice||"")}</div>`:""}
+    <div class="op-foot"><div class="op-amt">Precio por acción (derivado): <b>${derPrice?fmtP(derPrice):"—"}</b>${lastPrice?` <span style="color:var(--faint);font-weight:600;font-size:11px">· último cierre ${fmtP(lastPrice)}</span>`:""}</div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
   const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Comprar también sirve para <b>aportar capital nuevo</b>: cada compra suma el monto al capital aportado y recalcula el valor de la cartera y el drift — sin que cuente como rentabilidad.",opBody+`<div class="helpline" style="margin-top:12px">¿Ingresaste mal un precio o una cantidad? Corrige la operación en <b>Historial</b> con el lápiz <b>✎</b> del registro (campos «Operación de este registro»).</div><div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
   return projbar+summary+opCard;
 }
@@ -3172,16 +3178,16 @@ function attachInv(){
   const be=document.getElementById("bkpexport");if(be)be.onclick=exportBackup;
   const bim=document.getElementById("bkpimport"),bf=document.getElementById("bkpfile");if(bim&&bf){bim.onclick=()=>bf.click();bf.onchange=ev=>{if(ev.target.files[0])importBackup(ev.target.files[0]);};}
   document.querySelectorAll("[data-setfreq]").forEach(b=>b.onclick=()=>changeFreq(b.dataset.setfreq));
-  const _cm=(WEEKS.length===0||editIdx===0);if(_cm){const _upd=()=>{const pv=document.getElementById("compraprev");if(pv)pv.innerHTML=compraPreview();};document.querySelectorAll(".pinp,.qinp").forEach(i=>i.oninput=_upd);_upd();}
+  const _cm=(WEEKS.length===0||editIdx===0);if(_cm){const _upd=()=>{const pv=document.getElementById("compraprev");if(pv)pv.innerHTML=compraPreview();};document.querySelectorAll(".pinp,.qinp,.minp").forEach(i=>i.oninput=_upd);_upd();}
   const sv=document.getElementById("savew");
   if(sv)sv.onclick=()=>{
     const compraMode=(WEEKS.length===0||editIdx===0);
     const prices={};let ok=true,qty=null;
-    if(compraMode){qty={};PF.holdings.forEach(hd=>{const pe=document.querySelector('.pinp[data-pt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const p=pe?parseFloat(pe.value):NaN,q=qe?parseFloat(qe.value):NaN;if(!p||p<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=p;}});}
+    if(compraMode){qty={};PF.holdings.forEach(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?parseFloat(me.value):NaN,q=qe?parseFloat(qe.value):NaN;if(!m||m<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=m/q;}});}   // precio DERIVADO = monto/cantidad (cuadra al peso con la corredora)
     else{PF.holdings.forEach(hd=>{const el=document.querySelector('.pinp[data-pt="'+hd.t+'"]');const v=el?parseFloat(el.value):NaN;if(!v||v<=0)ok=false;else prices[hd.t]=v;});}
     const ipEl=document.getElementById("wipsa"),ipsa=ipEl?parseFloat(ipEl.value):NaN;
     const dEl=document.getElementById("wdate"),date=dEl&&dEl.value?dEl.value:localDay();
-    if(!ok||!ipsa||ipsa<=0){alert(compraMode?"Ingresa el precio de compra y la cantidad de acciones de cada papel, y el IPSA, con números válidos.":"Ingresa todos los precios de cierre y el valor del IPSA con números válidos.");return;}
+    if(!ok||!ipsa||ipsa<=0){alert(compraMode?"Ingresa la cantidad de acciones y el MONTO total invertido de cada papel (los de tu corredora), y el IPSA, con números válidos.":"Ingresa todos los precios de cierre y el valor del IPSA con números válidos.");return;}
     if(!weekendGuard(date))return;
     const rec={date,prices,ipsa};if(qty)rec.qty=qty;
     const wasCompra=(editIdx===0||WEEKS.length===0);
@@ -3192,13 +3198,15 @@ function attachInv(){
       if(_ow.ev)rec.ev=_ow.ev;
       if(_ow.fresh)rec.fresh=_ow.fresh;
       if(_ow.ipsaFresh)rec.ipsaFresh=_ow.ipsaFresh;}
-    // corrección de la OPERACIÓN (cantidad/precio mal ingresados): campos ✎ del formulario de edición
+    // corrección de la OPERACIÓN (cantidad/monto mal ingresados): campos ✎ del formulario de edición.
+    // El precio por acción se DERIVA = monto/cantidad, para cuadrar al peso con la cartola de la corredora.
     let _evTouched=false;
-    const _eq=document.getElementById("evqty"),_ep=document.getElementById("evprice");
+    const _eq=document.getElementById("evqty"),_ep=document.getElementById("evmonto");
     if(rec.ev&&rec.ev.kind==="trade"&&_eq&&_ep){
-      const nq=parseFloat(_eq.value),np=parseFloat(_ep.value);
-      if(!(nq>0)||!(np>0)){alert("La operación necesita una cantidad y un precio válidos (mayores a 0).");return;}
-      if(nq!==+rec.ev.shares||np!==+rec.ev.price){rec.ev=Object.assign({},rec.ev,{shares:nq,price:np});_evTouched=true;}
+      const nq=parseFloat(_eq.value),nm=parseFloat(_ep.value);
+      if(!(nq>0)||!(nm>0)){alert("La operación necesita una cantidad y un monto total válidos (mayores a 0).");return;}
+      const np=nm/nq;
+      if(nq!==+rec.ev.shares||Math.abs(np-(+rec.ev.price))>1e-9){rec.ev=Object.assign({},rec.ev,{shares:nq,price:np});_evTouched=true;}
       // sin cierre real del papel ese día, el precio del día es el de la transacción corregida (guardia ±15%)
       if(rec.fresh&&rec.fresh.indexOf(rec.ev.t)<0){const _cur=rec.prices[rec.ev.t];if(!(_cur>0)||Math.abs(np/_cur-1)<=0.15)rec.prices[rec.ev.t]=np;}
     }
@@ -3232,11 +3240,14 @@ function attachInv(){
   const vs=document.getElementById("versim");if(vs)vs.onclick=()=>{let sel,amt;const b0=WEEKS[0];if(b0&&b0.qty){let tot=0;const per={};PF.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*(b0.prices[hd.t]||0);per[hd.t]=m;tot+=m;});sel={};PF.holdings.forEach(hd=>{sel[hd.t]=+((tot?per[hd.t]/tot:0)*100).toFixed(1);});const ks=Object.keys(sel);if(ks.length){const sm=ks.reduce((a,k)=>a+sel[k],0);sel[ks[0]]=+(sel[ks[0]]+(100-sm)).toFixed(1);}amt=Math.round(tot);}else{const o=PF.origSim||{sel:(function(){const s={};PF.holdings.forEach(hd=>{s[hd.t]=+(hd.w*100).toFixed(1);});return s;})(),amount:PF.amount};sel=Object.assign({},o.sel);amt=o.amount;}simState.sel=sel;simState.amount=amt;scenEditId=null;modulo="sim";page="constructor";render();};
   const gi=document.getElementById("geninforme");if(gi)gi.onclick=genInvReport;
   const gx=document.getElementById("genxls");if(gx)gx.onclick=exportInvCSV;
-  document.querySelectorAll("[data-opside]").forEach(b=>b.onclick=()=>{opState.side=b.dataset.opside;opState.tkr=null;opState.price="";render();});
-  const _ot=document.getElementById("optkr");if(_ot)_ot.onchange=()=>{opState.tkr=_ot.value;opState.price="";render();};
-  function _opAmt(){const q=parseFloat(opState.qty),p=parseFloat(opState.price);const m=(q>0&&p>0)?q*p:0;const el=document.querySelector(".op-amt b");if(el)el.textContent=m>0?fmtCLP(m):"—";}
+  document.querySelectorAll("[data-opside]").forEach(b=>b.onclick=()=>{opState.side=b.dataset.opside;opState.tkr=null;opState.price="";opState.monto="";render();});
+  const _ot=document.getElementById("optkr");if(_ot)_ot.onchange=()=>{opState.tkr=_ot.value;opState.price="";opState.monto="";render();};
+  // precio DERIVADO en vivo = monto/cantidad (los inputs son los de la cartola de la corredora)
+  function _opAmt(){const q=parseFloat(opState.qty),m=parseFloat(opState.monto);const pd=(q>0&&m>0)?m/q:null;
+    const el=document.querySelector(".op-amt b");if(el)el.textContent=pd?fmtP(pd):"—";
+    const _ov=document.getElementById("opval");if(_ov&&opState.side==="buy"){const _t=(document.getElementById("optkr")||{}).value||opState.tkr;_ov.innerHTML=opValHTML(_t,pd||"");}}
   const _oq=document.getElementById("opqty");if(_oq)_oq.oninput=()=>{opState.qty=_oq.value;_opAmt();};
-  const _op=document.getElementById("opprice");if(_op)_op.oninput=()=>{opState.price=_op.value;_opAmt();const _ov=document.getElementById("opval");if(_ov&&opState.side==="buy"){const _t=(document.getElementById("optkr")||{}).value||opState.tkr;_ov.innerHTML=opValHTML(_t,_op.value);}};
+  const _om=document.getElementById("opmonto");if(_om)_om.oninput=()=>{opState.monto=_om.value;_opAmt();};
   const _od=document.getElementById("opdate");if(_od)_od.onchange=()=>{opState.date=_od.value;};
   const _odo=document.getElementById("opdo");if(_odo)_odo.onclick=opDo;
   const _crep=document.getElementById("contabreport");if(_crep)_crep.onclick=genContabReport;
@@ -5928,11 +5939,12 @@ function realCap(){if(!PF)return 0;const b=(typeof WEEKS!=="undefined"&&WEEKS.le
 
 function opDo(){
   syncProj();if(!PF)return;
-  const selEl=document.getElementById("optkr"),qEl=document.getElementById("opqty"),pEl=document.getElementById("opprice"),dEl=document.getElementById("opdate");
-  const t=selEl?selEl.value:opState.tkr,side=opState.side,q=parseFloat(qEl?qEl.value:opState.qty),p=parseFloat(pEl?pEl.value:opState.price);
+  const selEl=document.getElementById("optkr"),qEl=document.getElementById("opqty"),mEl=document.getElementById("opmonto"),dEl=document.getElementById("opdate");
+  const t=selEl?selEl.value:opState.tkr,side=opState.side,q=parseFloat(qEl?qEl.value:opState.qty),m=parseFloat(mEl?mEl.value:opState.monto);
   if(!t){window.alert("Elige una acción.");return;}
   if(!(q>0)){window.alert("Indica la cantidad de acciones (mayor que 0).");return;}
-  if(!(p>0)){window.alert("Indica el precio por acción (mayor que 0).");return;}
+  if(!(m>0)){window.alert("Indica el monto total de la operación (el de tu corredora, mayor que 0).");return;}
+  const p=m/q;   // precio por acción DERIVADO: así el monto en Investor cuadra AL PESO con la cartola
   const last=WEEKS.length?WEEKS[WEEKS.length-1]:null;
   let hd=PF.holdings.find(h=>h.t===t);
   const isNew=!hd;
@@ -6663,7 +6675,7 @@ function clientLoad(){
   syncProj();
   simState.sel={};if(invProfile)simState.profile=invProfile.profile;
   editIdx=null;scenEditId=null;impFiles=[];impMsg="";mindAuto=mindAuto;
-  opState={pid:null,side:"buy",tkr:null,qty:"",price:"",date:""};
+  opState={pid:null,side:"buy",tkr:null,qty:"",price:"",monto:"",date:""};
 }
 function clientSwitch(id){if(!id||id===activeClient)return;activeClient=id;try{localStorage.setItem("inv_active_client",id);}catch(e){}clientLoad();modulo="proyectos";page="hub";render();}
 function clientCreate(name,color){const id="c_"+Date.now();CLIENTS.push({id,name:(name||("Cliente "+(CLIENTS.length+1))).trim(),color:color||CLIENT_PAL[CLIENTS.length%CLIENT_PAL.length]});saveClients();clientSwitch(id);}
