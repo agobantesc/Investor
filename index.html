@@ -5903,8 +5903,10 @@ function opDo(){
   // PRECIOS DE MERCADO del día de la operación: se prefieren los cierres REALES de la base para ESA fecha (todas
   // las tenencias + IPSA), no se arrastran los del último registro — así el seguimiento queda valorizado al cierre
   // del día de la compra. Si la base aún no tiene ese día, se arrastra el último conocido (y al sincronizar el
-  // cierre, pricedbApplyToProjects lo actualiza). El precio de la TRANSACCIÓN NO pisa el cierre (revalorizaría en
-  // falso lo que ya tenías): solo se usa como precio del día si el papel no tiene cierre conocido (posición nueva).
+  // cierre, pricedbApplyToProjects lo actualiza). Para el PAPEL OPERADO, si su cierre de HOY aún no existe, el
+  // precio del día es el de la TRANSACCIÓN (es un precio REAL de mercado de HOY, más fresco que el arrastre de
+  // ayer): sin esto, comprar hoy sobre el cierre de ayer fabricaba una "pérdida del día" fantasma (aporte al
+  // precio real vs valorización al arrastre). El cierre REAL del mismo día, cuando existe o llega después, manda.
   const prices=Object.assign({},basePrices);
   const fresh=[];let _ipFresh=false;
   try{const C=consolidatedSeries();if(C){
@@ -5912,7 +5914,12 @@ function opDo(){
     const mpt=C.tick[t];if(mpt&&mpt[date]!=null){prices[t]=mpt[date];if(fresh.indexOf(t)<0)fresh.push(t);}
     if(C.ipsaMap&&C.ipsaMap[date]!=null){ipsa=C.ipsaMap[date];_ipFresh=true;}
   }}catch(e){}
-  if(prices[t]==null)prices[t]=p;   // acción nueva sin cierre en la base: usa el precio de la operación como valor del día
+  if(fresh.indexOf(t)<0&&p>0){
+    // sin cierre real de HOY para el papel operado → el precio del día es el de la transacción. Guardia anti
+    // dedo-gordo: si difiere >15% del último precio conocido (posible error de unidad), NO revaloriza la posición
+    // existente con él; solo se usa cuando no hay ningún precio (posición completamente nueva).
+    if(!(prices[t]>0)||Math.abs(p/prices[t]-1)<=0.15)prices[t]=p;
+  }
   // fresh SIEMPRE se estampa (aunque vacío): marca qué precios son cierre REAL del día vs arrastre. Un arreglo
   // vacío = ningún cierre real ese día → los Δ del período de esas acciones se muestran "—" (no un % arrastrado).
   const _wk={date,prices,ipsa,fresh,ev:{kind:"trade",t,side,shares:qty,price:p}};if(_ipFresh)_wk.ipsaFresh=true;
