@@ -5254,14 +5254,20 @@ function pricedbApplyToProjects(){
   CLIENTS.forEach(c=>{const projs=clientProjects(c.id)||[];let touched=false;
     projs.forEach(p=>{const ws=p.weeks||[];if(!ws.length)return;const held=(p.holdings||[]).map(h=>h.t);if(!held.length)return;
       const baseDate=ws[0].date,basePrices=ws[0].prices||{};
-      const exIdx={};ws.forEach((w,i)=>{if(exIdx[w.date]==null)exIdx[w.date]=i;});
+      // TODOS los registros de cada fecha: con varias operaciones el mismo día hay varios registros con esa
+      // fecha, y el cierre oficial debe pisar el precio de transacción en TODOS — sobre todo en el ÚLTIMO,
+      // que es el que manda en la valorización (antes solo se estampaba el primero y el valor quedaba
+      // congelado al precio de la compra: descuadre permanente contra la corredora)
+      const exIdx={};ws.forEach((w,i)=>{(exIdx[w.date]||(exIdx[w.date]=[])).push(i);});
       let pts=0;
       allDates.forEach(D=>{if(D<=baseDate)return;
         if(!held.some(t=>px[t]&&px[t][D]!=null))return;
         const ip=pdAsOf(ipsaM,ik,D);
-        if(exIdx[D]!=null){const w=ws[exIdx[D]];w.prices=w.prices||{};let ch=false;   // OJO: los registros de OPERACIÓN (w.ev) también se valorizan al cierre real del día — antes se saltaban y el seguimiento del día de la compra quedaba con precios arrastrados/desactualizados. El ev (acciones, precio de transacción) queda intacto: los precios del día son solo para VALORIZAR.
-          if(!w.fresh)w.fresh=[];
-          held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh.indexOf(t)<0){w.fresh.push(t);ch=true;}}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}if(!w.ipsaFresh){w.ipsaFresh=true;ch=true;}}if(ch)pts++;}   // solo IPSA EXACTO de la base; ch también cuando cambian los stamps fresh/ipsaFresh (antes no se persistían para clientes no activos)
+        if(exIdx[D]!=null){let chD=false;   // OJO: los registros de OPERACIÓN (w.ev) también se valorizan al cierre real del día — antes se saltaban y el seguimiento del día de la compra quedaba con precios arrastrados/desactualizados. El ev (acciones, precio de transacción) queda intacto: los precios del día son solo para VALORIZAR.
+          exIdx[D].forEach(wi=>{const w=ws[wi];w.prices=w.prices||{};let ch=false;
+            if(!w.fresh)w.fresh=[];
+            held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh.indexOf(t)<0){w.fresh.push(t);ch=true;}}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}if(!w.ipsaFresh){w.ipsaFresh=true;ch=true;}}if(ch)chD=true;});
+          if(chD)pts++;}   // solo IPSA EXACTO de la base; ch también cuando cambian los stamps fresh/ipsaFresh (antes no se persistían para clientes no activos)
         else{const prices={},freshT=[];held.forEach(t=>{const ex=px[t]&&px[t][D]!=null;const v=ex?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));if(ex)freshT.push(t);prices[t]=(v!=null?v:basePrices[t]);});
           const ipEx=ipsaM[D]!=null;
           ws.push({date:D,ipsa:ipEx?ipsaM[D]:(ip!=null?ip:(ws[0].ipsa||0)),prices,fresh:freshT,ipsaFresh:ipEx});pts++;}   // fresh/ipsaFresh marcan qué es cierre REAL del día: los arrastres (as-of) no vuelven a la base ni generan retornos 0% espurios
@@ -6362,7 +6368,10 @@ function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const in
   // α de Jensen REALIZADO (no anualizado, sobre el período transcurrido): retorno real − el exigido por CAPM para la β de la cartera.
   // Va en línea con "Rentab. %" (ambos acumulados a la fecha), así no se infla anualizando un seguimiento corto.
   const reqRet=Math.pow(1+(p.erCapm||0)/100,IM.elapsedYrs||0)-1, alphaReal=L.ret-reqRet;
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:IM.series.map(s=>Math.round(s.val)),since};});}
+  // serie para sparklines del Home: UN punto por FECHA (último registro del día) — varias operaciones el
+  // mismo día son registros distintos y dibujarlos todos estira el día de compra como si fueran varios días
+  const serie=IM.series.filter((s,i,a)=>i===a.length-1||a[i+1].date!==s.date).map(s=>Math.round(s.val));
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,since};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
    mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
@@ -7041,7 +7050,7 @@ function seedExamples(){
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
-let homeIpsaFreq=lsGet("inv_home_ipsa_freq2")||"mensual";   // cadencia del GRÁFICO del IPSA en Home (no toca las etiquetas de rentabilidad) · estándar: mensual 24m (clave v2: re-estandariza a mensual)
+let homeIpsaWin=(()=>{const v=+lsGet("inv_home_ipsa_win");return [3,6,12,24].indexOf(v)>=0?v:24;})();   // VENTANA (meses) del gráfico del IPSA en Home — el gráfico es SIEMPRE mensual; solo se elige cuántos meses ver
 /* ══ INVESTOR SCORE (v3 · piedra angular, riesgo descontado + candado de confianza) ══
    Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
    fundamentos reales), INDEPENDIENTE del análisis activo. Rankea por PERCENTIL dentro del universo.
@@ -7291,30 +7300,18 @@ function viewHome(){
     if(!_ips)return "";
     const _fD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(0,4):"";
     const cell=(lbl,r,desc,base)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";const tt=desc+(base?(" · base: cierre del "+_fD(base)):"");return `<div class="ipsa-cell" title="${tt}"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
-    // curva del índice con CADENCIA elegible — SOLO cambia el gráfico, nunca las etiquetas de rentabilidad
-    // de arriba (siguen siendo variaciones móviles día/~7d/~30d/12m). Estándar acordado: MENSUAL con los
-    // últimos 24 meses; semanal = últimas 52 semanas; diario = últimos 3 días hábiles (zoom de corto plazo).
-    // Se toman los últimos N períodos con dato REAL directamente (sin exigir racha consecutiva: la vieja regla
-    // hacía que un hueco reciente mandara la vista "diaria" a mensual).
+    // curva del índice SIEMPRE MENSUAL (cierre de cada mes) — solo se elige la VENTANA: 3, 6, 12 o 24 meses.
+    // Las etiquetas de rentabilidad de arriba no se tocan (siguen siendo variaciones móviles día/~7d/~30d/12m).
     let ipsaChart="";
     try{const C=consolidatedSeries();
-      let rs=[],cap="",monthly=false;
-      if(homeIpsaFreq==="semanal"){
-        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"semanal")).slice(-52);
-        cap="cierres semanales · últimas "+rs.length+" semanas";
-      }else if(homeIpsaFreq==="diario"){
-        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"diario")).slice(-30);
-        cap="últimos "+rs.length+" días hábiles";
-      }else{
-        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-24);monthly=true;
-        cap="cierres mensuales · últimos "+rs.length+" meses";
-      }
-      const seg=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","30 días"],["semanal","52 semanas"],["mensual","24 meses"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Solo cambia el gráfico; las variaciones de arriba no se tocan">${l}</button>`).join("")}</div>`;
+      const rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-homeIpsaWin);
+      const cap="cierres mensuales · últimos "+rs.length+" meses";
+      const seg=`<div class="home-seg" role="group" aria-label="Ventana del gráfico del IPSA">${[3,6,12,24].map(k=>`<button data-ipsawin="${k}" class="${homeIpsaWin===k?"on":""}" title="Cierres de fin de mes de los últimos ${k} meses; las variaciones de arriba no se tocan">${k}m</button>`).join("")}</div>`;
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
-        // en la vista mensual (varios años) la etiqueta lleva MES/AÑO; "DD/MM" se repetiría idéntico entre años
-        const labels=monthly?rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4)):rs.map(x=>x.d);
-        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:monthly,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div></div>`;}
-      else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes a esta cadencia</div></div></div>`;
+        // etiqueta MES/AÑO: "DD/MM" se repetiría idéntico entre años
+        const labels=rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4));
+        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div></div>`;}
+      else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes en esta ventana</div></div></div>`;
     }catch(e){}
     const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
     return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base",body);
@@ -7462,7 +7459,7 @@ function attachHome(){
     modulo="inv";page="seguimiento";render();});
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
   document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
-  document.querySelectorAll("[data-ipsafreq]").forEach(b=>b.onclick=()=>{homeIpsaFreq=b.dataset.ipsafreq;try{lsSet("inv_home_ipsa_freq2",homeIpsaFreq);}catch(e){}render();});
+  document.querySelectorAll("[data-ipsawin]").forEach(b=>b.onclick=()=>{homeIpsaWin=+b.dataset.ipsawin||24;try{lsSet("inv_home_ipsa_win",homeIpsaWin);}catch(e){}render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
