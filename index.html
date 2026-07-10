@@ -2643,24 +2643,27 @@ function invMetrics(){
     prevVal=val;
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
     series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:w.ipsa/base.ipsa-1,diff:(twr-1)-(w.ipsa/base.ipsa-1),yrs,inflow,ev:w.ev||null});});
+  // fresh AUSENTE = semana antigua/compra inicial (precios reales por construcción) → se confía; fresh PRESENTE
+  // pero sin el ticker = ese precio es arrastre o precio de transacción (no cierre) → se desconfía.
+  const freshOK=(w,t)=>w?(w.fresh?w.fresh.indexOf(t)>=0:true):false;
   // "Crecimiento por acción": base 100 desde la PRIMERA compra de cada acción. Antes de esa fecha va en null,
   // por lo que la línea NO existe (svgMulti la dibuja recién desde la compra): ENEL, comprada más tarde, arranca
   // en su fecha de incorporación y no arrastra el crecimiento previo de la cartera. Estándar para cualquier acción.
   // El ANCLA es el CIERRE del día de incorporación (el mismo valor que se grafica en ese índice), no el precio de
   // la transacción: si compraste a $81,42 y ese día cerró a $80,90, la línea parte EXACTO en 100 y mide el
   // crecimiento de mercado desde la incorporación. El retorno sobre tu precio de compra vive en la tabla (gain/costo).
+  // SOLO se grafican CIERRES REALES: un registro sin cierre del papel (operación de hoy antes de la sincronización,
+  // o precio arrastrado) NO aporta punto — la línea termina en el último cierre y el punto del día aparece cuando
+  // llega el cierre. Así una COMPRA/VENTA jamás "mueve" el crecimiento (su precio vale para valorizar, no como cierre).
   const stockSeries=PF.holdings.map(hd=>{const fb=firstBuy[hd.t],fi=fb?fb.idx:0;
     const cl=WEEKS[fi]?WEEKS[fi].prices[hd.t]:null,anc=(cl>0)?cl:((fb&&fb.price>0)?fb.price:b0[hd.t]);
-    return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>i<fi?null:+(100*((w.prices[hd.t]||anc)/anc)).toFixed(2))};});
+    return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>(i<fi||!freshOK(w,hd.t)||!(w.prices[hd.t]>0))?null:+(100*(w.prices[hd.t]/anc)).toFixed(2))};});
   const lastW=WEEKS[WEEKS.length-1],prevW=WEEKS.length>=2?WEEKS[WEEKS.length-2]:null,last=series[series.length-1];
   // retorno por acción = sobre el capital REALMENTE invertido en ella (gain/costo): mide desde su compra, no desde
   // el inicio de la cartera; buy = costo promedio por acción. Para acciones de la cartera original coincide con cur/b0-1.
   // Δ del período por acción: EXIGE cierre REAL en ambas semanas (esta y la anterior) para ESA acción — nunca se
   // arrastra un precio (carry-forward) ni se usa b0. Una acción recién comprada (aún sin cierre previo propio) o
   // con precio arrastrado devuelve null → la tabla muestra "—" en vez de un 0,00% o un % falso.
-  // fresh AUSENTE = semana antigua/compra inicial (precios reales por construcción) → se confía; fresh PRESENTE
-  // pero sin el ticker = ese precio es arrastre → se desconfía.
-  const freshOK=(w,t)=>w?(w.fresh?w.fresh.indexOf(t)>=0:true):false;
   // Δ del período: usa el ÚLTIMO PAR de cierres REALES de cada acción, aunque el registro más nuevo sea una
   // OPERACIÓN de hoy con precios arrastrados (p.ej. una compra hecha antes de que llegue el cierre del día):
   // se busca hacia atrás la última semana con cierre real y la anterior con cierre real. Se exige vigencia
