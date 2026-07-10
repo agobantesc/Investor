@@ -5828,8 +5828,11 @@ function mktTileHTML(label,valHtml,chg,sparkSeries,sub){
 }
 function mindTile(d){
   const o=MIND&&MIND[d.k];const chg=d.spark?mindChange(d.k):null;
-  return mktTileHTML(d.label, o?mindFmt(o.valor,d.dec,d.unit):'<span class="mkt-na">—</span>', chg, d.spark?MINDH[d.k]:null,
-    o?("al "+mindDate(o.fecha)+(o.unidad?" · "+o.unidad:"")):(mindBusy?"cargando…":"sin datos"));
+  // los indicadores DIARIOS con fecha atrasada (>4 días corridos) se marcan en ámbar; los mensuales (IPC,
+  // desempleo, Imacec, UTM, TPM) muestran su fecha normal — su "antigüedad" es esperada, no un problema.
+  let sub=o?("al "+mindDate(o.fecha)+(o.unidad?" · "+o.unidad:"")):(mindBusy?"cargando…":"sin datos");
+  if(o&&MIND_DAILY[d.k]){const days=mindDaysOld(o.fecha);if(days!=null&&days>4)sub=`<span style="color:var(--amber);font-weight:700" title="Este indicador debería moverse cada día hábil; su último dato tiene ${days} días. Se está reintentando la actualización.">⚠ al ${mindDate(o.fecha)} · hace ${days} d</span>`;}
+  return mktTileHTML(d.label, o?mindFmt(o.valor,d.dec,d.unit):'<span class="mkt-na">—</span>', chg, d.spark?MINDH[d.k]:null, sub);
 }
 function oilTile(d){
   const o=OIL&&OIL[d.k];
@@ -5843,19 +5846,29 @@ async function mktGet(url,kind,ms){
   try{const r=await fetch(url,{signal:ctrl.signal,cache:"no-store"});clearTimeout(to);if(!r.ok)throw new Error("HTTP "+r.status);return kind==="json"?await r.json():await r.text();}
   finally{clearTimeout(to);}
 }
+/* JSON de mindicador con CADENA DE RESPALDO: directo y, si falla (CORS/red/bloqueo intermitente), vía proxies CORS
+   (el mismo patrón que el petróleo). Sin esto, un solo fallo del fetch directo dejaba los indicadores CONGELADOS
+   en el último valor cacheado (causa de "datos muy antiguos": dólar/cobre quedaban semanas atrás). Se parsea el
+   texto a JSON (algunos proxies no fijan content-type). */
+async function mindGetJson(url,ms){
+  const prox=u=>[u,"https://corsproxy.io/?url="+encodeURIComponent(u),"https://api.allorigins.win/raw?url="+encodeURIComponent(u),"https://thingproxy.freeboard.io/fetch/"+u];
+  let err="sin respuesta";
+  for(const u of prox(url)){try{const t=await mktGet(u,"text",ms||9000);const j=(typeof t==="string")?JSON.parse(t):t;if(j&&typeof j==="object")return j;}catch(e){err=String((e&&e.message)||e);}}
+  throw new Error(err);
+}
 async function mindCore(){
   try{
-    const j=await mktGet(MIND_URL,"json");const m={};
+    const j=await mindGetJson(MIND_URL);const m={};
     MIND_DEF.forEach(d=>{const o=j[d.k];if(o&&isFinite(o.valor))m[d.k]={valor:o.valor,fecha:o.fecha,unidad:o.unidad_medida};});
     if(!Object.keys(m).length)throw new Error("respuesta sin indicadores");
     MIND=m;mindTs=new Date().toISOString();lsSet("inv_mind_v1",MIND);lsSet("inv_mind_ts_v1",mindTs);
     await Promise.allSettled(MIND_DEF.filter(d=>d.spark).map(async d=>{try{
-      const jj=await mktGet(MIND_URL+"/"+d.k,"json");
+      const jj=await mindGetJson(MIND_URL+"/"+d.k);
       const serie=(jj.serie||[]).slice(0,30).reverse().map(x=>+x.valor).filter(isFinite);
       if(serie.length>=2)MINDH[d.k]=serie;
     }catch(e){}}));
     lsSet("inv_mindh_v1",MINDH);mindErr="";
-  }catch(e){mindErr=(e.name==="AbortError")?"La conexión tardó demasiado (timeout). Reintenta.":("No se pudo conectar a mindicador.cl ("+e.message+").");}
+  }catch(e){mindErr=(e.name==="AbortError")?"La conexión tardó demasiado (timeout). Reintenta.":("No se pudo conectar a mindicador.cl ("+e.message+"). Reintentando por rutas alternativas…");}
 }
 function oilParseStooq(txt){
   const lines=(txt||"").trim().split(/\r?\n/);if(lines.length<2)return null;
@@ -5903,10 +5916,24 @@ async function mindFetch(){
   await Promise.allSettled([mindCore(),oilFetch()]);
   mindBusy=false;render();
 }
-/* indicadores VENCIDOS: sin datos o con más de 6 horas — se refrescan SOLOS al abrir Home/Mercados.
-   mindLastTry evita el reintento en bucle cuando la fuente no responde (reintenta cada 10 min como máximo). */
+/* indicadores VENCIDOS: se refrescan SOLOS al abrir Home/Mercados. mindLastTry evita el reintento en bucle cuando
+   la fuente no responde (reintenta cada 10 min como máximo). */
 let mindLastTry=0;
-function mindStale(){if(!mindTs)return true;try{return (Date.now()-new Date(mindTs).getTime())>6*3600e3;}catch(e){return true;}}
+/* indicadores que DEBERÍAN moverse cada día hábil (los mensuales — IPC, desempleo, Imacec, UTM, TPM — quedan
+   "viejos" por diseño y NO deben marcarse como desactualizados). */
+const MIND_DAILY={dolar:1,euro:1,libra_cobre:1,uf:1,bitcoin:1};
+/* días corridos desde la fecha de un dato (o.fecha "YYYY-MM-DD" o ISO) */
+function mindDaysOld(fecha){if(!fecha)return null;try{const d=new Date((""+fecha).slice(0,10)+"T00:00:00");if(isNaN(d))return null;return Math.floor((Date.now()-d.getTime())/864e5);}catch(e){return null;}}
+/* frescura por FECHA DEL DATO (no solo por hora de fetch): si el indicador DIARIO más reciente tiene >4 días
+   corridos, la data está atrasada aunque el fetch haya "funcionado" — cubre el blind spot de que la fuente
+   devuelva un valor viejo con fetch exitoso. */
+function mindDataStale(){if(!MIND)return true;
+  // disparador global: dólar/euro/cobre (indicadores de mercado que NO se publican con fecha futura, a diferencia
+  // de la UF). Se toma el MÁS reciente; si el más fresco de esos ya tiene >4 días, la data está atrasada.
+  const KEYS=["dolar","euro","libra_cobre"];let fresh=null,any=false;
+  KEYS.forEach(k=>{if(MIND[k]){any=true;const o=mindDaysOld(MIND[k].fecha);if(o!=null&&o>=0&&(fresh==null||o<fresh))fresh=o;}});
+  if(!any)return true;return fresh==null||fresh>4;}
+function mindStale(){if(!mindTs)return true;try{if((Date.now()-new Date(mindTs).getTime())>6*3600e3)return true;}catch(e){return true;}return mindDataStale();}
 function mindAutoRefresh(){try{if(!mindBusy&&mindStale()&&(Date.now()-mindLastTry>600e3)&&typeof mindFetch==="function")mindFetch();}catch(e){}}
 function viewMercados(){
   const head=card("Mercados · indicadores en vivo",
