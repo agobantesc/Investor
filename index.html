@@ -2711,18 +2711,24 @@ const FREQ={diario:{u:"día",uc:"Día",us:"días",adj:"diario",cap:"Diario",det:
 let invNew=null;   // estado del formulario "Realizar nueva inversión" (directo, sin pasar por Simulación)
 /* detalle ampliado de la inversión del proyecto seleccionado (composición de la compra inicial) */
 function invDetailCard(){
+  // composición ACTUAL de la cartera: acciones en cartera y costo promedio salen del replay de TODAS las
+  // operaciones (invMetrics), no solo de la compra inicial — una acción incorporada después (p.ej. ENEL
+  // comprada en Operar) mostraba "0 acciones" y sin precio pese a tener monto invertido.
   const b0=WEEKS[0],hasQty=!!(b0&&b0.qty);
+  let IM=null;try{IM=invMetrics();}catch(e){}
+  const ps=IM?IM.perStock:null;
   const rows=PF.holdings.map(hd=>{
-    const q=hasQty?(b0.qty[hd.t]||0):null;
-    const pc=(b0&&b0.prices&&b0.prices[hd.t]!=null)?b0.prices[hd.t]:null;
-    const monto=(q!=null&&pc!=null)?q*pc:(hd.monto||0);
+    const P=ps?ps.find(x=>x.hd.t===hd.t):null;
+    const q=P?P.sh:(hasQty?(b0.qty[hd.t]||0):null);
+    const pc=(P&&P.sh>0&&P.cost>0)?P.buy:((b0&&b0.prices&&b0.prices[hd.t]!=null&&hasQty&&(b0.qty[hd.t]||0)>0)?b0.prices[hd.t]:null);
+    const monto=P?P.cost:((q!=null&&pc!=null)?q*pc:(hd.monto||0));
     return {hd,q,pc,monto};
   });
   const tot=rows.reduce((a,r)=>a+r.monto,0)||1;
-  const body=`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r ntr">β</th>${hasQty?'<th class="r">Acciones</th><th class="r">Precio compra</th>':''}<th class="r">Monto</th><th class="r">Peso</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr><td><b style="color:${r.hd.c}">${r.hd.t}</b> <span style="color:var(--muted);font-size:11px">${(""+(r.hd.n||r.hd.t)).replace(/</g,"&lt;")}</span></td><td>${r.hd.s||"—"}</td><td class="r">${r.hd.b!=null?r.hd.b.toFixed(2):"—"}</td>${hasQty?`<td class="r">${r.q!=null?r.q.toLocaleString("es-CL"):"—"}</td><td class="r">${r.pc!=null?fmtP(r.pc):"—"}</td>`:''}<td class="r" style="font-weight:700">${fmtCLP(r.monto)}</td><td class="r">${(r.monto/tot*100).toFixed(1)}%</td></tr>`).join("")+
+  const body=`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r ntr">β</th>${hasQty?'<th class="r">Acciones en cartera</th><th class="r">Precio prom. compra</th>':''}<th class="r">Monto invertido</th><th class="r">Peso</th></tr></thead><tbody>`+
+    rows.map(r=>`<tr><td><b style="color:${r.hd.c}">${r.hd.t}</b> <span style="color:var(--muted);font-size:11px">${(""+(r.hd.n||r.hd.t)).replace(/</g,"&lt;")}</span></td><td>${r.hd.s||"—"}</td><td class="r">${r.hd.b!=null?r.hd.b.toFixed(2):"—"}</td>${hasQty?`<td class="r">${r.q!=null?r.q.toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td><td class="r">${r.pc!=null?fmtP(r.pc):"—"}</td>`:''}<td class="r" style="font-weight:700">${fmtCLP(r.monto)}</td><td class="r">${(r.monto/tot*100).toFixed(1)}%</td></tr>`).join("")+
     `<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td></td>${hasQty?'<td></td><td></td>':''}<td class="r">${fmtCLP(tot)}</td><td class="r">100%</td></tr></tbody></table></div>`;
-  return card("Detalle de la inversión",`Composición de <b>${(""+PF.name).replace(/</g,"&lt;")}</b> · aplicada el ${PF.date} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`,{html:body,flush:true});
+  return card("Detalle de la inversión",`Composición de <b>${(""+PF.name).replace(/</g,"&lt;")}</b> · aplicada el ${PF.date} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}% · acciones y costo promedio ACTUALES (incluye compras/ventas posteriores)`,{html:body,flush:true});
 }
 /* formulario de inversión directa: elige acciones + monto y crea el proyecto (sin construir en Simulación) */
 function invNewForm(){
@@ -2818,7 +2824,9 @@ function viewInvActive(){
   const ftitle=editing?("Editar "+(editIdx===0?"compra":fr.u+" "+editIdx)):(isFirst?"Registrar compra ("+fr.u+" inicial)":"Ingresar "+fr.u+" "+WEEKS.length);
   const fsub=editing?"Modifica los precios o la fecha y guarda los cambios":(isFirst?"Precio de compra y nº de acciones por papel (el monto invertido se calcula) + IPSA del día":"Precios de cierre "+fr.per+" y valor del IPSA");
   const banner=editing?`<div class="note" style="margin-bottom:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">Editando ${editIdx===0?"la compra":fr.det+" "+editIdx}. <a id="canceledit" style="color:var(--indigo);cursor:pointer;font-weight:800">✕ Cancelar edición</a></div>`:"";
-  const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:localDay()}"></div><div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div></div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo · y si compras sobre/bajo el valor intrínseco (columna «vs valor»: verde = bajo su valor)</div><div id="compraprev" style="margin-top:6px"></div>':''}<div style="margin-top:13px"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button></div>`);
+  const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:localDay()}"></div><div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div></div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo · y si compras sobre/bajo el valor intrínseco (columna «vs valor»: verde = bajo su valor)</div><div id="compraprev" style="margin-top:6px"></div>':''}${(editing&&ed.ev&&ed.ev.kind==="trade")?`<div class="genl" style="margin-top:15px">✎ Operación de este registro · <b style="color:${ed.ev.side==="sell"?"var(--red)":"var(--green)"}">${ed.ev.side==="sell"?"VENTA":"COMPRA"} de ${ed.ev.t}</b></div>
+      <div class="simhead" style="margin-top:6px"><div><div class="genl">Cantidad (acciones)</div><input type="number" step="any" id="evqty" value="${ed.ev.shares}"></div><div><div class="genl">Precio de la transacción ($)</div><input type="number" step="any" id="evprice" value="${ed.ev.price}"></div></div>
+      <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>precio</b> de la operación, corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}<div style="margin-top:13px"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button></div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
   if(!IM) return (seg||histPg)?(projbar+summary+notecard("Aún no hay datos registrados. Ve a la pestaña <b>Ingresar datos</b> para registrar la compra inicial y los precios de cada "+fr.u+".")):(projbar+summary+freqBar+form+notecard("Registra la <b>compra inicial</b> (precios de compra de cada acción y el IPSA del día en que invertiste) para comenzar el seguimiento."));
@@ -3007,7 +3015,7 @@ function viewOperar(){
     </div>
     ${opState.side==="buy"?`<div id="opval" class="op-val" style="margin-top:12px;padding:11px 13px;border:1px solid var(--line2);border-radius:11px;background:var(--soft);font-size:12.5px;line-height:1.5">${opValHTML(osel,priceVal)}</div>`:""}
     <div class="op-foot"><div class="op-amt">${opState.side==="sell"?"Monto a recibir":"Monto a invertir"}: <b>${omonto>0?fmtCLP(omonto):"—"}</b></div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
-  const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Comprar también sirve para <b>aportar capital nuevo</b>: cada compra suma el monto al capital aportado y recalcula el valor de la cartera y el drift — sin que cuente como rentabilidad.",opBody+`<div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
+  const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Comprar también sirve para <b>aportar capital nuevo</b>: cada compra suma el monto al capital aportado y recalcula el valor de la cartera y el drift — sin que cuente como rentabilidad.",opBody+`<div class="helpline" style="margin-top:12px">¿Ingresaste mal un precio o una cantidad? Corrige la operación en <b>Historial</b> con el lápiz <b>✎</b> del registro (campos «Operación de este registro»).</div><div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
   return projbar+summary+opCard;
 }
 
@@ -3171,12 +3179,32 @@ function attachInv(){
     const rec={date,prices,ipsa};if(qty)rec.qty=qty;
     const wasCompra=(editIdx===0||WEEKS.length===0);
     // editar un registro que fue una OPERACIÓN (aporte/compra/venta/rebalanceo) conserva la operación:
-    // si se perdiera el campo ev, sus acciones y su flujo de caja desaparecerían del TWR y del libro
-    if(editIdx!=null&&WEEKS[editIdx]&&WEEKS[editIdx].ev)rec.ev=WEEKS[editIdx].ev;
+    // si se perdiera el campo ev, sus acciones y su flujo de caja desaparecerían del TWR y del libro.
+    // También se conservan los sellos fresh/ipsaFresh (qué precios son cierre REAL): editar no los cambia.
+    if(editIdx!=null&&WEEKS[editIdx]){const _ow=WEEKS[editIdx];
+      if(_ow.ev)rec.ev=_ow.ev;
+      if(_ow.fresh)rec.fresh=_ow.fresh;
+      if(_ow.ipsaFresh)rec.ipsaFresh=_ow.ipsaFresh;}
+    // corrección de la OPERACIÓN (cantidad/precio mal ingresados): campos ✎ del formulario de edición
+    let _evTouched=false;
+    const _eq=document.getElementById("evqty"),_ep=document.getElementById("evprice");
+    if(rec.ev&&rec.ev.kind==="trade"&&_eq&&_ep){
+      const nq=parseFloat(_eq.value),np=parseFloat(_ep.value);
+      if(!(nq>0)||!(np>0)){alert("La operación necesita una cantidad y un precio válidos (mayores a 0).");return;}
+      if(nq!==+rec.ev.shares||np!==+rec.ev.price){rec.ev=Object.assign({},rec.ev,{shares:nq,price:np});_evTouched=true;}
+      // sin cierre real del papel ese día, el precio del día es el de la transacción corregida (guardia ±15%)
+      if(rec.fresh&&rec.fresh.indexOf(rec.ev.t)<0){const _cur=rec.prices[rec.ev.t];if(!(_cur>0)||Math.abs(np/_cur-1)<=0.15)rec.prices[rec.ev.t]=np;}
+    }
     if(editIdx!=null){WEEKS[editIdx]=rec;editIdx=null;}else{WEEKS.push(rec);}
     // la ponderación ejecutada (acciones enteras a precio de mercado) no calza exacto con la simulada:
     // al registrar/editar la COMPRA, la simulación del proyecto pasa a reflejar los pesos REALES.
     if(wasCompra&&qty){try{projSyncReal(PF);}catch(e){}}
+    if(_evTouched){try{
+      const IMx=invMetrics();
+      if(IMx&&IMx.cost)PF.holdings.forEach(h=>{h.monto=Math.round(IMx.cost[h.t]||0);});   // el costo real cambió con la corrección
+      projSyncReal(PF);
+      rec.ev.erCapm=PF.erCapm;rec.ev.bp=PF.bp;   // re-sella el CAPM/β vigentes desde esta operación (curva "Esperado CAPM")
+    }catch(e){}}
     saveProjects();render();
   };
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
@@ -6075,7 +6103,7 @@ function viewContab(){
   const txSub=multi?(contabTxTab==="all"?`${allTx.length} operaciones en ${withOps.length} proyectos · consolidado · en orden cronológico (la más antigua arriba)`:`${txShown.length} operación${txShown.length!==1?"es":""} de "${_selName?(""+_selName.name).replace(/</g,"&lt;"):""}" · en orden cronológico (la más antigua arriba)`):`${allTx.length} operaciones · fecha, precio, monto, comisión e IVA de cada compra/venta · en orden cronológico (la más antigua arriba)`;
   const txCard=card("Libro de operaciones"+(multi?" por proyecto":""),txSub,
     `${txTabs}<div class="tw"><table><thead><tr>${showProj?"<th>Proyecto</th>":""}<th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">IVA</th><th class="r">Efectivo</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table></div>`+(multi?`<div class="note" style="margin:11px 0 0">El <b>informe consolidado para el contador</b> incluye el libro completo de <b>todos</b> los proyectos.</div>`:""));
-  const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto. El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen y fechas de adquisición). Entrega el <b>informe consolidado</b> a tu contador como respaldo ordenado.");
+  const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto. El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). ¿Una operación con precio o cantidad mal ingresados? Corrígela en <b>Inversión → Historial</b> con el lápiz <b>✎</b> del registro. Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen y fechas de adquisición). Entrega el <b>informe consolidado</b> a tu contador como respaldo ordenado.");
   return head+netCard+tiles+realizedCard+projCard+txCard+disc;
 }
 function genContabReport(){
