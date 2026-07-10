@@ -1,16 +1,16 @@
 {
- "updatedAt": "2026-07-09T23:20:17.852Z",
+ "updatedAt": "2026-07-10T23:05:18.015Z",
  "source": "Yahoo Finance (.SN) + fuentes IPSA",
  "ipsaSources": [
   "yahoo ^IPSA hoy: 1 día(s)",
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=allorigins/get: respuesta inespera",
   "yahoo ^IPSA period: 1 día(s)"
  ],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 1 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=allorigins/get: respuesta inespera · yahoo ^IPSA period: 1 día(s)"
  ],
  "days": [
   {
@@ -16418,6 +16418,40 @@
     "CAP": 6396
    },
    "ipsa": 11025.29
+  },
+  {
+   "date": "2026-07-10",
+   "prices": {
+    "CHILE": 188.88,
+    "SANTANDER": 79,
+    "BCI": 63500,
+    "ENELCHILE": 81.7,
+    "COLBUN": 133.5,
+    "FALABELLA": 5905,
+    "CENCOSUD": 2045.1,
+    "COPEC": 6139,
+    "CMPC": 1109,
+    "SQM-B": 67750,
+    "CCU": 5200,
+    "ENTEL": 3765,
+    "LATAM": 26.26,
+    "PARAUCO": 3978,
+    "AGUAS-A": 339,
+    "IAM": 914.63,
+    "ENELAM": 85.4,
+    "ECL": 1755,
+    "ANDINA-B": 4747,
+    "CONCHATORO": 855,
+    "QUINENCO": 4245,
+    "MALLPLAZA": 3901,
+    "VAPORES": 45.5,
+    "RIPLEY": 382.5,
+    "SMU": 131.28,
+    "SONDA": 310.18,
+    "ITAUCL": 20390,
+    "CAP": 6579
+   },
+   "ipsa": 11056.87
   }
  ]
 }
