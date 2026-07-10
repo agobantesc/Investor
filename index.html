@@ -2826,7 +2826,7 @@ function viewInvActive(){
   const banner=editing?`<div class="note" style="margin-bottom:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">Editando ${editIdx===0?"la compra":fr.det+" "+editIdx}. <a id="canceledit" style="color:var(--indigo);cursor:pointer;font-weight:800">✕ Cancelar edición</a></div>`:"";
   const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:localDay()}"></div><div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div></div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo · y si compras sobre/bajo el valor intrínseco (columna «vs valor»: verde = bajo su valor)</div><div id="compraprev" style="margin-top:6px"></div>':''}${(editing&&ed.ev&&ed.ev.kind==="trade")?`<div class="genl" style="margin-top:15px">✎ Operación de este registro · <b style="color:${ed.ev.side==="sell"?"var(--red)":"var(--green)"}">${ed.ev.side==="sell"?"VENTA":"COMPRA"} de ${ed.ev.t}</b></div>
       <div class="simhead" style="margin-top:6px"><div><div class="genl">Cantidad (acciones)</div><input type="number" step="any" id="evqty" value="${ed.ev.shares}"></div><div><div class="genl">Precio de la transacción ($)</div><input type="number" step="any" id="evprice" value="${ed.ev.price}"></div></div>
-      <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>precio</b> de la operación, corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}<div style="margin-top:13px"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button></div>`);
+      <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>precio</b> de la operación, corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}<div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button>${(editing&&editIdx!==0)?`<button class="btn" id="delw" style="color:var(--red);border-color:var(--red-line)">🗑 Eliminar este registro${(ed&&ed.ev)?" y su operación":""}</button>`:""}</div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
   if(!IM) return (seg||histPg)?(projbar+summary+notecard("Aún no hay datos registrados. Ve a la pestaña <b>Ingresar datos</b> para registrar la compra inicial y los precios de cada "+fr.u+".")):(projbar+summary+freqBar+form+notecard("Registra la <b>compra inicial</b> (precios de compra de cada acción y el IPSA del día en que invertiste) para comenzar el seguimiento."));
@@ -3214,6 +3214,13 @@ function attachInv(){
   document.querySelectorAll("[data-gomod]").forEach(b=>b.onclick=()=>{modulo=b.dataset.gomod;if(modulo==="proyectos")page="hub";render();});
   document.querySelectorAll("[data-projsel]").forEach(b=>b.onclick=()=>{activeId=+b.dataset.projsel;editIdx=null;saveProjects();render();});
   const ce=document.getElementById("canceledit");if(ce)ce.onclick=()=>{editIdx=null;render();};
+  // eliminar el registro DESDE el editor (mismo comportamiento que el ✕ del Historial): compras/ventas incluidas
+  const dw=document.getElementById("delw");if(dw)dw.onclick=()=>{const i=editIdx;if(i==null||!WEEKS[i])return;
+    const _ev=WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra")+" de "+_ev.t:"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";
+    if(!window.confirm(_msg))return;
+    WEEKS.splice(i,1);editIdx=null;
+    if(_ev){try{const IMx=invMetrics();if(IMx&&IMx.cost)PF.holdings.forEach(h=>{h.monto=Math.round(IMx.cost[h.t]||0);});projSyncReal(PF);}catch(e){}}
+    saveProjects();render();};
   attachMultiHover("invval");attachMultiHover("invevo");attachMultiHover("invstk");attachMultiHover("invcapm");
   const vs=document.getElementById("versim");if(vs)vs.onclick=()=>{let sel,amt;const b0=WEEKS[0];if(b0&&b0.qty){let tot=0;const per={};PF.holdings.forEach(hd=>{const m=(b0.qty[hd.t]||0)*(b0.prices[hd.t]||0);per[hd.t]=m;tot+=m;});sel={};PF.holdings.forEach(hd=>{sel[hd.t]=+((tot?per[hd.t]/tot:0)*100).toFixed(1);});const ks=Object.keys(sel);if(ks.length){const sm=ks.reduce((a,k)=>a+sel[k],0);sel[ks[0]]=+(sel[ks[0]]+(100-sm)).toFixed(1);}amt=Math.round(tot);}else{const o=PF.origSim||{sel:(function(){const s={};PF.holdings.forEach(hd=>{s[hd.t]=+(hd.w*100).toFixed(1);});return s;})(),amount:PF.amount};sel=Object.assign({},o.sel);amt=o.amount;}simState.sel=sel;simState.amount=amt;scenEditId=null;modulo="sim";page="constructor";render();};
   const gi=document.getElementById("geninforme");if(gi)gi.onclick=genInvReport;
@@ -6945,7 +6952,7 @@ function seedExamples(){
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
-let homeIpsaFreq=lsGet("inv_home_ipsa_freq")||"diario";   // cadencia del GRÁFICO del IPSA en Home (no toca las etiquetas de rentabilidad)
+let homeIpsaFreq=lsGet("inv_home_ipsa_freq2")||"mensual";   // cadencia del GRÁFICO del IPSA en Home (no toca las etiquetas de rentabilidad) · estándar: mensual 24m (clave v2: re-estandariza a mensual)
 /* ══ INVESTOR SCORE (v3 · piedra angular, riesgo descontado + candado de confianza) ══
    Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
    fundamentos reales), INDEPENDIENTE del análisis activo. Rankea por PERCENTIL dentro del universo.
@@ -7195,26 +7202,25 @@ function viewHome(){
     if(!_ips)return "";
     const _fD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(0,4):"";
     const cell=(lbl,r,desc,base)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";const tt=desc+(base?(" · base: cierre del "+_fD(base)):"");return `<div class="ipsa-cell" title="${tt}"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
-    // curva del índice con CADENCIA elegible (días/semanas/meses) — SOLO cambia el gráfico, nunca las
-    // etiquetas de rentabilidad de arriba (siguen siendo variaciones móviles día/~7d/~30d/12m).
+    // curva del índice con CADENCIA elegible — SOLO cambia el gráfico, nunca las etiquetas de rentabilidad
+    // de arriba (siguen siendo variaciones móviles día/~7d/~30d/12m). Estándar acordado: MENSUAL con los
+    // últimos 24 meses; semanal = últimas 52 semanas; diario = últimos 3 días hábiles (zoom de corto plazo).
+    // Se toman los últimos N períodos con dato REAL directamente (sin exigir racha consecutiva: la vieja regla
+    // hacía que un hueco reciente mandara la vista "diaria" a mensual).
     let ipsaChart="";
     try{const C=consolidatedSeries();
       let rs=[],cap="",monthly=false;
       if(homeIpsaFreq==="semanal"){
-        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"semanal")).slice(-104);
+        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"semanal")).slice(-52);
         cap="cierres semanales · últimas "+rs.length+" semanas";
-      }else if(homeIpsaFreq==="mensual"){
-        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-36);monthly=true;
-        cap="cierres mensuales · últimos "+rs.length+" meses";
+      }else if(homeIpsaFreq==="diario"){
+        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"diario")).slice(-3);
+        cap="últimos "+rs.length+" días hábiles";
       }else{
-        // diario: la RACHA DIARIA consecutiva más reciente (una sola cadencia, como una plataforma pro);
-        // si es corta (<10 días), cae a la serie mensual para no dejar el gráfico vacío
-        const all=dropTrailingFlat(resampleMap(C.ipsaMap,"diario"));
-        let i=all.length-1;while(i>0&&gapOK(all[i-1].d,all[i].d,"diario"))i--;
-        rs=all.slice(i).slice(-120);cap="últimos "+rs.length+" días hábiles";
-        if(rs.length<10){rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-36);cap="serie mensual ("+rs.length+" meses)";monthly=true;}
+        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-24);monthly=true;
+        cap="cierres mensuales · últimos "+rs.length+" meses";
       }
-      const seg=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","Días"],["semanal","Semanas"],["mensual","Meses"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Solo cambia el gráfico; las variaciones de arriba no se tocan">${l}</button>`).join("")}</div>`;
+      const seg=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","3 días"],["semanal","52 semanas"],["mensual","24 meses"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Solo cambia el gráfico; las variaciones de arriba no se tocan">${l}</button>`).join("")}</div>`;
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
         // en la vista mensual (varios años) la etiqueta lleva MES/AÑO; "DD/MM" se repetiría idéntico entre años
         const labels=monthly?rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4)):rs.map(x=>x.d);
@@ -7367,7 +7373,7 @@ function attachHome(){
     modulo="inv";page="seguimiento";render();});
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
   document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
-  document.querySelectorAll("[data-ipsafreq]").forEach(b=>b.onclick=()=>{homeIpsaFreq=b.dataset.ipsafreq;try{lsSet("inv_home_ipsa_freq",homeIpsaFreq);}catch(e){}render();});
+  document.querySelectorAll("[data-ipsafreq]").forEach(b=>b.onclick=()=>{homeIpsaFreq=b.dataset.ipsafreq;try{lsSet("inv_home_ipsa_freq2",homeIpsaFreq);}catch(e){}render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
