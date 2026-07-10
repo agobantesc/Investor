@@ -2630,6 +2630,11 @@ function invMetrics(){
   // cartera. Las acciones de la compra inicial arrancan en el índice 0; las que se agregan después (compra en
   // Operar / aporte) arrancan en su fecha de compra. b0 sigue siendo el precio de referencia para rellenos.
   const firstBuy={};PF.holdings.forEach(hd=>{if((cost[hd.t]||0)>0)firstBuy[hd.t]={idx:0,price:b0[hd.t]};});
+  // ÚLTIMO PRECIO CONOCIDO por acción (carry-forward): una tenencia AUSENTE del registro de una fecha (p.ej. una
+  // acción nueva comprada con fecha intermedia, que no aparece en los registros posteriores ya existentes) se
+  // valoriza a su último precio conocido — NO a 0. Antes `val` usaba `||0` mientras perStock caía a b0, y esa
+  // asimetría descuadraba Valor actual, Ganancia total y el KPI del día por el monto entero de la posición.
+  const lastPx={};PF.holdings.forEach(hd=>{lastPx[hd.t]=b0[hd.t]||0;});
   let twr=1,prevVal=null;const series=[],pr=[],mr=[];
   WEEKS.forEach((w,i)=>{
     let inflow=0;
@@ -2638,7 +2643,8 @@ function invMetrics(){
       else if(w.ev.kind==="rebal"&&w.ev.shares){PF.holdings.forEach(hd=>{const old=sh[hd.t]||0,nw=w.ev.shares[hd.t]!=null?w.ev.shares[hd.t]:old,p=w.prices[hd.t]||base.prices[hd.t]||1;if(nw<old)cost[hd.t]=(cost[hd.t]||0)*(old>0?nw/old:1);else if(nw>old)cost[hd.t]=(cost[hd.t]||0)+(nw-old)*p;sh[hd.t]=nw;});}
       else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;if(sh[tt]<=1e-9)delete firstBuy[tt];}else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;if(!firstBuy[tt]&&qy>0)firstBuy[tt]={idx:i,price:pp};}}
     }
-    const val=PF.holdings.reduce((a,hd)=>a+(sh[hd.t]||0)*(w.prices[hd.t]||0),0);
+    PF.holdings.forEach(hd=>{const p=w.prices[hd.t];if(p!=null&&p>0)lastPx[hd.t]=p;});   // actualiza el último precio conocido con los cierres reales del registro
+    const val=PF.holdings.reduce((a,hd)=>{const p=w.prices[hd.t];const px=(p!=null&&p>0)?p:(lastPx[hd.t]||0);return a+(sh[hd.t]||0)*px;},0);
     if(i>0&&prevVal>0){const r=(val-inflow)/prevVal-1;twr*=(1+r);pr.push(r);mr.push(w.ipsa/WEEKS[i-1].ipsa-1);}
     prevVal=val;
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
@@ -3880,10 +3886,12 @@ function cpRunTool(name,input){
       return JSON.stringify({activo:PF?PF.name:null,
         notaDinero:"DINERO: 'valorActualCLP' = lo que la cartera VALE HOY (la ÚNICA cifra válida para '¿cuánto tengo/vale mi cartera?'). 'capitalAportadoCLP' = lo realmente invertido. 'montoInicialPlan_CLP' = SOLO el plan de la compra inicial: NUNCA lo presentes como monto o valor de la cartera. 'costoCLP' por acción = costo de compra, no valor.",
         proyectos:(PROJECTS||[]).map(p=>{let s=null;try{s=projSummary(p);}catch(e){}
+          const _comprado=!!(s&&s.hasData);   // hasData=false => plan sin compra registrada: nada invertido aún
           return {nombre:p.name,fecha:p.date,
-            valorActualCLP:(s&&s.hasData)?Math.round(s.value):null,
-            capitalAportadoCLP:s?Math.round(s.invested):null,
-            gananciaNetaCLP:(s&&s.hasData)?Math.round(s.gainNet):null,
+            valorActualCLP:_comprado?Math.round(s.value):null,
+            capitalAportadoCLP:_comprado?Math.round(s.invested):0,
+            sinCompraRegistrada:!_comprado,
+            gananciaNetaCLP:_comprado?Math.round(s.gainNet):null,
             rentabilidadNeta_pct:(s&&s.hasData)?+s.gainNetPct.toFixed(2):null,
             montoInicialPlan_CLP:p.amount,
             beta:+p.bp.toFixed(2),erCapm:+p.erCapm.toFixed(2),sigma:+p.sig.toFixed(1),registros:p.weeks.length,
@@ -3902,9 +3910,10 @@ function cpRunTool(name,input){
       const _pv={};if(_IMw)_IMw.perStock.forEach(p=>{_pv[p.hd.t]=Math.round(p.val);});
       const out={nombre:PF.name,aplicada:PF.date,
         valorActualCLP:(_IMw&&_V>0)?Math.round(_V):null,
-        capitalRealInvertidoCLP:Math.round(realCap()),
+        capitalRealInvertidoCLP:_IMw?Math.round(realCap()):0,
+        sinCompraRegistrada:!_IMw,   // sin seguimiento: NO se ha invertido — aportado/valor = 0/null, el plan NO cuenta
         montoInicialPlan_CLP:PF.amount,
-        notaDinero:"'valorActualCLP' = lo que la cartera VALE HOY (la única cifra válida para '¿cuánto tengo/vale?'). 'capitalRealInvertidoCLP' = lo aportado. 'montoInicialPlan_CLP' = solo el plan de la compra inicial: NUNCA lo presentes como el monto/valor de la cartera. Por acción: 'costoCLP' = costo de compra; 'valorActualCLP' = valor de mercado hoy.",
+        notaDinero:"'valorActualCLP' = lo que la cartera VALE HOY (la única cifra válida para '¿cuánto tengo/vale?'). 'capitalRealInvertidoCLP' = lo aportado (0 si sinCompraRegistrada). 'montoInicialPlan_CLP' = solo el plan de la compra inicial: NUNCA lo presentes como el monto/valor de la cartera. Por acción: 'costoCLP' = costo de compra; 'valorActualCLP' = valor de mercado hoy.",
         betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
         notaPesos:"pesoObjetivo = plan (referencia del drift); pesoActual = peso real hoy por valor de mercado. Una acción comprada después de la cartera inicial YA queda incorporada al objetivo y a β/σ.",
         holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,pesoObjetivo:+(h.w*100).toFixed(1),pesoActual:_aw[h.t]!=null?_aw[h.t]:null,costoCLP:Math.round(h.monto),valorActualCLP:_pv[h.t]!=null?_pv[h.t]:null,beta:h.b}))};
@@ -5185,13 +5194,22 @@ function systemAnalysisRefresh(){
   if(tickers.length<2){anaClear("Se necesitan al menos 2 acciones con precios en la base (y no excluidas).");return false;}
   if(!Object.keys(PRICEDB.ipsa||{}).length&&cfg.bench==="IPSA"){anaClear("Falta el índice IPSA en la base (llega con la fuente automática o por planilla).");return false;}
   let months=Math.max(CA_MIN_MONTHS,+cfg.months||CA_MIN_MONTHS),R=null;
-  for(let it=0;it<8;it++){
+  for(let it=0;it<14;it++){
     R=null;try{R=caResolve(months,{tickers,bench:cfg.bench});}catch(e){anaClear(""+((e&&e.message)||e));return false;}
     if(R&&R.ok)break;
     if(R&&R.chk&&R.chk.jump){anaClear(R.error||"El índice tiene valores de dos escalas/fuentes mezclados.");return false;}
     const lim=(R&&R.chk&&R.chk.limiting)?R.chk.limiting.map(x=>x.t):[];
     if(lim.length&&tickers.length-lim.length>=2){tickers=tickers.filter(t=>lim.indexOf(t)<0);lim.forEach(t=>{if(anaAutoDrop.indexOf(t)<0)anaAutoDrop.push(t);});continue;}
-    if(R&&R.mAvail>=CA_MIN_MONTHS&&Math.floor(R.mAvail)<months){months=Math.floor(R.mAvail);continue;}
+    // LAGGARD GENUINO: con una ventana grande (p.ej. 36m) NINGUNA acción la cubre, así que 'limiting' las marca a
+    // TODAS y el drop normal se bloquea (quedarían <2). Pero una acción de historial muy corto (recién comprada)
+    // envenena el mAvail común (~1 mes) e impide el degradado. Se aísla al/los ticker(s) con cobertura muy inferior
+    // al mejor (<60%) — de a uno — para que el resto degrade normalmente; sin esto el análisis quedaba en blanco.
+    const _pt=(R&&R.chk&&R.chk.perTicker)||null;
+    if(_pt&&tickers.length>2){const cov=tickers.map(t=>({t,n:_pt[t]||0})).sort((a,b)=>a.n-b.n);const mx=cov[cov.length-1].n;
+      if(mx>0&&cov[0].n<mx*0.6){const drp=cov[0].t;tickers=tickers.filter(t=>t!==drp);if(anaAutoDrop.indexOf(drp)<0)anaAutoDrop.push(drp);continue;}}
+    // degradado con PASO ESTRICTO: baja a min(meses disponibles, ventana−1) — siempre avanza aunque
+    // floor(mAvail)==months (off-by-one en el borde) y termina resolviendo en cuanto la ventana entra en los datos.
+    if(R&&R.mAvail>=CA_MIN_MONTHS){const nm=Math.max(CA_MIN_MONTHS,Math.min(Math.floor(R.mAvail),months-1));if(nm<months){months=nm;continue;}}
     anaClear((R&&(R.error||(R.mAvail!=null?("Solo hay ~"+Math.floor(R.mAvail)+" meses con datos alineados de todas las acciones (mínimo "+CA_MIN_MONTHS+").") : null)))||"Los datos de la base aún no alcanzan para un análisis de "+CA_MIN_MONTHS+" meses.");
     return false;
   }
