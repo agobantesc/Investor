@@ -234,9 +234,30 @@ if (scHour < 17 && byDate[todaySc]) {
   console.log(`Descartado ${todaySc}: mercado aún abierto (valor intradía, no cierre).`);
 }
 
-const days = Object.values(byDate)
+let days = Object.values(byDate)
   .filter(d => Object.keys(d.prices).length || d.ipsa != null)
   .sort((a, b) => (a.date < b.date ? -1 : 1));
+
+// DÍA CALCO: si un día repite EXACTO el vector de precios del día anterior en TODAS las acciones (≥5),
+// es un arrastre del upstream — un mercado abierto jamás cierra idéntico en 28/28 papeles — no un cierre real.
+// Se vacían sus precios (el día sobrevive solo si trae un IPSA propio distinto). Caso real: los días
+// 14/15/16-10-2024 repetían el vector del 11-10-2024. Nunca se copia un cierre anterior como dato del día.
+let nCalco = 0;
+for (let i = days.length - 1; i >= 1; i--) {
+  const cur = days[i].prices || {}, ks = Object.keys(cur);
+  if (ks.length < 5) continue;
+  let j = i - 1; while (j >= 0 && !Object.keys(days[j].prices || {}).length) j--;
+  if (j < 0) continue;
+  const prev = days[j].prices || {};
+  if (ks.every(t => prev[t] != null && prev[t] === cur[t])) {
+    days[i].prices = {}; nCalco++;
+    if (days[i].ipsa != null && days[i].ipsa === days[j].ipsa) delete days[i].ipsa;
+  }
+}
+if (nCalco) {
+  days = days.filter(d => Object.keys(d.prices).length || d.ipsa != null);
+  console.log(`Día(s) CALCO descartados (todas las acciones repetían el cierre anterior): ${nCalco}`);
+}
 
 if (!days.length) { console.error("Sin datos. Errores:", errors); process.exit(1); }
 

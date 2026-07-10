@@ -1593,7 +1593,7 @@ function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div 
 const MODS={
   inicio:{label:"Inicio",tabs:[{id:"home",label:"Resumen general",n:"1"}]},
   datos:{label:"Datos",tabs:[{id:"base",label:"Base de precios",n:"1"},{id:"cargar",label:"Cargar planilla",n:"2"},{id:"cierre",label:"Cierre diario",n:"3"}]},
-  eval:{label:"Análisis",tabs:[{id:"crear",label:"Gestión de análisis",n:"1"},{id:"comparativa",label:"Comparativa",n:"2"},{id:"detalle",label:"Detalle por acción",n:"3"},{id:"capm",label:"CAPM / SML",n:"4"},{id:"multifactor",label:"Multifactor",n:"5"},{id:"fundamentos",label:"Fundamentos",n:"6"}]},
+  eval:{label:"Análisis",tabs:[{id:"crear",label:"Ajustes del análisis",n:"1"},{id:"comparativa",label:"Comparativa",n:"2"},{id:"detalle",label:"Detalle por acción",n:"3"},{id:"capm",label:"CAPM / SML",n:"4"},{id:"multifactor",label:"Multifactor",n:"5"},{id:"fundamentos",label:"Fundamentos",n:"6"}]},
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
   sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
@@ -1835,7 +1835,7 @@ function viewDetalle(){
       ${tile("Retorno exigido r",(_iv.r*100).toFixed(1)+"%","CAPM · Rf "+(+RF).toFixed(1)+"% + β "+_iv.beta.toFixed(2)+"·"+(+PRIMA).toFixed(1)+"%"+(_iv.g!=null?(" · g "+(_iv.g*100).toFixed(1)+"%"):""),s.c,indigo)}</div>`;
     const met=_iv.methods.map(m=>m.name+" $"+fmt(m.val)).join(" · ");
     const _disp=_iv.disp||0;
-    const _fiab=_disp>0.6?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> los ${_iv.n} métodos discrepan bastante (banda ancha). Tómalo como una referencia gruesa, no un número fino.`:"";
+    const _fiab=(_iv.n<2)?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> hay UNA sola ancla (${_iv.methods[0].name}) — sin triangulación entre métodos. Tómalo como referencia gruesa, no un número fino.`:(_disp>0.6?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> los ${_iv.n} métodos discrepan bastante (banda ancha). Tómalo como una referencia gruesa, no un número fino.`:"");
     const ivNote=notecard(`Valor central = <b>mediana</b> de las anclas (robusta a un método extremo). Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.${_fiab}`);
     ivCard=card("Valor intrínseco y margen de seguridad","¿Hay espacio para ganar? Compara lo que "+s.t+" vale (dividendos, múltiplos y target de analistas) con su último cierre de la base",bar+ivTiles+ivNote);
   }
@@ -2629,7 +2629,12 @@ function invMetrics(){
   // "Crecimiento por acción": base 100 desde la PRIMERA compra de cada acción. Antes de esa fecha va en null,
   // por lo que la línea NO existe (svgMulti la dibuja recién desde la compra): ENEL, comprada más tarde, arranca
   // en su fecha de incorporación y no arrastra el crecimiento previo de la cartera. Estándar para cualquier acción.
-  const stockSeries=PF.holdings.map(hd=>{const fb=firstBuy[hd.t],anc=(fb&&fb.price>0)?fb.price:b0[hd.t],fi=fb?fb.idx:0;return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>i<fi?null:+(100*((w.prices[hd.t]||anc)/anc)).toFixed(2))};});
+  // El ANCLA es el CIERRE del día de incorporación (el mismo valor que se grafica en ese índice), no el precio de
+  // la transacción: si compraste a $81,42 y ese día cerró a $80,90, la línea parte EXACTO en 100 y mide el
+  // crecimiento de mercado desde la incorporación. El retorno sobre tu precio de compra vive en la tabla (gain/costo).
+  const stockSeries=PF.holdings.map(hd=>{const fb=firstBuy[hd.t],fi=fb?fb.idx:0;
+    const cl=WEEKS[fi]?WEEKS[fi].prices[hd.t]:null,anc=(cl>0)?cl:((fb&&fb.price>0)?fb.price:b0[hd.t]);
+    return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>i<fi?null:+(100*((w.prices[hd.t]||anc)/anc)).toFixed(2))};});
   const lastW=WEEKS[WEEKS.length-1],prevW=WEEKS.length>=2?WEEKS[WEEKS.length-2]:null,last=series[series.length-1];
   // retorno por acción = sobre el capital REALMENTE invertido en ella (gain/costo): mide desde su compra, no desde
   // el inicio de la cartera; buy = costo promedio por acción. Para acciones de la cartera original coincide con cur/b0-1.
@@ -2707,7 +2712,7 @@ function projGuidedSteps(p){
     : "El orden ideal: <b>análisis → simulación → invertir</b>. Estudia y optimiza la cartera antes de elegir las acciones y registrar la compra.";
   const steps=
     (noData?step("Cargar datos","Sube tus planillas (mensual/semanal/diaria) o registra cierres para poblar la base.",`<button class="btn btn-pri" data-pstep="datos|cargar">Ir a Datos →</button>`):"")+
-    step("Análisis","Estudia las acciones del IPSA con tus datos y crea un análisis para este proyecto.",`<button class="btn${noData?"":" btn-pri"}" data-pstep="eval|crear">Ir a Análisis →</button>`)+
+    step("Análisis","Estudia las acciones del IPSA con el análisis del sistema (ajusta su ventana y acciones si quieres).",`<button class="btn${noData?"":" btn-pri"}" data-pstep="eval|comparativa">Ir a Análisis →</button>`)+
     step("Simulación","Arma y optimiza la cartera: pesos, riesgo, Sharpe y factores.",`<button class="btn" data-pstep="sim|constructor">Ir a Simulación →</button>`)+
     step("Invertir","Con la cartera ya analizada y simulada, define acciones y monto, y registra la compra real.",`<button class="btn" id="projDefineInv">Definir inversión →</button>`);
   return card("Construye tu proyecto: "+nm,sub,`<div class="proj-steps">${steps}</div>`);
@@ -3211,37 +3216,38 @@ function attachTableSort(){
 function evalMeta(){
   const per=DATA.perYear===252?"días":DATA.perYear===52?"semanas":"meses";
   const isImp=(typeof DATASET!=="undefined"&&DATASET==="import");
-  const _demoHidden=lsGet("inv_demo_hidden");
-  const anName=(function(){const id=currentAnalysisId();if(id==="none")return "sin análisis";if(id==="demo")return _demoHidden?"sin análisis":"IPSA · demo";const s=(IMPSETS||[]).find(x=>String(x.id)===String(id));return s?s.name:(isImp?"Análisis":(_demoHidden?"sin análisis":"IPSA · demo"));})();
-  const tag='<span class="em-tag '+(isImp?'imp':'')+'">'+(""+anName).replace(/</g,"&lt;")+'</span>';
-  const act=(page!=="crear")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Gestión de análisis</button>':'';
+  const anName=isImp?"Análisis del sistema":"sin análisis";
+  const tag='<span class="em-tag '+(isImp?'imp':'')+'">'+anName+'</span>';
+  const act=(page!=="crear")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Ajustes del análisis</button>':'';
   return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span>'+tag+'<span class="em-spacer"></span>'+act+'</div>';
 }
-/* true cuando el módulo Análisis mostraría el DEMO oculto: dataset activo = demo y el usuario limpió (demo oculto).
-   En ese caso no hay datos propios que mostrar → estado vacío en vez de la data hardcodeada del demo. */
-function evalIsEmpty(){return !(typeof DATASET!=="undefined"&&DATASET==="import") && !!lsGet("inv_demo_hidden");}
-/* estado vacío del módulo Simulación: sin análisis real activo NO se muestra el universo demo (evitaba
-   que se armara y APLICARA una inversión sobre precios ilustrativos, presentados como si fueran reales). */
+/* true cuando NO existe el análisis del sistema (base sin datos suficientes): estados vacíos honestos.
+   Ya no hay análisis independientes: cuando la base alcanza (≥2 acciones + IPSA ≥12m) el análisis se
+   construye SOLO y siempre está activo. */
+function evalIsEmpty(){return !(typeof DATASET!=="undefined"&&DATASET==="import");}
+/* estado vacío del módulo Simulación: el análisis del sistema aún no puede construirse (faltan datos).
+   Nunca se simula sobre datos ilustrativos. */
 function simEmpty(){
   const nBase=(typeof pricedbTickers==="function")?pricedbTickers().length:0;
+  const _err=(typeof anaLastErr!=="undefined"&&anaLastErr)?`<div class="note" style="margin:10px 0 0;color:var(--amber)">${(""+anaLastErr).replace(/</g,"&lt;")}</div>`:"";
   const body=nBase>0
-    ?`<div class="note" style="margin:0">Tu base tiene <b>${nBase} acciones</b> con precios, pero el Constructor necesita un <b>análisis activo</b> (β, retornos y correlaciones) para simular carteras. Créalo y se activa solo.</div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-go-import>📊 Crear análisis</button></div>`
-    :`<div class="note" style="margin:0">Aún no hay datos en el sistema para construir carteras. Los cierres llegan con la <b>fuente automática</b> y las planillas se cargan en <b>⚙ Configuración → Datos</b>; luego crea un análisis y vuelve aquí.</div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button><button class="btn" data-go-import>Gestión de análisis</button></div>`;
-  return card("Simulación · sin análisis activo","El Constructor y el Asistente trabajan con el análisis activo · no se simula sobre datos ilustrativos",body);
+    ?`<div class="note" style="margin:0">Tu base tiene <b>${nBase} acciones</b> con precios, pero el <b>análisis del sistema</b> aún no puede construirse (necesita el IPSA y ~12 meses de historia alineada). En cuanto la base alcance, se activa solo.</div>${_err}
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button><button class="btn" data-go-import>Ajustes del análisis</button></div>`
+    :`<div class="note" style="margin:0">Aún no hay datos en el sistema para construir carteras. Los cierres llegan con la <b>fuente automática</b> y las planillas se cargan en <b>⚙ Configuración → Datos</b>; el análisis del sistema se construye solo cuando hay datos.</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button></div>`;
+  return card("Simulación · el análisis del sistema aún no está disponible","El Constructor y el Asistente usan el análisis del sistema (β, retornos, correlaciones) · no se simula sobre datos ilustrativos",body);
 }
-/* estado vacío del módulo Análisis: no hay análisis ACTIVO. Este módulo trabaja SOLO con los datos del
-   sistema y el análisis activo — la carga de datos (sincronización/planillas) vive en Configuración → Datos,
-   nunca aquí. */
+/* estado vacío del módulo Análisis: la base aún no alcanza para el análisis del sistema. La carga de
+   datos (sincronización/planillas) vive en Configuración → Datos, nunca aquí. */
 function evalEmpty(){
   const nBase=(typeof pricedbTickers==="function")?pricedbTickers().length:0;
+  const _err=(typeof anaLastErr!=="undefined"&&anaLastErr)?`<div class="note" style="margin:10px 0 0;color:var(--amber)">${(""+anaLastErr).replace(/</g,"&lt;")}</div>`:"";
   const body=nBase>0
-    ?`<div class="note" style="margin:0">Tu base ya tiene <b>${nBase} acciones</b> con precios: solo falta <b>crear (o activar) un análisis</b> para que Comparativa, Detalle, CAPM, Multifactor y el Constructor se llenen con tus datos. El análisis se construye directamente con la data del sistema.</div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-go-import>📊 Crear análisis</button></div>`
-    :`<div class="note" style="margin:0">Aún no hay precios en el sistema. Los cierres llegan solos con la <b>fuente automática</b> y las planillas puntuales se cargan en <b>⚙ Configuración → Datos</b>. Cuando la base tenga datos, crea tu análisis en <b>Gestión de análisis</b>.</div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button><button class="btn" data-go-import>Gestión de análisis</button></div>`;
-  return card("Análisis · sin análisis activo","Este módulo funciona con los datos del sistema y el análisis activo · crea uno en Gestión de análisis",body);
+    ?`<div class="note" style="margin:0">Tu base ya tiene <b>${nBase} acciones</b> con precios, pero el <b>análisis del sistema</b> necesita además el IPSA y ~12 meses de historia alineada. En cuanto la base alcance, Comparativa, Detalle, CAPM, Multifactor y el Constructor se llenan solos.</div>${_err}
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button><button class="btn" data-go-import>Ajustes del análisis</button></div>`
+    :`<div class="note" style="margin:0">Aún no hay precios en el sistema. Los cierres llegan solos con la <b>fuente automática</b> y las planillas puntuales se cargan en <b>⚙ Configuración → Datos</b>. Con datos suficientes, el análisis del sistema se construye y activa solo.</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-pri" data-godatos>Ir a Datos →</button></div>`;
+  return card("Análisis · el análisis del sistema aún no está disponible","Investor construye el análisis automáticamente con los datos reales de la base · sin datos suficientes no se muestra nada ilustrativo",body);
 }
 let _lastViewKey="";
 function render(){
@@ -3801,7 +3807,7 @@ function cpRunTool(name,input){
             nota:"Métricas REALES desde la base de precios, NO metadatos. El 'análisis formal' es opcional (fija la ventana CAPM y las correlaciones del Constructor); el ranking y estas métricas son válidos ahora.",
             acciones:sc.rows.map((r,i)=>({rank:i+1,ticker:r.t,empresa:r.n,score:r.score,confianza_pct:r.confianza,sharpe:r.sharpe,sigma_pct:r.sig,beta:r.beta,alpha_amortiguado:r.alphaAdj,r2:r.r2,caidaMax_pct:r.maxDD,momentum6m_pct:r.mom6m,alertas:r.alertas}))});
         }
-        return JSON.stringify({estado:"sin datos",detalle:"No hay base de precios suficiente (≥3 acciones + IPSA). Guíalo a Configuración → Datos y luego Gestión de análisis.",universoIPSA:DATA_UNIVERSE.map(s=>({ticker:s.t,empresa:s.n,sector:s.s,betaReferencial:s.b})),nota:"Solo metadatos del universo; β referencial sectorial, NO calculada."});
+        return JSON.stringify({estado:"sin datos",detalle:"No hay base de precios suficiente (≥3 acciones + IPSA). Guíalo a Configuración → Datos; el análisis del sistema se construye solo cuando la base alcanza.",universoIPSA:DATA_UNIVERSE.map(s=>({ticker:s.t,empresa:s.n,sector:s.s,betaReferencial:s.b})),nota:"Solo metadatos del universo; β referencial sectorial, NO calculada."});
       }
       const out={ventana:DATA.window,rf:RF,prima:PRIMA,acciones:STOCKS.map(cpStockBrief)};
       const extra=DATA_UNIVERSE.filter(s=>!STOCKS.some(x=>x.t===s.t));
@@ -4365,11 +4371,10 @@ function setActive(s){
 }
 function impToActive(){const A=IMP.assets;return {stocks:A,market:{ret:IMP.bench.ret,sig:IMP.bench.sig,tot:IMP.bench.tot,rets:IMP.bench.rets,sharpe:IMP.bench.sharpe},corr:IMP.corr,tickers:A.map(a=>a.t),labels:IMP.labels,window:IMP.window+" · benchmark "+IMP.bench.name,n:IMP.n,rf:IMP.rf,prima:IMP.prima,perYear:IMP.perYear};}
 function applyDataset(which){
-  if(which==="import"&&IMP){setActive(impToActive());DATASET="import";lsSet("inv_dataset_active","import");render();return;}
-  // El set demo se retiró. Sin import activo, se usa la BASE REAL si tiene datos suficientes; si no, estado vacío
-  // (evalIsEmpty muestra "sin análisis" y pide cargar datos). Nunca se activa un set de ejemplo.
-  try{if(typeof pricedbToIMP==="function"){const _imp=pricedbToIMP(typeof pricedbFreq!=="undefined"?pricedbFreq:"diario");
-    if(_imp&&_imp.assets&&_imp.assets.length>=3){IMP=_imp;impActiveId="datos";lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id","datos");setActive(impToActive());DATASET="import";lsSet("inv_dataset_active","import");render();return;}}}catch(e){}
+  // v2 · ANÁLISIS ÚNICO DEL SISTEMA: siempre se intenta (re)construir desde la base real (ventana y acciones
+  // según los ajustes del usuario). Si la base no alcanza, estado vacío honesto. El set demo y los análisis
+  // independientes se retiraron de raíz: nunca se activa un set de ejemplo.
+  try{if(typeof systemAnalysisRefresh==="function"&&systemAnalysisRefresh()){render();return;}}catch(e){}
   DATASET="none";lsSet("inv_dataset_active","none");render();
 }
 
@@ -4481,10 +4486,10 @@ function impStats(prices,perYear){const rets=[];for(let i=1;i<prices.length;i++)
   const retAnn=mean*perYear;
   return {rets,mean,sd,total,retAnn,sigAnn:sd*Math.sqrt(perYear)};}
 function impBetaCorr(ra,rm){const n=Math.min(ra.length,rm.length);if(!n)return {beta:0,corr:0,r2:0};let ma=0,mm=0;for(let i=0;i<n;i++){ma+=ra[i];mm+=rm[i];}ma/=n;mm/=n;let cov=0,vm=0,va=0;for(let i=0;i<n;i++){cov+=(ra[i]-ma)*(rm[i]-mm);vm+=(rm[i]-mm)**2;va+=(ra[i]-ma)**2;}const beta=vm>0?cov/vm:0,corr=(vm>0&&va>0)?cov/Math.sqrt(vm*va):0;return {beta,corr,r2:corr*corr};}
-let IMPSETS=lsGet("inv_impsets_v1")||[], impActiveId=lsGet("inv_imp_active_id")||null, impRfAuto=true, impRfTried=false;
+/* v2: los análisis guardados (IMPSETS) se retiraron — existe UN único análisis del sistema (impActiveId="datos"),
+   reconstruido siempre desde la base real. La variable queda por compatibilidad y se purga al arrancar. */
+let IMPSETS=[], impActiveId=lsGet("inv_imp_active_id")||null, impRfAuto=true, impRfTried=false;
 function autoRf(){return (typeof MIND!=="undefined"&&MIND&&MIND.tpm&&isFinite(MIND.tpm.valor))?+MIND.tpm.valor:null;}
-function impsetAutoName(imp){const ts=imp.assets.map(a=>a.t);return ts.slice(0,3).join(", ")+(ts.length>3?(" +"+(ts.length-3)):"");}
-function impsetActivate(id){const s=IMPSETS.find(x=>x.id===id);if(!s)return;IMP=s.imp;impActiveId=id;lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id",id);applyDataset("import");}
 /* al ELIMINAR un análisis o simulación, se desvincula de TODOS los proyectos (de todos los clientes):
    sin esto quedaban chips "(no disponible)" en los cuadros de proyectos del Home/Proyectos */
 function purgeLinkEverywhere(kind,id){const s=String(id);
@@ -4497,36 +4502,7 @@ function purgeLinkEverywhere(kind,id){const s=String(id);
     if(ch)clientSaveProjects(c.id,projs);
   });}catch(e){}
 }
-function impsetDelete(id){const i=IMPSETS.findIndex(x=>x.id===id);if(i<0)return;IMPSETS.splice(i,1);lsSet("inv_impsets_v1",IMPSETS);purgeLinkEverywhere("analysis",id);if(impActiveId===id){if(IMPSETS.length){impsetActivate(IMPSETS[IMPSETS.length-1].id);}else{IMP=null;impActiveId=null;lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);applyDataset("demo");}}else{render();}}
-function impsetRename(id,name){const s=IMPSETS.find(x=>x.id===id);if(s){s.name=(name||"").trim()||s.name;lsSet("inv_impsets_v1",IMPSETS);}}
-function impCalc(){
-  if(impFiles.length<1)return;
-  const perYear=IMP_PY[impFreq];
-  let common=null;impFiles.forEach(s=>{const set=new Set(s.dates);common=common?common.filter(d=>set.has(d)):s.dates.filter(d=>set.has(d));});
-  common=[...new Set(common)].sort();
-  if(common.length<4){impMsg="Las acciones comparten solo "+common.length+" fechas en común. Asegúrate de que todos los archivos tengan la misma periodicidad ("+impFreq+") y rango.";render();return;}
-  const priceAt={};impFiles.forEach(s=>{const m={};s.dates.forEach((d,i)=>m[d]=s.closes[i]);priceAt[s.name]=common.map(d=>m[d]);});
-  const avg=impBench==="__avg__";let benchName=avg?"Índice (prom. acciones)":impBench;
-  const stocks=impFiles.filter(s=>avg?true:s.name!==impBench);
-  if(!stocks.length){impMsg="Selecciona un benchmark distinto: no quedan acciones.";render();return;}
-  let benchPrices;
-  if(avg)benchPrices=common.map((d,i)=>{let su=0,k=0;stocks.forEach(ss=>{const p=priceAt[ss.name];if(p[0]>0&&isFinite(p[i])){su+=p[i]/p[0];k++;}});return k?su/k*100:NaN;});
-  else benchPrices=priceAt[impBench];
-  if(benchPrices.some(v=>!isFinite(v)||v<=0)){impMsg="El benchmark tiene datos faltantes en las fechas en común.";render();return;}
-  const bs=impStats(benchPrices,perYear),benchRet=bs.retAnn*100,prima=benchRet-impRf;
-  const dropped=[],assets=[];let ci=0,used={};
-  stocks.forEach(s=>{const arr=priceAt[s.name];if(arr.some(v=>!isFinite(v)||v<=0)){dropped.push(s.name);return;}
-    let nm=s.name;while(used[nm])nm=nm+"·";used[nm]=1;
-    const st=impStats(arr,perYear),bc=impBetaCorr(st.rets,bs.rets),retAnn=st.retAnn*100,er=impRf+bc.beta*prima,jensen=retAnn-er,alphaR=(st.mean-bc.beta*bs.mean)*perYear*100,sharpe=st.sigAnn>0?(retAnn-impRf)/(st.sigAnn*100):0;
-    assets.push({t:nm,n:s.src||nm,s:"importada",c:IMP_PAL[ci++%IMP_PAL.length],b:bc.beta,rets:st.rets.map(r=>r*100),prices:arr,a24:{ret:retAnn,sig:st.sigAnn*100,r2:bc.r2,corr:bc.corr,jensen,alphaR,sharpe,er,tot:st.total*100}});});
-  if(!assets.length){impMsg="No quedaron acciones con datos completos.";render();return;}
-  const N=assets.length,corr=[];for(let i=0;i<N;i++){corr[i]=[];for(let j=0;j<N;j++)corr[i][j]=i===j?1:impBetaCorr(assets[i].rets.map(x=>x/100),assets[j].rets.map(x=>x/100)).corr;}
-  IMP={freq:impFreq,rf:impRf,prima,perYear,window:common[0]+" a "+common[common.length-1],n:common.length-1,labels:common.slice(1),
-    bench:{name:benchName,prices:benchPrices,rets:bs.rets.map(r=>r*100),ret:benchRet,sig:bs.sigAnn*100,tot:bs.total*100,sharpe:bs.sigAnn>0?(benchRet-impRf)/(bs.sigAnn*100):0},assets,corr,dropped};
-  lsSet("inv_import_v1",IMP);impMsg=dropped.length?("Omitidas por datos incompletos: "+dropped.join(", ")):"";
-  const _id="s"+Date.now()+Math.floor(Math.random()*1000);IMPSETS.push({id:_id,name:impsetAutoName(IMP),date:new Date().toLocaleDateString("es-CL"),imp:IMP});impActiveId=_id;lsSet("inv_impsets_v1",IMPSETS);lsSet("inv_imp_active_id",impActiveId);impFiles=[];
-  applyDataset("import");
-}
+/* impsetDelete/impsetRename/impCalc retirados con los análisis independientes (v2: único análisis del sistema) */
 /* ===================== BASE DE PRECIOS CENTRAL (PRICEDB) ===================== */
 /* Repositorio canónico de precios del sistema: { tickers:{T:{n,s,c,b}}, px:{T:{fecha:precio}}, ipsa:{fecha:valor} }
    Alimenta Home, análisis, simulaciones y los seguimientos de todas las carteras. Namespaced por cliente. */
@@ -4588,6 +4564,24 @@ function pricedbSanitize(){
   stripCF(PRICEDB.ipsa);
   Object.keys(PRICEDB.px||{}).forEach(t=>stripCF(PRICEDB.px[t]));
   Object.keys(ix).forEach(k=>stripCF(ix[k]));
+  // 2.2) DÍA CALCO del feed: si en una fecha TODAS las acciones (≥5) repiten EXACTO su cierre del día hábil
+  //   anterior, ese día es un arrastre del generador — un mercado abierto jamás cierra 28/28 idéntico al día
+  //   previo — esté donde esté en la serie (stripCF solo cubre rachas al FINAL). Se elimina el día completo.
+  //   Caso real: closes.json repetía el vector del 11-10-2024 los días 14, 15 y 16-10-2024.
+  let nDup=0;
+  (function(){const px=PRICEDB.px||{},tks=Object.keys(px);if(tks.length<5)return;
+    const dates=pricedbAllDates();let prev=dates[0];
+    for(let i=1;i<dates.length;i++){const d=dates[i];let n=0,eq=0;
+      tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null){n++;if(m[prev]!=null&&m[d]===m[prev])eq++;}});
+      if(n>=5&&eq===n){
+        tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null){delete m[d];nDup++;}});
+        if(PRICEDB.ipsa&&PRICEDB.ipsa[d]!=null&&PRICEDB.ipsa[d]===PRICEDB.ipsa[prev]){delete PRICEDB.ipsa[d];nDup++;}
+        Object.keys(ix).forEach(k=>{if(ix[k][d]!=null&&ix[k][d]===ix[k][prev]){delete ix[k][d];nDup++;}});
+        continue;   // el día calco no pasa a ser "anterior": una racha de calcos se compara siempre contra el último día REAL
+      }
+      prev=d;
+    }
+  })();
   // 2.5) ATÍPICOS de ESCALA en el IPSA/índice: un punto que cae bajo el 60% (o salta sobre 170%) de AMBOS
   //   vecinos es un dato de otra escala/fuente (el índice no se mueve así en un día → se hunde y rebota) → se
   //   elimina. Cubre la mezcla de fuentes (p.ej. un valor demo colado en una fecha que la planilla no cubrió).
@@ -4613,9 +4607,9 @@ function pricedbSanitize(){
     trimGhost(PRICEDB.ipsa||{});
     Object.keys(ix).forEach(k=>trimGhost(ix[k]));
   }
-  if(nWk||nCF||nGhost||nBogus||nOut)savePriceDB();
+  if(nWk||nCF||nGhost||nBogus||nOut||nDup)savePriceDB();
   const id=Object.keys(PRICEDB.ipsa||{}).sort();
-  return {nWk,nCF,nGhost,nBogus,nOut,ipsaTo:id.length?id[id.length-1]:null};
+  return {nWk,nCF,nGhost,nBogus,nOut,nDup,ipsaTo:id.length?id[id.length-1]:null};
 }
 function pricedbTickers(){return Object.keys(PRICEDB.px||{});}
 function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s[d]=1);Object.keys(PRICEDB.px||{}).forEach(t=>Object.keys(PRICEDB.px[t]).forEach(d=>s[d]=1));return Object.keys(s).sort();}
@@ -4661,7 +4655,7 @@ function pricedbMergeFiles(files,benchName){
   // otras fechas ni otras acciones. Solo se aceptan días hábiles y no futuros.
   (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];const nm=pdIndexOf(f.name,benchName);
     if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(tgt[d]!=null)updated++;else added++;tgt[d]=v;}}return;}
-    const t=f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);
+    const t=((""+(f.name||"")).trim().toUpperCase())||f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);   // ticker SIEMPRE en mayúsculas: "Falabella" no crea una acción paralela a FALABELLA
     for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(PRICEDB.px[t][d]!=null)updated++;else added++;PRICEDB.px[t][d]=v;}}
   });
   savePriceDB();try{pricedbSanitize();}catch(e){}   // saneo inmediato: sin arrastres ni IPSA por delante del mercado, sin esperar a la próxima recarga
@@ -4698,6 +4692,7 @@ async function ipsaBackfill(years){
   if(!dates)return {ok:false,err};
   const r=pricedbMergeFiles([{name:"IPSA",src:"IPSA (Stooq)",dates,closes}],"IPSA");
   const ap=pricedbApplyToProjects();
+  try{systemAnalysisRefresh();}catch(e){}
   return {ok:true,n:dates.length,from:dates[0],to:dates[dates.length-1],added:r.added,updated:r.updated,nPts:ap.nPts};
 }
 async function autopxSync(manual,bust){
@@ -4723,6 +4718,7 @@ async function autopxSync(manual,bust){
     if(ips.dates.length)files.push({name:"IPSA",src:"IPSA",dates:ips.dates,closes:ips.closes});
     const r=pricedbMergeFiles(files,"IPSA");
     const ap=pricedbApplyToProjects();
+    try{systemAnalysisRefresh();}catch(e){}   // el análisis del sistema se reconstruye con cada sincronización
     const info={at:new Date().toISOString(),day:autopxLocalDay(),added:r.added,updated:r.updated,skipped:r.skipped,lastDate:days[days.length-1].date};
     try{localStorage.setItem("inv_autopx_last",JSON.stringify(info));}catch(e){}
     try{fundSync(false);}catch(e){}   // los fundamentos viajan por el mismo canal: se refrescan con cada sincronización (sin bloquear)
@@ -4819,7 +4815,13 @@ async function autopxForce(onProgress){
    sincronizan solos con cada sincronización de cierres. Globales (no por cliente): son datos de mercado. */
 /* saneo defensivo: Yahoo a veces trae basura en los .SN (P/B calculado en otra moneda → miles; yield 0
    cuando NO tiene el dato). Fuera de rango plausible → null y la app muestra "—" en vez de mentir. */
-function fundSanitize(j){try{if(!j||!j.byTicker)return j;Object.keys(j.byTicker).forEach(t=>{const f=j.byTicker[t];const rg=(k,lo,hi)=>{if(f[k]!=null&&!(f[k]>lo&&f[k]<hi))f[k]=null;};rg("pe",0,500);rg("fpe",0,500);rg("pb",0,100);rg("dy",0,30);rg("roe",-100,200);rg("nm",-100,100);rg("eg",-95,400);rg("rg",-95,400);rg("de",0,25);rg("peg",-50,50);rg("evEbitda",0,200);rg("target",0,Infinity);rg("nAn",0,500);if(f.dps===0)f.dps=null;});}catch(e){}return j;}
+function fundSanitize(j){try{if(!j||!j.byTicker)return j;Object.keys(j.byTicker).forEach(t=>{const f=j.byTicker[t];const rg=(k,lo,hi)=>{if(f[k]!=null&&!(f[k]>lo&&f[k]<hi))f[k]=null;};rg("pe",0,500);rg("fpe",0,500);rg("pb",0,100);rg("dy",0,30);rg("roe",-100,200);rg("nm",-100,100);rg("eg",-95,400);rg("rg",-95,400);rg("de",0,25);rg("peg",-50,50);rg("evEbitda",0,200);rg("target",0,Infinity);rg("nAn",0,500);if(f.dps===0)f.dps=null;
+  // dps CRUZADO contra precio y yield: un dps en otra unidad/escala (yield implícito <0,3% sin que el dy lo
+  // confirme, o fuera de [0,4×–2,5×] del dy reportado) es basura del feed → null. Mejor SIN ancla DDM que con
+  // una falsa: un D0≈0 (p.ej. dps 0,01 con precio 1.081) arrastraba la mediana del valor intrínseco a cero.
+  if(f.dps!=null&&f.px>0){const iy=f.dps/f.px*100;
+    if(iy<0.3&&!(f.dy!=null&&f.dy<0.3))f.dps=null;
+    else if(f.dy!=null&&f.dy>0&&(iy>f.dy*2.5||iy<f.dy*0.4))f.dps=null;}});}catch(e){}return j;}
 let FDATA=fundSanitize((function(){try{return JSON.parse(localStorage.getItem("inv_fund_v1")||"null");}catch(e){return null;}})());
 function fundGet(t){return (FDATA&&FDATA.byTicker&&FDATA.byTicker[t])||null;}
 /* ── VALORIZACIÓN INTRÍNSECA (margen de seguridad) ──
@@ -4833,7 +4835,9 @@ function fundGet(t){return (FDATA&&FDATA.byTicker&&FDATA.byTicker[t])||null;}
 function fairPE(excludeNonRec){   // P/U EFECTIVO de referencia = mediana del universo con fundamentos (múltiplo justo)
   const tk=(typeof pricedbTickers==="function")?pricedbTickers():[];
   const src=tk.length?tk:Object.keys((FDATA&&FDATA.byTicker)||{});const vals=[];
-  src.forEach(t=>{const f=fundGet(t);if(!f)return;const epe=(f.pe!=null&&f.fpe!=null)?Math.max(f.pe,f.fpe):(f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null));
+  src.forEach(t=>{const f=fundGet(t);if(!f)return;
+    if(f.pe==null&&((f.roe!=null&&f.roe<0)||(f.nm!=null&&f.nm<0)))return;   // en PÉRDIDAS (pe null por utilidad negativa): su P/U forward no es un múltiplo de referencia del universo
+    const epe=(f.pe!=null&&f.fpe!=null)?Math.max(f.pe,f.fpe):(f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null));
     if(epe==null||!(epe>0))return;if(excludeNonRec&&f.fpe!=null&&f.pe!=null&&f.pe>0&&f.fpe>f.pe*2.5)return;vals.push(epe);});
   if(vals.length<3)return null;vals.sort((a,b)=>a-b);const m=Math.floor(vals.length/2);
   return vals.length%2?vals[m]:(vals[m-1]+vals[m])/2;
@@ -4849,7 +4853,11 @@ function intrinsicValue(t,ctx){
   // px = precio de los FUNDAMENTOS (para EPS/dividendo, internamente consistente con P/U). pxNow = precio ACTUAL
   // de comparación para el margen de seguridad: el ÚLTIMO CIERRE de la base de precios (fuente única y más fresca);
   // si el llamador ya lo tiene (ctx.px) se usa; si no, lastKnownPrice; y como último recurso el px de fundamentos.
-  const px=f.px,eps=(f.pe!=null&&f.pe>0)?px/f.pe:null;
+  // EPS CONSERVADOR: utilidad al P/U EFECTIVO (el MAYOR de trailing y forward, el mismo criterio del score).
+  // Si el forward anticipa que la utilidad reciente NO es recurrente (fpe ≫ pe), el múltiplo justo no la infla
+  // (y el payout del DDM tampoco subestima el reparto). Requiere pe>0: con pérdidas no hay múltiplo de utilidad.
+  const px=f.px,_epe=(f.pe!=null&&f.pe>0)?Math.max(f.pe,(f.fpe!=null&&f.fpe>0)?f.fpe:0):null;
+  const eps=(_epe!=null&&_epe>0)?px/_epe:null;
   let pxNow=(ctx.px!=null&&isFinite(ctx.px)&&ctx.px>0)?+ctx.px:null;
   if(pxNow==null){try{const lk=(typeof lastKnownPrice==="function")?lastKnownPrice(t):null;if(lk!=null&&lk!==""&&+lk>0)pxNow=+lk;}catch(e){}}
   if(pxNow==null||!(pxNow>0))pxNow=px;
@@ -4884,7 +4892,7 @@ function intrinsicValue(t,ctx){
 /* etiqueta/color del margen de seguridad para la UI (umbrales prudentes) */
 function mosLabel(mos){if(mos==null)return {txt:"—",cls:"ink"};if(mos>=0.20)return {txt:"margen amplio",cls:"green"};if(mos>=0.08)return {txt:"algo de margen",cls:"green"};if(mos>=-0.05)return {txt:"precio justo",cls:"ink"};if(mos>=-0.18)return {txt:"algo cara",cls:"amber"};return {txt:"cara",cls:"red"};}
 /* resumen de valorización para el agente (get_stock): valor intrínseco, banda, margen de seguridad y regla sin-peros */
-function valorizacionJSON(iv){if(!iv)return null;const disp=iv.disp||0;const fiab=disp>0.6?"baja (las anclas discrepan mucho: trátalo como referencia gruesa)":disp>0.35?"media":"alta";return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),fiabilidad:fiab,dispersion:+disp.toFixed(2),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Valor central = MEDIANA de las anclas (robusta a un método extremo). Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no timing. YA está en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR. Es una BANDA estimada; si 'fiabilidad' es baja, los métodos no coinciden y hay que tomarlo con cautela."};}
+function valorizacionJSON(iv){if(!iv)return null;const disp=iv.disp||0;const fiab=(iv.n<2)?"baja (UNA sola ancla: sin triangulación — referencia gruesa)":disp>0.6?"baja (las anclas discrepan mucho: trátalo como referencia gruesa)":disp>0.35?"media":"alta";return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),fiabilidad:fiab,dispersion:+disp.toFixed(2),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Valor central = MEDIANA de las anclas (robusta a un método extremo). Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no timing. YA está en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR. Es una BANDA estimada; si 'fiabilidad' es baja, los métodos no coinciden y hay que tomarlo con cautela."};}
 function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
 async function fundSync(manual){
   const u=fundUrl();
@@ -5015,10 +5023,55 @@ function pricedbCheckAnalysis(freq,opts){
   const lagging=core.tickers.filter(t=>core.tickLast[t]&&core.groupLatest&&core.tickLast[t]<core.groupLatest).map(t=>({t,last:core.tickLast[t]})).sort((a,b)=>a.last<b.last?-1:1);
   return {ok:availPts>=needPts&&availPts>=4,unit,availPts,availRet,needRet:(opts.lastN&&opts.lastN>0)?opts.lastN:null,from:core.from,to:core.to,limiting,lagging,groupLatest:core.groupLatest,perTicker:core.perTicker};
 }
-/* activa la base como universo de análisis/simulación (vía la maquinaria de import) */
-function pricedbActivateAnalysis(freq){freq=freq||pricedbFreq;pricedbFreq=freq;lsSet("inv_pricedb_freq",freq);
-  const imp=pricedbToIMP(freq);if(!imp){window.alert("Aún no hay suficiente data en la base para construir el análisis. Carga al menos 4 fechas con IPSA y precios.");return false;}
-  IMP=imp;impActiveId="datos";lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id","datos");applyDataset("import");return true;}
+/* ===================== ANÁLISIS ÚNICO DEL SISTEMA =====================
+   Ya no existen análisis independientes ni guardados: Investor construye SIEMPRE un análisis con los datos
+   reales de la base, y el usuario solo ajusta su VENTANA (meses, mínimo CA_MIN_MONTHS) y qué acciones incluye.
+   Ajustes persistidos en inv_analysis_cfg_v1: {months, excl:{TICKER:1}, bench}. */
+let anaState=null,anaAutoDrop=[],anaLastErr="",anaEffMonths=null;
+function anaEnsure(){
+  if(!anaState)anaState=lsGet("inv_analysis_cfg_v1")||{months:CA_MIN_MONTHS,excl:{},bench:"IPSA"};
+  if(!anaState.excl||typeof anaState.excl!=="object")anaState.excl={};
+  if(!anaState.months||anaState.months<CA_MIN_MONTHS)anaState.months=CA_MIN_MONTHS;
+  if(!anaState.bench)anaState.bench="IPSA";
+  return anaState;
+}
+function anaSave(){try{lsSet("inv_analysis_cfg_v1",anaState);}catch(e){}}
+function anaClear(msg){anaLastErr=msg||"";anaEffMonths=null;
+  IMP=null;impActiveId=null;lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);
+  if(typeof DATASET!=="undefined"&&DATASET==="import"){DATASET="none";lsSet("inv_dataset_active","none");}}
+/* (Re)construye el análisis del sistema desde la base. Honesto y resiliente:
+   · acciones sin historial suficiente se EXCLUYEN SOLAS (anaAutoDrop, visibles en Ajustes) — una acción nueva
+     no rompe el análisis del resto y se reincorpora sola cuando junta ventana;
+   · si la ventana pedida no alcanza pero hay ≥12 meses, se DEGRADA a los meses disponibles (anaEffMonths);
+   · si aun así no se puede (sin IPSA, <2 acciones, escalas mezcladas), NO se fabrica nada: estado vacío con motivo. */
+function systemAnalysisRefresh(){
+  const cfg=anaEnsure();
+  anaAutoDrop=[];anaLastErr="";anaEffMonths=null;
+  let tickers=((typeof pricedbTickers==="function")?pricedbTickers():[]).filter(t=>!cfg.excl[t]);
+  if(tickers.length<2){anaClear("Se necesitan al menos 2 acciones con precios en la base (y no excluidas).");return false;}
+  if(!Object.keys(PRICEDB.ipsa||{}).length&&cfg.bench==="IPSA"){anaClear("Falta el índice IPSA en la base (llega con la fuente automática o por planilla).");return false;}
+  let months=Math.max(CA_MIN_MONTHS,+cfg.months||CA_MIN_MONTHS),R=null;
+  for(let it=0;it<8;it++){
+    R=null;try{R=caResolve(months,{tickers,bench:cfg.bench});}catch(e){anaClear(""+((e&&e.message)||e));return false;}
+    if(R&&R.ok)break;
+    if(R&&R.chk&&R.chk.jump){anaClear(R.error||"El índice tiene valores de dos escalas/fuentes mezclados.");return false;}
+    const lim=(R&&R.chk&&R.chk.limiting)?R.chk.limiting.map(x=>x.t):[];
+    if(lim.length&&tickers.length-lim.length>=2){tickers=tickers.filter(t=>lim.indexOf(t)<0);lim.forEach(t=>{if(anaAutoDrop.indexOf(t)<0)anaAutoDrop.push(t);});continue;}
+    if(R&&R.mAvail>=CA_MIN_MONTHS&&Math.floor(R.mAvail)<months){months=Math.floor(R.mAvail);continue;}
+    anaClear((R&&(R.error||(R.mAvail!=null?("Solo hay ~"+Math.floor(R.mAvail)+" meses con datos alineados de todas las acciones (mínimo "+CA_MIN_MONTHS+").") : null)))||"Los datos de la base aún no alcanzan para un análisis de "+CA_MIN_MONTHS+" meses.");
+    return false;
+  }
+  if(!R||!R.ok){anaClear(anaLastErr||"Los datos de la base aún no alcanzan.");return false;}
+  let imp=null;try{imp=pricedbToIMP(R.freq,{tickers,lastN:R.lastN,bench:cfg.bench});}catch(e){}
+  if(!imp||!imp.assets||imp.assets.length<2){anaClear("No se pudo construir el análisis con los datos disponibles.");return false;}
+  IMP=imp;impActiveId="datos";lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id","datos");
+  setActive(impToActive());DATASET="import";lsSet("inv_dataset_active","import");
+  anaEffMonths=months;
+  return true;
+}
+/* compat: la activación desde la base ES el refresh del análisis del sistema (la cadencia la decide caResolve) */
+function pricedbActivateAnalysis(freq){if(freq){pricedbFreq=freq;lsSet("inv_pricedb_freq",freq);}
+  const ok=systemAnalysisRefresh();if(ok)render();return ok;}
 /* actualiza los seguimientos/historia de TODAS las carteras con los precios de la base (catch-up de varios días) */
 function pricedbApplyToProjects(){
   const px=PRICEDB.px||{},ipsaM=PRICEDB.ipsa||{};
@@ -5059,16 +5112,16 @@ function systemClean(){
     (PROJECTS||[]).forEach(p=>{if(!p)return;kept++;
       const ws=p.weeks||[];const keepW=ws.filter(w=>(w.qty&&Object.keys(w.qty).length)||w.ev);
       p.weeks=keepW.length?keepW:(ws.length?[ws[0]]:[]);
-      const L=p.links;if(L){L.scenarios=[];L.analyses=(L.analyses||[]).filter(a=>a==="demo"||a==="datos");if(!L.analyses.length)L.analyses=["demo"];if(L.primary&&L.primary!=="demo"&&L.primary!=="datos")L.primary="demo";}});
+      const L=p.links;if(L){L.scenarios=[];L.analyses=[];L.primary=null;}});
     // 2) base de precios: vaciar (seeded queda en true para que el demo no se re-siembre) y re-ingerir solo las compras conservadas
     PRICEDB={tickers:{},px:{},ipsa:{},idx:{},seeded:true};savePriceDB();
     try{pricedbIngestProjects();}catch(e){}
-    // 3) análisis guardados + datos importados (recreables tras cargar planillas)
+    // 3) análisis del sistema + datos importados (se reconstruyen solos tras cargar planillas)
     IMPSETS=[];lsSet("inv_impsets_v1",IMPSETS);
     IMP=null;impActiveId=null;impFiles=[];impMsg="";
     lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);
     lsSet("inv_demo_hidden",1);   // limpiar el sistema también retira el análisis "IPSA · demo" (no reaparece)
-    if(typeof DATASET!=="undefined"&&DATASET==="import"){applyDataset("demo");}
+    if(typeof DATASET!=="undefined"&&DATASET==="import"){applyDataset();}
     // 4) simulaciones y comparación de escenarios
     SCEN=[];lsSet("pf_scenarios_v1",SCEN);scenEditId=null;
     saveProjects();
@@ -5081,7 +5134,7 @@ function pricedbWipe(){
   try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de vaciar la base de precios");}catch(e){}
   PRICEDB={tickers:{},px:{},ipsa:{},idx:{},seeded:true};savePriceDB();
   lsSet("inv_demo_hidden",1);   // no reaparece el análisis "IPSA · demo"
-  try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")applyDataset("demo");}catch(e){}
+  try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")applyDataset();}catch(e){}
 }
 /* cobertura por cadencia: para cada acción (y el IPSA) cuántos períodos CONSECUTIVOS recientes tiene a cada
    cadencia (diario/semanal/mensual) con sus fechas reales, y cuál es su cadencia "principal" (la más fina con racha ≥3). */
@@ -5167,7 +5220,8 @@ function datosBase(){
     :(empty?"":`<div class="iss iss-ok">✓ Sin inconsistencias detectadas en la base.</div>`);
   const tbl=card("Acciones cargadas","Cada pestaña muestra las acciones con datos REALES a esa cadencia (racha reciente de períodos consecutivos) y su rango.",{html:tabSeg+covTable+issHtml,flush:true});
   // ── MANTENIMIENTO (secundario): cierre diario, histórico, quitar un día, reparar ──
-  const freqSeg=`<div class="home-seg" role="group" aria-label="Frecuencia de análisis">${["diario","semanal","mensual"].map(f=>`<button data-dfreq="${f}" class="${pricedbFreq===f?"on":""}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div>`;
+  // (el selector "Frecuencia análisis" se retiró: la cadencia del análisis del sistema la decide caResolve —
+  //  la más fina que cubra la ventana con todas las acciones — y se ajusta en Análisis → Ajustes del análisis)
   const _apx=autopxLastInfo();
   const _apxTxt=AUTOPX_URL?(_apx?(_apx.error?("última sync: error ("+(""+_apx.at).slice(0,10)+")"):("última sync: "+(""+_apx.at).slice(0,16).replace("T"," ")+" · hasta "+(_apx.lastDate||"—"))):"aún sin sincronizar"):"sin fuente configurada (⚙ Configuración → Datos)";
   const maint=card("Mantenimiento de datos","Acciones puntuales sobre la base.",`<div class="datos-maint">
@@ -5177,7 +5231,6 @@ function datosBase(){
     <button class="btn" data-dfix>🔧 Reparar base</button>
     <button class="btn" data-dwipe style="color:var(--red);border-color:var(--red-line)">🗑 Vaciar base de precios</button>
     <span style="display:inline-flex;gap:6px;align-items:center"><input type="date" data-ddaydate value="${lastDate}" style="padding:5px 7px"><button class="btn" data-ddaydel>Quitar este día</button></span>
-    <span class="datos-freq" style="margin-left:auto"><span class="genl" style="margin:0">Frecuencia análisis</span>${freqSeg}</span>
     </div><div class="helpline" style="margin:10px 0 0"><b>Sincronizar cierres</b>: ${_apxTxt}. <b>Forzar actualización</b> regenera los cierres de hoy en GitHub Actions y sincroniza (no espera la corrida de las 22:05; de un clic si guardas un token en ⚙ Configuración → Datos). <b>Cierre diario</b>: ingresa precios de un día. <b>Reparar</b> quita fines de semana y arrastres. <b>Quitar este día</b> borra una fecha puntual. <b>Vaciar base de precios</b> deja la base en blanco para recargar planillas como fuente única (no borra proyectos). El respaldo automático y “Limpiar sistema” están en <b>⚙ Configuración</b>.</div>`);
   return intro+tbl+maint;
 }
@@ -5211,8 +5264,7 @@ function datosCierre(){
 }
 function attachDatos(){
   document.querySelectorAll("[data-dgo]").forEach(b=>b.onclick=()=>{page=b.dataset.dgo;render();});
-  document.querySelectorAll("[data-dfreq]").forEach(b=>b.onclick=()=>{pricedbFreq=b.dataset.dfreq;lsSet("inv_pricedb_freq",pricedbFreq);if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);else render();});
-  const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();try{if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);}catch(e){}render();window.alert("Sistema actualizado con los datos cargados.\n\nSeguimientos: "+r.nPts+" punto(s) en "+r.nProj+" cartera(s). El Home, los análisis y los rankings ya reflejan la base.");};
+  const dp=document.querySelector("[data-dapply]");if(dp)dp.onclick=()=>{const r=pricedbApplyToProjects();try{systemAnalysisRefresh();}catch(e){}render();window.alert("Sistema actualizado con los datos cargados.\n\nSeguimientos: "+r.nPts+" punto(s) en "+r.nProj+" cartera(s). El Home, el análisis del sistema y los rankings ya reflejan la base.");};
   const dsy=document.querySelector("[data-dsync]");if(dsy)dsy.onclick=()=>{dsy.disabled=true;dsy.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{dsy.disabled=false;render();});};
   const dfc=document.querySelector("[data-dforce]");if(dfc)dfc.onclick=()=>{const dsy2=document.querySelector("[data-dsync]");if(dsy2)dsy2.disabled=true;dfc.disabled=true;const t0=dfc.textContent;autopxForce(m=>{dfc.textContent="⚡ "+m;}).finally(()=>{dfc.disabled=false;dfc.textContent=t0;render();});};
   document.querySelectorAll("[data-dcov]").forEach(b=>b.onclick=()=>{datosCovTab=b.dataset.dcov;lsSet("inv_datos_covtab",datosCovTab);render();});
@@ -5224,7 +5276,7 @@ function attachDatos(){
     if(typed==null||typed.trim().toUpperCase()!=="VACIAR"){window.alert("Cancelado. No se vació nada.");return;}
     pricedbWipe();page="base";render();
     window.alert("Base de precios vaciada. Ahora carga tus planillas en Datos → “Cargar planilla” y pulsa “Actualizar sistema”.\n\nSi además quieres reiniciar los seguimientos de las carteras (conservando la compra inicial), usa ⚙ Configuración → “Limpiar sistema”.");};
-  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();render();window.alert((r.nWk||r.nCF||r.nGhost||r.nBogus||r.nOut)?("Base reparada.\n\n"+(r.nBogus?("• "+r.nBogus+" 'acción(es)' fantasma con nombre de columna (Open/Close/Volume/…) eliminadas.\n"):"")+(r.nOut?("• "+r.nOut+" valor(es) atípico(s) de escala del IPSA/índice (picos de otra fuente) eliminados.\n"):"")+"• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
+  const dfx=document.querySelector("[data-dfix]");if(dfx)dfx.onclick=()=>{try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de reparar la base");}catch(e){}const r=pricedbSanitize();try{systemAnalysisRefresh();}catch(e){}render();window.alert((r.nWk||r.nCF||r.nGhost||r.nBogus||r.nOut||r.nDup)?("Base reparada.\n\n"+(r.nBogus?("• "+r.nBogus+" 'acción(es)' fantasma con nombre de columna (Open/Close/Volume/…) eliminadas.\n"):"")+(r.nOut?("• "+r.nOut+" valor(es) atípico(s) de escala del IPSA/índice (picos de otra fuente) eliminados.\n"):"")+(r.nDup?("• "+r.nDup+" dato(s) de días CALCO del feed (todas las acciones repetían exacto el cierre anterior) eliminados.\n"):"")+"• "+r.nWk+" dato(s) de fin de semana eliminados.\n• "+r.nCF+" arrastre(s) (precios copiados sin cierre real) eliminados.\n• "+r.nGhost+" valor(es) del IPSA/índice por delante del último cierre de las acciones eliminados.\n\nÚltimo dato de la base ahora: "+(r.ipsaTo||"—")+"."):("La base ya está limpia. Último dato: "+(r.ipsaTo||"—")+"."));};
   const ddi=document.querySelector("[data-ddelipsa]");if(ddi)ddi.onclick=()=>{const n=Object.keys(PRICEDB.ipsa||{}).length;if(!n){window.alert("El IPSA ya está vacío en la base.");return;}if(!confirm("Quitar los "+n+" valores del IPSA de la base (no toca las acciones ni tus carteras).\n\nÚsalo para recargar la historia del índice de UNA sola fuente (planilla de Investing/Stooq) y evitar escalas mezcladas.\n\n¿Continuar?"))return;PRICEDB.ipsa={};savePriceDB();render();window.alert("IPSA quitado de la base. Ahora recarga tu planilla IPSA en “Cargar planilla” (renómbrala IPSA.csv). El valor diario del índice se seguirá acumulando solo.");};
   document.querySelectorAll("[data-ddel]").forEach(b=>b.onclick=()=>{const t=b.dataset.ddel,np=(PRICEDB.px[t]?Object.keys(PRICEDB.px[t]).length:0);
     if(!confirm('¿Quitar '+t+' de la base de precios?\n\nSe eliminarán '+np+' punto(s) de precio de '+t+'. No afecta los cierres ya registrados en tus carteras.'))return;
@@ -5236,25 +5288,16 @@ function attachDatos(){
     const dz=document.getElementById("dDrop");if(dz){dz.ondragover=e=>{e.preventDefault();dz.classList.add("over");};dz.ondragleave=()=>dz.classList.remove("over");dz.ondrop=e=>{e.preventDefault();dz.classList.remove("over");if(e.dataTransfer.files.length)impOnFiles(e.dataTransfer.files);};}}
   document.querySelectorAll("[data-drm]").forEach(b=>b.onclick=()=>{impFiles.splice(+b.dataset.drm,1);render();});
   const dcl=document.querySelector("[data-dclear]");if(dcl)dcl.onclick=()=>{impFiles=[];impMsg="";render();};
-  const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) nuevo(s)"+(r.updated>0?" y "+r.updated+" actualizado(s) (mismo día/acción que ya tenías, p.ej. un cierre manual → se reemplaza por el de la planilla)":"")+" en "+r.tk+" acción(es)."+(r.skipped>0?"\n\n"+r.skipped+" fila(s) ignorada(s) por ser fin de semana o fecha futura.":"")+"\n\nNo se borró ningún otro dato. Seguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
+  const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";try{systemAnalysisRefresh();}catch(e){}const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) nuevo(s)"+(r.updated>0?" y "+r.updated+" actualizado(s) (mismo día/acción que ya tenías, p.ej. un cierre manual → se reemplaza por el de la planilla)":"")+" en "+r.tk+" acción(es)."+(r.skipped>0?"\n\n"+r.skipped+" fila(s) ignorada(s) por ser fin de semana o fecha futura.":"")+"\n\nNo se borró ningún otro dato. Seguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
   const dtm=document.querySelector("[data-dtmpl]");if(dtm)dtm.onclick=()=>impDownloadTemplate();
-  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(res&&res.invalid){window.alert("La fecha "+date+" no corresponde a un día bursátil válido (fin de semana o futura). No se registró nada.");return;}if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId==="datos")pricedbActivateAnalysis(pricedbFreq);render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
+  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(res&&res.invalid){window.alert("La fecha "+date+" no corresponde a un día bursátil válido (fin de semana o futura). No se registró nada.");return;}try{systemAnalysisRefresh();}catch(e){}render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
 }
 function impDownloadTemplate(){const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B\n2025-01-31;6500;52000;5800;38000\n2025-02-28;6610;53400;6010;36500\n2025-03-31;6720;55100;5950;40200\n2025-04-30;6680;54200;6230;39100\n2025-05-31;6810;56800;6480;42500\n2025-06-30;6905;57500;6390;41000\n";const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
-/* ===================== CREAR ANÁLISIS (parametrizado desde la base del sistema) ===================== */
-let caState=null;
-/* universo del análisis ACTIVO (demo IPSA o importado) reconstruido como serie fecha→precio, para poder parametrizarlo */
+/* ===================== AJUSTES DEL ANÁLISIS DEL SISTEMA ===================== */
+/* índices disponibles como benchmark en la base */
 function caIndexNames(C,srcKey){const out=[];if(C&&C.ipsaMap&&Object.keys(C.ipsaMap).length)out.push("IPSA");if(srcKey!=="activo"){const ix=(typeof PRICEDB!=="undefined"&&PRICEDB.idx)||{};Object.keys(ix).forEach(k=>{if(k!=="IPSA"&&ix[k]&&Object.keys(ix[k]).length)out.push(k);});}return out;}
 function caRows(C){return Object.keys(C.tick||{}).sort().map(t=>({t,n:(C.names&&C.names[t])||t,c:(C.cols&&C.cols[t])||"#1E5FD1",np:Object.keys(C.tick[t]).length}));}
-function caEnsure(){
-  if(!caState)caState={name:"",months:CA_MIN_MONTHS,bench:"IPSA",sel:{}};
-  if(!caState.months||caState.months<CA_MIN_MONTHS)caState.months=CA_MIN_MONTHS;
-  const C=consolidatedSeries();   // única fuente: la base poblada del sistema (Datos + cierres de carteras)
-  Object.keys(C.tick||{}).forEach(t=>{if(caState.sel[t]===undefined)caState.sel[t]=true;});
-  const idxs=caIndexNames(C,"sistema");if(!caState.bench||idxs.indexOf(caState.bench)<0)caState.bench=idxs[0]||"IPSA";
-  return C;
-}
-const CA_MIN_MONTHS=12;   // ventana mínima de un análisis: garantiza β/σ estables y una tabla SIEMPRE en retornos anuales
+const CA_MIN_MONTHS=12;   // ventana mínima del análisis: garantiza β/σ estables y una tabla SIEMPRE en retornos anuales
 /* meses → nº de retornos a cada cadencia (~21 días hábiles y ~4,35 semanas por mes) */
 function caMonthsToN(freq,months){return freq==="diario"?Math.round(months*21):freq==="semanal"?Math.round(months*4.345):Math.round(months);}
 /* La ventana del análisis se pide SOLO en meses; la cadencia de la regresión se elige sola: la más FINA
@@ -5279,84 +5322,57 @@ function caResolve(months,opts){
   return {ok:false,error:err||"No hay datos suficientes en la base."};
 }
 function viewCrear(){
-  const C=caEnsure();const S=caState;
-  const rows=caRows(C),ts=rows.map(r=>r.t),selCount=ts.filter(t=>S.sel[t]).length;
+  const S=anaEnsure();const C=consolidatedSeries();
+  const rows=caRows(C),ts=rows.map(r=>r.t),selCount=ts.filter(t=>!S.excl[t]).length;
   const idxs=caIndexNames(C,"sistema");
   let form;
   if(!ts.length){
-    form=`<div class="note" style="margin:0">Aún no hay precios en el sistema. Ve al módulo <b>Datos</b> para cargar planillas o cierres y poder crear análisis.<div style="margin-top:11px"><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
+    form=`<div class="note" style="margin:0">Aún no hay precios en el sistema. Ve al módulo <b>Datos</b> para cargar planillas o sincronizar cierres: con datos suficientes, el análisis del sistema se construye solo.<div style="margin-top:11px"><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
   }else{
     const mseg=`<div class="home-seg" role="group" aria-label="Ventana en meses">${[12,18,24,36].map(m=>`<button data-camonths="${m}" class="${S.months===m?"on":""}">${m} m</button>`).join("")}</div>`;
     const benchSel=idxs.length?`<div class="home-seg" role="group" aria-label="Índice de referencia">${idxs.map(ix=>`<button data-cabench="${ix}" class="${S.bench===ix?"on":""}">${ix}</button>`).join("")}</div>`:`<div class="ca-bench-none">No hay índice (IPSA) en la base · cárgalo en <b>Datos</b></div>`;
-    const chips=rows.map(r=>`<button class="ca-chip ${S.sel[r.t]?"on":""}" data-catk="${r.t}"><span class="rk-dot" style="background:${r.c}"></span>${r.t}<span class="ca-chip-n">${r.np}</span></button>`).join("");
-    // REGLA 3 · disponibilidad en vivo: ¿la ventana pedida (en meses) alcanza con datos vigentes de TODAS las acciones?
-    const _selTk=ts.filter(t=>S.sel[t]);let _avOk=true,_avHint="";
-    if(selCount>=2&&idxs.length){const R=caResolve(S.months,{tickers:_selTk,bench:S.bench,source:C});_avOk=!!R.ok;
+    const chips=rows.map(r=>{const drop=(anaAutoDrop||[]).indexOf(r.t)>=0,on=!S.excl[r.t];
+      return `<button class="ca-chip ${on&&!drop?"on":""}" data-catk="${r.t}" ${drop?'title="Excluida automáticamente: aún no junta la ventana mínima de historial — se reincorpora sola"':''}><span class="rk-dot" style="background:${r.c}"></span>${r.t}${drop?' <span style="opacity:.65">⏳</span>':''}<span class="ca-chip-n">${r.np}</span></button>`;}).join("");
+    // disponibilidad en vivo con la selección actual (misma lógica que usa systemAnalysisRefresh)
+    const _selTk=ts.filter(t=>!S.excl[t]);let _avHint="";
+    if(selCount>=2&&idxs.length){const R=caResolve(S.months,{tickers:_selTk,bench:S.bench,source:C});
       const _dd=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7):"";
       const _cadL={diario:"diaria",semanal:"semanal",mensual:"mensual"};
       if(R.ok){const c=R.chk;_avHint=" · ✓ "+S.months+" meses"+(R.trimmed?" (~"+Math.floor(R.mAvail)+" disponibles)":"")+" · cadencia "+_cadL[R.freq]+" (automática)"+(c.from?(" · datos "+_dd(c.from)+"→"+_dd(c.to)):"");
         if(c.lagging&&c.lagging.length)_avHint+=" · ⚠ "+c.lagging.slice(0,3).map(x=>x.t).join(", ")+" sin el período más reciente";}
       else if(R.error)_avHint=" · ⚠ "+R.error;
-      else _avHint=" · ⚠ solo ~"+Math.floor(R.mAvail)+" meses con datos de todas (pediste "+S.months+")"+(R.mAvail>=CA_MIN_MONTHS?" — baja la ventana":" — el mínimo es "+CA_MIN_MONTHS+" meses; carga más historial o quita acciones con pocos datos")+(R.chk&&R.chk.limiting&&R.chk.limiting.length?(" · limitan: "+R.chk.limiting.slice(0,3).map(x=>x.t).join(", ")):"");}
-    form=`<div class="ca-form">
-      <label class="ca-f"><span>Nombre del análisis</span><input id="caName" type="text" maxlength="44" placeholder="ej. IPSA · últimos 12 meses" value="${(""+S.name).replace(/"/g,"&quot;")}"></label>
+      else if(R.mAvail!=null)_avHint=" · ⚠ solo ~"+Math.floor(R.mAvail)+" meses con datos de todas"+(R.mAvail>=CA_MIN_MONTHS?" — el análisis usa esos meses automáticamente":" — acciones con poco historial se excluyen solas hasta juntar "+CA_MIN_MONTHS+" meses");}
+    const status=(typeof DATASET!=="undefined"&&DATASET==="import"&&IMP)
+      ?`<div class="note" style="margin:0 0 12px;border-color:var(--a-200);background:var(--a-50)"><b>✓ Análisis del sistema activo:</b> ${(""+IMP.window).replace(/</g,"&lt;")} · <b>${IMP.assets.length}</b> acciones · benchmark ${(""+IMP.bench.name).replace(/</g,"&lt;")}${(anaAutoDrop&&anaAutoDrop.length)?`<br>⏳ Excluidas automáticamente por historial insuficiente: <b>${anaAutoDrop.join(", ")}</b> — se reincorporan solas cuando junten ${CA_MIN_MONTHS} meses.`:""}${(anaEffMonths&&anaEffMonths<S.months)?`<br>⚠ Pediste ${S.months} meses pero hay ~${anaEffMonths} disponibles: el análisis usa ${anaEffMonths}.`:""}</div>`
+      :`<div class="note" style="margin:0 0 12px;color:var(--amber)"><b>El análisis del sistema aún no puede construirse.</b>${anaLastErr?(" "+(""+anaLastErr).replace(/</g,"&lt;")):""}</div>`;
+    form=status+`<div class="ca-form">
       <div class="ca-f"><span>Ventana del análisis</span>${mseg}</div>
       <label class="ca-f ca-f-n"><span>Meses de historial (mínimo ${CA_MIN_MONTHS})</span><input id="caM" type="number" min="${CA_MIN_MONTHS}" step="1" inputmode="numeric" value="${S.months}"></label>
       <div class="ca-f"><span>Índice de referencia (benchmark)</span>${benchSel}</div>
+      <div class="ca-f"><span>&nbsp;</span><button class="btn" data-careset title="Vuelve a 12 meses, benchmark IPSA y todas las acciones">↺ Restablecer</button></div>
     </div>
-    <div class="note" style="margin:10px 0 0;font-size:11.5px">El <b>benchmark</b> es el índice contra el que se calcula la β y el α de Jensen. La regresión usa <b>un</b> índice; si quieres comparar contra IPSA <i>y</i> IGPA, crea un análisis con cada uno. Con al menos ${CA_MIN_MONTHS} meses, los retornos de la tabla son siempre <b>anuales</b>; la cadencia de los retornos (diaria/semanal/mensual) se elige sola según los datos disponibles.</div>
-    <div class="ca-stk"><div class="ca-stk-h"><b>Acciones del análisis</b><span>${selCount} de ${ts.length} seleccionadas · <a data-caall>todas</a> · <a data-canone>ninguna</a></span></div>
+    <div class="note" style="margin:10px 0 0;font-size:11.5px">Los cambios se aplican <b>al instante</b> a toda la plataforma (Comparativa, Detalle, CAPM, Multifactor, Constructor). La cadencia de los retornos (semanal/mensual) se elige sola según los datos; con al menos ${CA_MIN_MONTHS} meses la tabla siempre muestra retornos <b>anuales</b>. El <b>Investor Score</b> no cambia con estos ajustes: usa siempre su ventana fija de 12 meses sobre el universo completo, para que el ranking sea comparable día a día.</div>
+    <div class="ca-stk"><div class="ca-stk-h"><b>Acciones del análisis</b><span>${selCount} de ${ts.length} incluidas · <a data-caall>incluir todas</a></span></div>
       <div class="ca-grid">${chips}</div></div>
-    <div class="ca-foot"><button class="btn btn-pri" id="caCreate" ${(selCount<2||!idxs.length||!_avOk)?'disabled style="opacity:.5;cursor:not-allowed"':""}>Crear análisis y abrir</button><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia (IPSA) en la base":selCount<2?"Elige al menos 2 acciones":(selCount+" acciones · "+S.bench+_avHint)}</span></div>`;
+    <div class="ca-foot"><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia (IPSA) en la base":selCount<2?"Debes incluir al menos 2 acciones":(selCount+" acciones · "+S.bench+_avHint)}</span></div>`;
   }
-  const create=card("Gestión de análisis","Aquí gestionas los distintos análisis del proyecto: elige la ventana en meses (mínimo "+CA_MIN_MONTHS+") y las acciones — así siempre hay data para rentabilidades anuales",form);
-  const list=analysisList(),cur=currentAnalysisId();
-  const savedRows=list.map(a=>{const on=String(a.id)===String(cur),canDel=(a.kind==="import"||a.kind==="demo");
-    const _ps=(IMPSETS.find(x=>String(x.id)===String(a.id))||{}).params||null;
-    const _cadN={diario:"diaria",semanal:"semanal",mensual:"mensual"};
-    const _extra=_ps&&_ps.months?(" · "+_ps.months+" meses · cadencia "+(_cadN[_ps.freq]||_ps.freq)):"";
-    const meta=a.kind==="demo"?"IPSA · demo (14 acciones) · sus datos ya están copiados en la base":a.kind==="datos"?("Base completa del sistema · "+a.n+" acciones"):(a.n+" acciones"+_extra);
-    const delAttr=a.kind==="demo"?"data-cahidedemo":`data-cadel="${a.id}"`;
-    return `<div class="ca-saved ${on?"on":""}"><div class="ca-saved-l"><b>${(""+a.name).replace(/</g,"&lt;")}</b><span>${meta}</span></div><div class="ca-saved-r">${on?'<span class="ca-badge">Activo</span>':`<button class="btn btnu" data-caact="${a.id}">Activar</button>`}${canDel?`<button class="wbtn del" ${delAttr} title="Eliminar análisis">✕</button>`:""}</div></div>`;}).join("");
-  const saved=card("Análisis guardados","El análisis activo alimenta Comparativa, Detalle, CAPM, Multifactor y el Constructor · se crean desde tu base de datos real (acciones + IPSA)",`<div class="ca-savedlist">${savedRows}</div>`);
-  return create+saved;
+  return card("Análisis del sistema","Investor construye SIEMPRE el análisis con los datos reales de la base — aquí ajustas su ventana (mínimo "+CA_MIN_MONTHS+" meses) y qué acciones incluye. Ya no hay análisis independientes que crear o guardar.",form);
 }
 function attachCrear(){
-  const grab=()=>{const n=document.getElementById("caName");if(n)caState.name=n.value;const q=document.getElementById("caM");if(q)caState.months=Math.max(CA_MIN_MONTHS,parseInt(q.value,10)||CA_MIN_MONTHS);};
-  const srcTk=()=>Object.keys(consolidatedSeries().tick||{});
-  document.querySelectorAll("[data-camonths]").forEach(b=>b.onclick=()=>{grab();caState.months=+b.dataset.camonths;render();});
-  document.querySelectorAll("[data-cabench]").forEach(b=>b.onclick=()=>{grab();caState.bench=b.dataset.cabench;render();});
-  document.querySelectorAll("[data-catk]").forEach(b=>b.onclick=()=>{grab();caState.sel[b.dataset.catk]=!caState.sel[b.dataset.catk];render();});
-  const _all=document.querySelector("[data-caall]");if(_all)_all.onclick=()=>{grab();srcTk().forEach(t=>caState.sel[t]=true);render();};
-  const _none=document.querySelector("[data-canone]");if(_none)_none.onclick=()=>{grab();srcTk().forEach(t=>caState.sel[t]=false);render();};
+  anaEnsure();
+  const apply=()=>{anaSave();try{systemAnalysisRefresh();}catch(e){}render();};
+  document.querySelectorAll("[data-camonths]").forEach(b=>b.onclick=()=>{anaState.months=+b.dataset.camonths;apply();});
+  const q=document.getElementById("caM");if(q)q.onchange=()=>{anaState.months=Math.max(CA_MIN_MONTHS,parseInt(q.value,10)||CA_MIN_MONTHS);apply();};
+  document.querySelectorAll("[data-cabench]").forEach(b=>b.onclick=()=>{anaState.bench=b.dataset.cabench;apply();});
+  document.querySelectorAll("[data-catk]").forEach(b=>b.onclick=()=>{const t=b.dataset.catk;
+    if(anaState.excl[t])delete anaState.excl[t];
+    else{const inc=Object.keys(consolidatedSeries().tick||{}).filter(x=>!anaState.excl[x]);
+      if(inc.length<=2){window.alert("El análisis necesita al menos 2 acciones incluidas.");return;}
+      anaState.excl[t]=1;}
+    apply();});
+  const _all=document.querySelector("[data-caall]");if(_all)_all.onclick=()=>{anaState.excl={};apply();};
+  const _rs=document.querySelector("[data-careset]");if(_rs)_rs.onclick=()=>{anaState={months:CA_MIN_MONTHS,excl:{},bench:"IPSA"};apply();};
   const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};
-  const c=document.getElementById("caCreate");if(c)c.onclick=()=>{
-    grab();const Csrc=consolidatedSeries();const tickers=Object.keys(Csrc.tick||{}).filter(t=>caState.sel[t]);
-    if(tickers.length<2){window.alert("Elige al menos 2 acciones para el análisis.");return;}
-    if(!caIndexNames(Csrc,"sistema").length){window.alert("Falta el índice de referencia (IPSA) en la base. Cárgalo en el módulo Datos.");return;}
-    const R=caResolve(caState.months,{tickers,bench:caState.bench,source:Csrc});
-    if(!R.ok){
-      let msg="No se puede crear el análisis de "+caState.months+" meses.\n\n";
-      if(R.error){msg+=R.error;}
-      else{
-        msg+="Solo hay ~"+Math.floor(R.mAvail)+" meses con datos de TODAS las acciones elegidas.";
-        if(R.chk&&R.chk.limiting&&R.chk.limiting.length)msg+="\n\nAcciones con menos historial: "+R.chk.limiting.slice(0,6).map(x=>x.t).join(", ")+".";
-        msg+=(R.mAvail>=CA_MIN_MONTHS)?"\n\nBaja la ventana a "+Math.floor(R.mAvail)+" meses o quita esas acciones.":"\n\nEl mínimo de un análisis es "+CA_MIN_MONTHS+" meses: carga más historial (Configuración → Datos) o quita las acciones con menos datos.";
-      }
-      window.alert(msg);return;
-    }
-    const imp=pricedbToIMP(R.freq,{tickers,lastN:R.lastN,bench:caState.bench,source:Csrc});
-    if(!imp){window.alert("No se pudo construir el análisis con los datos disponibles.");return;}
-    const id="s"+Date.now()+Math.floor(Math.random()*1000);
-    const nm=(caState.name||"").trim()||("Análisis "+caState.months+" meses · "+caState.bench+" · "+tickers.length+" acc.");
-    IMPSETS.push({id,name:nm,date:new Date().toLocaleDateString("es-CL"),imp,params:{months:caState.months,freq:R.freq,lastN:R.lastN,bench:caState.bench,tickers}});
-    lsSet("inv_impsets_v1",IMPSETS);impsetActivate(id);
-    try{const cp=curProj();if(cp){projAddLink(cp.id,"analysis",id);}}catch(e){}   // vincula el análisis al proyecto activo y lo deja como vigente
-    caState.name="";modulo="eval";page="comparativa";render();
-  };
-  document.querySelectorAll("[data-caact]").forEach(b=>b.onclick=()=>{if(activateAnalysis(b.dataset.caact))render();});
-  document.querySelectorAll("[data-cadel]").forEach(b=>b.onclick=()=>{const s=(IMPSETS||[]).find(x=>String(x.id)===String(b.dataset.cadel));if(confirm('¿Eliminar el análisis "'+(s?s.name:"")+'"? No se puede deshacer.'))impsetDelete(b.dataset.cadel);});
-  const _hd=document.querySelector("[data-cahidedemo]");if(_hd)_hd.onclick=()=>{if(confirm('¿Quitar el análisis "IPSA · demo" de la lista? Sus 23 meses de datos ya están en la base del sistema, así que NO se pierden y puedes seguir creando análisis.')){lsSet("inv_demo_hidden",1);if(currentAnalysisId()==="demo"){const _l=(IMPSETS||[])[IMPSETS.length-1];if(_l)activateAnalysis(_l.id);else applyDataset("demo");}render();}};
 }
 /* ===================== FUNDAMENTOS (P/U, P/B, dividendos, capitalización) ===================== */
 function fundFmtCap(v){if(v==null||!isFinite(v))return "—";if(v>=1e12)return "$"+(v/1e12).toLocaleString("es-CL",{maximumFractionDigits:1})+" B";if(v>=1e9)return "$"+Math.round(v/1e9).toLocaleString("es-CL")+" mil M";return "$"+Math.round(v/1e6).toLocaleString("es-CL")+" M";}
@@ -5414,61 +5430,7 @@ function viewFundamentos(){
   return tbl+qCard+guia;
 }
 function attachFundamentos(){const b=document.getElementById("fundSyncBtn");if(b)b.onclick=()=>{b.disabled=true;b.textContent="⟳ Trayendo…";fundSync(true).finally(()=>{try{render();}catch(e){}});};}
-function viewImport(){
-  const tmpl=card("Importar acciones para analizar","Carga muchas acciones candidatas, córreles el análisis completo — CAPM, riesgo-retorno, SML, correlaciones — y decide antes de armar tu portafolio",
-    `<div class="note" style="margin:0 0 12px">Dos formas de cargar:<br>• <b>Archivos de Investing.com</b> (uno por acción) — tal como los descargas (columnas Date, Price, Open…). Sube <b>varios a la vez</b>; el ticker se toma del nombre del archivo.<br>• <b>Un archivo combinado</b> (CSV/Excel): una columna por acción + una de índice.<br>Elige la <b>periodicidad</b> que descargaste (diario/semanal/mensual). Para β correcto, incluye también el <b>índice</b> (ej. IPSA) como un archivo más; si no, se usa un índice promedio de tus acciones.</div>
-     <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center"><button class="btn" id="imptmpl">⬇ Plantilla CSV combinada</button></div>`);
-  let saved="";
-  if(IMPSETS.length){
-    const rows=IMPSETS.map(set=>{const a=set.imp,active=(DATASET==="import"&&impActiveId===set.id);
-      return `<div class="impset ${active?"on":""}"><span class="impset-dot"></span>
-        <div class="impset-main"><input class="impset-name" data-rename="${set.id}" value="${(""+set.name).replace(/"/g,"&quot;")}">
-          <div class="impset-meta">${a.assets.length} acciones · ${a.freq} · ${a.window} · bench ${a.bench.name}${set.date?(" · "+set.date):""}</div></div>
-        ${active?'<span class="badge pos">ACTIVO</span>':`<button class="btn impset-act" data-activate="${set.id}">Activar</button>`}
-        <button class="impset-del" data-del="${set.id}" title="Eliminar análisis">🗑</button></div>`;}).join("");
-    saved=card("Análisis guardados",`${IMPSETS.length} análisis · actívalos, renómbralos o elimínalos`,
-      `<div class="impset-list">${rows}</div>
-       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:13px">${DATASET==="import"?`<button class="btn btn-pri" data-goto="eval:comparativa">→ Ver análisis activo</button><button class="btn" data-goto="sim:constructor">→ Constructor</button><button class="btn" id="impdemo">Volver al set demo (IPSA)</button>`:`<span class="note" style="margin:0">Set activo: <b>demo · IPSA</b>. Activa un análisis para usarlo en toda la plataforma.</span>`}</div>`,
-      DATASET==="import"?`<span class="badge pos">IMPORTADO ACTIVO</span>`:`<span class="badge">DEMO</span>`);
-  }
-  const rfTag=impRfAuto?'<span class="em-tag imp" title="Tasa de Política Monetaria vigente del Banco Central (mindicador.cl)">Auto · TPM</span>':'<button class="btn" id="imprfauto" style="padding:.32rem .55rem;font-size:11px">↻ Usar TPM auto</button>';
-  const up=card(IMPSETS.length?"Cargar un nuevo análisis":"1 · Cargar archivo(s)",impMsg&&!impFiles.length&&!IMP?`<span style="color:var(--red)">${impMsg}</span>`:"Sube tus CSV de Investing (o un combinado) y elige la periodicidad",
-    `<div class="imp-cfgrow"><div><div class="genl">Periodicidad de los datos</div><div class="pbtns">${[["diario","Diario"],["semanal","Semanal"],["mensual","Mensual"]].map(([k,l])=>`<button class="pbtn ${impFreq===k?"on":""}" data-impfreq="${k}">${l}</button>`).join("")}</div></div>
-       <div><div class="genl">Tasa libre de riesgo (% anual)</div><div style="display:flex;align-items:center;gap:8px"><input type="number" step="0.1" id="imprf" value="${(+impRf).toFixed(2)}" style="width:96px;text-align:right">${rfTag}</div></div></div>
-     <div class="imp-drop" id="impdrop"><div class="di"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5-5 5 5"/><path d="M12 5v12"/></svg></div><b>Arrastra o haz clic para subir</b><br><span>Uno o varios CSV / XLSX</span></div><input type="file" id="impfile" accept=".csv,.xlsx" multiple style="display:none">`);
-  let cfg="";
-  if(impFiles.length){
-    const rows=impFiles.map((s,i)=>`<div class="imp-frow"><span class="fdot" style="background:${IMP_PAL[i%IMP_PAL.length]}"></span><input class="tk" data-tk="${i}" value="${(""+s.name).replace(/"/g,"&quot;")}"><span class="src" title="${s.src}">${s.src}</span><span class="meta">${s.dates.length} pts · ${s.dates[0]||"?"}→${s.dates[s.dates.length-1]||"?"}</span><button class="rm" data-rm="${i}" title="Quitar">✕</button></div>`).join("");
-    const benchOpts=impFiles.map(s=>`<option value="${s.name}" ${s.name===impBench?"selected":""}>${s.name}</option>`).join("")+`<option value="__avg__" ${impBench==="__avg__"?"selected":""}>(Promedio de las acciones)</option>`;
-    cfg=card("Series cargadas y benchmark",`${impFiles.length} serie(s) · edita el ticker, elige el índice y guarda el análisis`,
-      `<div class="imp-files">${rows}</div>
-       <div class="imp-cfgrow" style="margin-top:14px"><div><div class="genl">Benchmark (índice)</div><select id="impbench" style="padding:.5rem .6rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font-family:var(--font);font-size:12.5px">${benchOpts}</select></div>
-         <button class="btn btn-pri" id="impcalc">Calcular y guardar análisis →</button><button class="btn" id="impreset">Limpiar</button></div>
-       ${impMsg?`<div class="note" style="margin-top:9px;color:var(--amber)">${impMsg}</div>`:""}`);
-  }
-  const dbanner=`<div class="card" style="background:linear-gradient(160deg,var(--a-50),var(--card) 60%);border-color:var(--a-200)"><div class="bd" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:220px"><div style="font:800 13.5px var(--font);color:var(--navy)">¿Quieres centralizar tus precios?</div><div style="font-size:12px;color:var(--muted);margin-top:3px">El nuevo módulo <b>Datos</b> guarda todas tus planillas en una sola base que alimenta el análisis, las simulaciones, el Home y actualiza los seguimientos de todas tus carteras. Esta pestaña sigue creando análisis sueltos.</div></div><button class="btn btn-pri" data-godatos>Ir al módulo Datos →</button></div></div>`;
-  return dbanner+tmpl+saved+up+cfg;
-}
-function attachImport(){
-  document.querySelectorAll("[data-impfreq]").forEach(b=>b.onclick=()=>{impFreq=b.dataset.impfreq;render();});
-  const rf=document.getElementById("imprf");if(rf)rf.onchange=e=>{impRf=parseFloat(e.target.value)||0;impRfAuto=false;};
-  const rfa=document.getElementById("imprfauto");if(rfa)rfa.onclick=()=>{impRfAuto=true;impRfTried=false;render();};
-  if(impRfAuto){const ar=autoRf();if(ar!=null){if(Math.abs(ar-impRf)>1e-9){impRf=ar;const _i=document.getElementById("imprf");if(_i)_i.value=ar.toFixed(2);}}
-    else if(!impRfTried&&typeof mindCore==="function"){impRfTried=true;mindCore().then(()=>{const a=autoRf();if(impRfAuto&&a!=null){impRf=a;render();}});}}
-  const tm=document.getElementById("imptmpl");if(tm)tm.onclick=impDownloadTemplate;
-  const drop=document.getElementById("impdrop"),fi=document.getElementById("impfile");
-  if(drop&&fi){drop.onclick=()=>fi.click();drop.ondragover=e=>{e.preventDefault();drop.classList.add("drag");};drop.ondragleave=()=>drop.classList.remove("drag");drop.ondrop=e=>{e.preventDefault();drop.classList.remove("drag");if(e.dataTransfer.files.length)impOnFiles(e.dataTransfer.files);};fi.onchange=e=>{if(e.target.files.length)impOnFiles(e.target.files);};}
-  document.querySelectorAll("[data-tk]").forEach(inp=>inp.onchange=()=>{impFiles[+inp.dataset.tk].name=(inp.value||"").trim()||impFiles[+inp.dataset.tk].name;});
-  document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{impFiles.splice(+b.dataset.rm,1);if(impBench&&!impFiles.some(s=>s.name===impBench))impBench=impFiles.length?"__avg__":null;render();});
-  const bs=document.getElementById("impbench");if(bs)bs.onchange=e=>{impBench=e.target.value;};
-  const cc=document.getElementById("impcalc");if(cc)cc.onclick=impCalc;
-  const ir=document.getElementById("impreset");if(ir)ir.onclick=()=>{impFiles=[];impMsg="";render();};
-  const dm=document.getElementById("impdemo");if(dm)dm.onclick=()=>applyDataset("demo");
-  document.querySelectorAll("[data-activate]").forEach(b=>b.onclick=()=>impsetActivate(b.dataset.activate));
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const s=IMPSETS.find(x=>x.id===b.dataset.del);if(confirm('¿Eliminar el análisis "'+(s?s.name:"")+'"? No se puede deshacer.'))impsetDelete(b.dataset.del);});
-  document.querySelectorAll("[data-rename]").forEach(inp=>inp.onchange=()=>impsetRename(inp.dataset.rename,inp.value));
-  document.querySelectorAll("[data-goto]").forEach(b=>b.onclick=()=>{const[m,p]=b.dataset.goto.split(":");modulo=m;page=p;render();});
-}
+/* viewImport/attachImport retirados: los análisis independientes ya no existen (v2: único análisis del sistema) */
 /* ---------------- CONFIGURACIÓN (modal) ---------------- */
 function cfgEnsureDOM(){if(document.getElementById("cfgBack"))return;const back=document.createElement("div");back.className="cfg-back";back.id="cfgBack";back.innerHTML='<div class="cfg-modal" id="cfgModal" role="dialog" aria-modal="true" aria-label="Configuración"></div>';document.body.appendChild(back);back.onclick=e=>{if(e.target===back)cfgClose();};const g=document.getElementById("cfgbtn");if(g)g.onclick=cfgOpen;}
 function cfgOpen(){cfgEnsureDOM();cfgRender();document.getElementById("cfgBack").classList.add("open");setTimeout(()=>{const x=document.getElementById("cfgX");if(x)try{x.focus();}catch(e){}},60);}
@@ -5506,7 +5468,7 @@ function cfgRender(){
     const estado=nT?(`<b>${nT}</b> acciones · IPSA ${S.ipsaN?("hasta <b>"+S.ipsaTo+"</b>"):"<b>sin datos</b>"} · ${S.ipsaN||0} fechas del índice`):"Base vacía · carga planillas o configura la fuente automática";
     const _apxI=(typeof autopxLastInfo==="function")?autopxLastInfo():null;
     const _apxTxt=AUTOPX_URL?(_apxI?(_apxI.error?("última sync: error ("+(""+_apxI.at).slice(0,10)+")"):("última sync: "+(""+_apxI.at).slice(0,16).replace("T"," ")+" · datos hasta "+(_apxI.lastDate||"—"))):"aún sin sincronizar"):"configura la URL de abajo para activarla";
-    const ds=DATASET==="import"&&IMP?((impActiveId==="datos"?"Base del sistema":"Importado")+" ("+IMP.assets.length+" acciones)"):"Sin análisis activo (crea uno desde tu base)";
+    const ds=DATASET==="import"&&IMP?("Análisis del sistema ("+IMP.assets.length+" acciones)"):"Análisis del sistema no disponible (faltan datos en la base)";
     body=sec("Actualización automática","La base se actualiza sola al abrir la app (una vez al día) desde tu fuente de cierres",
       row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
       row("Sincronizar ahora",_apxTxt,'<button class="btn btn-pri" id="cfgSyncNow">⟳ Sincronizar cierres</button>',1)+
@@ -5516,7 +5478,7 @@ function cfgRender(){
       sec("Carga manual","Para poblar historia o registrar un día puntual",
         row("Planillas y cierres","Sube CSV/XLSX (diario, semanal o mensual) o ingresa el cierre de un día",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgGoCargar">📈 Cargar planilla</button><button class="btn" id="cfgGoCierre">📝 Cierre diario</button></div>'))+
       sec("Otros","",
-        row("Análisis activo",ds,'<span class="cfg-sub">Se gestiona en Análisis → Gestión de análisis (desde tu base de datos real)</span>')+
+        row("Análisis activo",ds,'<span class="cfg-sub">Siempre se construye solo desde tu base real · se ajusta en Análisis → Ajustes del análisis</span>')+
         row("Fuente de petróleo (URL JSON)","Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.",`<input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="${inStyle}">`,1));
   }else if(cfgTab==="respaldo"){
     const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
@@ -5645,12 +5607,12 @@ function cpSystemDynamic(){
     if(nBase===0){
       dataNote="\n\nESTADO DEL SISTEMA: la base de precios del universo está VACÍA (0 acciones) — no hay con qué calcular el Investor Score ni β/σ/retornos de NINGUNA acción; NO cites esas cifras, no existen todavía."
         +(pfName&&hasTracking?" (El SEGUIMIENTO de la cartera activa SÍ está disponible: se calcula de sus propios registros, no de la base del universo — get_performance_summary / get_active_portfolio: TWR, vsIPSA, β realizado, drawdown.)":"")
-        +" Para métricas del universo: sincroniza cierres (⚙ Configuración → Datos) o carga una planilla; luego crea el análisis en Gestión de análisis.";
+        +" Para métricas del universo: sincroniza cierres (⚙ Configuración → Datos) o carga una planilla; el análisis del sistema se construye solo cuando la base alcanza.";
     } else if(!scoreOK){
       dataNote="\n\nESTADO DEL SISTEMA: hay **"+nBase+" acción(es)** con precios cargados, pero AÚN son insuficientes para calcular el Investor Score ni métricas por acción (se necesitan ≥3 acciones + IPSA con ~12m de historia alineada). NO cites β/σ/score todavía; guía al usuario a completar la base (⚙ Configuración → Datos).";
     } else {
       dataNote="\n\nESTADO DEL SISTEMA: la base tiene datos reales y el **Investor Score cubre el universo** ("+sc.n+" acciones, ventana "+sc.window+"): es tu fuente de recomendación con métricas REALES (Sharpe, σ, α amortiguado, r², caída máx, momentum, fundamentos). Pide cifras con get_investor_score.";
-      if(noAnalysis)dataNote+=" No hay un ANÁLISIS FORMAL activo: eso SOLO vacía las tablas Comparativa/CAPM/Multifactor — NO significa que falten datos. list_stocks/get_stock/get_correlations/get_multifactor caen al Investor Score y devuelven métricas reales; para recomendar/rankear usa get_investor_score. Si el usuario quiere las tablas formales, sugiérele crear el análisis en Gestión de análisis.";
+      if(noAnalysis)dataNote+=" El ANÁLISIS DEL SISTEMA aún no puede construirse (requiere ~12 meses alineados con el IPSA): eso SOLO vacía las tablas Comparativa/CAPM/Multifactor — NO significa que falten datos. list_stocks/get_stock/get_correlations/get_multifactor caen al Investor Score y devuelven métricas reales; para recomendar/rankear usa get_investor_score. El análisis se construye y activa solo en cuanto la base alcanza (su ventana y acciones se ajustan en Análisis → Ajustes del análisis).";
     }
   }
   return (cpClientNote()+cpProfileNote()+dataNote+pfNote).replace(/^\n+/,"");
@@ -5660,8 +5622,7 @@ function cpSystemPrompt(){return cpSystemStatic()+"\n\n"+cpSystemDynamic();}   /
 
 /* init */
 if(invProfile)simState.profile=invProfile.profile;
-if(IMP&&!IMPSETS.length){impActiveId="s"+Date.now();IMPSETS=[{id:impActiveId,name:impsetAutoName(IMP),date:"importado",imp:IMP}];lsSet("inv_impsets_v1",IMPSETS);lsSet("inv_imp_active_id",impActiveId);}
-if(IMP&&lsGet("inv_dataset_active")==="import"){try{setActive(impToActive());DATASET="import";}catch(e){}}
+if(IMP&&lsGet("inv_dataset_active")==="import"){try{setActive(impToActive());DATASET="import";impActiveId="datos";}catch(e){}}   // restauración rápida; analysisSystemOnly() lo reconstruye enseguida desde la base
 cfgEnsureDOM();
 
 /* ===== MERCADOS · INDICADORES EN VIVO (mindicador.cl + Stooq, sin backend ni API key) ===== */
@@ -6158,16 +6119,22 @@ async function authSubmit(){
 }
 function authLock(){try{sessionStorage.removeItem("inv_sess_v1");localStorage.removeItem("inv_remember_v1");}catch(e){}authInit();}
 
-/* ===== PROYECTOS: análisis + simulaciones + inversiones vinculados ===== */
-function currentAnalysisId(){
-  if(typeof DATASET!=="undefined"&&DATASET==="import"&&impActiveId)return String(impActiveId);
-  if(lsGet("inv_demo_hidden")){try{const p=curProj();const pid=p?projPrimaryAnalysis(p):null;if(pid&&pid!=="demo")return String(pid);}catch(e){}return "none";}   // demo oculto: usa el análisis del proyecto activo o "sin análisis"
-  return "demo";
+/* ===== PROYECTOS: simulaciones + inversiones vinculadas (el análisis es ÚNICO y del sistema) ===== */
+function currentAnalysisId(){return (typeof DATASET!=="undefined"&&DATASET==="import")?"datos":"none";}
+/* existe a lo más UN análisis: el del sistema (cuando la base alcanza) */
+function analysisList(){return (typeof DATASET!=="undefined"&&DATASET==="import")?[{id:"datos",name:"Análisis del sistema",kind:"datos",n:(STOCKS||[]).length}]:[];}
+/* v2 · SOLO ANÁLISIS DEL SISTEMA: purga los análisis independientes guardados de versiones anteriores
+   (IMPSETS + vínculos por proyecto) y (re)construye el análisis del sistema desde la base. Idempotente. */
+function analysisSystemOnly(){
+  try{
+    IMPSETS=[];lsSet("inv_impsets_v1",[]);
+    if(impActiveId&&impActiveId!=="datos"){impActiveId=null;lsSet("inv_imp_active_id",null);}
+    CLIENTS.forEach(c=>{const projs=clientProjects(c.id)||[];let ch=false;
+      projs.forEach(p=>{const L=p&&p.links;if(!L)return;if((L.analyses||[]).length||L.primary){L.analyses=[];L.primary=null;ch=true;}});
+      if(ch)clientSaveProjects(c.id,projs);});
+  }catch(e){}
+  try{systemAnalysisRefresh();}catch(e){}
 }
-/* la base del sistema (Datos) NO es un análisis: los análisis se crean a partir de ella (Crear análisis). Lista: demo + análisis guardados */
-function analysisList(){const out=[];(IMPSETS||[]).forEach(s=>out.push({id:String(s.id),name:s.name,kind:"import",n:(s.imp&&s.imp.assets)?s.imp.assets.length:0}));return out;}   // el set "IPSA · demo" se retiró: los análisis se crean desde la base real
-/* el pseudo-análisis "datos" (base en vivo) ya no se ofrece: si quedó activo, conviértelo en un análisis guardado con nombre */
-function analysisMigrateDatos(){try{if(impActiveId==="datos"&&IMP){const nm="Análisis "+(IMP.freq||"")+" · "+(((IMP.assets&&IMP.assets.length)||0))+" acc.";const id="s"+Date.now()+Math.floor(Math.random()*1000);IMPSETS.push({id,name:nm,date:(IMP.window||""),imp:IMP});impActiveId=id;lsSet("inv_impsets_v1",IMPSETS);lsSet("inv_imp_active_id",id);}}catch(e){}}
 function analysisName(id){const a=analysisList().find(x=>x.id===String(id));return a?a.name:"(no disponible)";}
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
@@ -6245,12 +6212,12 @@ function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String
 function projDelLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;const L=projLinks(p),s=String(id);if(kind==="analysis")L.analyses=L.analyses.filter(x=>String(x)!==s);else L.scenarios=L.scenarios.filter(x=>String(x)!==s);saveProjects();render();}
 function projPrimaryAnalysis(p){const L=projLinks(p);if(L.primary&&L.analyses.map(String).indexOf(String(L.primary))>=0)return String(L.primary);return L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}
 function projSetPrimary(pid,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;projLinks(p).primary=String(id);saveProjects();render();}
-function activateAnalysis(id){if(!id)return false;if(String(id)==="demo"){applyDataset("demo");return true;}if(String(id)==="datos"){return pricedbActivateAnalysis();}if(typeof impsetActivate==="function"&&(IMPSETS||[]).some(s=>String(s.id)===String(id))){impsetActivate(id);return true;}return false;}
+function activateAnalysis(id){if(!id)return false;if(String(id)==="datos")return (typeof systemAnalysisRefresh==="function")?(systemAnalysisRefresh()&&(render(),true)):false;return false;}   // solo existe el análisis del sistema
 function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;activeId=p.id;
   // estado por-proyecto que NO debe sobrevivir al cambio: un editIdx del proyecto anterior apuntando a un
   // registro inexistente hacía lanzar a viewInvActive y dejaba la UI congelada (botones sin re-conectar)
   editIdx=null;invNew=null;invStkSel=null;scenEditId=null;
-  saveProjects();syncProj();if(!activateAnalysis(projPrimaryAnalysis(p)))render();}
+  saveProjects();syncProj();render();}   // el análisis es global (del sistema): cambiar de proyecto no lo toca
 
 /* ===================================================================== */
 /* ============ MÓDULO MONTECARLO (beta) · proyección probabilística ==== */
@@ -6428,18 +6395,16 @@ function viewProyectos(){
   // proyecto ACTIVO recién creado (sin inversión): muestra los pasos guiados arriba
   const curP=curProj();
   const guided=(curP&&projIsEmpty(curP))?projGuidedSteps(curP):"";
-  const aOpts=analysisList().map(a=>`<option value="${a.id}">${(""+a.name).replace(/</g,"&lt;")} (${a.n})</option>`).join("");
   const sOpts=(SCEN||[]).map(s=>`<option value="${s.id}">${(""+s.name).replace(/</g,"&lt;")}</option>`).join("");
-  // saneo: links a análisis/simulaciones YA ELIMINADOS (de antes del purge automático) se desvinculan solos
-  const _validA=new Set(analysisList().map(a=>String(a.id))),_validS=new Set((SCEN||[]).map(x=>String(x.id)));
+  // saneo: links a simulaciones YA ELIMINADAS se desvinculan solos; los vínculos a análisis se retiraron
+  // (el análisis es único y del sistema — analysisSystemOnly() ya purgó los antiguos)
+  const _validS=new Set((SCEN||[]).map(x=>String(x.id)));
   let _healed=false;
   all.forEach(({p})=>{const L=projLinks(p);const a0=L.analyses.length,s0=L.scenarios.length;
-    L.analyses=L.analyses.filter(id=>_validA.has(String(id)));L.scenarios=L.scenarios.filter(id=>_validS.has(String(id)));
-    if(L.analyses.length!==a0||L.scenarios.length!==s0){_healed=true;if(L.primary&&!_validA.has(String(L.primary)))L.primary=L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}});
+    L.analyses=[];if(L.primary)L.primary=null;L.scenarios=L.scenarios.filter(id=>_validS.has(String(id)));
+    if(a0||L.scenarios.length!==s0)_healed=true;});
   if(_healed)try{saveProjects();}catch(e){}
   const cards=all.map(({p,s})=>{const active=p.id===activeId,L=projLinks(p);
-    const prim=projPrimaryAnalysis(p);
-    const aChips=L.analyses.length?L.analyses.map(id=>{const isP=String(id)===String(prim),act=currentAnalysisId()===String(id);return `<span class="prj-chip an ${isP?"primary":""} ${act?"active":""}"><button class="prj-star" data-primary="${p.id}|${id}" title="${isP?"Análisis vigente del proyecto":"Marcar como vigente"}">${isP?"★":"☆"}</button><button class="prj-go" data-actanalysis="${id}" title="Activar este análisis">${analysisName(id)}</button><button class="prj-x" data-unlink="${p.id}|analysis|${id}">✕</button></span>`;}).join(""):'<span class="prj-none">— sin análisis —</span>';
     const sChips=L.scenarios.length?L.scenarios.map(id=>`<span class="prj-chip sc">${scenName(id)}<button class="prj-x" data-unlink="${p.id}|scenario|${id}">✕</button></span>`).join(""):'<span class="prj-none">— sin simulaciones —</span>';
     return `<div class="prj-card ${active?"on":""}">
       <div class="prj-head"><div style="flex:1;min-width:0"><span class="prj-namewrap"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}" title="Haz clic para editar el nombre del proyecto" aria-label="Nombre del proyecto"></span><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${p.date||"—"}</div></div>
@@ -6454,7 +6419,6 @@ function viewProyectos(){
         <div class="prj-m" title="Sharpe modelado de la cartera (retorno esperado por unidad de riesgo, según su construcción CAPM/Markowitz)"><span class="l">Sharpe</span><b style="color:${accentT}">${(s.sharpe||0).toFixed(2)}</b></div>
       </div>
       <div class="prj-links">
-        <div class="prj-lrow"><span class="prj-llbl">Análisis</span><div class="prj-chips">${aChips}</div><select class="prj-add" data-addlink="${p.id}|analysis"><option value="">+ vincular análisis…</option>${aOpts}</select></div>
         <div class="prj-lrow"><span class="prj-llbl">Simulaciones</span><div class="prj-chips">${sChips}</div><select class="prj-add" data-addlink="${p.id}|scenario"><option value="">+ vincular simulación…</option>${sOpts}</select></div>
       </div>
       <div class="prj-foot"><button class="btn" data-pgoto="${p.id}|inv|seguimiento">Seguimiento →</button><button class="btn" data-pgoto="${p.id}|inv|operar">Operar →</button><button class="btn" data-pgoto="${p.id}|inv|contabilidad">Contabilidad →</button></div>
@@ -6466,16 +6430,11 @@ function viewProyectos(){
 function attachProyectos(){
   document.querySelectorAll("[data-prename]").forEach(inp=>inp.onchange=()=>{const p=PROJECTS.find(x=>String(x.id)===inp.dataset.prename);if(p){p.name=(inp.value||"").trim()||p.name;saveProjects();}});
   document.querySelectorAll("[data-pact]").forEach(b=>b.onclick=()=>projActivate(b.dataset.pact));
-  document.querySelectorAll("[data-primary]").forEach(b=>b.onclick=()=>{const[pid,id]=b.dataset.primary.split("|");projSetPrimary(pid,id);});
-  document.querySelectorAll("[data-actanalysis]").forEach(b=>b.onclick=()=>{if(!activateAnalysis(b.dataset.actanalysis))render();});
   document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{const p=PROJECTS.find(x=>String(x.id)===b.dataset.pdel);if(p&&confirm('¿Eliminar el proyecto "'+p.name+'" y todo su seguimiento? No se puede deshacer.')){PROJECTS=PROJECTS.filter(x=>x.id!==p.id);if(activeId===p.id)activeId=PROJECTS.length?PROJECTS[0].id:null;saveProjects();syncProj();render();}});
   document.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>{const[pid,kind,id]=b.dataset.unlink.split("|");projDelLink(pid,kind,id);});
   document.querySelectorAll("[data-addlink]").forEach(sel=>sel.onchange=()=>{const[pid,kind]=sel.dataset.addlink.split("|");if(sel.value)projAddLink(pid,kind,sel.value);});
   document.querySelectorAll("[data-pgoto]").forEach(b=>b.onclick=()=>{const[pid,m,pg]=b.dataset.pgoto.split("|");activeId=PROJECTS.find(x=>String(x.id)===pid).id;saveProjects();syncProj();modulo=m;page=pg;render();});
   document.querySelectorAll("[data-pgoto2]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.pgoto2.split("|");modulo=m;page=pg;render();});
-  document.querySelectorAll("[data-aact]").forEach(b=>b.onclick=()=>{const id=b.dataset.aact;if(id==="demo")applyDataset("demo");else if(typeof impsetActivate==="function")impsetActivate(id);});
-  document.querySelectorAll("[data-adel]").forEach(b=>b.onclick=()=>{const id=b.dataset.adel;const a=analysisList().find(x=>x.id===id);if(a&&confirm('¿Eliminar el análisis "'+a.name+'"?'))impsetDelete(id);});
-  document.querySelectorAll("[data-aren]").forEach(b=>b.onclick=()=>{const id=b.dataset.aren;const a=analysisList().find(x=>x.id===id);const nm=window.prompt("Nuevo nombre del análisis:",a?a.name:"");if(nm!==null&&nm.trim()){impsetRename(id,nm.trim());render();}});
   document.querySelectorAll("[data-scren]").forEach(b=>b.onclick=()=>renameScenario(b.dataset.scren));
   document.querySelectorAll("[data-scload]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scload);if(sc){scenEditId=null;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;modulo="sim";page="constructor";render();}});
   document.querySelectorAll("[data-scdel]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(x=>String(x.id)===b.dataset.scdel);if(sc&&confirm('¿Eliminar la simulación "'+sc.name+'"?')){SCEN=SCEN.filter(x=>String(x.id)!==b.dataset.scdel);lsSet("pf_scenarios_v1",SCEN);purgeLinkEverywhere("scenario",b.dataset.scdel);render();}});
@@ -6536,7 +6495,7 @@ function attachClientes(){
 function clientLoad(){
   PROJECTS=lsGet("pf_projects_v1")||[];activeId=lsGet("pf_active_v1")||null;
   SCEN=lsGet("pf_scenarios_v1")||[];
-  IMPSETS=lsGet("inv_impsets_v1")||[];impActiveId=lsGet("inv_imp_active_id")||null;
+  IMPSETS=[];impActiveId=lsGet("inv_imp_active_id")||null;   // los análisis guardados se retiraron (analysisSystemOnly purga el storage)
   IMP=lsGet("inv_import_v1")||null;
   PRICEDB=(function(){const d=lsGet("inv_pricedb_v1");return (d&&d.px)?d:{tickers:{},px:{},ipsa:{}};})();pricedbFreq=lsGet("inv_pricedb_freq")||"mensual";
   invProfile=lsGet("inv_profile_v1")||null;profAns=lsGet("inv_profile_ans_v1")||{};profGoal=lsGet("inv_profile_goal_v1")||{};profEdit=false;
@@ -6544,7 +6503,7 @@ function clientLoad(){
   catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
   try{pricedbAutoSeed();}catch(e){}   // base poblada (demo + cierres) una vez por cliente
   try{pricedbSanitize();}catch(e){}   // auto-saneo en cada carga: sin fines de semana ni arrastres (fidelidad de la base)
-  try{analysisMigrateDatos();}catch(e){}
+  try{analysisSystemOnly();}catch(e){}
   syncProj();
   simState.sel={};if(invProfile)simState.profile=invProfile.profile;
   editIdx=null;scenEditId=null;impFiles=[];impMsg="";mindAuto=mindAuto;
@@ -6689,7 +6648,11 @@ function seguimientoStats(freq){
 }
 /* ===================== CARGA DE PRECIOS A NIVEL PLATAFORMA ===================== */
 function allHeldTickers(){const m={};allTrackedProjects().forEach(({p})=>{(p.holdings||[]).forEach(hd=>{if(!m[hd.t])m[hd.t]={t:hd.t,n:hd.n||hd.t,c:hd.c||"#1E5FD1"};});});return Object.keys(m).sort().map(k=>m[k]);}
-function lastKnownPrice(t,C){C=C||consolidatedSeries();const mp=C.tick[t];if(mp){const ds=Object.keys(mp).sort();if(ds.length)return mp[ds[ds.length-1]];}const st=STOCKS.find(x=>x.t===t);return (st&&st.prices&&st.prices.length)?st.prices[st.prices.length-1]:"";}
+function lastKnownPrice(t,C){C=C||consolidatedSeries();const mp=C.tick[t];if(mp){const ds=Object.keys(mp).sort();if(ds.length)return mp[ds[ds.length-1]];}
+  // el fallback a STOCKS solo vale cuando STOCKS viene de DATOS REALES (análisis del sistema activo): los
+  // precios del set demo hardcodeado jamás salen como "último precio" (dato faltante ⇒ "" y la UI muestra "—")
+  const st=(typeof DATASET!=="undefined"&&DATASET==="import")?(STOCKS||[]).find(x=>x.t===t):null;
+  return (st&&st.prices&&st.prices.length)?st.prices[st.prices.length-1]:"";}
 function lastKnownIpsa(C){C=C||consolidatedSeries();const ds=Object.keys(C.ipsaMap).sort();return ds.length?C.ipsaMap[ds[ds.length-1]]:(MKT&&MKT.last?MKT.last:8000);}
 function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;saveProjects();}else{try{localStorage.setItem("pf_projects_v1__"+cid,JSON.stringify(projs));}catch(e){saveWarn();}}}
 /* agrega un punto de valoración (precios de cierre) a TODOS los proyectos con seguimiento */
@@ -6840,6 +6803,7 @@ function seedExamples(){
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
+let homeIpsaFreq=lsGet("inv_home_ipsa_freq")||"diario";   // cadencia del GRÁFICO del IPSA en Home (no toca las etiquetas de rentabilidad)
 /* ══ INVESTOR SCORE (v3 · piedra angular, riesgo descontado + candado de confianza) ══
    Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
    fundamentos reales), INDEPENDIENTE del análisis activo. Rankea por PERCENTIL dentro del universo.
@@ -6891,7 +6855,8 @@ function investorScoreCompute(){
   // caer (p.ej. revalorización contable IFRS de un operador de malls): NO tratarla como "barata" ni "rentable".
   const nonRecOf=f=>(f.fpe!=null&&f.pe!=null&&f.pe>0&&f.fpe>f.pe*2.5);
   // P/U EFECTIVO = el más CONSERVADOR (mayor) de trailing y forward: solo es "barata" si lo es en ambos
-  const epeOf=f=>{if(f.pe!=null&&f.fpe!=null)return Math.max(f.pe,f.fpe);return f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null);};
+  const epeOf=f=>{if(f.pe==null&&((f.roe!=null&&f.roe<0)||(f.nm!=null&&f.nm<0)))return null;   // en pérdidas el criterio "barata en ambos P/U" es inevaluable → null (no "barata al 100%")
+    if(f.pe!=null&&f.fpe!=null)return Math.max(f.pe,f.fpe);return f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null);};
   const pbs=[],dys=[],nms=[],ups=[],epes=[],roesEff=[];
   A.forEach(s=>{const f=F(s.t);pbs.push(f.pb);dys.push(f.dy);nms.push(f.nm);epes.push(epeOf(f));
     roesEff.push(nonRecOf(f)?null:f.roe);   // ROE se descarta si la utilidad no es recurrente (no contar dos veces la misma ganancia contable)
@@ -6903,7 +6868,10 @@ function investorScoreCompute(){
   // intrínseco de una acción es el MISMO en el score, en Detalle y en el agente (consistencia auditada).
   const medEPE=(typeof fairPE==="function")?fairPE(true):null;
   const ivs=A.map(s=>{try{const _px=(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null;return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,medPE:medEPE,px:_px}):null;}catch(e){return null;}});
-  const moss=ivs.map(iv=>iv?iv.mos*100:null);   // margen de seguridad en % (mayor = más barata = mejor value)
+  // margen de seguridad en % (mayor = más barata = mejor value). Se exige n≥2 anclas: un intrínseco de UNA sola
+  // ancla (solo el target de analistas) no es triangulación — y ese target YA puntúa aparte como "upside" (20%
+  // del bloque), así que contarlo también como mos lo duplicaría. En la UI se sigue mostrando con fiabilidad baja.
+  const moss=ivs.map(iv=>(iv&&iv.n>=2)?iv.mos*100:null);
   const obsFactor=Math.max(0,Math.min(1,nRet/40));   // ≥40 retornos (~9m semanal) = muestra suficiente
   const rows=A.map((s,si)=>{
     const f=F(s.t);
@@ -7084,18 +7052,31 @@ function viewHome(){
     if(!_ips)return "";
     const _fD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(0,4):"";
     const cell=(lbl,r,desc,base)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";const tt=desc+(base?(" · base: cierre del "+_fD(base)):"");return `<div class="ipsa-cell" title="${tt}"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
-    // curva del índice — usa la RACHA DIARIA consecutiva más reciente (una sola cadencia, como una plataforma pro);
-    // si es corta (<10 días), muestra la serie mensual para no dejar el gráfico vacío
+    // curva del índice con CADENCIA elegible (días/semanas/meses) — SOLO cambia el gráfico, nunca las
+    // etiquetas de rentabilidad de arriba (siguen siendo variaciones móviles día/~7d/~30d/12m).
     let ipsaChart="";
-    try{const C=consolidatedSeries();const all=dropTrailingFlat(resampleMap(C.ipsaMap,"diario"));
-      let i=all.length-1;while(i>0&&gapOK(all[i-1].d,all[i].d,"diario"))i--;
-      let rs=all.slice(i),cap="últimos "+rs.length+" días hábiles",monthly=false;
-      if(rs.length<10){rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-36);cap="serie mensual ("+rs.length+" meses)";monthly=true;}
-      rs=rs.slice(-120);
+    try{const C=consolidatedSeries();
+      let rs=[],cap="",monthly=false;
+      if(homeIpsaFreq==="semanal"){
+        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"semanal")).slice(-104);
+        cap="cierres semanales · últimas "+rs.length+" semanas";
+      }else if(homeIpsaFreq==="mensual"){
+        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-36);monthly=true;
+        cap="cierres mensuales · últimos "+rs.length+" meses";
+      }else{
+        // diario: la RACHA DIARIA consecutiva más reciente (una sola cadencia, como una plataforma pro);
+        // si es corta (<10 días), cae a la serie mensual para no dejar el gráfico vacío
+        const all=dropTrailingFlat(resampleMap(C.ipsaMap,"diario"));
+        let i=all.length-1;while(i>0&&gapOK(all[i-1].d,all[i].d,"diario"))i--;
+        rs=all.slice(i).slice(-120);cap="últimos "+rs.length+" días hábiles";
+        if(rs.length<10){rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-36);cap="serie mensual ("+rs.length+" meses)";monthly=true;}
+      }
+      const seg=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","Días"],["semanal","Semanas"],["mensual","Meses"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Solo cambia el gráfico; las variaciones de arriba no se tocan">${l}</button>`).join("")}</div>`;
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
         // en la vista mensual (varios años) la etiqueta lleva MES/AÑO; "DD/MM" se repetiría idéntico entre años
         const labels=monthly?rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4)):rs.map(x=>x.d);
-        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:monthly,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div class="genl" style="margin:6px 0 0;text-align:right">${cap}</div></div>`;}
+        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:monthly,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div></div>`;}
+      else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes a esta cadencia</div></div></div>`;
     }catch(e){}
     const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
     return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base",body);
@@ -7243,6 +7224,7 @@ function attachHome(){
     modulo="inv";page="seguimiento";render();});
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
   document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
+  document.querySelectorAll("[data-ipsafreq]").forEach(b=>b.onclick=()=>{homeIpsaFreq=b.dataset.ipsafreq;try{lsSet("inv_home_ipsa_freq",homeIpsaFreq);}catch(e){}render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
@@ -7282,7 +7264,7 @@ function removeExampleClients(){try{
 }catch(e){}}
 try{removeExampleClients();}catch(e){}
 try{pricedbAutoSeed();}catch(e){}
-try{analysisMigrateDatos();}catch(e){}
+try{analysisSystemOnly();}catch(e){}
 render();
 try{autobkTick();}catch(e){}
 try{autopxAutoRun();}catch(e){}   // sincroniza los cierres del día desde la fuente automática (si está configurada)
