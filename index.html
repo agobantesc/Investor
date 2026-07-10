@@ -79,8 +79,18 @@
   body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:13px;-webkit-font-smoothing:antialiased;}
   #app{display:flex;height:100vh;overflow:hidden;}
   .tnum{font-variant-numeric:tabular-nums;}
+  ::selection{background:rgba(37,99,235,.22);}
+  :root[data-theme="dark"] ::selection{background:rgba(96,165,250,.32);}
+  /* scrollbar acorde al tema (antes quedaba clara sobre fondo oscuro) */
+  :root{--sb-thumb:#C4D0E2;--sb-thumb-h:#A9BAD3;}
+  :root[data-theme="dark"]{--sb-thumb:#283B5F;--sb-thumb-h:#35507E;}
+  *{scrollbar-width:thin;scrollbar-color:var(--sb-thumb) transparent;}
   ::-webkit-scrollbar{width:11px;height:11px;}
-  ::-webkit-scrollbar-thumb{background:#CAD5E5;border-radius:7px;border:3px solid var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--sb-thumb);border-radius:7px;border:3px solid var(--bg);}
+  ::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-h);}
+  /* accesibilidad de nivel producto: anillo de foco al navegar con teclado (no aparece con el mouse) */
+  :where(button,a,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px;}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;}}
 
   /* ===== SIDEBAR (navy) ===== */
   aside{width:258px;flex-shrink:0;background:linear-gradient(168deg,#0B2143 0%,#143A77 100%);color:#AEC2DC;display:flex;flex-direction:column;}
@@ -887,6 +897,7 @@
   .sfoot{padding:1rem 1.2rem;font-size:9.5px;color:#647CA4;line-height:1.95;background:rgba(0,0,0,.16);
     border-top:1px solid rgba(255,255,255,.07);}
   .sfoot b{color:#A3B9D8;font-weight:700;}
+  .sfoot:empty{display:none;}
 
   /* ---- Topbar + título que resalta ---- */
   .topbar{height:66px;gap:16px;padding:0 1.5rem;box-shadow:0 1px 0 var(--line),0 8px 22px rgba(15,38,80,.05);}
@@ -1460,26 +1471,33 @@ function svgScatter(o){
   const cy=m.t+(H-m.t-m.b)/2;
   g+=`<text x="17" y="${cy}" text-anchor="middle" font-size="13" font-weight="600" fill="${muted}" transform="rotate(-90 17 ${cy})">${o.ylab||""}</text>`;
   (o.lines||[]).forEach(L=>{g+=`<line x1="${X(L.x1)}" y1="${Y(L.y1)}" x2="${X(L.x2)}" y2="${Y(L.y2)}" stroke="${L.c}" stroke-width="2" ${L.dash?'stroke-dasharray="7 5"':""}/>`;});
-  // etiquetas con anti-colisión: cada etiqueta prueba posiciones (arriba/abajo/derecha/izquierda) y toma la
-  // primera libre respecto de las ya colocadas, para que nombres de puntos cercanos no se pisen entre sí
+  // dos pasadas: primero TODOS los puntos, después las etiquetas — así un punto dibujado más tarde nunca
+  // tapa una etiqueta ya colocada, y las etiquetas esquivan tanto a otras etiquetas como a los puntos
   const _boxes=[];
   const _fits=(bx)=>bx.x>=m.l&&bx.x+bx.w<=W-m.r&&bx.y>=m.t&&bx.y+bx.h<=H-m.b&&!_boxes.some(o2=>bx.x<o2.x+o2.w&&bx.x+bx.w>o2.x&&bx.y<o2.y+o2.h&&bx.y+bx.h>o2.y);
   (o.pts||[]).forEach(p=>{const x=X(p.x),y=Y(p.y),r=p.r||7.5;_geo.push({cx:x,cy:y,vx:p.x,vy:p.y,label:p.label||"",c:p.c});
+    _boxes.push({x:x-r-1,y:y-r-1,w:2*r+2,h:2*r+2});
     if(p.shape==="diamond")g+=`<rect x="${x-r}" y="${y-r}" width="${r*2}" height="${r*2}" transform="rotate(45 ${x} ${y})" fill="${p.c}" stroke="#fff" stroke-width="2"/>`;
     else if(p.shape==="tri")g+=`<polygon points="${x},${y-r-1} ${x-r},${y+r-1} ${x+r},${y+r-1}" fill="${p.c}" stroke="#fff" stroke-width="1.5"/>`;
-    else g+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${p.c}" stroke="#fff" stroke-width="2"/>`;
-    if(p.label){const lbl=(p.label.length>16?p.label.slice(0,15)+"…":p.label).replace(/&/g,"&amp;").replace(/</g,"&lt;");const lw=lbl.length*6.4,lh=12;
-      const cands=[
-        {tx:x,ty:y-r-6,an:"middle",bx:{x:x-lw/2,y:y-r-6-lh+2,w:lw,h:lh}},
-        {tx:x,ty:y+r+13,an:"middle",bx:{x:x-lw/2,y:y+r+13-lh+2,w:lw,h:lh}},
-        {tx:x+r+7,ty:y+4,an:"start",bx:{x:x+r+7,y:y+4-lh+2,w:lw,h:lh}},
-        {tx:x-r-7,ty:y+4,an:"end",bx:{x:x-r-7-lw,y:y+4-lh+2,w:lw,h:lh}}
-      ];
-      let ch=cands.find(c2=>_fits(c2.bx))||cands[0];
-      // sin posición libre: clamp horizontal como antes
-      if(ch===cands[0]&&!_fits(ch.bx)){const tx=Math.max(m.l+6,Math.min(W-m.r-6,x));const ty=(y-r-6)<(m.t+9)?(y+r+13):(y-r-6);ch={tx,ty,an:"middle",bx:{x:tx-lw/2,y:ty-lh+2,w:lw,h:lh}};}
-      _boxes.push(ch.bx);
-      g+=`<text x="${ch.tx.toFixed(1)}" y="${ch.ty.toFixed(1)}" text-anchor="${ch.an}" font-size="10.5" font-weight="800" fill="${p.c}">${lbl}</text>`;}});
+    else g+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${p.c}" stroke="#fff" stroke-width="2"/>`;});
+  (o.pts||[]).forEach(p=>{if(!p.label)return;const x=X(p.x),y=Y(p.y),r=p.r||7.5;
+    const lbl=(p.label.length>16?p.label.slice(0,15)+"…":p.label).replace(/&/g,"&amp;").replace(/</g,"&lt;");const lw=lbl.length*6.4,lh=12;
+    const cands=[
+      {tx:x,ty:y-r-6,an:"middle",bx:{x:x-lw/2,y:y-r-6-lh+2,w:lw,h:lh}},
+      {tx:x,ty:y+r+13,an:"middle",bx:{x:x-lw/2,y:y+r+13-lh+2,w:lw,h:lh}},
+      {tx:x+r+7,ty:y+4,an:"start",bx:{x:x+r+7,y:y+4-lh+2,w:lw,h:lh}},
+      {tx:x-r-7,ty:y+4,an:"end",bx:{x:x-r-7-lw,y:y+4-lh+2,w:lw,h:lh}},
+      {tx:x+r+5,ty:y-r-3,an:"start",bx:{x:x+r+5,y:y-r-3-lh+2,w:lw,h:lh}},
+      {tx:x-r-5,ty:y-r-3,an:"end",bx:{x:x-r-5-lw,y:y-r-3-lh+2,w:lw,h:lh}},
+      {tx:x+r+5,ty:y+r+11,an:"start",bx:{x:x+r+5,y:y+r+11-lh+2,w:lw,h:lh}},
+      {tx:x-r-5,ty:y+r+11,an:"end",bx:{x:x-r-5-lw,y:y+r+11-lh+2,w:lw,h:lh}}
+    ];
+    const ch=cands.find(c2=>_fits(c2.bx));
+    // sin posición libre en un cúmulo denso: la etiqueta se omite (el nombre queda accesible por hover),
+    // porque una etiqueta encima de otra es peor que ninguna
+    if(!ch)return;
+    _boxes.push(ch.bx);
+    g+=`<text x="${ch.tx.toFixed(1)}" y="${ch.ty.toFixed(1)}" text-anchor="${ch.an}" font-size="10.5" font-weight="800" fill="${p.c}" style="paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round">${lbl}</text>`;});
   window["__sg_"+_id]={pts:_geo,fx,fy,xlab:o.xlab||"",ylab:o.ylab||"",W,H};
   return `<svg id="sg_${_id}" data-scatter="${_id}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="sgh_${_id}"></g></svg>`;
 }
