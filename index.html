@@ -2684,8 +2684,16 @@ function invMetrics(){
     if(vm>0){betaR=cov/vm;corrR=vp>0?cov/Math.sqrt(vm*vp):null;}}
   const perY=PF.freq==="semanal"?52:PF.freq==="mensual"?12:252;
   let realizedVol=null;if(pr.length>=2){const mp=pr.reduce((a,b)=>a+b,0)/pr.length;const v=pr.reduce((a,b)=>a+(b-mp)**2,0)/(pr.length-1);realizedVol=Math.sqrt(v)*Math.sqrt(perY)*100;}
-  const L0=series.length>=2?series[series.length-2]:null,lastInflow=last.inflow||0;
-  const dayAbs=L0?(last.val-lastInflow)-L0.val:null,dayPct=L0?((last.val-lastInflow)/L0.val-1):null,prevDate=L0?L0.date:null;
+  // CAMBIO ÚLTIMO DÍA: entre los dos últimos registros con CIERRE REAL de mercado. Un registro de OPERACIÓN
+  // sin cierre aún (fresh presente y vacío — p.ej. una compra de hoy antes de las ~18:05) NO define el "día":
+  // se salta, y sus aportes/retiros se netean del tramo. Así el KPI muestra el día 08→09 real y no un
+  // pseudo-día 09→10 sin mercado. Cuando el cierre del día llega, el KPI avanza solo a ese día.
+  const _hasClose=w=>!(w&&w.fresh&&!w.fresh.length);
+  let _di=series.length-1;while(_di>0&&!_hasClose(WEEKS[_di]))_di--;
+  let _dj=_di-1;while(_dj>=0&&!_hasClose(WEEKS[_dj]))_dj--;
+  const L1=series[_di],L0=_dj>=0?series[_dj]:null;
+  let _flow=0;for(let i=_dj+1;i<=_di;i++)_flow+=series[i].inflow||0;
+  const dayAbs=L0?(L1.val-_flow)-L0.val:null,dayPct=L0?((L1.val-_flow)/L0.val-1):null,prevDate=L0?L0.date:null,dayTo=L0?L1.date:null;
   const worstRet=pr.length?Math.min(...pr):null,bestRet=pr.length?Math.max(...pr):null;
   let worstIdx=-1;if(pr.length){let mn=Infinity;pr.forEach((r,i)=>{if(r<mn){mn=r;worstIdx=i;}});}
   const worstLossCLP=worstIdx>=0?(series[worstIdx+1].val-series[worstIdx+1].inflow)-series[worstIdx].val:null;
@@ -2696,7 +2704,7 @@ function invMetrics(){
   if(elapsedYrs>0)cagr=Math.pow(1+last.ret,1/elapsedYrs)-1;
   if(pr.length>=2&&realizedVol){const retAnn=avg(pr)*perY;sharpeR=(retAnn-RF/100)/(realizedVol/100);const act=pr.map((x,i)=>x-mr[i]),ma=avg(act);const va=act.reduce((a,b)=>a+(b-ma)**2,0)/(act.length-1),teP=Math.sqrt(va);trackingError=teP*Math.sqrt(perY)*100;infoRatio=teP>0?(ma*Math.sqrt(perY))/teP:null;winRate=act.filter(x=>x>0).length/act.length*100;}
   let peak=-Infinity,maxDD=0,maxDDCLP=0;series.forEach(s=>{if(s.val>peak)peak=s.val;const dd=s.val/peak-1;if(dd<maxDD){maxDD=dd;maxDDCLP=s.val-peak;}});
-  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,nret:pr.length,worstRet,bestRet,maxDD,maxDDCLP,worstLossCLP,realizedVol,dayAbs,dayPct,prevDate,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
+  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,nret:pr.length,worstRet,bestRet,maxDD,maxDDCLP,worstLossCLP,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
 }
 
 const FREQ={diario:{u:"día",uc:"Día",us:"días",adj:"diario",cap:"Diario",det:"el día",per:"del día",pf:"D"},semanal:{u:"semana",uc:"Semana",us:"semanas",adj:"semanal",cap:"Semanal",det:"la semana",per:"de la semana",pf:"S"},mensual:{u:"mes",uc:"Mes",us:"meses",adj:"mensual",cap:"Mensual",det:"el mes",per:"del mes",pf:"M"}};
@@ -2819,7 +2827,7 @@ function viewInvActive(){
   const elapsed=days<1?"hoy (compra de hoy)":(days+" días · "+(days/7).toFixed(1)+" sem · "+(days/30.44).toFixed(1)+" meses");
   const dA=IM.dayAbs,dP=IM.dayPct,dc=dA!=null?col(dA):muted;
   const dayBox=dA!=null
-    ? `<div style="font-size:27px;font-weight:800;color:${dc};line-height:1.05">${dA>=0?"+":"−"}${fmtCLP(Math.abs(dA))}</div><div style="font-size:15px;font-weight:800;color:${dc};margin-top:2px">${pc(dP*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px">desde ${IM.prevDate}</div>`
+    ? `<div style="font-size:27px;font-weight:800;color:${dc};line-height:1.05">${dA>=0?"+":"−"}${fmtCLP(Math.abs(dA))}</div><div style="font-size:15px;font-weight:800;color:${dc};margin-top:2px">${pc(dP*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Entre los dos últimos registros con cierre REAL de mercado (una operación de hoy sin cierre aún no define el día)">cierre ${IM.prevDate} → ${IM.dayTo||""}</div>`
     : `<div style="font-size:20px;font-weight:800;color:var(--faint);line-height:1.1">—</div><div style="font-size:10.5px;color:var(--faint);margin-top:4px">registra otro ${fr.u} para ver el cambio</div>`;
   const hero=`<div class="card"><div class="bd" style="padding:1.35rem 1.5rem">
     <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;justify-content:space-between">
@@ -3090,7 +3098,7 @@ function genInvReport(){
       ${kpi("Capital aportado",fmtCLP(IM.aport),null,IM.aport>PF.amount?("inicial "+fmtCLP(PF.amount)):"capital invertido")}
       ${kpi("Valor actual",fmtCLP(L.val),null,days+" días invertido")}
       ${kpi("Ganancia / pérdida",(gain>=0?"+":"−")+fmtCLP(Math.abs(gain)),cc(gain),"valor − aportado")}
-      ${kpi("Cambio último "+fr.u,dayTxt,IM.dayAbs!=null?cc(IM.dayAbs):'#52668A',IM.prevDate?("desde "+IM.prevDate):"")}
+      ${kpi("Cambio último "+fr.u,dayTxt,IM.dayAbs!=null?cc(IM.dayAbs):'#52668A',IM.prevDate?("cierre "+IM.prevDate+" → "+(IM.dayTo||"")):"")}
       ${kpi("Retorno (TWR)",sg(L.ret*100),cc(L.ret*100),"time-weighted")}
       ${kpi("Retorno IPSA",sg(L.ipsaRet*100),cc(L.ipsaRet*100),"mismo período")}
       ${kpi("Diferencia vs IPSA",sg1(L.diff*100)+" pts",cc(L.diff*100),L.diff>=0?"sobre el mercado":"bajo el mercado")}
@@ -6268,6 +6276,26 @@ function projFixTargets(p){
   p.holdings.forEach(h=>{h.monto=Math.round(cost[h.t]||0);});
   return true;
 }
+/* REPARA registros de OPERACIÓN guardados con la valorización antigua: si el día de la operación no tenía
+   cierre real del papel (fresh presente y sin el ticker), el precio del día debe ser el de la TRANSACCIÓN
+   (precio real de mercado de ese día) — no el arrastre de ayer, que fabricaba una "pérdida del día" fantasma
+   al comprar sobre el cierre anterior. Idempotente; respeta la guardia anti dedo-gordo (±15%). Cuando el
+   cierre real llega, pricedbApplyToProjects lo pisa igual que siempre. */
+function projFixTradeDayPrices(){
+  let n=0;
+  try{CLIENTS.forEach(c=>{const projs=clientProjects(c.id)||[];let ch=false;
+    projs.forEach(p=>{(p.weeks||[]).forEach(w=>{
+      if(!w||!w.ev||w.ev.kind!=="trade")return;
+      const t=w.ev.t,pp=+w.ev.price;
+      if(!(pp>0)||!w.fresh||w.fresh.indexOf(t)>=0)return;   // con cierre real del papel ese día, el cierre manda
+      const cur=w.prices?w.prices[t]:null;
+      if(cur===pp)return;
+      if(!(cur>0)||Math.abs(pp/cur-1)<=0.15){w.prices=w.prices||{};w.prices[t]=pp;n++;ch=true;}
+    });});
+    if(ch)clientSaveProjects(c.id,projs);
+  });if(n)syncProj();}catch(e){}
+  return n;
+}
 /* pesos REALES de las tenencias ACTUALES (capital invertido por acción, replay de TODAS las operaciones —
    incluye compras/ventas posteriores a la compra inicial): {sel:{t:%},amount} o null si aún no hay compra real.
    Antes se derivaba solo de weeks[0].qty, por lo que una acción comprada después (p.ej. ENEL en Operar) NO entraba
@@ -6588,6 +6616,7 @@ function clientLoad(){
   catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
   try{pricedbAutoSeed();}catch(e){}   // base poblada (demo + cierres) una vez por cliente
   try{pricedbSanitize();}catch(e){}   // auto-saneo en cada carga: sin fines de semana ni arrastres (fidelidad de la base)
+  try{projFixTradeDayPrices();}catch(e){}   // operaciones guardadas con valorización de arrastre → precio real de la transacción
   try{analysisSystemOnly();}catch(e){}
   syncProj();
   simState.sel={};if(invProfile)simState.profile=invProfile.profile;
@@ -7350,6 +7379,7 @@ function removeExampleClients(){try{
 }catch(e){}}
 try{removeExampleClients();}catch(e){}
 try{pricedbAutoSeed();}catch(e){}
+try{projFixTradeDayPrices();}catch(e){}
 try{analysisSystemOnly();}catch(e){}
 render();
 try{autobkTick();}catch(e){}
