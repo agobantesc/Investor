@@ -3709,6 +3709,8 @@ MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máxim
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
 
+REGLA DE DINERO (credibilidad no negociable): las cifras en pesos tienen semántica ESTRICTA y jamás se intercambian. 'valorActualCLP' = lo que la cartera VALE HOY — es la ÚNICA cifra válida cuando el usuario pregunta cuánto tiene, cuánto vale o el monto de su cartera. 'capitalAportadoCLP'/'capitalRealInvertidoCLP' = lo que puso de su bolsillo. 'montoInicialPlan_CLP' = el plan de la compra INICIAL (dato histórico de referencia): PROHIBIDO presentarlo como el monto o valor de la cartera. 'costoCLP' por acción = costo de compra, no valor. Al citar la cartera nombra siempre las tres magnitudes por separado (aportado, valor actual, ganancia) y si no hay seguimiento con valor actual, di que aún no hay valorización — NUNCA uses el plan inicial como sustituto.
+
 REGLA DE ESTADO: NUNCA afirmes un ESTADO de la plataforma —si hay o no cartera activa, si "el sistema está limpio", si hay o no datos— sin verificarlo con la tool que lo establece. El bloque **ESTADO DEL SISTEMA** (abajo, se recalcula cada turno) es la VERDAD del estado: no lo contradigas ni lo adivines a la baja. "Sin análisis formal" **≠** "sin datos ni cartera": el **Investor Score** (get_investor_score), la **cartera activa** (get_active_portfolio), su **seguimiento** (get_performance_summary) y las **proyecciones** (get_projection) NO dependen del análisis formal — funcionan siempre que exista base de precios (score) o una cartera con seguimiento (tracking); no los des por muertos por falta de análisis formal. Ante cualquier pregunta sobre la cartera, llama get_active_portfolio ANTES de decir una palabra sobre si existe. **Prohibido abrir negando lo que no verificaste** (ni "no tengo tu cartera", ni "no hay métricas", antes de mirarlas).
 
 INVESTOR SCORE — LA RECOMENDACIÓN DE LA PLATAFORMA (piedra angular): el Investor Score (0–100, get_investor_score) es la síntesis de TODO el análisis cuantitativo (riesgo-retorno ajustado, fundamentos reales, tendencia) con un candado de confianza por calidad de datos. **Todo el riesgo relevante YA ESTÁ DESCONTADO en el número**: la volatilidad castiga el Sharpe, el α poco confiable se amortigua, las caídas bajan el bloque de resistencia, la data débil acerca el puntaje al neutro. Por eso, al justificar una acción con buen score: hazlo **con convicción**, explicando POR QUÉ es sólida (sus bloques y métricas fuertes) — NUNCA agregues "peros" que el score ya descontó ("buen puntaje pero es volátil / pero su r² es bajo" está PROHIBIDO: si eso importara, el score ya sería más bajo). Un score alto = la plataforma la recomienda, punto. Solo menciona una advertencia si viene en el campo 'alertas' del score (son materiales y ya bajaron el puntaje: preséntala como contexto, no como contradicción) o si el perfil del usuario no calza (ej. conservador y la acción es de riesgo pese a buen score → dilo). El agua/macro/noticias NO están en el score (irían con ruido): úsalos TÚ como color adicional al justificar, no para contradecir el número. Si te preguntan "¿por qué X tiene buen/mal score?", desglosa sus bloques (riesgo-retorno, fundamentos, tendencia, confianza) con cifras. LÉELO POR TRAMOS, no por el puesto exacto: con 12 meses de datos, diferencias menores a ~5 puntos NO son estadísticamente separables (el #1 y el #4 del top pueden ser el mismo nivel) — nunca digas "la mejor es X" por 2-3 puntos; habla de "el grupo de candidatos fuertes (score ≥70)".
@@ -3789,7 +3791,19 @@ function cpRunTool(name,input){
   try{
     if(name==="get_portfolios"){
       syncProj();
-      return JSON.stringify({activo:PF?PF.name:null,proyectos:(PROJECTS||[]).map(p=>({nombre:p.name,fecha:p.date,objetivoCLP:p.amount,beta:+p.bp.toFixed(2),erCapm:+p.erCapm.toFixed(2),sigma:+p.sig.toFixed(1),registros:p.weeks.length,holdings:p.holdings.map(h=>({t:h.t,sector:h.s,peso:+(h.w*100).toFixed(1),montoCLP:Math.round(h.monto),beta:h.b}))}))});
+      // CONTRATO DE DINERO: cada proyecto lleva SIEMPRE su valor ACTUAL (projSummary) además del plan inicial,
+      // con nombres inequívocos — el agente confundía el monto de la compra inicial con "el monto de la cartera".
+      return JSON.stringify({activo:PF?PF.name:null,
+        notaDinero:"DINERO: 'valorActualCLP' = lo que la cartera VALE HOY (la ÚNICA cifra válida para '¿cuánto tengo/vale mi cartera?'). 'capitalAportadoCLP' = lo realmente invertido. 'montoInicialPlan_CLP' = SOLO el plan de la compra inicial: NUNCA lo presentes como monto o valor de la cartera. 'costoCLP' por acción = costo de compra, no valor.",
+        proyectos:(PROJECTS||[]).map(p=>{let s=null;try{s=projSummary(p);}catch(e){}
+          return {nombre:p.name,fecha:p.date,
+            valorActualCLP:(s&&s.hasData)?Math.round(s.value):null,
+            capitalAportadoCLP:s?Math.round(s.invested):null,
+            gananciaNetaCLP:(s&&s.hasData)?Math.round(s.gainNet):null,
+            rentabilidadNeta_pct:(s&&s.hasData)?+s.gainNetPct.toFixed(2):null,
+            montoInicialPlan_CLP:p.amount,
+            beta:+p.bp.toFixed(2),erCapm:+p.erCapm.toFixed(2),sigma:+p.sig.toFixed(1),registros:p.weeks.length,
+            holdings:p.holdings.map(h=>({t:h.t,sector:h.s,pesoObjetivo:+(h.w*100).toFixed(1),costoCLP:Math.round(h.monto),beta:h.b}))};})});
     }
     if(name==="get_active_portfolio"){
       syncProj();
@@ -3801,9 +3815,15 @@ function cpRunTool(name,input){
       const _IMw=(function(){try{return invMetrics();}catch(e){return null;}})();
       const _V=(_IMw&&_IMw.last)?_IMw.last.val:0;
       const _aw={};if(_IMw&&_V>0)_IMw.perStock.forEach(p=>{_aw[p.hd.t]=+(p.val/_V*100).toFixed(1);});
-      const out={nombre:PF.name,aplicada:PF.date,objetivoCLP:PF.amount,capitalRealInvertidoCLP:Math.round(realCap()),betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
+      const _pv={};if(_IMw)_IMw.perStock.forEach(p=>{_pv[p.hd.t]=Math.round(p.val);});
+      const out={nombre:PF.name,aplicada:PF.date,
+        valorActualCLP:(_IMw&&_V>0)?Math.round(_V):null,
+        capitalRealInvertidoCLP:Math.round(realCap()),
+        montoInicialPlan_CLP:PF.amount,
+        notaDinero:"'valorActualCLP' = lo que la cartera VALE HOY (la única cifra válida para '¿cuánto tengo/vale?'). 'capitalRealInvertidoCLP' = lo aportado. 'montoInicialPlan_CLP' = solo el plan de la compra inicial: NUNCA lo presentes como el monto/valor de la cartera. Por acción: 'costoCLP' = costo de compra; 'valorActualCLP' = valor de mercado hoy.",
+        betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
         notaPesos:"pesoObjetivo = plan (referencia del drift); pesoActual = peso real hoy por valor de mercado. Una acción comprada después de la cartera inicial YA queda incorporada al objetivo y a β/σ.",
-        holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,pesoObjetivo:+(h.w*100).toFixed(1),pesoActual:_aw[h.t]!=null?_aw[h.t]:null,montoCLP:Math.round(h.monto),beta:h.b}))};
+        holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,pesoObjetivo:+(h.w*100).toFixed(1),pesoActual:_aw[h.t]!=null?_aw[h.t]:null,costoCLP:Math.round(h.monto),valorActualCLP:_pv[h.t]!=null?_pv[h.t]:null,beta:h.b}))};
       const exp=cpExposure((function(){const s={};PF.holdings.forEach(h=>s[h.t]=+(h.w*100).toFixed(1));return s;})());
       out.exposicionFactorial=exp.Z; out.erMultifactor=exp.erMF; out.correlacionMedia=+exp.PM.corrAvg.toFixed(2);
       const IM=_IMw;
@@ -3981,7 +4001,9 @@ function cpRunTool(name,input){
       syncProj();if(!PF)return "No hay un proyecto de inversión activo. Crea o activa uno en Proyectos / Inversión.";
       const IM=invMetrics();if(!IM)return "El proyecto activo aún no tiene seguimiento. Ingresa su compra y registros en Inversión → Ingresar datos.";
       const L=IM.last;
-      return JSON.stringify({proyecto:PF.name,retorno_twr_pct:+(L.ret*100).toFixed(2),vs_IPSA_pts:+(L.diff*100).toFixed(2),volatilidad_realizada_pct:(IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null),sharpe_realizado:(IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null),max_drawdown_pct:+(IM.maxDD*100).toFixed(2),dias_seguimiento:IM.elapsedDays});
+      return JSON.stringify({proyecto:PF.name,
+        valorActualCLP:Math.round(L.val),capitalAportadoCLP:Math.round(IM.aport),gananciaPerdidaCLP:Math.round(L.val-IM.aport),
+        retorno_twr_pct:+(L.ret*100).toFixed(2),vs_IPSA_pts:+(L.diff*100).toFixed(2),volatilidad_realizada_pct:(IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null),sharpe_realizado:(IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null),max_drawdown_pct:+(IM.maxDD*100).toFixed(2),dias_seguimiento:IM.elapsedDays});
     }
     return "Herramienta desconocida.";
   }catch(err){return "Error ejecutando "+name+": "+err.message;}
