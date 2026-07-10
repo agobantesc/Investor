@@ -1739,7 +1739,12 @@ function viewComparativa(){
   const mosCell=s=>{let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;}catch(e){}
     if(!iv)return `<td class="tnum num" style="color:${muted}">—</td>`;
     const ml=mosLabel(iv.mos),mc=({green,red,amber,ink})[ml.cls]||ink;
-    return `<td class="tnum num" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(iv.value).toLocaleString("es-CL")} · banda $${Math.round(iv.lo).toLocaleString("es-CL")}–$${Math.round(iv.hi).toLocaleString("es-CL")} · ${ml.txt}">${(iv.mos>=0?"+":"")+(iv.mos*100).toFixed(0)+"%"}</td>`;};
+    // fiabilidad visible aquí también: 1 sola ancla o anclas que discrepan mucho = referencia gruesa (⚠).
+    // El % se ACOTA en pantalla a ≤−100% (el exacto va en el tooltip): "−349%" aparenta precisión que no existe.
+    const lowFiab=(iv.n<2)||(iv.disp>0.6);
+    const shown=iv.mos<-1?"≤−100%":((iv.mos>=0?"+":"")+(iv.mos*100).toFixed(0)+"%");
+    const fiabTxt=iv.n<2?"fiabilidad BAJA (una sola ancla)":iv.disp>0.6?"fiabilidad BAJA (las anclas discrepan)":iv.disp>0.35?"fiabilidad media":"fiabilidad alta";
+    return `<td class="tnum num" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(iv.value).toLocaleString("es-CL")} · banda $${Math.round(iv.lo).toLocaleString("es-CL")}–$${Math.round(iv.hi).toLocaleString("es-CL")} · margen exacto ${(iv.mos*100).toFixed(0)}% · ${ml.txt} · ${fiabTxt}">${shown}${lowFiab?' <span style="color:'+amber+'">⚠</span>':""}</td>`;};
   const rows=byS.map(s=>{const a=s.a24;return `<tr><td>${tk(s)}</td><td>${badge(s.s,s.c)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(retOf(s))}</td>
     <td class="tnum num">${p0(a.sig)}</td><td class="tnum num" style="font-weight:800;color:${a.sharpe>=0?green:red}">${a.sharpe.toFixed(2)}</td>
@@ -2111,7 +2116,8 @@ function viewComparador(){
     :`<div class="note">Aún no has guardado escenarios. Ve al <b>Constructor de portafolio</b>, arma una alternativa y pulsa <b>Guardar escenario</b>. Luego vuelve aquí para compararlas lado a lado.</div>`);
   if(!SCEN.length)return intro;
   const rows=SCEN.map((s,i)=>{const comp=s.comp.map(c=>`<span class="tag" style="border-color:${c.c}55;color:${c.c}">${c.t} ${c.w}%</span>`).join(" ");
-    return `<tr><td><span class="lgdot" style="background:${SCPAL[i%SCPAL.length]}"></span> <b>${s.name}</b></td>
+    const isAuto=/^sim_/.test(String(s.id));
+    return `<tr><td><span class="lgdot" style="background:${SCPAL[i%SCPAL.length]}"></span> <b>${s.name}</b>${isAuto?' <span class="badge" style="font-size:8.5px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33" title="Escenario AUTOMÁTICO: refleja tu cartera real y se actualiza solo con cada operación. Puedes quitarlo con ✕ (no vuelve a crearse).">auto · cartera real</span>':""}</td>
     <td style="max-width:260px;white-space:normal">${comp}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">${s.m.bp.toFixed(2)}</td>
     <td class="tnum num" style="color:${indigo};font-weight:600">${p0(s.m.erCapm)}</td>
@@ -2165,11 +2171,20 @@ function attachMultiHover(id){
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
 function attachComparador(){
-  document.querySelectorAll("[data-delscen]").forEach(b=>b.onclick=()=>{const id=+b.dataset.delscen;if(window.confirm("¿Eliminar este escenario?")){SCEN=SCEN.filter(s=>s.id!==id);lsSet("pf_scenarios_v1",SCEN);render();}});
-  document.querySelectorAll("[data-loadscen]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(s=>s.id===+b.dataset.loadscen);if(sc){scenEditId=sc.id;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;modulo="sim";page="constructor";render();}});
-  document.querySelectorAll("[data-renscen]").forEach(b=>b.onclick=()=>renameScenario(+b.dataset.renscen));
-  document.querySelectorAll("[data-applyscen]").forEach(b=>b.onclick=()=>applyScenario(+b.dataset.applyscen));
-  const cl=document.getElementById("clrscen");if(cl)cl.onclick=()=>{if(window.confirm("¿Eliminar TODOS los escenarios guardados?")){SCEN=[];lsSet("pf_scenarios_v1",SCEN);render();}};
+  // ids de escenario SIEMPRE como string: los automáticos son "sim_<proyecto>" y el viejo +id los volvía NaN
+  // (por eso "no se podía eliminar"). Al quitar uno automático se marca el proyecto (noAutoScen) para que
+  // projSyncReal NO lo vuelva a crear en la próxima operación/sincronización.
+  const _dropAuto=id=>{const m=String(id).match(/^sim_(.+)$/);if(!m)return;
+    try{CLIENTS.forEach(c=>{const projs=clientProjects(c.id)||[];let ch=false;projs.forEach(p=>{if(String(p.id)===m[1]){p.noAutoScen=1;ch=true;}});if(ch)clientSaveProjects(c.id,projs);});syncProj();}catch(e){}};
+  document.querySelectorAll("[data-delscen]").forEach(b=>b.onclick=()=>{const id=b.dataset.delscen;const isAuto=/^sim_/.test(String(id));
+    if(window.confirm(isAuto?"Este escenario es AUTOMÁTICO (sigue tu cartera real). ¿Quitarlo del comparador?\n\nNo se volverá a crear solo; tu cartera y su seguimiento no se tocan.":"¿Eliminar este escenario?")){
+      SCEN=SCEN.filter(s=>String(s.id)!==String(id));lsSet("pf_scenarios_v1",SCEN);
+      _dropAuto(id);purgeLinkEverywhere("scenario",id);render();}});
+  document.querySelectorAll("[data-loadscen]").forEach(b=>b.onclick=()=>{const sc=SCEN.find(s=>String(s.id)===String(b.dataset.loadscen));if(sc){scenEditId=sc.id;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;modulo="sim";page="constructor";render();}});
+  document.querySelectorAll("[data-renscen]").forEach(b=>b.onclick=()=>renameScenario(b.dataset.renscen));
+  document.querySelectorAll("[data-applyscen]").forEach(b=>b.onclick=()=>applyScenario(b.dataset.applyscen));
+  const cl=document.getElementById("clrscen");if(cl)cl.onclick=()=>{if(window.confirm("¿Eliminar TODOS los escenarios guardados?\n\nLos automáticos ('Cartera real') tampoco se volverán a crear solos.")){
+    SCEN.forEach(s=>{_dropAuto(s.id);purgeLinkEverywhere("scenario",s.id);});SCEN=[];lsSet("pf_scenarios_v1",SCEN);render();}};
   attachMultiHover("cmpproj");
 }
 
@@ -2524,7 +2539,7 @@ function genPDF(){
 }
 
 // ===== INVERSIÓN (bloqueado) =====
-function applyScenario(id){const sc=SCEN.find(s=>s.id===id);if(!sc)return;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;applyInvestment(sc.name);}
+function applyScenario(id){const sc=SCEN.find(s=>String(s.id)===String(id));if(!sc)return;simState.sel=Object.assign({},sc.sel);simState.amount=sc.amount;applyInvestment(sc.name);}
 /* ¿el proyecto está "vacío" (recién creado, sin inversión definida)? */
 function projIsEmpty(p){return !!p&&!(p.holdings&&p.holdings.length)&&!(p.weeks&&p.weeks.length);}
 /* crea un PROYECTO vacío (sin inversión todavía); el usuario lo construye: análisis → simulación → invertir */
@@ -3760,7 +3775,7 @@ const COPILOT_TOOLS=[
   {name:"get_projection",description:"Proyección Monte Carlo (probabilística) del capital a futuro: simula trayectorias log-normales (GBM) con el retorno esperado (μ) y el riesgo (σ) del proyecto ACTIVO —o los que le pases— y devuelve, al horizonte pedido: mediana, rango p25–p75, escenario adverso p5, optimista p95, probabilidad de terminar bajo lo aportado y, si das meta, probabilidad de alcanzarla. Es el mismo motor del módulo Montecarlo. Úsalo para '¿cuánto podría valer en X años?', VaR y planificación de metas. Nunca inventes proyecciones: llámalo.",input_schema:{type:"object",properties:{horizonYears:{type:"number",description:"Horizonte en años (default 5)"},monthlyContribution:{type:"number",description:"Aporte mensual en CLP (opcional)"},goal:{type:"number",description:"Meta de capital en CLP (opcional; devuelve prob. de alcanzarla)"},initialCapital:{type:"number",description:"Capital inicial CLP (opcional; default = valor del proyecto activo)"},expectedReturnPct:{type:"number",description:"μ anual en % (opcional; default = E(R) CAPM del proyecto)"},volatilityPct:{type:"number",description:"σ anual en % (opcional; default = σ del proyecto)"}}}},
   {name:"get_investor_profile",description:"Perfil de inversionista del usuario (conservador/moderado/riesgoso) para personalizar recomendaciones.",input_schema:{type:"object",properties:{}}},
   {name:"get_investor_score",description:"Investor Score (0–100) de TODAS las acciones del sistema — la RECOMENDACIÓN de la plataforma, síntesis de todo el análisis (riesgo-retorno ajustado 45% + fundamentos reales 30% + tendencia 25%) con candado de confianza por calidad de datos. Todo el riesgo relevante YA está descontado en el número. Devuelve el ranking con sub-bloques (riesgo-retorno, fundamentos, tendencia), confianza, métricas (Sharpe, σ, α amortiguado, r², caída máx, momentum) y alertas materiales. Úsalo para '¿qué acción conviene?', '¿por qué X tiene ese puntaje?', o para rankear candidatos. Se recalcula cada día, independiente del análisis activo.",input_schema:{type:"object",properties:{limit:{type:"number",description:"Máximo de acciones (default todas, ordenadas por score desc)"}}}},
-  {name:"get_imported_analysis",description:"Si el usuario importó un set de acciones propio, devuelve sus métricas CAPM, benchmark y correlaciones. Vacío si usa el set demo.",input_schema:{type:"object",properties:{}}},
+  {name:"get_imported_analysis",description:"Métricas CAPM del ANÁLISIS DEL SISTEMA (siempre activo, construido desde la base real): benchmark, β, retornos, σ, Sharpe y α de Jensen por acción, con su ventana y cadencia.",input_schema:{type:"object",properties:{}}},
   {name:"get_multifactor",description:"Modelo multifactor de estilo (más allá del CAPM). Por cada acción del set activo: Composite, z-scores de los 6 factores (Momentum, Low-Vol, Value, Quality, Size, Dividend Yield), E(R) multifactor y estilo; más los pesos de factor del perfil. Úsalo para analizar/recomendar con factores, no solo β.",input_schema:{type:"object",properties:{}}},
   {name:"get_market_indicators",description:"Indicadores financieros y macroeconómicos EN VIVO de Chile (mindicador.cl): dólar, euro, cobre, UF, UTM, IPC, tasa de desempleo, Imacec, TPM, bitcoin, más indicadores manuales del usuario (ej. petróleo, S&P 500). Úsalos para contextualizar recomendaciones con el entorno de mercado actual.",input_schema:{type:"object",properties:{}}},
   {name:"get_market_news",description:"Titulares financieros y económicos de Chile (Google News) cargados en la app. Úsalos para leer la coyuntura, detectar drivers (TPM, cobre, dólar, petróleo, IPSA) y relacionarlos con acciones del set. Si no hay noticias cargadas, indica abrir el Home o Mercados para refrescar.",input_schema:{type:"object",properties:{limit:{type:"number",description:"Máximo de titulares (default 8)"}}}},
@@ -3923,7 +3938,7 @@ function cpRunTool(name,input){
           sharpe:r.sharpe,sigma_pct:r.sig,alpha_amortiguado:r.alphaAdj,r2:r.r2,caidaMax_pct:r.maxDD,momentum6m_pct:r.mom6m,upside_analistas_pct:r.upside,
           alertas:r.alertas}))});
     }
-    if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El usuario usa el set demo (IPSA); no ha importado datos propios.";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
+    if(name==="get_imported_analysis"){if(!(typeof IMP!=="undefined"&&IMP))return "El análisis del sistema aún no está construido (la base necesita ≥2 acciones y el IPSA con ~12 meses alineados).";return JSON.stringify({benchmark:IMP.bench.name,periodicidad:IMP.freq,ventana:IMP.window,rf:IMP.rf,primaImplicita:+IMP.prima.toFixed(2),benchRetAnual:+IMP.bench.ret.toFixed(2),acciones:IMP.assets.map(a=>({t:a.t,beta:+a.b.toFixed(2),retAnual:+a.a24.ret.toFixed(1),sigma:+a.a24.sig.toFixed(1),sharpe:+a.a24.sharpe.toFixed(2),alphaJensen:+a.a24.jensen.toFixed(1),r2:+a.a24.r2.toFixed(2)}))});}
     if(name==="get_multifactor"){
       if(typeof evalIsEmpty==="function"&&evalIsEmpty()){
         // los z-scores de estilo completos requieren un set activo, PERO fundamentales + bloques del score son reales
@@ -3941,9 +3956,11 @@ function cpRunTool(name,input){
       return JSON.stringify(out);
     }
     if(name==="get_market_indicators"){
+      try{if(typeof mindAutoRefresh==="function")mindAutoRefresh();}catch(e){}   // si están vencidos, dispara el refresco en segundo plano
       const hasM=(typeof MIND!=="undefined"&&MIND),hasOil=(typeof OIL!=="undefined"&&OIL);
       if(!hasM&&!hasOil)return "El usuario aún no cargó indicadores de mercado (módulo Mercados, botón superior). Sugiérele abrirlo y pulsar Actualizar para traer dólar, euro, cobre, petróleo, IPC, desempleo, etc.";
-      const out={fuentes:["mindicador.cl (Banco Central de Chile / INE)","Stooq (petróleo)"],actualizado:(typeof mindTs!=="undefined"?mindTs:null)};
+      const out={fuentes:["mindicador.cl (Banco Central de Chile / INE)","Stooq (petróleo)"],actualizado:(typeof mindTs!=="undefined"?mindTs:null),
+        frescura:(typeof mindStale==="function"&&mindStale())?"DESACTUALIZADOS (más de 6 h): se están refrescando en segundo plano — adviértelo si citas cifras, y sugiere reconsultar en unos segundos":"al día"};
       if(hasM){out.indicadores={};MIND_DEF.forEach(d=>{if(MIND[d.k])out.indicadores[d.label]={valor:MIND[d.k].valor,unidad:MIND[d.k].unidad,fecha:MIND[d.k].fecha};});}
       if(hasOil){out.petroleo={};OIL_DEF.forEach(d=>{if(OIL[d.k])out.petroleo[d.label]={valor:OIL[d.k].valor,unidad:d.unit,variacion_pct:OIL[d.k].chg!=null?+OIL[d.k].chg.toFixed(2):null,fecha:OIL[d.k].fecha};});}
       return JSON.stringify(out);
@@ -4020,6 +4037,7 @@ function cpRenderHead(){
     <button class="cp-x" id="cpClose" title="Cerrar">✕</button>`;
 }
 function cpWelcome(){const n=(typeof AUTH!=="undefined"&&AUTH&&AUTH.enabled&&AUTH.user)?(" "+AUTH.user):"";return "Hola"+n+", ¿qué quieres que revisemos hoy? El **desempeño de los proyectos**, **estudiar una acción o un nuevo análisis**, u **optimizar la cartera**. Tú me dices y partimos.";}
+let _cpFollow=true;   // el chat sigue al agente mientras escribe (se suelta solo si el usuario sube a leer)
 function cpRenderBody(){
   const body=document.getElementById("cpbody");if(!body)return;
   if(!cpKey){
@@ -4062,11 +4080,14 @@ function cpRenderBody(){
   if(cpMsgs.length===0){
     h+=`<div class="cp-msg a"><div class="who"><span class="live-dot"></span>Agente</div>${cpFormat(cpWelcome())}</div>`;
   }
-  // SCROLL: solo baja si el usuario YA estaba abajo (si subió a leer, no lo arrastramos)
-  const nb=(body.scrollHeight-body.scrollTop-body.clientHeight)<90;
+  // SCROLL PEGADO AL FONDO: mientras el agente escribe, la vista SIGUE el texto (siempre al pie). El "seguir"
+  // solo se suelta si el usuario sube a leer (scroll manual hacia arriba) y se re-engancha al volver abajo o al
+  // enviar un mensaje. Antes un salto grande (bloque de herramienta) superaba el umbral y el chat dejaba de bajar.
+  if(!body._followWired){body._followWired=1;_cpFollow=true;
+    body.addEventListener("scroll",()=>{_cpFollow=(body.scrollHeight-body.scrollTop-body.clientHeight)<120;});}
   body.innerHTML=h;
   body.querySelectorAll("[data-cpsug]").forEach(b=>b.onclick=()=>cpSend(b.dataset.cpsug));
-  if(nb)body.scrollTop=body.scrollHeight;
+  if(_cpFollow!==false)body.scrollTop=body.scrollHeight;
   // avanza el typewriter a ritmo LENTO y legible (~50–125 car/s), decoupled de la red. Cadencia
   // deliberadamente pausada para poder leer mientras escribe; desacelera al final (lectura natural).
   // Nunca arrastra la conversación hacia abajo salvo que ya estuvieras al pie (control del scroll arriba).
@@ -4137,6 +4158,7 @@ async function cpStreamOnce(noTools){
 }
 async function cpSend(text){
   text=(text||"").trim();if(!text||cpBusy||!cpKey)return;
+  _cpFollow=true;   // al enviar, la vista vuelve al pie y sigue la respuesta
   cpMsgs.push({role:"user",content:text});cpTurnMax=maxTokensFor();cpBusy=true;cpRenderBody();cpRenderFoot();
   try{
     let guard=0,lastStop=null;
@@ -4816,6 +4838,10 @@ async function autopxForce(onProgress){
 /* saneo defensivo: Yahoo a veces trae basura en los .SN (P/B calculado en otra moneda → miles; yield 0
    cuando NO tiene el dato). Fuera de rango plausible → null y la app muestra "—" en vez de mentir. */
 function fundSanitize(j){try{if(!j||!j.byTicker)return j;Object.keys(j.byTicker).forEach(t=>{const f=j.byTicker[t];const rg=(k,lo,hi)=>{if(f[k]!=null&&!(f[k]>lo&&f[k]<hi))f[k]=null;};rg("pe",0,500);rg("fpe",0,500);rg("pb",0,100);rg("dy",0,30);rg("roe",-100,200);rg("nm",-100,100);rg("eg",-95,400);rg("rg",-95,400);rg("de",0,25);rg("peg",-50,50);rg("evEbitda",0,200);rg("target",0,Infinity);rg("nAn",0,500);if(f.dps===0)f.dps=null;
+  // P/U trailing y forward IRRECONCILIABLES (>6×): al menos uno viene corrupto del feed y no se puede saber cuál
+  // (caso real: MALLPLAZA pe 5,9 / fpe 70,9 → margen de seguridad −349% falso). La utilidad no es evaluable por
+  // múltiplos → ambos a null (regla del producto: mejor sin dato que con uno falso). peUnusable alimenta la alerta.
+  if(f.pe!=null&&f.fpe!=null&&f.pe>0&&f.fpe>f.pe*6){f.pe=null;f.fpe=null;f.peUnusable=true;}
   // dps CRUZADO contra precio y yield: un dps en otra unidad/escala (yield implícito <0,3% sin que el dy lo
   // confirme, o fuera de [0,4×–2,5×] del dy reportado) es basura del feed → null. Mejor SIN ancla DDM que con
   // una falsa: un D0≈0 (p.ej. dps 0,01 con precio 1.081) arrastraba la mediana del valor intrínseco a cero.
@@ -5067,6 +5093,9 @@ function systemAnalysisRefresh(){
   IMP=imp;impActiveId="datos";lsSet("inv_import_v1",IMP);lsSet("inv_imp_active_id","datos");
   setActive(impToActive());DATASET="import";lsSet("inv_dataset_active","import");
   anaEffMonths=months;
+  // las β por acción salen de ESTE análisis → re-sincroniza los parámetros (β, σ, E(R), Sharpe, corr) de TODOS
+  // los proyectos con inversión real, para que nunca queden con métricas de un análisis anterior
+  try{let ch=false;(PROJECTS||[]).forEach(p=>{try{if(projSyncReal(p))ch=true;}catch(e){}});if(ch)saveProjects();}catch(e){}
   return true;
 }
 /* compat: la activación desde la base ES el refresh del análisis del sistema (la cadencia la decide caResolve) */
@@ -5670,7 +5699,7 @@ function mindFmt(v,dec,unit){
   const n=(+v).toLocaleString("es-CL",{minimumFractionDigits:dec,maximumFractionDigits:dec});
   return unit==="%"?(n+"%"):(unit+" "+n);
 }
-function mindChange(k){const s=MINDH[k];if(!s||s.length<2)return null;const a=s[0],b=s[s.length-1];if(!a)return null;return (b/a-1)*100;}
+function mindChange(k){const s=MINDH[k];if(!s||s.length<2)return null;const a=s[s.length-2],b=s[s.length-1];if(!a)return null;return (b/a-1)*100;}   // variación vs el dato ANTERIOR (diaria), no vs 30 días atrás — "+2,9%" en el dólar era el mes entero
 function mindDate(f){if(!f)return "";const d=(""+f).slice(0,10).split("-");return d.length===3?(d[2]+"-"+d[1]+"-"+d[0]):f;}
 function mindAgo(){if(!mindTs)return "";const ms=Date.now()-new Date(mindTs).getTime();const m=Math.round(ms/60000);if(m<1)return "recién";if(m<60)return "hace "+m+" min";const h=Math.round(m/60);if(h<24)return "hace "+h+" h";return "hace "+Math.round(h/24)+" d";}
 function mindSparkSVG(series,colOverride){
@@ -5682,7 +5711,7 @@ function mindSparkSVG(series,colOverride){
   const gid="sp"+Math.abs((series[0]*1000|0)+series.length);
   return `<svg class="mkt-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".22"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
-function mktChgHtml(chg){return (chg==null||!isFinite(chg))?"":`<span class="mkt-chg ${chg>=0?"up":"dn"}">${chg>=0?"▲":"▼"} ${Math.abs(chg).toLocaleString("es-CL",{maximumFractionDigits:2})}%</span>`;}
+function mktChgHtml(chg){return (chg==null||!isFinite(chg))?"":`<span class="mkt-chg ${chg>=0?"up":"dn"}" title="variación vs el dato anterior">${chg>=0?"▲":"▼"} ${Math.abs(chg).toLocaleString("es-CL",{maximumFractionDigits:2})}%</span>`;}
 function mktTileHTML(label,valHtml,chg,sparkSeries,sub){
   return `<div class="mkt-tile"><div class="mkt-top"><span class="mkt-name">${label}</span></div>
     <div class="mkt-val">${valHtml}${mktChgHtml(chg)}</div>
@@ -5754,25 +5783,30 @@ async function oilFetch(){
   let ok=0;
   await Promise.allSettled(OIL_DEF.map(async d=>{
     const p=await oilOne(d);if(!p)return;
-    const win=p.closes.slice(-30),last=win[win.length-1],first=win[0];
-    OIL=OIL||{};OIL[d.k]={valor:last,fecha:p.lastDate,chg:first?(last/first-1)*100:null};
+    const win=p.closes.slice(-30),last=win[win.length-1],prev=win.length>=2?win[win.length-2]:null;
+    OIL=OIL||{};OIL[d.k]={valor:last,fecha:p.lastDate,chg:prev?(last/prev-1)*100:null};   // variación DIARIA (el "−32%" del Brent era la ventana completa de 30 sesiones)
     OILH[d.k]=win;ok++;
   }));
   if(ok){lsSet("inv_oil_v1",OIL);lsSet("inv_oilh_v1",OILH);oilErr="";}
   else if(!OIL)oilErr="fuente no disponible";
 }
 async function mindFetch(){
-  if(mindBusy)return;mindBusy=true;render();
+  if(mindBusy)return;mindBusy=true;mindLastTry=Date.now();render();
   await Promise.allSettled([mindCore(),oilFetch()]);
   mindBusy=false;render();
 }
+/* indicadores VENCIDOS: sin datos o con más de 6 horas — se refrescan SOLOS al abrir Home/Mercados.
+   mindLastTry evita el reintento en bucle cuando la fuente no responde (reintenta cada 10 min como máximo). */
+let mindLastTry=0;
+function mindStale(){if(!mindTs)return true;try{return (Date.now()-new Date(mindTs).getTime())>6*3600e3;}catch(e){return true;}}
+function mindAutoRefresh(){try{if(!mindBusy&&mindStale()&&(Date.now()-mindLastTry>600e3)&&typeof mindFetch==="function")mindFetch();}catch(e){}}
 function viewMercados(){
   const head=card("Mercados · indicadores en vivo",
     "Tipo de cambio, materias primas, petróleo y macro de Chile, en tiempo casi-real — directo desde tu navegador, sin servidores ni clave",
     `<div class="note" style="margin:0 0 12px">Fuentes: <b>mindicador.cl</b> (Banco Central de Chile e INE) para tipo de cambio, cobre y macro; <b>Stooq</b> para el <b>petróleo</b> (WTI y Brent). Se consultan al abrir el módulo y con <b>Actualizar</b>; los últimos valores quedan guardados para verlos sin conexión.</div>
      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
        <button class="btn btn-pri" id="mindReload" ${mindBusy?'disabled style="opacity:.6"':""}>${mindBusy?"Actualizando…":"↻ Actualizar"}</button>
-       ${mindTs?`<span class="note" style="margin:0">Actualizado ${mindAgo()} · ${mindDate(mindTs)}</span>`:`<span class="note" style="margin:0">Aún sin consultar</span>`}
+       ${mindTs?`<span class="note" style="margin:0;${mindStale()?"color:var(--amber);font-weight:700":""}">${mindStale()?"⚠ Datos de "+mindAgo()+" — actualizando…":"Actualizado "+mindAgo()+" · "+mindDate(mindTs)}</span>`:`<span class="note" style="margin:0">Aún sin consultar</span>`}
      </div>`);
   let body="";
   if(mindErr&&!MIND){
@@ -5794,6 +5828,7 @@ function viewMercados(){
 }
 function attachMercados(){
   const rl=document.getElementById("mindReload");if(rl)rl.onclick=mindFetch;
+  mindAutoRefresh();   // al abrir Mercados con datos vencidos (>6 h), se refrescan solos
   const rt=document.getElementById("mindRetry");if(rt)rt.onclick=mindFetch;
   if(!mindAuto){mindAuto=true;if((!MIND||!OIL)&&!mindBusy)mindFetch();}
 }
@@ -5862,6 +5897,7 @@ function opDo(){
           // sella en la operación el retorno exigido (y β) de la cartera RESULTANTE: la curva "Esperado CAPM" del
           // seguimiento usa esta tasa DESDE este día en adelante (el CAPM se recalcula desde la compra/venta).
           _wk.ev.erCapm=PF.erCapm;_wk.ev.bp=PF.bp;}
+        try{projSyncReal(PF);}catch(e){}   // sincroniza también el escenario "Cartera real" del comparador (si el usuario no lo quitó)
       }
     }
   }catch(e){}
@@ -5953,7 +5989,7 @@ function viewContab(){
   let realizedCard="";
   if(sales.length){
     const tNet=sales.reduce((a,s)=>a+s.net,0),tGross=sales.reduce((a,s)=>a+s.grossGain,0),tFee=sales.reduce((a,s)=>a+s.fee,0);
-    const srows=sales.slice().reverse().map(s=>`<tr><td>${s.date}</td><td style="color:var(--faint)">${(""+s.proj).replace(/</g,"&lt;")}</td><td><b>${s.t}</b></td><td class="r">${s.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(s.price)}</td><td class="r">${fmtCLP(s.proceeds)}</td><td class="r">${fmtCLP(s.cost)}</td><td class="r" style="color:var(--mut)">${s.fee?fmtCLP(s.fee):"—"}</td><td class="r" style="color:${s.net>=0?green:red};font-weight:800">${(s.net>=0?"+":"−")+fmtCLP(Math.abs(s.net))}</td></tr>`).join("");
+    const srows=sales.slice().sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:0)).map(s=>`<tr><td>${s.date}</td><td style="color:var(--faint)">${(""+s.proj).replace(/</g,"&lt;")}</td><td><b>${s.t}</b></td><td class="r">${s.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(s.price)}</td><td class="r">${fmtCLP(s.proceeds)}</td><td class="r">${fmtCLP(s.cost)}</td><td class="r" style="color:var(--mut)">${s.fee?fmtCLP(s.fee):"—"}</td><td class="r" style="color:${s.net>=0?green:red};font-weight:800">${(s.net>=0?"+":"−")+fmtCLP(Math.abs(s.net))}</td></tr>`).join("");
     realizedCard=card("Detalle de ventas realizadas",`Cada venta con su fecha, precio, monto, costo promedio y comisión (IVA incl.) · ${sales.length} venta${sales.length!==1?"s":""}`,
       `<div class="tw"><table><thead><tr><th>Fecha</th><th>Proyecto</th><th>Acción</th><th class="r">Acciones</th><th class="r">Precio venta</th><th class="r">Monto venta</th><th class="r">Costo prom.</th><th class="r">Comisión</th><th class="r">Resultado neto</th></tr></thead><tbody>${srows}</tbody>
       <tfoot><tr style="border-top:2px solid var(--line2);font-weight:800"><td colspan="5">Total ventas</td><td class="r">${fmtCLP(sales.reduce((a,s)=>a+s.proceeds,0))}</td><td class="r">${fmtCLP(sales.reduce((a,s)=>a+s.cost,0))}</td><td class="r" style="color:var(--mut)">${fmtCLP(tFee)}</td><td class="r" style="color:${tNet>=0?green:red}">${(tNet>=0?"+":"−")+fmtCLP(Math.abs(tNet))}</td></tr></tfoot></table></div>
@@ -5972,7 +6008,7 @@ function viewContab(){
   const projCard=card("Por proyecto","Capital invertido, valor actual y rentabilidad de cada proyecto",
     `<div class="tw"><table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th><th class="r">Ops.</th></tr></thead><tbody>${projRows}</tbody></table></div>`);
   const allTx=[];withOps.forEach(({p,A})=>A.L.tx.forEach(x=>allTx.push(Object.assign({proj:p.name,projId:p.id},x))));
-  allTx.sort((a,b)=>a.date<b.date?1:(a.date>b.date?-1:0));
+  allTx.sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:0));   // orden CRONOLÓGICO: la más antigua arriba (libro contable)
   const multi=withOps.length>1;
   if(multi&&contabTxTab!=="all"&&!withOps.some(x=>String(x.p.id)===String(contabTxTab)))contabTxTab="all";
   const showProj=multi&&contabTxTab==="all";   // la columna "Proyecto" solo tiene sentido en la vista consolidada
@@ -5981,7 +6017,7 @@ function viewContab(){
   const txRows=txShown.map(txRow).join("");
   const txTabs=multi?`<div class="ctx-tabs"><button class="ctxtab ${contabTxTab==="all"?"on":""}" data-ctxtab="all">Todos</button>${withOps.map(({p})=>`<button class="ctxtab ${String(contabTxTab)===String(p.id)?"on":""}" data-ctxtab="${p.id}">${(""+p.name).replace(/</g,"&lt;")}</button>`).join("")}</div>`:"";
   const _selName=(multi&&contabTxTab!=="all")?(withOps.find(x=>String(x.p.id)===String(contabTxTab))||{}).p:null;
-  const txSub=multi?(contabTxTab==="all"?`${allTx.length} operaciones en ${withOps.length} proyectos · consolidado · más recientes arriba`:`${txShown.length} operación${txShown.length!==1?"es":""} de "${_selName?(""+_selName.name).replace(/</g,"&lt;"):""}" · más recientes arriba`):`${allTx.length} operaciones · fecha, precio, monto, comisión e IVA de cada compra/venta · más recientes arriba`;
+  const txSub=multi?(contabTxTab==="all"?`${allTx.length} operaciones en ${withOps.length} proyectos · consolidado · en orden cronológico (la más antigua arriba)`:`${txShown.length} operación${txShown.length!==1?"es":""} de "${_selName?(""+_selName.name).replace(/</g,"&lt;"):""}" · en orden cronológico (la más antigua arriba)`):`${allTx.length} operaciones · fecha, precio, monto, comisión e IVA de cada compra/venta · en orden cronológico (la más antigua arriba)`;
   const txCard=card("Libro de operaciones"+(multi?" por proyecto":""),txSub,
     `${txTabs}<div class="tw"><table><thead><tr>${showProj?"<th>Proyecto</th>":""}<th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">IVA</th><th class="r">Efectivo</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table></div>`+(multi?`<div class="note" style="margin:11px 0 0">El <b>informe consolidado para el contador</b> incluye el libro completo de <b>todos</b> los proyectos.</div>`:""));
   const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto. El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen y fechas de adquisición). Entrega el <b>informe consolidado</b> a tu contador como respaldo ordenado.");
@@ -6160,7 +6196,9 @@ function projSyncReal(p){
   // "objetivo vs real". Solo se actualizan las métricas del proyecto y el escenario "Cartera real".
   try{const M=pMetricsUniverse(sel.sel,t=>{const hd=p.holdings.find(h=>h.t===t);return hd?hd.b:null;});
     if(M){p.bp=+M.bp.toFixed(3);p.erCapm=+M.erCapm.toFixed(2);p.sig=+M.sig.toFixed(2);p.sharpe=+M.sharpe.toFixed(2);p.corrAvg=+M.corrAvg.toFixed(2);}}catch(e){}
-  try{const sc=projDefaultScenario(p);if(sc){const i=SCEN.findIndex(s=>String(s.id)===String(sc.id));if(i>=0)SCEN[i]=sc;else SCEN.push(sc);lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
+  try{const sc=projDefaultScenario(p);if(sc){const i=SCEN.findIndex(s=>String(s.id)===String(sc.id));
+    if(i>=0)SCEN[i]=sc;else if(!p.noAutoScen)SCEN.push(sc);   // si el usuario lo quitó del comparador, NO se resucita
+    lsSet("pf_scenarios_v1",SCEN);}}catch(e){}
   return true;
 }
 /* REPARA el objetivo de acciones incorporadas DESPUÉS de crear la cartera (compradas en Operar) que quedaron con
@@ -6903,6 +6941,7 @@ function investorScoreCompute(){
     if(trendOf(s)!=null&&trendOf(s)<-12&&(momOf(s)==null||momOf(s)<0))alertas.push("en caída reciente");
     if(mddOf(s)>0.28)alertas.push("tuvo un drawdown importante en el año");
     if(_nonRec)alertas.push("utilidad reciente probablemente no recurrente (P/U forward ≫ trailing): valorización y ROE ajustados");
+    if(f.peUnusable)alertas.push("P/U trailing y forward irreconciliables en el feed (dato de utilidad no confiable): los múltiplos de utilidad se excluyeron de su valorización");
     if(moss[si]!=null&&moss[si]<=-15)alertas.push("cotiza sobre su valor intrínseco estimado (margen de seguridad negativo)");
     if(nFund<2)alertas.push("fundamentos incompletos (Yahoo no los cubre)");
     if((s.a24.r2||0)<0.05)alertas.push("baja correlación con el IPSA (β poco confiable, α amortiguado)");
@@ -7232,7 +7271,7 @@ function attachHome(){
   try{attachMultiHover("mgtot");}catch(e){}
   document.querySelectorAll("[data-newsretry]").forEach(b=>b.onclick=()=>{try{newsFetch(true);}catch(e){}});
   const _wx=document.querySelector("[data-welcomehide]");if(_wx)_wx.onclick=()=>{try{localStorage.setItem("inv_welcome_hide","1");}catch(e){}render();};
-  if(!MIND&&!mindBusy&&typeof mindFetch==="function"){try{mindFetch();}catch(e){}}
+  try{mindAutoRefresh();}catch(e){}   // Home también refresca indicadores vencidos (antes solo si NUNCA se habían cargado)
   if(typeof newsFetch==="function"){try{newsFetch();}catch(e){}}
 }
 /* topbar switcher */
