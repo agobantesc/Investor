@@ -2859,13 +2859,20 @@ function viewInvActive(){
       ${(()=>{const _ri=_real?_real.tot:(realCap()||PF.amount);return tile("Capital aportado",fmtCLP(IM.aport),IM.aport>_ri+1?("inicial "+fmtCLP(_ri)+" + aportes"):"capital realmente invertido",indigo,ink);})()}
     </div></div></div>`;
   const ret100=v=>((v>=100?"+":"")+(v-100).toFixed(2)+"%");
-  const dates=IM.series.map(s=>s.date);
+  // COLAPSO VISUAL POR FECHA: varias operaciones el mismo día son varios REGISTROS (así lo exige el libro y la
+  // contabilidad), pero los GRÁFICOS muestran UN solo punto por fecha — el último del día, con los aportes del
+  // día SUMADOS en el desglose del tooltip. Sin esto, una gran compra repartida en varias órdenes estiraba el
+  // día en el eje X y mostraba "rentabilidades" intradía entre órdenes.
+  const _dix=[];IM.series.forEach((s,i)=>{if(i===IM.series.length-1||IM.series[i+1].date!==s.date)_dix.push(i);});
+  const dates=_dix.map(i=>IM.series[i].date);
+  const _dayFlows=_dix.map((i,k)=>{const from=k===0?0:_dix[k-1]+1;let f=0;for(let j=from;j<=i;j++)f+=IM.series[j].inflow||0;return Math.round(f);});
   // SECCIÓN 1 · valor en el tiempo
-  const valSeries=[{label:"Valor",c:indigo,vals:IM.series.map(s=>+s.val.toFixed(0)),w:2.8,op:1}];
-  const valChart=nd>=2?card("1 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP) desde la compra · pasa el mouse: en los días de compra/venta el salto se separa en <b>aporte</b> (capital) y <b>rentabilidad</b> real",svgMulti({series:valSeries,labels:dates,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true,flows:IM.series.map(s=>Math.round(s.inflow||0))}))
+  const valSeries=[{label:"Valor",c:indigo,vals:_dix.map(i=>+IM.series[i].val.toFixed(0)),w:2.8,op:1}];
+  const valChart=nd>=2?card("1 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP) desde la compra · pasa el mouse: en los días de compra/venta el salto se separa en <b>aporte</b> (capital) y <b>rentabilidad</b> real",svgMulti({series:valSeries,labels:dates,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true,flows:_dayFlows}))
     :card("1 · Valor de la inversión en el tiempo","Aún no hay suficientes registros",`<div class="note" style="border:none;background:none;margin:0">Ingresa al menos <b>2 registros</b> (incluida la compra) para ver la evolución del valor.</div>`);
   let stkSeries=IM.stockSeries;
   if(invStkSel){const f=IM.stockSeries.filter(s=>s.label===invStkSel);if(f.length)stkSeries=f;else invStkSel=null;}
+  stkSeries=stkSeries.map(s=>Object.assign({},s,{vals:_dix.map(i=>s.vals[i])}));   // un punto por fecha (colapso visual)
   const stkBtns=`<div class="legend" style="gap:6px;flex-wrap:wrap"><button class="pbtn ${!invStkSel?"on":""}" data-stksel="" style="padding:.3rem .7rem;font-size:11px">Todas</button>`+IM.stockSeries.map(s=>`<button class="pbtn" data-stksel="${s.label}" style="padding:.3rem .7rem;font-size:11px;${invStkSel===s.label?`background:${s.c};border-color:transparent;color:#fff`:`color:${s.c};border-color:${s.c}66`}">${s.label}</button>`).join("")+`</div>`;
   const selP=invStkSel?IM.perStock.find(x=>x.hd.t===invStkSel):null;
   const tileC=(l,v,s,c,vc)=>`<div class="tile" style="border-color:${c}44;background:linear-gradient(180deg,${c}0E,var(--card) 62%)"><div class="edge" style="background:${c};width:4px"></div><div class="l" style="color:${c}">${l}</div><div class="v tnum" style="color:${vc}">${v}</div><div class="s">${s}</div></div>`;
@@ -2888,7 +2895,7 @@ function viewInvActive(){
   const psNote=`<div class="note" style="margin-top:11px">Mayor aporte al retorno: <b style="color:${bestS.hd.c}">${bestS.hd.t}</b> (${pc(bestS.contribCum*100)}). Mayor lastre: <b style="color:${worstS.hd.c}">${worstS.hd.t}</b> (${pc(worstS.contribCum*100)}). La <b>contribución</b> = ganancia de la acción ÷ capital invertido; suma el retorno total de la cartera.</div>`;
   const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
   // SECCIÓN 2 · portafolio vs IPSA
-  const evoSeries=[{label:"Portafolio",c:indigo,vals:IM.series.map(s=>+(100*(1+s.ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:IM.series.map(s=>+(100*(1+s.ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
+  const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
   const evoChart=nd>=2?card("2 · Portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
   const ipsaTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">${tile("Retorno portafolio",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}${tile("Retorno IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}${tile("Diferencia",pc(L.diff*100),L.diff>=0?"a favor del portafolio":"en contra",indigo,col(L.diff*100))}</div>`;
   const verdict=nd>=1?`<div class="card" style="background:linear-gradient(180deg,#F7FAFF,#fff)"><div class="bd"><div class="note" style="border:none;background:none;margin:0;font-size:14px">Tu portafolio rinde <b style="color:${col(L.ret*100)}">${pc(L.ret*100)}</b> vs el IPSA <b style="color:${col(L.ipsaRet*100)}">${pc(L.ipsaRet*100)}</b> → ${L.diff>=0?`<b style="color:${green}">supera al mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`:`<b style="color:${red}">va bajo el mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`} en estos ${days} días.</div></div></div>`:"";
@@ -2904,7 +2911,7 @@ function viewInvActive(){
     else{const dt=Math.max(0,s.yrs-IM.series[i-1].yrs);capmVals.push(Math.round(capmVals[i-1]*Math.pow(1+_rate,dt)+(s.inflow||0)));
       if(s.ev&&s.ev.erCapm!=null)_rate=s.ev.erCapm/100;}   // desde la operación: el exigido usa la tasa de la cartera resultante
   });
-  const cseries=[{label:"Valor real",c:indigo,vals:IM.series.map(s=>+s.val.toFixed(0)),w:2.6,op:1},{label:"Esperado CAPM",c:"#0E8C5E",vals:capmVals,dash:true}];
+  const cseries=[{label:"Valor real",c:indigo,vals:_dix.map(i=>+IM.series[i].val.toFixed(0)),w:2.6,op:1},{label:"Esperado CAPM",c:"#0E8C5E",vals:_dix.map(i=>capmVals[i]),dash:true}];
   const _shortWin=(IM.elapsedDays<30||IM.nret<5);   // muestra corta: el alpha realizado es ruido, no una lectura estable
   const capmKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">
     ${tile("Retorno real",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}
@@ -2912,7 +2919,7 @@ function viewInvActive(){
     ${tile("Alpha realizado",pc(alphaReal*100),_shortWin?"muestra corta · referencial":(alphaReal>=0?"batiendo lo exigido":"bajo lo exigido"),indigo,col(alphaReal*100))}
     ${tile("β esperado (CAPM)",PF.bp.toFixed(2),"sobre el capital invertido actual",indigo,accentT)}
     ${tile("β realizado",IM.betaR!=null?IM.betaR.toFixed(2):"—",IM.betaR!=null?((IM.betaR>PF.bp?"más sensible":"menos sensible")+" que lo esperado"):"≥5 registros para calcular",indigo,accentT)}</div>`;
-  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual) · la curva exigida <b>incluye tus aportes</b> (compras) y se recalcula desde cada operación — así la brecha es solo rentabilidad, no capital",svgMulti({series:cseries,labels:dates,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:IM.series.map(s=>Math.round(s.inflow||0))}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div>`):"";
+  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual) · la curva exigida <b>incluye tus aportes</b> (compras) y se recalcula desde cada operación — así la brecha es solo rentabilidad, no capital",svgMulti({series:cseries,labels:dates,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:_dayFlows}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div>`):"";
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} No es recomendación de inversión.`);
   const rows=IM.series.map((s,i)=>{const pv=i>0?IM.series[i-1]:null;const dpo=pv&&pv.val>0?((s.val-(s.inflow||0))/pv.val-1):null;const dip=pv?((1+s.ipsaRet)/(1+pv.ipsaRet)-1):null;const evLab=s.ev?(s.ev.kind==="inject"?"Aporte":s.ev.kind==="trade"?(s.ev.side==="sell"?"Venta":"Compra"):"Rebalanceo"):null;return `<tr><td><b>${i===0?"Compra":fr.pf+i}</b>${evLab?` <span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33">${evLab}</span>`:""}</td><td>${s.date}</td><td class="r" style="font-weight:700">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?chip(dpo*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?chip(dip*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${chip(s.ipsaRet*100)}</td><td class="r">${chip(s.diff*100)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar">✕</button></td></tr>`;}).join("");
   const tbl=card("Historial de seguimiento",nd+" registro"+(nd>1?"s":"")+" "+fr.adj+" · editable · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
@@ -7233,13 +7240,13 @@ function viewHome(){
         rs=dropTrailingFlat(resampleMap(C.ipsaMap,"semanal")).slice(-52);
         cap="cierres semanales · últimas "+rs.length+" semanas";
       }else if(homeIpsaFreq==="diario"){
-        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"diario")).slice(-3);
+        rs=dropTrailingFlat(resampleMap(C.ipsaMap,"diario")).slice(-30);
         cap="últimos "+rs.length+" días hábiles";
       }else{
         rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-24);monthly=true;
         cap="cierres mensuales · últimos "+rs.length+" meses";
       }
-      const seg=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","3 días"],["semanal","52 semanas"],["mensual","24 meses"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Solo cambia el gráfico; las variaciones de arriba no se tocan">${l}</button>`).join("")}</div>`;
+      const seg=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","30 días"],["semanal","52 semanas"],["mensual","24 meses"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Solo cambia el gráfico; las variaciones de arriba no se tocan">${l}</button>`).join("")}</div>`;
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
         // en la vista mensual (varios años) la etiqueta lleva MES/AÑO; "DD/MM" se repetiría idéntico entre años
         const labels=monthly?rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4)):rs.map(x=>x.d);
