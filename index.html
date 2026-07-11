@@ -7430,10 +7430,16 @@ function managedTotalSeries(){
     try{const IM=withProject(p,()=>invMetrics());if(IM&&IM.series&&IM.series.length>1){
       // colapso por FECHA: último valor del día + aportes del día SUMADOS (varias operaciones = un punto)
       const pts=[];IM.series.forEach(s=>{
-        if(!pts.length||pts[pts.length-1].d!==s.date)pts.push({d:s.date,v:s.val,f:s.inflow||0});
+        if(!pts.length||pts[pts.length-1].d!==s.date)pts.push({d:s.date,v:s.val,f:s.inflow||0,fee:0});
         else{const q=pts[pts.length-1];q.f+=s.inflow||0;q.v=s.val;}});
       // el día en que el proyecto ENTRA al agregado, TODO su valor es capital nuevo (no rentabilidad)
       if(pts.length)pts[0].f=pts[0].v;
+      // comisiones por FECHA (del libro): para la curva de rentabilidad NETA — misma base que la tarjeta
+      // "Rentabilidad" del Resumen consolidado (ganancia neta ÷ aportado)
+      try{const LG=withProject(p,()=>ledger());if(LG&&LG.tx){const fm={};LG.tx.forEach(x=>{fm[x.date]=(fm[x.date]||0)+brokerFee(x.monto);});
+        pts.forEach(pt=>{if(fm[pt.d]){pt.fee=fm[pt.d];delete fm[pt.d];}});
+        // comisiones de fechas sin punto propio (raro): al primer punto posterior
+        Object.keys(fm).sort().forEach(d=>{const tgt=pts.find(pt=>pt.d>=d)||pts[pts.length-1];if(tgt)tgt.fee+=fm[d];});}}catch(e){}
       series.push(pts);}}catch(e){}
   });});
   if(!series.length)return null;
@@ -7441,15 +7447,20 @@ function managedTotalSeries(){
   const dates=Object.keys(dset).sort();
   if(dates.length<2)return null;
   const di={};dates.forEach((d,k)=>{di[d]=k;});
-  const flows=dates.map(()=>0);
-  series.forEach(s=>s.forEach(pt=>{flows[di[pt.d]]+=pt.f;}));
+  const flows=dates.map(()=>0),feesD=dates.map(()=>0);
+  series.forEach(s=>s.forEach(pt=>{flows[di[pt.d]]+=pt.f;feesD[di[pt.d]]+=pt.fee||0;}));
   const idx=series.map(()=>0);
   const totals=dates.map(d=>{let tot=0;series.forEach((s,k)=>{let v=null;while(idx[k]<s.length&&s[idx[k]].d<=d){v=s[idx[k]].v;idx[k]++;}if(v==null&&idx[k]>0)v=s[idx[k]-1].v;if(v!=null&&idx[k]>0)tot+=v;});return Math.round(tot);});
   // rentabilidad GESTIONADA (base 100): encadena el retorno por fecha NETEANDO los flujos del día
   // (aportes/retiros y proyectos que entran) — mide la gestión, no el tamaño del capital
   const ret100=[100];
   for(let k=1;k<dates.length;k++){const prev=totals[k-1];const r=prev>0?(totals[k]-flows[k])/prev:1;ret100.push(+(ret100[k-1]*r).toFixed(3));}
-  return {dates,totals,ret100};
+  // rentabilidad NETA acumulada (%): (valor − aportado − comisiones) ÷ aportado, a cada fecha — el último
+  // punto coincide EXACTO con la tarjeta "Rentabilidad" del Resumen consolidado del Home
+  const netPct=[];let aportCum=0,feeCum=0;
+  for(let k=0;k<dates.length;k++){aportCum+=flows[k];feeCum+=feesD[k];
+    netPct.push(aportCum>0?+(((totals[k]-aportCum-feeCum)/aportCum)*100).toFixed(3):0);}
+  return {dates,totals,ret100,netPct};
 }
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
@@ -7548,17 +7559,17 @@ function viewHome(){
       : `<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`)
     : `<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`;
   const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,fundsInner);
-  // gráfico gestionado en el tiempo: la CURVA es la RENTABILIDAD (base 100, netea aportes/retiros y carteras
-  // que entran — la del patrimonio quedaba dominada por los saltos de capital de las compras y se veía mal).
-  // El patrimonio queda como dato en el pie (y en el hero de arriba, que ya lo grafica).
+  // gráfico gestionado en el tiempo: la CURVA es la historia de la RENTABILIDAD NETA — (valor − aportado −
+  // comisiones) ÷ aportado a cada fecha, la MISMA base que la tarjeta "Rentabilidad" del Resumen consolidado
+  // (el último punto coincide exacto con ella). El patrimonio queda como dato en el pie (y en el hero).
   const totalCard=(()=>{
     const mt=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
     if(!mt||!mt.totals||mt.totals.length<2)return "";
-    const first=mt.totals[0],lastV=mt.totals[mt.totals.length-1],chg=first>0?(lastV/first-1)*100:0;
-    if(!mt.ret100||mt.ret100.length<2)return "";
-    const lastR=mt.ret100[mt.ret100.length-1],upR=lastR>=100;
-    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad",c:upR?green:red,vals:mt.ret100,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",yfmt:v=>(+v).toFixed(0),ttfmt:v=>((v-100>=0?"+":"")+(v-100).toFixed(2)+"%")})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastR-100>=0?"+":"")+(lastR-100).toFixed(2)}% acumulado (neto de aportes) · patrimonio actual ${fmtCLP(lastV)} (${(chg>=0?"+":"")+chg.toFixed(2)}% desde el inicio)</div></div>`;
-    return card("Rentabilidad gestionada en el tiempo (base 100)","Retorno acumulado de la gestión de todas tus carteras · netea aportes, retiros y carteras que entran — comparable con un índice · pasa el cursor para ver el % de cada día",body);
+    const lastV=mt.totals[mt.totals.length-1];
+    if(!mt.netPct||mt.netPct.length<2)return "";
+    const lastN=mt.netPct[mt.netPct.length-1],upN=lastN>=0;
+    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",yfmt:v=>(+v).toFixed(1)+"%",ttfmt:v=>((v>=0?"+":"")+(+v).toFixed(2)+"%")})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2)}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div></div>`;
+    return card("Rentabilidad neta en el tiempo","Historia de la rentabilidad neta de todas tus carteras · (valor − aportado − comisiones) sobre el capital aportado a cada fecha · el último punto es la misma «Rentabilidad» del resumen de arriba",body);
   })();
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
