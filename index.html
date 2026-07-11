@@ -2700,7 +2700,9 @@ function invMetrics(){
     {let i=WEEKS.length-1;
      while(i>=0&&!(freshOK(WEEKS[i],hd.t)&&WEEKS[i].prices[hd.t]>0))i--;
      if(i>0&&_gapD(WEEKS[i].date,lastW.date)<=_tolD){
-       let j=i-1;while(j>=0&&!(freshOK(WEEKS[j],hd.t)&&WEEKS[j].prices[hd.t]>0))j--;
+       // el par es entre FECHAS distintas: con varias operaciones el mismo día hay varios registros con esa
+       // fecha (todos con el cierre estampado) y comparar dos del mismo día daba un Δ 0,00% falso
+       let j=i-1;while(j>=0&&(WEEKS[j].date===WEEKS[i].date||!(freshOK(WEEKS[j],hd.t)&&WEEKS[j].prices[hd.t]>0)))j--;
        if(j>=0&&_gapD(WEEKS[j].date,WEEKS[i].date)<=_tolD){dayRet=WEEKS[i].prices[hd.t]/WEEKS[j].prices[hd.t]-1;dayFrom=WEEKS[j].date;dayTo=WEEKS[i].date;}
      }}
     const openedLast=!!(firstBuy[hd.t]&&firstBuy[hd.t].idx===WEEKS.length-1);   // comprada en el último registro
@@ -2717,7 +2719,10 @@ function invMetrics(){
   // pseudo-día 09→10 sin mercado. Cuando el cierre del día llega, el KPI avanza solo a ese día.
   const _hasClose=w=>!(w&&w.fresh&&!w.fresh.length);
   let _di=series.length-1;while(_di>0&&!_hasClose(WEEKS[_di]))_di--;
-  let _dj=_di-1;while(_dj>=0&&!_hasClose(WEEKS[_dj]))_dj--;
+  // el registro "anterior" es el último de una FECHA ANTERIOR: con varias operaciones el mismo día hay varios
+  // registros de esa fecha (todos con cierre estampado) y comparar dos del mismo día daba un "día" de $0/-0,0x%
+  // que no correspondía al movimiento real del mercado
+  let _dj=_di-1;while(_dj>=0&&(WEEKS[_dj].date===WEEKS[_di].date||!_hasClose(WEEKS[_dj])))_dj--;
   const L1=series[_di],L0=_dj>=0?series[_dj]:null;
   let _flow=0;for(let i=_dj+1;i<=_di;i++)_flow+=series[i].inflow||0;
   const dayAbs=L0?(L1.val-_flow)-L0.val:null,dayPct=L0?((L1.val-_flow)/L0.val-1):null,prevDate=L0?L0.date:null,dayTo=L0?L1.date:null;
@@ -2909,7 +2914,9 @@ function viewInvActive(){
   const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Crecimiento del <b>precio de mercado</b> (base 100 desde su incorporación) · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación) — tu retorno personal, que pondera tus compras, va en las tarjetas y la tabla · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeries,labels:dates,h:280,id:"invstk",unit:"",ttfmt:ret100,area:!!invStkSel}),stkBtns):"";
   const psSorted=[...IM.perStock].sort((a,b)=>b.contribCum-a.contribCum);
   const _todayBadge=`<span class="altchip" style="border-color:var(--accent);color:var(--accent);padding:1px 5px;font-size:8.5px;margin-left:5px" title="La compraste en este último registro: su Δ es el movimiento de mercado de la acción, no afecta el P/L del día (la compra se netea como aporte).">comprada hoy</span>`;
-  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?`<span title="entre sus dos últimos cierres reales: ${p.dayFrom} → ${p.dayTo}">${chip(p.dayRet*100)}</span>`:'<span style="color:var(--faint)" title="Esta acción aún no tiene DOS cierres reales vigentes (recién comprada, o su cierre aún no llega): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
+  // P. compra prom. = costo registrado ÷ acciones — comparable 1:1 con el "P. Compra" de la cartola de la
+  // corredora; si difiere, el costo de algún tramo (p.ej. la compra inicial) quedó mal ingresado → Historial ✎
+  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r" title="Precio promedio de compra registrado (costo ÷ acciones). Compáralo con el «P. Compra» de tu corredora: si difiere, corrige el tramo mal ingresado en Historial ✎.">${(p.sh>0&&p.buy>0)?fmtP(p.buy):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?`<span title="entre sus dos últimos cierres reales: ${p.dayFrom} → ${p.dayTo}">${chip(p.dayRet*100)}</span>`:'<span style="color:var(--faint)" title="Esta acción aún no tiene DOS cierres reales vigentes (recién comprada, o su cierre aún no llega): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
   const bestS=psSorted[0],worstS=psSorted[psSorted.length-1];
   // el rango del pie sale del PAR DE CIERRES REALES efectivamente usado (no del último registro, que puede ser
   // una operación de hoy sin cierre aún); si el último registro no tiene cierres, se explica que el Δ llega con el cierre
@@ -2917,7 +2924,7 @@ function viewInvActive(){
   const _lastNoClose=(function(){const w=WEEKS[WEEKS.length-1];return !!(w&&w.fresh&&!w.fresh.length);})();
   const _srcNote=(WEEKS.length>=2)?`<div class="note" style="margin-top:8px;font-size:10.5px">Δ ${fr.u} = entre los <b>dos últimos cierres reales</b> de cada acción${_dPair?(` (en general <b>${_dPair.dayFrom}</b> → <b>${_dPair.dayTo}</b>; el par exacto va en el tooltip de cada Δ)`):""}.${_lastNoClose?` El registro más nuevo (<b>${WEEKS[WEEKS.length-1].date}</b>) es una operación sin cierre de mercado aún: su Δ aparecerá cuando llegue el cierre del día (sincronización ~18:05).`:""} Fuente: base de precios del proyecto (Yahoo/planilla). Puede diferir del feed de tu bróker (BTG usa otro proveedor de datos): pequeñas diferencias de centavos son normales.</div>`:"";
   const psNote=`<div class="note" style="margin-top:11px">Mayor aporte al retorno: <b style="color:${bestS.hd.c}">${bestS.hd.t}</b> (${pc(bestS.contribCum*100)}). Mayor lastre: <b style="color:${worstS.hd.c}">${worstS.hd.t}</b> (${pc(worstS.contribCum*100)}). La <b>contribución</b> = ganancia de la acción ÷ capital invertido; suma el retorno total de la cartera.</div>`;
-  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
+  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
   // SECCIÓN 2 · portafolio vs IPSA
   const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
   const evoChart=nd>=2?card("2 · Portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
