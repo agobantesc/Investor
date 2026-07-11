@@ -4942,7 +4942,12 @@ function pricedbUpsertDay(date,ipsa,priceMap){
   Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;
     const nm=pdIndexOf(t,"IPSA");   // "IPSA"/"IGPA" tipeado como acción va al ÍNDICE, no a la base de acciones (igual que en pricedbMergeFiles)
     if(nm){if(nm==="IPSA"){if(!(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL))PRICEDB.ipsa[date]=+v;}else{((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{})[date]=+v;}return;}   // con fuente automática, el IPSA manual se descarta (única fuente de la verdad)
-    (PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);});
+    (PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);
+    // CIERRE MANUAL PROTEGIDO: un valor ingresado a mano queda ANCLADO — la sincronización automática (Yahoo)
+    // no puede volver a pisarlo. Motivo real: Yahoo cambió retroactivamente el cierre de LATAM del 10-07
+    // (26,26 → 26,37) y el sync aplastó el valor que cuadraba con la corredora. Un nuevo ingreso manual
+    // (este formulario o una planilla) siempre puede reescribirlo.
+    (PRICEDB.pin=PRICEDB.pin||{});(PRICEDB.pin[t]=PRICEDB.pin[t]||{})[date]=1;});
   savePriceDB();
 }
 /* índices/benchmarks disponibles en la base: IPSA vive en PRICEDB.ipsa; otros (IGPA, …) en PRICEDB.idx */
@@ -4958,18 +4963,19 @@ function pricedbIdxAll(){const o={};if(PRICEDB.ipsa&&Object.keys(PRICEDB.ipsa).l
 function pricedbIndexNames(){return Object.keys(pricedbIdxAll());}
 function pricedbIdxMap(name){if(!name||name==="IPSA")return PRICEDB.ipsa||{};return (PRICEDB.idx&&PRICEDB.idx[name])||{};}
 /* carga masiva: fusiona series parseadas (formato impFiles: {name,src,dates,closes}) en la base */
-function pricedbMergeFiles(files,benchName){
-  let added=0,updated=0,tk=0,skipped=0;
+function pricedbMergeFiles(files,benchName,opts){
+  let added=0,updated=0,tk=0,skipped=0,pinned=0;
+  const _pinOf=(t,d)=>!!(opts&&opts.respectPins&&PRICEDB.pin&&PRICEDB.pin[t]&&PRICEDB.pin[t][d]);
   // FUSIÓN por celda (acción × fecha), "el último dato manda": una fila nueva reemplaza el valor de esa
   // acción en esa fecha (p.ej. una planilla oficial pisa un cierre manual del mismo día), pero NUNCA borra
   // otras fechas ni otras acciones. Solo se aceptan días hábiles y no futuros.
   (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];const nm=pdIndexOf(f.name,benchName);
     if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(tgt[d]!=null)updated++;else added++;tgt[d]=v;}}return;}
     const t=((""+(f.name||"")).trim().toUpperCase())||f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);   // ticker SIEMPRE en mayúsculas: "Falabella" no crea una acción paralela a FALABELLA
-    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(PRICEDB.px[t][d]!=null)updated++;else added++;PRICEDB.px[t][d]=v;}}
+    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(PRICEDB.px[t][d]!=null&&_pinOf(t,d)){pinned++;continue;}if(PRICEDB.px[t][d]!=null)updated++;else added++;PRICEDB.px[t][d]=v;}}   // celda ANCLADA por cierre manual: la fuente automática no la pisa
   });
   savePriceDB();try{pricedbSanitize();}catch(e){}   // saneo inmediato: sin arrastres ni IPSA por delante del mercado, sin esperar a la próxima recarga
-  return {added,updated,tk,skipped};
+  return {added,updated,tk,skipped,pinned};
 }
 /* ── SINCRONIZACIÓN AUTOMÁTICA DE CIERRES ──
    Lee un JSON público (p.ej. generado a diario por GitHub Actions y servido vía raw.githubusercontent, que permite CORS)
@@ -5026,7 +5032,7 @@ async function autopxSync(manual,bust){
     });
     const files=Object.keys(byT).map(t=>({name:t,src:t,dates:byT[t].dates,closes:byT[t].closes}));
     if(ips.dates.length)files.push({name:"IPSA",src:"IPSA",dates:ips.dates,closes:ips.closes});
-    const r=pricedbMergeFiles(files,"IPSA");
+    const r=pricedbMergeFiles(files,"IPSA",{respectPins:true});   // los cierres corregidos a mano no se pisan
     const ap=pricedbApplyToProjects();
     try{systemAnalysisRefresh();}catch(e){}   // el análisis del sistema se reconstruye con cada sincronización
     const info={at:new Date().toISOString(),day:autopxLocalDay(),added:r.added,updated:r.updated,skipped:r.skipped,lastDate:days[days.length-1].date};
@@ -5592,7 +5598,7 @@ function datosCierre(){
   const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label>${ipsaFld}</div>
     <div class="ppx-grid" style="max-height:52vh">${rows}</div>
     <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:14px"><button class="btn" data-dgo="base">← Volver a la base</button><button class="btn btn-pri" data-dcapply>Guardar cierre y actualizar carteras</button></div>`;
-  return card("Cierre diario","Ingresa los precios de cierre del día. Se guardan en la base y se aplican a todos los proyectos que tengan esas acciones."+((typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)?" El <b>IPSA no se ingresa a mano</b>: lo escribe solo la fuente automática (única fuente de la verdad del índice); esta pantalla es para acciones que la fuente no cubre o un dato puntual — la sincronización pisará cualquier valor manual dentro de su ventana.":" Si te atrasaste varios días, mejor carga la planilla completa en “Cargar planilla”."),body);
+  return card("Cierre diario","Ingresa los precios de cierre del día. Se guardan en la base y se aplican a todos los proyectos que tengan esas acciones."+((typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)?" El <b>IPSA no se ingresa a mano</b>: lo escribe solo la fuente automática (única fuente de la verdad del índice); esta pantalla es para acciones que la fuente no cubre o para <b>corregir un dato puntual</b>: un precio ingresado a mano queda <b>anclado</b> y la sincronización automática no lo vuelve a pisar (útil cuando Yahoo trae un cierre distinto al de tu corredora).":" Si te atrasaste varios días, mejor carga la planilla completa en “Cargar planilla”."),body);
 }
 function attachDatos(){
   document.querySelectorAll("[data-dgo]").forEach(b=>b.onclick=()=>{page=b.dataset.dgo;render();});
