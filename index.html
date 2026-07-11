@@ -167,6 +167,11 @@
 
   /* stat tiles */
   .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;}
+  /* grid del "Resumen consolidado" (Home): filas balanceadas sin tarjetas huérfanas. La tarjeta principal
+     (.tw2) ocupa 2 columnas → 8 celdas encajan en 2 filas exactas de 4 (o pares limpios en pantallas angostas). */
+  .tiles-consol{display:grid;gap:12px;grid-template-columns:repeat(2,1fr);}
+  @media(min-width:680px){.tiles-consol{grid-template-columns:repeat(4,1fr);}}
+  .tiles-consol .tw2{grid-column:span 2;}
   .tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.92rem .9rem .92rem 1rem;position:relative;overflow:hidden;box-shadow:var(--sh);}
   .tile .edge{position:absolute;left:0;top:0;bottom:0;width:3px;}
   .tile .l{font-size:10.5px;letter-spacing:.4px;color:var(--muted);font-weight:800;text-transform:uppercase;margin-bottom:7px;line-height:1.3;}
@@ -1658,7 +1663,7 @@ function renderChrome(){
   document.getElementById("footr").textContent=`β por regresión OLS vs IPSA · ${DATA.window}`;
 }
 
-function tile(l,v,s,edge,vc){return `<div class="tile"><div class="edge" style="background:${edge}"></div><div class="l">${l}</div><div class="v tnum" style="color:${vc||ink}">${v}</div><div class="s">${s}</div></div>`;}
+function tile(l,v,s,edge,vc,xc){return `<div class="tile${xc?" "+xc:""}"><div class="edge" style="background:${edge}"></div><div class="l">${l}</div><div class="v tnum" style="color:${vc||ink}">${v}</div><div class="s">${s}</div></div>`;}
 function notecard(h){return `<div class="card"><div class="bd"><div class="note">${h}</div></div></div>`;}
 function heat(v){if(v>=0)return `rgba(14,159,110,${0.12+0.62*Math.min(1,v)})`;return `rgba(224,36,36,${0.12+0.62*Math.min(1,-v)})`;}
 
@@ -7427,12 +7432,12 @@ function viewHome(){
       <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}</div></div>
     ${patSeries.length>1?`<div class="hh-c">${heroSpark(patSeries)}</div>`:""}
     <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(T.gainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
-  const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles">
-    ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
+  const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles-consol">
+    ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT,"tw2")}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
     ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
     ${tile("Ganancia bruta",sg(T.gain),"antes de comisiones",indigo,T.gain>=0?green:red)}
-    ${tile("Ganancia neta",sg(T.gainNet),T.fees>0?("después de comisiones ("+fmtCLP(T.fees)+")"):"después de comisiones",indigo,T.gainNet>=0?green:red)}
+    ${tile("Ganancia neta",sg(T.gainNet),"después de comisiones",indigo,T.gainNet>=0?green:red)}
     ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","neta · sobre el capital",indigo,Tpct>=0?green:red)}
     ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}</div>`);
   // IPSA del último día / semana / mes (desde la base del sistema)
