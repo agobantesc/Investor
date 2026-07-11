@@ -2882,7 +2882,7 @@ function viewInvActive(){
       <div style="text-align:right;min-width:150px"><div class="genl" style="margin:0">Cambio último ${fr.u}</div>${dayBox}</div>
     </div>
     <div class="tiles" style="margin-top:16px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))">
-      ${tile("Ganancia / pérdida total",(gain>=0?"+":"−")+fmtCLP(Math.abs(gain)),"sobre "+fmtCLP(IM.aport)+" invertidos ("+pc(IM.aport>0?gain/IM.aport*100:0)+" de tu capital · el % del Home)",indigo,col(gain))}
+      ${(()=>{const _gp=IM.aport>0?gain/IM.aport*100:0;return tile("Ganancia / pérdida total",((gain>=0?"+":"−")+fmtCLP(Math.abs(gain)))+`<div style="font-size:1.05em;font-weight:800;letter-spacing:-.3px;color:${col(_gp)};margin-top:3px">${pc(_gp)}</div>`,"rentabilidad sobre "+fmtCLP(IM.aport)+" invertidos · el % del Home",indigo,col(gain));})()}
       ${tile("Retorno acumulado (TWR)",pc(L.ret*100),"rendimiento de la ESTRATEGIA · comparable con el IPSA · no depende del tamaño/fecha de tus aportes",indigo,col(L.ret*100))}
       ${tile("Rentabilidad IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}
       ${tile("vs IPSA",pc(L.diff*100),L.diff>=0?"superando al mercado":"bajo el mercado",indigo,col(L.diff*100))}
@@ -6405,10 +6405,14 @@ function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const in
   // α de Jensen REALIZADO (no anualizado, sobre el período transcurrido): retorno real − el exigido por CAPM para la β de la cartera.
   // Va en línea con "Rentab. %" (ambos acumulados a la fecha), así no se infla anualizando un seguimiento corto.
   const reqRet=Math.pow(1+(p.erCapm||0)/100,IM.elapsedYrs||0)-1, alphaReal=L.ret-reqRet;
-  // serie para sparklines del Home: UN punto por FECHA (último registro del día) — varias operaciones el
-  // mismo día son registros distintos y dibujarlos todos estira el día de compra como si fueran varios días
-  const serie=IM.series.filter((s,i,a)=>i===a.length-1||a[i+1].date!==s.date).map(s=>Math.round(s.val));
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,since};});}
+  // series para sparklines del Home: UN punto por FECHA (último registro del día) — varias operaciones el
+  // mismo día son registros distintos y dibujarlos todos estira el día de compra como si fueran varios días.
+  // series = patrimonio (para el agregado del hero) · retSeries = rentabilidad acumulada TWR en base 100
+  // (la curva de las tarjetas de fondos: mide la gestión, sin los saltos de capital de las compras)
+  const _perDate=IM.series.filter((s,i,a)=>i===a.length-1||a[i+1].date!==s.date);
+  const serie=_perDate.map(s=>Math.round(s.val));
+  const serieRet=_perDate.map(s=>+(100*(1+s.ret)).toFixed(2));
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
    mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
@@ -7223,7 +7227,7 @@ function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[],since:s.since||null});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],since:s.since||null});}catch(e){}});});
   return {clients,T,projs};
 }
 /* serie agregada de patrimonio (alineada por la cola) para el sparkline del hero */
@@ -7266,15 +7270,29 @@ function stkPeriodReturns(t){
 function managedTotalSeries(){
   const series=[];
   CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{
-    try{const IM=withProject(p,()=>invMetrics());if(IM&&IM.series&&IM.series.length>1)series.push(IM.series.map(s=>({d:s.date,v:s.val})));}catch(e){}
+    try{const IM=withProject(p,()=>invMetrics());if(IM&&IM.series&&IM.series.length>1){
+      // colapso por FECHA: último valor del día + aportes del día SUMADOS (varias operaciones = un punto)
+      const pts=[];IM.series.forEach(s=>{
+        if(!pts.length||pts[pts.length-1].d!==s.date)pts.push({d:s.date,v:s.val,f:s.inflow||0});
+        else{const q=pts[pts.length-1];q.f+=s.inflow||0;q.v=s.val;}});
+      // el día en que el proyecto ENTRA al agregado, TODO su valor es capital nuevo (no rentabilidad)
+      if(pts.length)pts[0].f=pts[0].v;
+      series.push(pts);}}catch(e){}
   });});
   if(!series.length)return null;
   const dset={};series.forEach(s=>s.forEach(pt=>{dset[pt.d]=1;}));
   const dates=Object.keys(dset).sort();
   if(dates.length<2)return null;
+  const di={};dates.forEach((d,k)=>{di[d]=k;});
+  const flows=dates.map(()=>0);
+  series.forEach(s=>s.forEach(pt=>{flows[di[pt.d]]+=pt.f;}));
   const idx=series.map(()=>0);
   const totals=dates.map(d=>{let tot=0;series.forEach((s,k)=>{let v=null;while(idx[k]<s.length&&s[idx[k]].d<=d){v=s[idx[k]].v;idx[k]++;}if(v==null&&idx[k]>0)v=s[idx[k]-1].v;if(v!=null&&idx[k]>0)tot+=v;});return Math.round(tot);});
-  return {dates,totals};
+  // rentabilidad GESTIONADA (base 100): encadena el retorno por fecha NETEANDO los flujos del día
+  // (aportes/retiros y proyectos que entran) — mide la gestión, no el tamaño del capital
+  const ret100=[100];
+  for(let k=1;k<dates.length;k++){const prev=totals[k-1];const r=prev>0?(totals[k]-flows[k])/prev:1;ret100.push(+(ret100[k-1]*r).toFixed(3));}
+  return {dates,totals,ret100};
 }
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
@@ -7358,28 +7376,36 @@ function viewHome(){
   const _sD=d=>{if(!d)return null;const m=(""+d).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?(m[3]+"/"+m[2]+"/"+m[1].slice(2)):(""+d);};   // inicio del proyecto en corto (dd/mm/aa)
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
-    const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,40);
-    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
+    const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,40);
+    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     const stat=(l,v,c,lc)=>`<div class="fw-stat"><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
     if(!p.hasData)return `<button class="home-fundwide nodata" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct nd">— sin seguimiento</span></div><div class="fw-stats">${stat("Aportado",fmtCLP(p.val))}${sd?stat("Inicio",sd,null,"ntr"):""}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}<div class="fw-stat" style="flex:1 1 200px"><span class="fw-sl">&nbsp;</span><span class="fw-hint">Registra su compra inicial para ver su evolución</span></div></div></button>`;
-    const spark=lineSpark(p.series&&p.series.length>1?p.series:[1,1],pos?green:red,112);
-    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» dentro del proyecto mide la estrategia y puede diferir cuando hay aportes en distintos momentos.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${sd?stat("Inicio",sd,null,"ntr"):""}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}</div></button>`;};
+    const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,112);
+    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}" title="Curva: rentabilidad acumulada (base 100) — mide la gestión, sin los saltos de capital de las compras"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» dentro del proyecto mide la estrategia y puede diferir cuando hay aportes en distintos momentos.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${sd?stat("Inicio",sd,null,"ntr"):""}${stat("β",(p.beta||0).toFixed(2),null,"ntr")}</div></button>`;};
   const fundsInner=funds.length
     ? (funds.length<=2
       ? `<div class="home-fundgrid n${funds.length}">${funds.map(fundWide).join("")}</div>`
       : `<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`)
     : `<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`;
-  const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · valor, rentabilidad bruta y β · haz clic para entrar`,fundsInner);
-  // gráfico del TOTAL gestionado en el tiempo (suma de todas las carteras con seguimiento, alineada por fecha)
+  const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,fundsInner);
+  // TOTAL gestionado en el tiempo: DOS gráficas lado a lado — el patrimonio (CLP) y la rentabilidad
+  // gestionada (base 100, netea aportes y proyectos que entran: mide la gestión, no el tamaño del capital)
   const totalCard=(()=>{
     const mt=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
     if(!mt||!mt.totals||mt.totals.length<2)return "";
     const up=mt.totals[mt.totals.length-1]>=mt.totals[0];
     const first=mt.totals[0],lastV=mt.totals[mt.totals.length-1],chg=first>0?(lastV/first-1)*100:0;
-    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Total",c:up?green:red,vals:mt.totals,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgtot",unit:"",yfmt:v=>fmtK(v),ttfmt:v=>fmtCLP(v)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(chg>=0?"+":"")+chg.toFixed(2)}% desde el inicio</div></div>`;
-    return card("Total gestionado en el tiempo","Valor consolidado de todas tus carteras con seguimiento · suma por fecha (as-of) · pasa el cursor para ver el valor de cada día",body);
+    const patBody=`<div class="ipsa-chart">${svgMulti({series:[{label:"Total",c:up?green:red,vals:mt.totals,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgtot",unit:"",yfmt:v=>fmtK(v),ttfmt:v=>fmtCLP(v)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(chg>=0?"+":"")+chg.toFixed(2)}% desde el inicio</div></div>`;
+    const patCard=card("Total gestionado en el tiempo","Valor consolidado de todas tus carteras con seguimiento · suma por fecha (as-of) · pasa el cursor para ver el valor de cada día",patBody);
+    let retCard="";
+    if(mt.ret100&&mt.ret100.length>=2){
+      const lastR=mt.ret100[mt.ret100.length-1],upR=lastR>=100;
+      const retBody=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad",c:upR?green:red,vals:mt.ret100,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",yfmt:v=>(+v).toFixed(0),ttfmt:v=>((v-100>=0?"+":"")+(v-100).toFixed(2)+"%")})}<div class="genl" style="margin:6px 0 0;text-align:right">${(lastR-100>=0?"+":"")+(lastR-100).toFixed(2)}% acumulado desde el inicio</div></div>`;
+      retCard=card("Rentabilidad gestionada (base 100)","Retorno acumulado de la gestión · netea aportes, retiros y carteras que entran — comparable con un índice",retBody);
+    }
+    return retCard?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(430px,1fr))">${patCard}${retCard}</div>`:patCard;
   })();
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
