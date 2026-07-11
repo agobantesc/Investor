@@ -1429,6 +1429,7 @@ function uniStk(t){return (STOCKS||[]).find(s=>s.t===t)||DATA_UNIVERSE.find(s=>s
 function uniMeta(t){const s=uniStk(t);return s?{t:s.t,n:s.n,s:s.s,c:s.c,b:(s.b!=null?s.b:1)}:{t:t,n:t,s:"—",c:"#1E5FD1",b:1};}
 let modulo="inicio", page="home", sel=STOCKS[0].t;
 let invStkSel=null;
+let objEditOn=false;   // editor de pesos objetivo (Composición actual vs objetivo, en Seguimiento)
 
 // ===== FORMATO =====
 let ink="#0F2747",muted="#52668A",faint="#8DA1C2",green="#0E8C5E",red="#D83A3A",amber="#B57A12",
@@ -3009,7 +3010,15 @@ function viewInvActive(){
   const drifts=IM.perStock.map(p=>({p,dr:(p.val/L.val-p.hd.w)*100}));
   const breaches=drifts.filter(d=>Math.abs(d.dr)>5);
   const driftAlert=breaches.length?`<div class="note" style="margin-top:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)"><b>⚠ Alerta de rebalanceo:</b> ${breaches.map(d=>d.p.hd.t+" "+(d.dr>=0?"+":"")+d.dr.toFixed(1)+" pp").join(", ")} ${breaches.length>1?"superan":"supera"} el 5% de desviación respecto al objetivo. Revisa la <b>estrategia de rebalanceo</b> más abajo.</div>`:`<div class="note" style="margin-top:12px;border-color:var(--green-line);background:var(--greenbg);color:var(--green)">✓ Todas las posiciones están dentro de ±5 pp de su objetivo · sin necesidad de rebalancear.</div>`;
-  const allocCard=card("Composición actual vs objetivo","Cómo se desviaron los pesos desde la compra · base para rebalancear",allocBody+driftAlert);
+  // EDITOR DE PESOS OBJETIVO: los objetivos (hd.w) son editables desde aquí — al guardar se normalizan a 100%
+  // y el drift, las alertas de rebalanceo y Operar pasan a medir contra los nuevos objetivos
+  const objEditor=(typeof objEditOn!=="undefined"&&objEditOn)?(()=>{
+    const rows=IM.perStock.map(p=>{const cw=(p.val/L.val)*100;return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${p.hd.c}"></span><b style="color:${p.hd.c}">${p.hd.t}</b><span class="simsec">actual ${cw.toFixed(1)}%</span></div><div class="simw"><input type="number" step="any" min="0" max="100" class="objinp" data-obj="${p.hd.t}" data-cur="${cw.toFixed(1)}" value="${(p.hd.w*100).toFixed(1)}" style="width:88px"><span style="color:${muted}">%</span></div></div>`;}).join("");
+    return `<div class="note" style="margin-top:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">Editando los <b>pesos objetivo</b>. Al guardar se <b>normalizan a 100%</b> (se reparten proporcionalmente si la suma difiere). El drift y las alertas de rebalanceo pasan a medirse contra estos objetivos.</div>
+      <div class="simlist" style="margin-top:10px">${rows}</div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:12px"><button class="btn btn-pri" id="objSave">✓ Guardar objetivos</button><button class="btn" id="objUseActual" title="Copia los pesos actuales de la cartera como nuevo objetivo (drift queda en 0)">Usar pesos actuales</button><button class="btn" id="objEqual" title="Reparte el objetivo en partes iguales">Partes iguales</button><button class="btn" id="objCancel">✕ Cancelar</button><span class="genl" style="margin:0" id="objSum"></span></div>`;
+  })():"";
+  const allocCard=card("Composición actual vs objetivo","Cómo se desviaron los pesos desde la compra · base para rebalancear · los objetivos son editables",(objEditOn?objEditor:allocBody+driftAlert),`<button class="btn" id="objEditBtn">${objEditOn?"✕ Cerrar editor":"✎ Editar objetivos"}</button>`);
   const invTools=`<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" id="geninforme">📄 Generar informe</button><button class="btn" id="genxls">📊 Generar Excel</button></div>`;
   const b0q=WEEKS[0];
   const deltaCard=b0q.qty?card("Inversión inicial: real vs objetivo","Acciones compradas y monto real por acción frente al objetivo de la simulación",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">Objetivo</th><th class="r">Real</th><th class="r">Δ</th></tr></thead><tbody>`+PF.holdings.map(hd=>{const q=b0q.qty[hd.t]||0,p=b0q.prices[hd.t]||0,real=q*p,obj=PF.amount*hd.w,d=real-obj;return `<tr><td>${tk(hd)}</td><td class="r">${q.toLocaleString("es-CL")}</td><td class="r">${fmtP(p)}</td><td class="r">${fmtCLP(obj)}</td><td class="r" style="font-weight:700">${fmtCLP(real)}</td><td class="r" style="color:${Math.abs(d)<1?muted:(d>=0?green:red)}">${(d>=0?"+":"−")+fmtCLP(Math.abs(d))}</td></tr>`;}).join("")+`<tr style="background:var(--soft);font-weight:800"><td>Total invertido</td><td></td><td></td><td class="r">${fmtCLP(PF.amount)}</td><td class="r">${fmtCLP(IM.series[0].val)}</td><td class="r" style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</td></tr></tbody></table><div class="note" style="margin-top:11px">Por el precio entero de las acciones, invertiste <b>${fmtCLP(IM.series[0].val)}</b> vs el objetivo de <b>${fmtCLP(PF.amount)}</b> → delta <b style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</b> (${((IM.series[0].val-PF.amount)/PF.amount*100).toFixed(1)}%). El seguimiento usa las acciones y montos realmente comprados.</div></div>`,flush:true}):"";
@@ -3239,6 +3248,25 @@ function genInvReport(){
 function attachInv(){
   if(modulo!=="inv")return;
   document.querySelectorAll("[data-stksel]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invStkSel=b.dataset.stksel||null;render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
+  // ── editor de pesos objetivo (tarjeta "Composición actual vs objetivo") ──
+  (function(){
+    const _keepScroll=fn=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;fn();const _m2=document.getElementById("main");if(_m2)_m2.scrollTop=_st;};
+    const eb=document.getElementById("objEditBtn");if(eb)eb.onclick=()=>_keepScroll(()=>{objEditOn=!objEditOn;render();});
+    const cancel=document.getElementById("objCancel");if(cancel)cancel.onclick=()=>_keepScroll(()=>{objEditOn=false;render();});
+    const _sumUpd=()=>{const el=document.getElementById("objSum");if(!el)return;let s=0;document.querySelectorAll(".objinp").forEach(i=>{const v=parseFloat(i.value);if(v>0)s+=v;});el.textContent="suma: "+s.toFixed(1)+"%"+(Math.abs(s-100)>0.5?" · se normalizará a 100%":"");};
+    document.querySelectorAll(".objinp").forEach(i=>i.oninput=_sumUpd);_sumUpd();
+    const ua=document.getElementById("objUseActual");if(ua)ua.onclick=()=>{document.querySelectorAll(".objinp").forEach(i=>{i.value=i.dataset.cur||"0";});_sumUpd();};
+    const eq=document.getElementById("objEqual");if(eq)eq.onclick=()=>{const ins=document.querySelectorAll(".objinp");const w=(100/ins.length).toFixed(1);ins.forEach(i=>{i.value=w;});_sumUpd();};
+    const sb=document.getElementById("objSave");if(sb)sb.onclick=()=>{
+      const vals={};let tot=0,bad=false;
+      document.querySelectorAll(".objinp").forEach(i=>{const v=parseFloat(i.value);if(!(v>=0)||v>100){bad=true;return;}vals[i.dataset.obj]=v;tot+=v;});
+      if(bad||tot<=0){window.alert("Revisa los objetivos: cada peso debe estar entre 0% y 100%, y la suma debe ser mayor que 0.");return;}
+      // normaliza a 100% y guarda como objetivo del proyecto (hd.w) — drift, alertas y Operar lo usan al tiro
+      PF.holdings.forEach(hd=>{if(vals[hd.t]!=null)hd.w=vals[hd.t]/tot;});
+      saveProjects();
+      _keepScroll(()=>{objEditOn=false;render();});
+    };
+  })();
   const ld=document.getElementById("loaddemo");if(ld)ld.onclick=seedDemos;
   document.querySelectorAll("[data-pstep]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.pstep.split("|");modulo=m;page=pg;render();});
   const _pdi=document.getElementById("projDefineInv");if(_pdi)_pdi.onclick=()=>{const p=curProj();invNew={name:(p&&p.name)||"",amount:"",sel:{}};render();};
