@@ -7418,22 +7418,16 @@ function viewHome(){
       : `<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`)
     : `<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`;
   const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,fundsInner);
-  // TOTAL gestionado en el tiempo: DOS gráficas lado a lado — el patrimonio (CLP) y la rentabilidad
-  // gestionada (base 100, netea aportes y proyectos que entran: mide la gestión, no el tamaño del capital)
+  // gráfico del TOTAL gestionado en el tiempo (patrimonio consolidado, a lo ancho — la rentabilidad
+  // acumulada ya vive en la curva de cada fondo administrado y en el % acumulado del pie)
   const totalCard=(()=>{
     const mt=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
     if(!mt||!mt.totals||mt.totals.length<2)return "";
     const up=mt.totals[mt.totals.length-1]>=mt.totals[0];
     const first=mt.totals[0],lastV=mt.totals[mt.totals.length-1],chg=first>0?(lastV/first-1)*100:0;
-    const patBody=`<div class="ipsa-chart">${svgMulti({series:[{label:"Total",c:up?green:red,vals:mt.totals,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgtot",unit:"",yfmt:v=>fmtK(v),ttfmt:v=>fmtCLP(v)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(chg>=0?"+":"")+chg.toFixed(2)}% desde el inicio</div></div>`;
-    const patCard=card("Total gestionado en el tiempo","Valor consolidado de todas tus carteras con seguimiento · suma por fecha (as-of) · pasa el cursor para ver el valor de cada día",patBody);
-    let retCard="";
-    if(mt.ret100&&mt.ret100.length>=2){
-      const lastR=mt.ret100[mt.ret100.length-1],upR=lastR>=100;
-      const retBody=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad",c:upR?green:red,vals:mt.ret100,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",yfmt:v=>(+v).toFixed(0),ttfmt:v=>((v-100>=0?"+":"")+(v-100).toFixed(2)+"%")})}<div class="genl" style="margin:6px 0 0;text-align:right">${(lastR-100>=0?"+":"")+(lastR-100).toFixed(2)}% acumulado desde el inicio</div></div>`;
-      retCard=card("Rentabilidad gestionada (base 100)","Retorno acumulado de la gestión · netea aportes, retiros y carteras que entran — comparable con un índice",retBody);
-    }
-    return retCard?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(430px,1fr))">${patCard}${retCard}</div>`:patCard;
+    const lastR=(mt.ret100&&mt.ret100.length)?mt.ret100[mt.ret100.length-1]:null;
+    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Total",c:up?green:red,vals:mt.totals,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgtot",unit:"",yfmt:v=>fmtK(v),ttfmt:v=>fmtCLP(v)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(chg>=0?"+":"")+chg.toFixed(2)}% desde el inicio${lastR!=null?` · rentabilidad gestionada ${(lastR-100>=0?"+":"")+(lastR-100).toFixed(2)}% (neta de aportes)`:""}</div></div>`;
+    return card("Total gestionado en el tiempo","Valor consolidado de todas tus carteras con seguimiento · suma por fecha (as-of) · pasa el cursor para ver el valor de cada día",body);
   })();
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
