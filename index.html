@@ -833,6 +833,7 @@
   .mkt-chg{font-size:11px;font-weight:800;padding:.08rem .4rem;border-radius:var(--r-pill);}
   .mkt-chg.up{color:var(--green);background:var(--greenbg);}
   .mkt-chg.dn{color:var(--red);background:var(--redbg);}
+  .mkt-chg.flat{color:var(--muted);background:var(--soft2);}
   .mkt-spark{display:block;width:100%;height:26px;margin:8px 0 4px;}
   .mkt-date{font-size:10px;color:var(--faint);font-weight:600;}
   .mkt-manform{display:flex;gap:9px;flex-wrap:wrap;align-items:center;}
@@ -1578,7 +1579,7 @@ function svgMulti(o){
   if(o.flatx||dateLike){const kk=Math.max(1,Math.ceil(n/(o.flatx?13:9)));o.labels.forEach((lb,i)=>{if((i%kk===0&&(n-1-i)>=kk*0.6)||i===n-1)g+=`<text x="${X(i).toFixed(1)}" y="${H-m.b+18}" text-anchor="middle" font-size="11" fill="${muted}">${fmtLbl(lb)}</text>`;});}
   else {const kk=Math.max(1,Math.ceil(n/8));o.labels.forEach((lb,i)=>{if((i%kk===0&&(n-1-i)>=kk*0.6)||i===n-1)g+=`<text x="${X(i).toFixed(1)}" y="${H-m.b+16}" text-anchor="end" font-size="10.5" fill="${muted}" transform="rotate(-38 ${X(i).toFixed(1)} ${H-m.b+16})">${fmtLbl(lb)}</text>`;});}
   if(o.xlabel)g+=`<text x="${m.l+(W-m.l-m.r)/2}" y="${H-4}" text-anchor="middle" font-size="12" font-weight="600" fill="${muted}">${o.xlabel}</text>`;
-  if(o.id){window["__mg_"+o.id]={series:o.series,labels:o.labels,unit:o.unit||"",yfmt:o.yfmt||null,ttfmt:o.ttfmt||null,delta:o.delta||false,flows:o.flows||null,xs:o.series[0].vals.map((_,i)=>X(i)),pys:o.series.map(s=>s.vals.map(v=>(v==null||!isFinite(v))?null:Y(v))),mt:m.t,mb:m.b,H};return `<svg id="${o.id}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${o.id}hover"></g></svg>`;}
+  if(o.id){window["__mg_"+o.id]={series:o.series,labels:o.labels,unit:o.unit||"",yfmt:o.yfmt||null,ttfmt:o.ttfmt||null,delta:o.delta||false,flows:o.flows||null,extra:o.extra||null,signBase:(o.signBase!=null?o.signBase:null),xs:o.series[0].vals.map((_,i)=>X(i)),pys:o.series.map(s=>s.vals.map(v=>(v==null||!isFinite(v))?null:Y(v))),mt:m.t,mb:m.b,H};return `<svg id="${o.id}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${o.id}hover"></g></svg>`;}
   return `<svg viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
 }
 function svgProj(o){
@@ -2193,7 +2194,10 @@ function attachMultiHover(id){
       else {const dp=v0?dv/v0*100:0,dc2=dv>=0?green:red;
         dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:${dc2};font-weight:800">${dv>=0?"▲ +":"▼ −"}${fmtCLP(Math.abs(dv))} <span style="font-weight:700">(${pc(dp)})</span></span><span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">vs registro anterior (${g.labels[bi-1]})</span>`;}}
       else dext=`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:var(--faint);font-weight:600;font-size:10.5px">punto inicial · compra</span>`;}
-    tt.innerHTML=`<b>${g.unit} ${g.labels[bi]}</b>`+g.series.map(s=>{const vv=s.vals[bi];if(vv==null||!isFinite(vv))return "";return `<span style="color:${s.c};font-weight:800;display:block">${(""+s.label).replace(/&/g,"&amp;").replace(/</g,"&lt;")}: ${tf(vv)}</span>`;}).join("")+dext;
+    if(g.extra&&g.extra[bi])dext+=g.extra[bi];
+    // signBase: el VALOR se colorea por su signo (verde sobre la base, rojo bajo ella) — una rentabilidad
+    // negativa jamás debe verse verde; la etiqueta conserva el color de la serie (identidad)
+    tt.innerHTML=`<b>${g.unit} ${g.labels[bi]}</b>`+g.series.map(s=>{const vv=s.vals[bi];if(vv==null||!isFinite(vv))return "";const vc=(g.signBase!=null)?((vv>=g.signBase)?green:red):s.c;return `<span style="display:block"><span style="color:${s.c};font-weight:800">${(""+s.label).replace(/&/g,"&amp;").replace(/</g,"&lt;")}:</span> <span style="color:${vc};font-weight:800">${tf(vv)}</span></span>`;}).join("")+dext;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
@@ -2936,7 +2940,7 @@ function viewInvActive(){
   const _mktG=(function(){if(!_selSer)return null;for(let i=_selSer.vals.length-1;i>=0;i--)if(_selSer.vals[i]!=null)return _selSer.vals[i]-100;return null;})();
   const selInfo=selP?`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:13px">${tileC("Tu retorno en "+selP.hd.t,pc(selP.ret*100),"pondera tus compras (cuánto y cuándo)",selP.hd.c,col(selP.ret*100))}${_mktG!=null?tileC("Precio desde incorporación",pc(_mktG),"crecimiento de mercado · es lo que dibuja el gráfico",selP.hd.c,col(_mktG)):""}${tileC("Ganancia / pérdida",(selP.gain>=0?"+":"−")+fmtCLP(Math.abs(selP.gain)),"sobre "+fmtCLP(selP.cost)+" invertidos",selP.hd.c,col(selP.gain))}${tileC("Precio compra → actual",fmtP(selP.buy)+" → "+fmtP(selP.cur),selP.sh?(selP.sh.toLocaleString("es-CL",{maximumFractionDigits:2})+" acciones"):"",selP.hd.c,ink)}${tileC("Aporte al retorno total",pc(selP.contribCum*100),"contribución a la cartera",selP.hd.c,col(selP.contribCum*100))}</div>${(_mktG!=null&&Math.abs(_mktG-selP.ret*100)>0.3)?`<div class="note" style="margin:-4px 0 13px;font-size:11px">¿Por qué difieren? El <b>gráfico</b> mide el crecimiento del <b>precio de mercado</b> desde que ${selP.hd.t} entró a la cartera (${pc(_mktG)}). <b>Tu retorno</b> (${pc(selP.ret*100)}) pondera <b>cuándo y cuánto</b> compraste: si compraste la mayor parte después de una subida, tu retorno es menor que el del precio — y al revés.</div>`:""}`
     :`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:13px">${IM.perStock.map(p=>tileC("Retorno "+p.hd.t,pc(p.ret*100),(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),p.hd.c,col(p.ret*100))).join("")}</div>`;
-  const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Crecimiento del <b>precio de mercado</b> (base 100 desde su incorporación) · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación) — tu retorno personal, que pondera tus compras, va en las tarjetas y la tabla · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeries,labels:dates,h:280,id:"invstk",unit:"",ttfmt:ret100,area:!!invStkSel}),stkBtns):"";
+  const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Crecimiento del <b>precio de mercado</b> (base 100 desde su incorporación) · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación) — tu retorno personal, que pondera tus compras, va en las tarjetas y la tabla · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeries,labels:dates,h:280,id:"invstk",unit:"",signBase:100,ttfmt:ret100,area:!!invStkSel}),stkBtns):"";
   const psSorted=[...IM.perStock].sort((a,b)=>b.contribCum-a.contribCum);
   const _todayBadge=`<span class="altchip" style="border-color:var(--accent);color:var(--accent);padding:1px 5px;font-size:8.5px;margin-left:5px" title="La compraste en este último registro: su Δ es el movimiento de mercado de la acción, no afecta el P/L del día (la compra se netea como aporte).">comprada hoy</span>`;
   // P. compra prom. = costo registrado ÷ acciones — comparable 1:1 con el "P. Compra" de la cartola de la
@@ -2952,7 +2956,7 @@ function viewInvActive(){
   const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
   // SECCIÓN 1 · rentabilidad: portafolio vs IPSA (va ARRIBA: lo primero es cómo rinde la estrategia)
   const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
-  const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
+  const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",signBase:100,ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
   const ipsaTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">${tile("Retorno portafolio",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}${tile("Retorno IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}${tile("Diferencia",pc(L.diff*100),L.diff>=0?"a favor del portafolio":"en contra",indigo,col(L.diff*100))}</div>`;
   const verdict=nd>=1?`<div class="card" style="background:linear-gradient(180deg,#F7FAFF,#fff)"><div class="bd"><div class="note" style="border:none;background:none;margin:0;font-size:14px">Tu portafolio rinde <b style="color:${col(L.ret*100)}">${pc(L.ret*100)}</b> vs el IPSA <b style="color:${col(L.ipsaRet*100)}">${pc(L.ipsaRet*100)}</b> → ${L.diff>=0?`<b style="color:${green}">supera al mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`:`<b style="color:${red}">va bajo el mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`} en estos ${days} días.</div></div></div>`:"";
   // SECCIÓN 3 · CAPM — curva EXIGIDA money-weighted: parte del valor real inicial, crece al retorno exigido y
@@ -6050,11 +6054,12 @@ function mindSparkSVG(series,colOverride){
   const gid="sp"+Math.abs((series[0]*1000|0)+series.length);
   return `<svg class="mkt-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".22"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
-function mktChgHtml(chg){return (chg==null||!isFinite(chg))?"":`<span class="mkt-chg ${chg>=0?"up":"dn"}" title="variación vs el dato anterior">${chg>=0?"▲":"▼"} ${Math.abs(chg).toLocaleString("es-CL",{maximumFractionDigits:2})}%</span>`;}
+function mktChgHtml(chg){if(chg==null||!isFinite(chg))return "";const flat=Math.abs(chg)<0.005;return `<span class="mkt-chg ${flat?"flat":(chg>=0?"up":"dn")}" title="variación vs el dato anterior">${flat?"•":(chg>=0?"▲":"▼")} ${Math.abs(chg).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`;}
 function mktTileHTML(label,valHtml,chg,sparkSeries,sub){
+  const _sc=(chg!=null&&isFinite(chg)&&Math.abs(chg)>=0.005)?(chg>=0?"var(--green)":"var(--red)"):undefined;   // curva del MISMO color que el chip de variación (consistencia); sin chip, por tendencia
   return `<div class="mkt-tile"><div class="mkt-top"><span class="mkt-name">${label}</span></div>
     <div class="mkt-val">${valHtml}${mktChgHtml(chg)}</div>
-    ${sparkSeries?mindSparkSVG(sparkSeries):""}
+    ${sparkSeries?mindSparkSVG(sparkSeries,_sc):""}
     <div class="mkt-date">${sub}</div></div>`;
 }
 function mindTile(d){
@@ -7466,8 +7471,8 @@ function managedTotalSeries(){
     try{const IM=withProject(p,()=>invMetrics());if(IM&&IM.series&&IM.series.length>1){
       // colapso por FECHA: último valor del día + aportes del día SUMADOS (varias operaciones = un punto)
       const pts=[];IM.series.forEach(s=>{
-        if(!pts.length||pts[pts.length-1].d!==s.date)pts.push({d:s.date,v:s.val,f:s.inflow||0,fee:0});
-        else{const q=pts[pts.length-1];q.f+=s.inflow||0;q.v=s.val;}});
+        if(!pts.length||pts[pts.length-1].d!==s.date)pts.push({d:s.date,v:s.val,f:s.inflow||0,fee:0,o:(s.ev?1:0)});
+        else{const q=pts[pts.length-1];q.f+=s.inflow||0;q.v=s.val;if(s.ev)q.o=(q.o||0)+1;}});
       // el día en que el proyecto ENTRA al agregado, TODO su valor es capital nuevo (no rentabilidad)
       if(pts.length)pts[0].f=pts[0].v;
       // comisiones por FECHA (del libro): para la curva de rentabilidad NETA — misma base que la tarjeta
@@ -7483,8 +7488,8 @@ function managedTotalSeries(){
   const dates=Object.keys(dset).sort();
   if(dates.length<2)return null;
   const di={};dates.forEach((d,k)=>{di[d]=k;});
-  const flows=dates.map(()=>0),feesD=dates.map(()=>0);
-  series.forEach(s=>s.forEach(pt=>{flows[di[pt.d]]+=pt.f;feesD[di[pt.d]]+=pt.fee||0;}));
+  const flows=dates.map(()=>0),feesD=dates.map(()=>0),opsD=dates.map(()=>0);
+  series.forEach(s=>s.forEach(pt=>{flows[di[pt.d]]+=pt.f;feesD[di[pt.d]]+=pt.fee||0;opsD[di[pt.d]]+=pt.o||0;}));
   const idx=series.map(()=>0);
   const totals=dates.map(d=>{let tot=0;series.forEach((s,k)=>{let v=null;while(idx[k]<s.length&&s[idx[k]].d<=d){v=s[idx[k]].v;idx[k]++;}if(v==null&&idx[k]>0)v=s[idx[k]-1].v;if(v!=null&&idx[k]>0)tot+=v;});return Math.round(tot);});
   // rentabilidad GESTIONADA (base 100): encadena el retorno por fecha NETEANDO los flujos del día
@@ -7496,7 +7501,7 @@ function managedTotalSeries(){
   const netPct=[];let aportCum=0,feeCum=0;
   for(let k=0;k<dates.length;k++){aportCum+=flows[k];feeCum+=feesD[k];
     netPct.push(aportCum>0?+(((totals[k]-aportCum-feeCum)/aportCum)*100).toFixed(3):0);}
-  return {dates,totals,ret100,netPct};
+  return {dates,totals,ret100,netPct,flows,feesD,opsD};
 }
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
@@ -7607,7 +7612,18 @@ function viewHome(){
     const lastV=mt.totals[mt.totals.length-1];
     if(!mt.netPct||mt.netPct.length<2)return "";
     const lastN=mt.netPct[mt.netPct.length-1],upN=lastN>=0;
-    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",yfmt:v=>(+v).toFixed(1)+"%",ttfmt:v=>((v>=0?"+":"")+(+v).toFixed(2)+"%")})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2)}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
+    // detalle por punto del tooltip: Δ del día en puntos, operaciones/aportes/comisiones del día y la
+    // explicación de la dilución cuando entra capital nuevo (para que una baja del % no se lea como pérdida)
+    const _xtr=mt.dates.map((d,k)=>{
+      const parts=[];
+      if(k>0){const dp=mt.netPct[k]-mt.netPct[k-1];parts.push(`<span style="display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line2);color:${dp>=0?green:red};font-weight:800">${dp>=0?"▲ +":"▼ −"}${Math.abs(dp).toFixed(2)} pp <span style="font-weight:600;color:var(--faint);font-size:10px">vs ${mt.dates[k-1]}</span></span>`);}
+      const fl=mt.flows?(mt.flows[k]||0):0,fe=mt.feesD?(mt.feesD[k]||0):0,op=mt.opsD?(mt.opsD[k]||0):0;
+      if(op)parts.push(`<span style="display:block;color:var(--accent);font-weight:700;font-size:10.5px">⇄ ${op} operaci${op===1?"ón":"ones"} este día</span>`);
+      if(fl)parts.push(`<span style="display:block;color:${fl>=0?"var(--accent)":amber};font-weight:700;font-size:10.5px">${fl>=0?"↳ aporte +":"↳ retiro −"}${fmtCLP(Math.abs(fl))}</span>`);
+      if(fe)parts.push(`<span style="display:block;color:${red};font-weight:700;font-size:10.5px">↳ comisiones −${fmtCLP(fe)}</span>`);
+      if(fl>0&&k>0)parts.push(`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">el % se diluye: la ganancia se reparte sobre el capital nuevo</span>`);
+      return parts.join("");});
+    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>(+v).toFixed(1)+"%",ttfmt:v=>((v>=0?"+":"")+(+v).toFixed(2)+"%")})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2)}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
     return card("Rentabilidad neta en el tiempo","Historia de la rentabilidad neta de todas tus carteras · (valor − aportado − comisiones) sobre el capital aportado a cada fecha · el último punto es la misma «Rentabilidad» del resumen de arriba",body);
   })();
   // indicadores que se movieron
