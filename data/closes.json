@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-07-11T13:44:59.225Z",
+ "updatedAt": "2026-07-13T23:02:26.951Z",
  "source": "Yahoo Finance (.SN) + fuentes IPSA",
  "ipsaSources": [
   "yahoo ^IPSA hoy: 1 día(s)",
@@ -16452,6 +16452,39 @@
     "CAP": 6579
    },
    "ipsa": 11056.87
+  },
+  {
+   "date": "2026-07-13",
+   "prices": {
+    "CHILE": 185,
+    "SANTANDER": 78.2,
+    "BCI": 62500,
+    "ENELCHILE": 81,
+    "COLBUN": 132,
+    "FALABELLA": 5905,
+    "CENCOSUD": 2040,
+    "COPEC": 6057.3,
+    "CMPC": 1078,
+    "SQM-B": 67211,
+    "CCU": 5249,
+    "ENTEL": 3766,
+    "LATAM": 24.9,
+    "PARAUCO": 3999.9,
+    "AGUAS-A": 337.27,
+    "IAM": 916.02,
+    "ENELAM": 84.2,
+    "ECL": 1739,
+    "ANDINA-B": 4784,
+    "CONCHATORO": 855.95,
+    "QUINENCO": 4180,
+    "MALLPLAZA": 3979.4,
+    "VAPORES": 46,
+    "RIPLEY": 385,
+    "SMU": 131.99,
+    "ITAUCL": 20300,
+    "CAP": 6464.3
+   },
+   "ipsa": 10927.71
   }
  ]
 }
