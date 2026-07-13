@@ -1435,6 +1435,7 @@ function uniMeta(t){const s=uniStk(t);return s?{t:s.t,n:s.n,s:s.s,c:s.c,b:(s.b!=
 let modulo="inicio", page="home", sel=STOCKS[0].t;
 let invStkSel=null;
 let objEditOn=false;   // editor de pesos objetivo (Composición actual vs objetivo, en Seguimiento)
+let invValFrom="",invValTo="";   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (solo ese gráfico)
 
 // ===== FORMATO =====
 let ink="#0F2747",muted="#52668A",faint="#8DA1C2",green="#0E8C5E",red="#D83A3A",amber="#B57A12",
@@ -2646,7 +2647,7 @@ function buildDemo(cfg){
 function seedDemos(){window.alert("Los proyectos de prueba se retiraron: Investor trabaja solo con datos reales.\n\nCrea tu cartera en Proyectos → ➕ Nueva inversión, o cárgala en Simulación → Constructor.");}
 function invMetrics(){
   if(!PF||!WEEKS.length)return null;
-  const base=WEEKS[0],sh={},cost={},b0={};PF.holdings.forEach(hd=>{let bp=base.prices[hd.t];if(bp==null){const fw=WEEKS.find(w=>w.prices[hd.t]!=null);bp=fw?fw.prices[hd.t]:0;}b0[hd.t]=bp||1;const inB=base.prices[hd.t]!=null;if(base.qty&&base.qty[hd.t]!=null){sh[hd.t]=base.qty[hd.t];cost[hd.t]=base.qty[hd.t]*(base.prices[hd.t]||b0[hd.t]);}else{sh[hd.t]=inB?hd.monto/base.prices[hd.t]:0;cost[hd.t]=inB?hd.monto:0;}});
+  const base=WEEKS[0],sh={},cost={},b0={};PF.holdings.forEach(hd=>{let bp=base.prices[hd.t];if(bp==null){const fw=WEEKS.find(w=>w.prices[hd.t]!=null);bp=fw?fw.prices[hd.t]:0;}b0[hd.t]=bp||1;const inB=base.prices[hd.t]!=null;if(base.qty&&base.qty[hd.t]!=null){sh[hd.t]=base.qty[hd.t];cost[hd.t]=base.qty[hd.t]*(base.prices[hd.t]||b0[hd.t]);}else if(base.qty){sh[hd.t]=0;cost[hd.t]=0;}else{sh[hd.t]=inB?hd.monto/base.prices[hd.t]:0;cost[hd.t]=inB?hd.monto:0;}});   // con COMPRA REAL registrada (qty), un papel ausente de qty NO se compró al inicio: 0 acciones — jamás derivar una posición fantasma desde hd.monto (que las ediciones de operaciones recalculan como costo)
   const t0=new Date(base.date).getTime();
   const addD=(WEEKS.length>1&&WEEKS[1].date===WEEKS[0].date)?864e5:0;
   let aport=base.qty?PF.holdings.reduce((a,hd)=>a+(sh[hd.t]||0)*(base.prices[hd.t]||0),0):PF.amount;
@@ -2914,10 +2915,15 @@ function viewInvActive(){
   const _dix=[];IM.series.forEach((s,i)=>{if(i===IM.series.length-1||IM.series[i+1].date!==s.date)_dix.push(i);});
   const dates=_dix.map(i=>IM.series[i].date);
   const _dayFlows=_dix.map((i,k)=>{const from=k===0?0:_dix[k-1]+1;let f=0;for(let j=from;j<=i;j++)f+=IM.series[j].inflow||0;return Math.round(f);});
-  // SECCIÓN 1 · valor en el tiempo
-  const valSeries=[{label:"Valor",c:indigo,vals:_dix.map(i=>+IM.series[i].val.toFixed(0)),w:2.8,op:1}];
-  const valChart=nd>=2?card("1 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP) desde la compra · pasa el mouse: en los días de compra/venta el salto se separa en <b>aporte</b> (capital) y <b>rentabilidad</b> real",svgMulti({series:valSeries,labels:dates,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true,flows:_dayFlows}))
-    :card("1 · Valor de la inversión en el tiempo","Aún no hay suficientes registros",`<div class="note" style="border:none;background:none;margin:0">Ingresa al menos <b>2 registros</b> (incluida la compra) para ver la evolución del valor.</div>`);
+  // SECCIÓN 2 · valor en el tiempo — con RANGO DE FECHAS propio (solo afecta este gráfico)
+  const _allVals=_dix.map(i=>+IM.series[i].val.toFixed(0));
+  const _vk=dates.map((d,k)=>k).filter(k=>(!invValFrom||dates[k]>=invValFrom)&&(!invValTo||dates[k]<=invValTo));
+  const vDates=_vk.map(k=>dates[k]),vVals=_vk.map(k=>_allVals[k]),vFlows=_vk.map(k=>_dayFlows[k]);
+  const _rangeOn=!!(invValFrom||invValTo);
+  const rangeUI=`<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><span class="genl" style="margin:0">Desde</span><input type="date" id="invValFrom" value="${invValFrom||""}" min="${dates[0]||""}" max="${dates[dates.length-1]||""}" style="width:128px" aria-label="Desde"><span class="genl" style="margin:0">hasta</span><input type="date" id="invValTo" value="${invValTo||""}" min="${dates[0]||""}" max="${dates[dates.length-1]||""}" style="width:128px" aria-label="Hasta">${_rangeOn?`<button class="btn" id="invValAll" style="padding:.3rem .6rem;font-size:11px" title="Ver todo el historial">✕ Todo</button>`:""}</div>`;
+  const valChart=nd>=2?card("2 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP)"+(_rangeOn?` · <b>rango: ${vDates[0]||"—"} → ${vDates[vDates.length-1]||"—"}</b>`:" desde la compra")+" · pasa el mouse: en los días de compra/venta el salto se separa en <b>aporte</b> (capital) y <b>rentabilidad</b> real",
+      vDates.length>=2?svgMulti({series:[{label:"Valor",c:indigo,vals:vVals,w:2.8,op:1}],labels:vDates,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true,flows:vFlows}):`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,rangeUI)
+    :card("2 · Valor de la inversión en el tiempo","Aún no hay suficientes registros",`<div class="note" style="border:none;background:none;margin:0">Ingresa al menos <b>2 registros</b> (incluida la compra) para ver la evolución del valor.</div>`);
   let stkSeries=IM.stockSeries;
   if(invStkSel){const f=IM.stockSeries.filter(s=>s.label===invStkSel);if(f.length)stkSeries=f;else invStkSel=null;}
   stkSeries=stkSeries.map(s=>Object.assign({},s,{vals:_dix.map(i=>s.vals[i])}));   // un punto por fecha (colapso visual)
@@ -2944,9 +2950,9 @@ function viewInvActive(){
   const _srcNote=(WEEKS.length>=2)?`<div class="note" style="margin-top:8px;font-size:10.5px">Δ ${fr.u} = entre los <b>dos últimos cierres reales</b> de cada acción${_dPair?(` (en general <b>${_dPair.dayFrom}</b> → <b>${_dPair.dayTo}</b>; el par exacto va en el tooltip de cada Δ)`):""}.${_lastNoClose?` El registro más nuevo (<b>${WEEKS[WEEKS.length-1].date}</b>) es una operación sin cierre de mercado aún: su Δ aparecerá cuando llegue el cierre del día (sincronización ~18:05).`:""} Fuente: base de precios del proyecto (Yahoo/planilla). Puede diferir del feed de tu bróker (BTG usa otro proveedor de datos): pequeñas diferencias de centavos son normales.</div>`:"";
   const psNote=`<div class="note" style="margin-top:11px">Mayor aporte al retorno: <b style="color:${bestS.hd.c}">${bestS.hd.t}</b> (${pc(bestS.contribCum*100)}). Mayor lastre: <b style="color:${worstS.hd.c}">${worstS.hd.t}</b> (${pc(worstS.contribCum*100)}). La <b>contribución</b> = ganancia de la acción ÷ capital invertido; suma el retorno total de la cartera.</div>`;
   const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
-  // SECCIÓN 2 · portafolio vs IPSA
+  // SECCIÓN 1 · rentabilidad: portafolio vs IPSA (va ARRIBA: lo primero es cómo rinde la estrategia)
   const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
-  const evoChart=nd>=2?card("2 · Portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
+  const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
   const ipsaTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">${tile("Retorno portafolio",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}${tile("Retorno IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}${tile("Diferencia",pc(L.diff*100),L.diff>=0?"a favor del portafolio":"en contra",indigo,col(L.diff*100))}</div>`;
   const verdict=nd>=1?`<div class="card" style="background:linear-gradient(180deg,#F7FAFF,#fff)"><div class="bd"><div class="note" style="border:none;background:none;margin:0;font-size:14px">Tu portafolio rinde <b style="color:${col(L.ret*100)}">${pc(L.ret*100)}</b> vs el IPSA <b style="color:${col(L.ipsaRet*100)}">${pc(L.ipsaRet*100)}</b> → ${L.diff>=0?`<b style="color:${green}">supera al mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`:`<b style="color:${red}">va bajo el mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`} en estos ${days} días.</div></div></div>`:"";
   // SECCIÓN 3 · CAPM — curva EXIGIDA money-weighted: parte del valor real inicial, crece al retorno exigido y
@@ -3046,7 +3052,7 @@ function viewInvActive(){
       `<div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" data-invtab="operar">⇄ Operar (comprar / vender)</button><button class="btn" data-gomod="proyectos">📁 Proyectos (crear nueva inversión)</button></div>`);
     return projbar+summary+invDetailCard()+opHint;
   }
-  return projbar+invTools+hero+summary+valChart+psTbl+allocCard+stkChart+evoChart+ipsaTiles+verdict+capmKp+capmChart+capmNote+riskCard+qualityCard;
+  return projbar+invTools+hero+summary+evoChart+valChart+psTbl+allocCard+stkChart+ipsaTiles+verdict+capmKp+capmChart+capmNote+riskCard+qualityCard;
 }
 
 function compraPreview(){
@@ -3322,6 +3328,13 @@ function genInvReport(){
 function attachInv(){
   if(modulo!=="inv")return;
   document.querySelectorAll("[data-stksel]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invStkSel=b.dataset.stksel||null;render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
+  // rango de fechas del gráfico "Valor de la inversión en el tiempo" (conserva el scroll al aplicar)
+  (function(){
+    const _keep=fn=>{const m=document.getElementById("main"),st=m?m.scrollTop:0;fn();const m2=document.getElementById("main");if(m2)m2.scrollTop=st;};
+    const vf=document.getElementById("invValFrom");if(vf)vf.onchange=()=>_keep(()=>{invValFrom=vf.value||"";render();});
+    const vt=document.getElementById("invValTo");if(vt)vt.onchange=()=>_keep(()=>{invValTo=vt.value||"";render();});
+    const va=document.getElementById("invValAll");if(va)va.onclick=()=>_keep(()=>{invValFrom="";invValTo="";render();});
+  })();
   // ── editor de pesos objetivo (tarjeta "Composición actual vs objetivo") ──
   (function(){
     const _keepScroll=fn=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;fn();const _m2=document.getElementById("main");if(_m2)_m2.scrollTop=_st;};
@@ -3377,7 +3390,9 @@ function attachInv(){
     // editar un registro que fue una OPERACIÓN (aporte/compra/venta/rebalanceo) conserva la operación:
     // si se perdiera el campo ev, sus acciones y su flujo de caja desaparecerían del TWR y del libro.
     // También se conservan los sellos fresh/ipsaFresh (qué precios son cierre REAL): editar no los cambia.
+    let _owPrices=null;
     if(editIdx!=null&&WEEKS[editIdx]){const _ow=WEEKS[editIdx];
+      _owPrices=Object.assign({},_ow.prices||{});
       if(_ow.ev)rec.ev=_ow.ev;
       if(_ow.fresh)rec.fresh=_ow.fresh;
       if(_ow.ipsaFresh)rec.ipsaFresh=_ow.ipsaFresh;}
@@ -3392,6 +3407,21 @@ function attachInv(){
       if(nq!==+rec.ev.shares||Math.abs(np-(+rec.ev.price))>1e-9){rec.ev=Object.assign({},rec.ev,{shares:nq,price:np});_evTouched=true;}
       // sin cierre real del papel ese día, el precio del día es el de la transacción corregida (guardia ±15%)
       if(rec.fresh&&rec.fresh.indexOf(rec.ev.t)<0){const _cur=rec.prices[rec.ev.t];if(!(_cur>0)||Math.abs(np/_cur-1)<=0.15)rec.prices[rec.ev.t]=np;}
+    }
+    // CORRECCIÓN MANUAL DE UN CIERRE desde el Historial: si el usuario cambió el PRECIO DEL DÍA de una
+    // acción (no la operación), la corrección se propaga a TODOS los registros de esa fecha (con varias
+    // operaciones el mismo día, el que manda en la valorización es el último) y se ANCLA en la base de
+    // precios — así la sincronización automática no repone el valor viejo (caso real: Yahoo cambió
+    // retroactivamente el cierre de LATAM y no había forma de corregirlo en un día con operaciones).
+    if(editIdx!=null&&!compraMode&&_owPrices){
+      // el precio del papel operado re-derivado de la transacción (sin cierre real ese día) NO es un cierre
+      // manual: no se propaga ni se ancla — solo los precios que el usuario cambió en los campos del día
+      const _skipEvT=(rec.ev&&rec.ev.kind==="trade"&&rec.fresh&&rec.fresh.indexOf(rec.ev.t)<0)?rec.ev.t:null;
+      const _chg={};PF.holdings.forEach(hd=>{if(hd.t===_skipEvT)return;const nv=rec.prices[hd.t];const ov=_owPrices[hd.t];if(nv>0&&isFinite(nv)&&nv!==ov)_chg[hd.t]=nv;});
+      if(Object.keys(_chg).length){
+        WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date){w.prices=w.prices||{};Object.keys(_chg).forEach(t=>{w.prices[t]=_chg[t];});}});
+        try{pricedbUpsertDay(rec.date,null,_chg);}catch(e){}
+      }
     }
     if(editIdx!=null){WEEKS[editIdx]=rec;editIdx=null;}else{WEEKS.push(rec);}
     // la ponderación ejecutada (acciones enteras a precio de mercado) no calza exacto con la simulada:
@@ -7508,13 +7538,16 @@ function viewHome(){
   const _who=(typeof AUTH!=="undefined"&&AUTH&&AUTH.user)?(", "+(""+AUTH.user).replace(/</g,"&lt;")):"";
   const _fecha=_now.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const greetStrip=`<div class="home-greet"><div><div class="hg-hi">${_greet}${_who}</div><div class="hg-date">${_fecha.charAt(0).toUpperCase()+_fecha.slice(1)}</div></div><button class="btn btnu hg-cta" data-go="datos|cierre">↻ Cargar cierre del día</button></div>`;
-  const patSeries=aggSeries(D.projs);
+  // serie gestionada (se calcula UNA vez): el sparkline del hero y la tarjeta de rentabilidad neta la comparten.
+  // El hero dibuja la RENTABILIDAD NETA (no el patrimonio: los aportes lo hacían ver como un escalón plano).
+  const _mtH=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
+  const patSeries=(_mtH&&_mtH.netPct&&_mtH.netPct.length>1)?_mtH.netPct:aggSeries(D.projs);
   const _hpos=T.gainNet>=0,_hcol=_hpos?"#34D399":"#FB7185";
   const hero=`<div class="home-hero ${_hpos?"pos":"neg"}">
     <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO</div>
       <div class="hh-val" style="color:${_hcol}">${fmtCLP(T.value)}</div>
       <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}</div></div>
-    ${patSeries.length>1?`<div class="hh-c">${heroSpark(patSeries)}</div>`:""}
+    ${patSeries.length>1?`<div class="hh-c" title="Rentabilidad neta en el tiempo">${heroSpark(patSeries)}</div>`:""}
     <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(T.gainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
   const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles-consol">
     ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT,"tw2")}
@@ -7569,7 +7602,7 @@ function viewHome(){
   // comisiones) ÷ aportado a cada fecha, la MISMA base que la tarjeta "Rentabilidad" del Resumen consolidado
   // (el último punto coincide exacto con ella). El patrimonio queda como dato en el pie (y en el hero).
   const totalCard=(()=>{
-    const mt=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
+    const mt=_mtH;
     if(!mt||!mt.totals||mt.totals.length<2)return "";
     const lastV=mt.totals[mt.totals.length-1];
     if(!mt.netPct||mt.netPct.length<2)return "";
@@ -7697,7 +7730,7 @@ function attachHome(){
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
   try{attachMultiHover("ipsahome");}catch(e){}
-  try{attachMultiHover("mgtot");}catch(e){}
+  try{attachMultiHover("mgret");}catch(e){}   // rentabilidad neta en el tiempo: tooltip con fecha y % al pasar el mouse
   document.querySelectorAll("[data-newsretry]").forEach(b=>b.onclick=()=>{try{newsFetch(true);}catch(e){}});
   const _wx=document.querySelector("[data-welcomehide]");if(_wx)_wx.onclick=()=>{try{localStorage.setItem("inv_welcome_hide","1");}catch(e){}render();};
   try{mindAutoRefresh();}catch(e){}   // Home también refresca indicadores vencidos (antes solo si NUNCA se habían cargado)
