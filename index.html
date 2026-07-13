@@ -3631,7 +3631,8 @@ function evalMeta(){
   const anName=isImp?"Análisis del sistema":"sin análisis";
   const tag='<span class="em-tag '+(isImp?'imp':'')+'">'+anName+'</span>';
   const act=(page!=="crear")?'<button class="em-btn" data-go-import><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Ajustes del análisis</button>':'';
-  return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span>'+tag+'<span class="em-spacer"></span>'+act+'</div>';
+  const pdfBtn='<button class="em-btn" id="anaReportBtn" title="Genera un PDF con todo el análisis (Comparativa, CAPM, Detalle, Multifactor y Fundamentos) según estos parámetros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h6M9 12h2"/></svg>Informe PDF</button>';
+  return '<div class="eval-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Ventana: <b>'+DATA.window+'</b></span><span class="dot">·</span><span><b>'+DATA.n+'</b> '+per+'</span><span class="dot">·</span><span><b>'+STOCKS.length+'</b> acciones</span>'+tag+'<span class="em-spacer"></span>'+pdfBtn+act+'</div>';
 }
 /* true cuando NO existe el análisis del sistema (base sin datos suficientes): estados vacíos honestos.
    Ya no hay análisis independientes: cuando la base alcanza (≥2 acciones + IPSA ≥12m) el análisis se
@@ -3716,6 +3717,7 @@ function render(){
     if(modulo==="inicio") attachHome();
     if(modulo==="datos") attachDatos();
     {const _gi=document.querySelector("[data-go-import]");if(_gi)_gi.onclick=()=>{modulo="eval";page="crear";render();};const _gd=document.querySelector("[data-godatos]");if(_gd)_gd.onclick=()=>{modulo="datos";page="base";render();};const _gc=document.querySelector("[data-gocargar]");if(_gc)_gc.onclick=()=>{modulo="datos";page="cargar";render();};}   // navegación genérica: también sirve al estado vacío de Simulación
+    {const _ar=document.getElementById("anaReportBtn");if(_ar)_ar.onclick=()=>{try{genAnalysisReport();}catch(e){try{console.error("genAnalysisReport:",e);}catch(_){}window.alert("No se pudo generar el informe del análisis: "+((e&&e.message)||e));}};}   // informe PDF del análisis completo
     attachScatterAll();
     attachTableSort();
   }catch(err){try{console.error("attach("+modulo+"/"+page+"):",err);}catch(e){}}
@@ -5828,7 +5830,8 @@ function viewCrear(){
       <div class="ca-grid">${chips}</div></div>
     <div class="ca-foot"><span class="note" style="margin:0">${!idxs.length?"Falta el índice de referencia (IPSA) en la base":selCount<2?"Debes incluir al menos 2 acciones":(selCount+" acciones · "+S.bench+_avHint)}</span></div>`;
   }
-  return card("Análisis del sistema","Investor construye SIEMPRE el análisis con los datos reales de la base — aquí ajustas su ventana (mínimo "+CA_MIN_MONTHS+" meses) y qué acciones incluye. Ya no hay análisis independientes que crear o guardar.",form);
+  const _pdfAct=(typeof DATASET!=="undefined"&&DATASET==="import")?'<button class="btn btn-pri" id="anaReportBtn" title="Genera un PDF con todo el análisis según estos parámetros">📄 Informe del análisis (PDF)</button>':'';
+  return card("Análisis del sistema","Investor construye SIEMPRE el análisis con los datos reales de la base — aquí ajustas su ventana (mínimo "+CA_MIN_MONTHS+" meses) y qué acciones incluye. Ya no hay análisis independientes que crear o guardar.",form,_pdfAct);
 }
 function attachCrear(){
   anaEnsure();
@@ -5879,7 +5882,7 @@ function viewFundamentos(){
     return {pe:f.pe,html:`<tr><td>${nm}</td><td class="r tnum">${fv(f.px,2)}</td><td class="r tnum" style="font-weight:700;color:${f.pe==null?faint:peMed&&f.pe<peMed?green:ink}">${fv(f.pe,1)}</td><td class="r tnum" style="color:${muted}">${fv(f.fpe,1)}</td><td class="r tnum">${fv(f.pb,2)}</td><td class="r tnum" style="font-weight:700;color:${f.dy>=5?green:f.dy!=null?ink:faint}">${f.dy!=null?f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r tnum" style="color:${muted}">${fv(f.eps,1)}</td><td class="r tnum">${fundFmtCap(f.mcap)}</td><td>${bar}</td><td>${chips}</td></tr>`};
   }).sort((a,b)=>(a.pe==null?1e9:a.pe)-(b.pe==null?1e9:b.pe)).map(r=>r.html).join("");
   const tbl=card("Valorización y dividendos",`P/U, P/B, dividendos, capitalización y posición en el rango de 52 semanas · al ${(""+(FDATA.updatedAt||"")).slice(0,10)||"—"} · fuente Yahoo Finance · clic en un encabezado para ordenar`,
-    {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio</th><th class="r">P/U</th><th class="r">P/U fwd</th><th class="r">P/B</th><th class="r">Yield div.</th><th class="r">EPS</th><th class="r">Capitalización</th><th>52 semanas</th><th>Señales</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true},syncBtn);
+    {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio</th><th class="r">P/U</th><th class="r">P/U fwd</th><th class="r">P/B</th><th class="r">Yield div.</th><th class="r">EPS</th><th class="r">Capitalización</th><th>52 semanas</th><th>Señales</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true},((typeof DATASET!=="undefined"&&DATASET==="import")?'<button class="btn" id="anaReportBtn" title="Genera un PDF con todo el análisis según los Ajustes del análisis activos">📄 Informe del análisis (PDF)</button> ':'')+syncBtn);
   // ── CALIDAD, CRECIMIENTO Y CONSENSO (segunda pasada del pipeline: ROE, márgenes, deuda, analistas) ──
   const hasQ=tks.some(t=>{const f=by[t];return f.roe!=null||f.nm!=null||f.target!=null||f.de!=null||f.peg!=null;});
   const _recL={strong_buy:["Compra fuerte",green],buy:["Compra",green],overweight:["Sobreponderar",green],hold:["Mantener",amber],neutral:["Neutral",amber],underweight:["Subponderar",red],underperform:["Vender",red],sell:["Vender",red]};
@@ -6599,6 +6602,172 @@ function genContabReport(){
     metaHTML,bodyHTML,footHTML,sigHTML,folio,fch
   });
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
+}
+/* ===== INFORME PDF DEL ANÁLISIS COMPLETO (todos los submódulos, según los Ajustes del análisis activos) ===== */
+function genAnalysisReport(){
+  if(typeof evalIsEmpty==="function"&&evalIsEmpty()){window.alert("El análisis del sistema aún no está disponible. Carga datos en el módulo Datos: con precios suficientes (≥2 acciones + IPSA) el análisis se construye solo.");return;}
+  if(!STOCKS||!STOCKS.length){window.alert("No hay acciones en el análisis.");return;}
+  let MFok=false;try{MFok=!!(typeof MF!=="undefined"&&MF&&MF.z&&MF.er);}catch(e){}
+  const W=(typeof winMode==="function")?winMode():false;
+  const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
+  const pos="#0E8C5E",neg="#C0392B",mut="#52668A",fnt="#8DA1C2",acc="#1E5FD1";
+  const cc=v=>v>=0?pos:neg;
+  const sg=(v,d)=>(v>=0?"+":"")+(+v).toFixed(d==null?2:d)+"%";
+  const p0r=(v,d)=>(+v).toFixed(d==null?1:d)+"%";
+  const f2=v=>(+v).toFixed(2);
+  const clpR=n=>"$"+Math.round(n||0).toLocaleString("es-CL");
+  const esc=s=>(""+s).replace(/</g,"&lt;");
+  const kpi=(l,v,c,s)=>`<div class="kpi"><div class="kl">${l}</div><div class="kv" style="color:${c||'#10306A'}">${v}</div>${s?`<div class="ks">${s}</div>`:""}</div>`;
+  // helpers de ventana (mismos que Comparativa / CAPM)
+  const retOf=s=>W?s.a24.tot:s.a24.ret, erOf=s=>W?erWin(s.b):s.a24.er, alfaOf=s=>W?alphaWin(s):s.a24.jensen;
+  const mktRet=W?MKT.tot:MKT.ret, rfY=W?rfWin():RF, primaY=W?primaWin():PRIMA;
+  const winTxt=(typeof winLong==="function")?winLong():((DATA.n||"")+"");
+  const shortTxt=(typeof winShort==="function")?winShort():"";
+  const perLbl=DATA.perYear===252?"diaria":DATA.perYear===52?"semanal":"mensual";
+  const benchName=(typeof IMP!=="undefined"&&IMP&&IMP.bench&&IMP.bench.name)?IMP.bench.name:"IPSA";
+  const nExcl=(typeof anaState!=="undefined"&&anaState&&anaState.excl)?Object.keys(anaState.excl).length:0;
+  const ivOf=s=>{try{return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;}catch(e){return null;}};
+  // ── gráficos con paleta CLARA (segura para el PDF blanco) ──
+  const _pal={GC,AC,ZC,faint,muted,indigo};
+  let scatterRR="",scatterSML="";
+  try{
+    GC="#E6EDF7";AC="#C3D0E4";ZC="#AEBED4";faint="#8DA1C2";muted="#52668A";indigo="#1E5FD1";
+    // Mapa Riesgo–Retorno
+    const sx=niceBounds([0,...STOCKS.map(s=>s.a24.sig)],0.12);sx.min=0;
+    const sy=niceBounds([rfY,...STOCKS.map(retOf),mktRet],0.14);
+    const ptsRR=STOCKS.map(s=>({x:s.a24.sig,y:retOf(s),c:s.c,label:s.t}));
+    ptsRR.push({x:MKT.sig,y:mktRet,c:"#1E5FD1",label:"IPSA",shape:"diamond",r:8});
+    ptsRR.push({x:0,y:rfY,c:"#52668A",label:"Rf",shape:"tri"});
+    scatterRR=svgScatter({pts:ptsRR,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:W?("Retorno "+shortTxt+" (%)"):"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:360,w:760});
+    // SML
+    const bmax=Math.max(...STOCKS.map(s=>s.b))*1.18;
+    const primaR=isFinite(mktRet)?(mktRet-rfY):primaY;
+    const yb=niceBounds([rfY,...STOCKS.map(retOf)],0.14);
+    const ptsSML=STOCKS.map(s=>({x:s.b,y:retOf(s),c:s.c,label:s.t}));
+    const lineSML=[{x1:0,y1:rfY,x2:bmax,y2:rfY+bmax*primaY,c:"#1E5FD1",dash:true}];
+    scatterSML=svgScatter({pts:ptsSML,lines:lineSML,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:W?("Retorno real "+shortTxt+" (%)"):"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:340,w:760});
+  }catch(e){scatterRR=scatterRR||"";scatterSML=scatterSML||"";}
+  finally{GC=_pal.GC;AC=_pal.AC;ZC=_pal.ZC;faint=_pal.faint;muted=_pal.muted;indigo=_pal.indigo;}
+
+  // ── SECCIÓN 1 · Parámetros del análisis (Ajustes activos) ──
+  const secParams=`<section class="sec-a"><h2><span class="sn">1</span>Parámetros del análisis</h2>
+    <div class="ssub">Configuración vigente en «Ajustes del análisis» — todas las secciones de este informe se calculan con estos parámetros</div>
+    <div class="kgrid">
+      ${kpi("Ventana",winTxt,null,"cadencia "+perLbl)}
+      ${kpi("Acciones analizadas",String(STOCKS.length),null,nExcl?(nExcl+" excluida(s) en Ajustes"):"todas las de la base")}
+      ${kpi("Benchmark",esc(benchName),acc,"índice de referencia")}
+      ${kpi("Modo de retornos",W?"Ventana (<1 año)":"Anualizado",null,W?"retornos de la ventana; el anual es referencial":"σ, retornos y α anualizados")}
+    </div>
+    <div class="kgrid" style="margin-top:10px">
+      ${kpi("Tasa libre de riesgo (Rf)",p0r(RF),null,W?("en la ventana "+p0r(rfY,2)):"anual")}
+      ${kpi("Prima de mercado",p0r(PRIMA),null,W?("en la ventana "+p0r(primaY,2)):"IPSA − Rf, anual")}
+      ${kpi("E(R) mercado",p0r(typeof ERM!=="undefined"?ERM:(RF+PRIMA)),acc,"retorno esperado del IPSA")}
+      ${kpi("Rentabilidad IPSA",sg(mktRet),cc(mktRet),W?("de la ventana · σ "+p0r(MKT.sig)):("anual · σ "+p0r(MKT.sig)))}
+    </div>
+    <div class="note">Estos parámetros se ajustan en <b>Análisis → Ajustes del análisis</b> (ventana en meses, benchmark y qué acciones incluir). El <b>modo ventana</b> se activa solo cuando la ventana es menor a ~1 año: en ese caso los retornos, el α y la SML se expresan en términos de la ventana (no anualizados) para no proyectar de más.</div></section>`;
+
+  // ── SECCIÓN 2 · Resumen ejecutivo · Investor Score ──
+  let secScore="";
+  try{
+    const IS=(typeof investorScore==="function")?investorScore():null;
+    if(IS&&IS.rows&&IS.rows.length){
+      const rows=IS.rows.map((r,i)=>{const tier=(typeof iscTier==="function")?iscTier(r.score):"";const tc=(typeof iscCol==="function")?iscCol(r.score):acc;
+        return `<tr><td class="r">${i+1}</td><td><span class="dot" style="background:${r.c}"></span><b>${esc(r.t)}</b></td><td class="r" style="font-weight:800;color:${tc}">${Math.round(r.score)}</td><td style="color:${tc};font-weight:700">${tier}</td><td class="r">${f2(r.beta)}</td><td class="r" style="color:${r.sharpe>=0?pos:neg}">${f2(r.sharpe)}</td><td class="r" style="color:${cc(r.alpha)}">${sg(r.alpha,1)}</td><td class="r" style="color:${r.mos!=null?(r.mos>=0?pos:neg):fnt}">${r.mos!=null?sg(r.mos<-100?-100:r.mos,0):"—"}</td><td class="r" style="color:${r.upside!=null?(r.upside>=0?pos:neg):fnt}">${r.upside!=null?sg(r.upside,0):"—"}</td></tr>`;}).join("");
+      secScore=`<section class="pb"><h2><span class="sn">2</span>Resumen ejecutivo · Investor Score</h2>
+        <div class="ssub">Ranking compuesto (rentabilidad-riesgo + fundamentos + tendencia) sobre las ${IS.rows.length} acciones · ventana fija de 12 meses para que sea comparable día a día</div>
+        <table><thead><tr><th class="r">#</th><th>Acción</th><th class="r">Score</th><th>Nivel</th><th class="r">β</th><th class="r">Sharpe</th><th class="r">α Jensen</th><th class="r">Mrg. seg.</th><th class="r">Upside</th></tr></thead><tbody>${rows}</tbody></table>
+        <div class="note">El <b>Investor Score</b> (0–100) combina desempeño ajustado por riesgo, fundamentos (P/U, ROE, margen de seguridad) y tendencia. <b>Mrg. seg.</b> = valor intrínseco vs precio (positivo = cotiza bajo su valor). <b>Upside</b> = precio objetivo de analistas vs precio actual. Documento educativo; no es recomendación de inversión.</div></section>`;
+    }
+  }catch(e){}
+
+  // ── SECCIÓN 3 · Comparativa (Riesgo–Retorno) ──
+  const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
+  const mosCellR=s=>{const iv=ivOf(s);if(!iv)return `<td class="r" style="color:${fnt}">—</td>`;
+    const ml=(typeof mosLabel==="function")?mosLabel(iv.mos):{cls:"ink",txt:""};const mc=({green:pos,red:neg,amber:"#B57A12",ink:"#10306A"})[ml.cls]||"#10306A";
+    const shown=iv.mos<-1?"≤−100%":sg(iv.mos*100,0);
+    return `<td class="r" style="font-weight:700;color:${mc}">${shown}</td>`;};
+  const compRows=byS.map(s=>{const a=s.a24;return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td style="color:${mut}">${esc(s.s)}</td><td class="r" style="color:${acc};font-weight:700">${f2(s.b)}</td><td class="r" style="color:${cc(retOf(s))}">${sg(retOf(s))}</td><td class="r">${p0r(a.sig)}</td><td class="r" style="font-weight:700;color:${a.sharpe>=0?pos:neg}">${f2(a.sharpe)}</td><td class="r" style="color:${cc(alfaOf(s))}">${sg(alfaOf(s))}</td>${mosCellR(s)}<td class="r" style="color:${mut}">${f2(a.r2)}</td></tr>`;}).join("");
+  const mktRow=`<tr style="font-weight:700;background:#F2F7FF"><td style="color:${acc}">IPSA</td><td style="color:${mut}">mercado</td><td class="r" style="color:${acc}">1.00</td><td class="r" style="color:${cc(mktRet)}">${sg(mktRet)}</td><td class="r">${p0r(MKT.sig)}</td><td class="r" style="color:${MKT.sharpe>=0?pos:neg}">${f2(MKT.sharpe)}</td><td class="r" style="color:${mut}">—</td><td class="r" style="color:${mut}">—</td><td class="r" style="color:${mut}">1.00</td></tr>`;
+  const secComp=`<section class="sec-a pb"><h2><span class="sn">3</span>Comparativa · Riesgo–Retorno</h2>
+    <div class="ssub">Volatilidad anual (X) vs retorno ${W?("de la ventana"):"anual"} (Y) · ${esc(winTxt)} · ordenadas por Sharpe</div>
+    ${scatterRR?`<div class="chartbox">${scatterRR}<div style="margin-top:5px"><span class="lg"><span class="d" style="background:#1E5FD1"></span>IPSA (mercado)</span><span class="lg"><span class="d" style="background:#52668A"></span>Rf</span></div></div>`:""}
+    <table style="margin-top:11px"><thead><tr><th>Acción</th><th>Sector</th><th class="r">β</th><th class="r">Ret. ${W?esc(shortTxt):"anual"}</th><th class="r">σ anual</th><th class="r">Sharpe</th><th class="r">α ${W?"ventana":"Jensen"}</th><th class="r">Mrg. seg.</th><th class="r">R²</th></tr></thead><tbody>${compRows}${mktRow}</tbody></table>
+    <div class="note">El <b>Sharpe</b> mide el retorno por unidad de riesgo; el <b>α</b> es el retorno sobre lo exigido por el CAPM para la β de la acción; el <b>R²</b> es la fracción del riesgo explicada por el mercado (el resto es propio/diversificable). <b>Mrg. seg.</b> verde = la acción cotiza bajo su valor intrínseco.</div></section>`;
+
+  // ── SECCIÓN 4 · CAPM / SML ──
+  const aThr=W?Math.max(0.3,(typeof winYears==="function"?winYears():1)):1;
+  const byJ=[...STOCKS].sort((a,b)=>alfaOf(b)-alfaOf(a));
+  const capmRows=byJ.map(s=>{const al=alfaOf(s);const sig2=al>aThr?"SUBVALORADA":al<-aThr?"SOBREVALORADA":"EQUILIBRIO",sc=al>aThr?pos:al<-aThr?neg:mut;
+    return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r" style="color:${acc};font-weight:700">${f2(s.b)}</td><td class="r" style="color:${acc}">${p0r(erOf(s),W?2:1)}</td><td class="r" style="color:${cc(retOf(s))}">${sg(retOf(s))}</td><td class="r" style="color:${cc(al)}">${sg(al)}</td><td style="color:${sc};font-weight:700">${sig2}</td></tr>`;}).join("");
+  const secCapm=`<section class="sec-a pb"><h2><span class="sn">4</span>CAPM · Security Market Line</h2>
+    <div class="ssub">Retorno exigido por β (E(R) = Rf + β × prima) · puntos sobre la línea batieron al CAPM (α positivo)${W?(" · prorrateado a la ventana de "+esc(winTxt)):""}</div>
+    ${scatterSML?`<div class="chartbox">${scatterSML}<div style="margin-top:5px"><span class="lg"><span class="d" style="background:#1E5FD1"></span>SML (retorno exigido)</span></div></div>`:""}
+    <table style="margin-top:11px"><thead><tr><th>Acción</th><th class="r">β</th><th class="r">E(R) ${W?"exigido":"CAPM"}</th><th class="r">Retorno real</th><th class="r">α ${W?"ventana":"Jensen"}</th><th>Señal</th></tr></thead><tbody>${capmRows}</tbody></table>
+    <div class="note">La <b>SML</b> es el retorno que el CAPM exige según el riesgo sistemático (β). Una acción <b>sobre</b> la línea rindió más de lo exigido (α positivo, señal SUBVALORADA); <b>bajo</b> la línea, menos (SOBREVALORADA). ${W?"Ventana corta: las señales son indicios, no veredictos.":""}</div></section>`;
+
+  // ── SECCIÓN 5 · Valoración por acción (Detalle: valor intrínseco y margen de seguridad) ──
+  const ivRows=STOCKS.map(s=>{const iv=ivOf(s);
+    if(!iv)return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r" style="color:${fnt}" colspan="6">sin fundamentos suficientes (Yahoo no los cubre)</td></tr>`;
+    const ml=(typeof mosLabel==="function")?mosLabel(iv.mos):{cls:"ink",txt:""};const mc=({green:pos,red:neg,amber:"#B57A12",ink:"#10306A"})[ml.cls]||"#10306A";
+    const fiab=iv.n<2?"baja (1 ancla)":(iv.disp>0.6?"baja (discrepan)":iv.disp>0.35?"media":"alta");
+    const shown=iv.mos<-1?"≤−100%":sg(iv.mos*100,0);
+    return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r">${clpR(iv.value)}</td><td class="r" style="color:${mut}">${clpR(iv.lo)} – ${clpR(iv.hi)}</td><td class="r">${clpR(iv.px)}</td><td class="r" style="font-weight:700;color:${mc}">${shown}</td><td class="r">${p0r(iv.r*100)}</td><td style="color:${mut}">${iv.n} · ${fiab}</td></tr>`;}).join("");
+  const secDet=`<section class="pb"><h2><span class="sn">5</span>Valoración por acción · valor intrínseco y margen de seguridad</h2>
+    <div class="ssub">Lo que cada acción vale (dividendos, múltiplos justos y precio objetivo de analistas) frente a su último cierre · el ángulo de precio del Detalle por acción</div>
+    <table><thead><tr><th>Acción</th><th class="r">Valor intrínseco</th><th class="r">Banda</th><th class="r">Precio</th><th class="r">Mrg. seguridad</th><th class="r">Ret. exigido r</th><th>Métodos · fiab.</th></tr></thead><tbody>${ivRows}</tbody></table>
+    <div class="note">El <b>valor intrínseco</b> es la mediana de las anclas disponibles (DDM de dividendos, múltiplo justo P/U del universo y precio objetivo de analistas). El <b>margen de seguridad</b> = (valor − precio) ÷ valor: positivo = hay colchón comprando bajo su valor; negativo = pagas de más. El <b>retorno exigido r</b> sale del CAPM con la β de la regresión. Es valorización (¿a qué precio entrar?), no una señal de <i>timing</i>.</div></section>`;
+
+  // ── SECCIÓN 6 · Multifactor ──
+  let secMF="";
+  if(MFok){
+    const prof=(typeof mfProfile!=="undefined"&&mfProfile)?mfProfile:"moderado";
+    const zc=v=>{const c=v>=0.5?pos:v<=-0.5?neg:mut;return `<span style="color:${c};font-weight:${Math.abs(v)>=0.5?"700":"400"}">${(v>=0?"+":"")+(+v).toFixed(2)}</span>`;};
+    const ranked=[...STOCKS].sort((a,b)=>(compositeOf(b.t,prof))-(compositeOf(a.t,prof)));
+    const mfRows=ranked.map(x=>{const z=MF.z[x.t]||{},capm=x.a24.er,mf=MF.er[x.t],d=mf-capm;
+      return `<tr><td><span class="dot" style="background:${x.c}"></span><b>${esc(x.t)}</b></td><td class="r">${zc(z.momentum||0)}</td><td class="r">${zc(z.lowvol||0)}</td><td class="r">${zc(z.value||0)}</td><td class="r">${zc(z.quality||0)}</td><td class="r">${zc(z.size||0)}</td><td class="r">${zc(z.yield||0)}</td><td class="r" style="font-weight:700">${zc(compositeOf(x.t,prof))}</td><td class="r" style="color:${acc}">${p0r(capm)}</td><td class="r" style="font-weight:700">${p0r(mf)}</td><td class="r" style="color:${cc(d)}">${sg(d)}</td></tr>`;}).join("");
+    secMF=`<section class="pb"><h2><span class="sn">6</span>Análisis multifactor</h2>
+      <div class="ssub">Más allá del β: 6 factores de estilo (z transversal, +mejor) y retorno esperado multifactor vs CAPM · perfil ${esc(prof)}</div>
+      <table><thead><tr><th>Acción</th><th class="r">Mom.</th><th class="r">LowVol</th><th class="r">Value</th><th class="r">Quality</th><th class="r">Size</th><th class="r">Yield</th><th class="r">Composite</th><th class="r">E(R) CAPM</th><th class="r">E(R) MF</th><th class="r">Δ</th></tr></thead><tbody>${mfRows}</tbody></table>
+      <div class="note">Cada factor se estandariza (z-score transversal sobre las ${STOCKS.length} acciones; <b>+z = mejor</b>). El <b>Composite</b> pondera los factores según el perfil (${esc(prof)}). El <b>E(R) multifactor</b> añade primas de factor sobre el CAPM (modelo tipo APT). Los factores de precio (Momentum, Low-Vol) usan tus cierres reales; los fundamentales usan los datos del pipeline.</div></section>`;
+  }
+
+  // ── SECCIÓN 7 · Fundamentos ──
+  let secFund="";
+  try{
+    const fRows=STOCKS.map(s=>{const f=(typeof fundGet==="function")?fundGet(s.t):null;if(!f)return null;
+      const up=(f.target!=null&&f.px>0)?((f.target/f.px-1)*100):null;
+      const pos52=(f.px!=null&&f.hi52!=null&&f.lo52!=null&&f.hi52>f.lo52)?Math.max(0,Math.min(1,(f.px-f.lo52)/(f.hi52-f.lo52))):null;
+      return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r">${f.pe!=null?(+f.pe).toLocaleString("es-CL",{maximumFractionDigits:1}):"—"}</td><td class="r" style="color:${f.pb!=null&&f.pb<1?pos:"#10306A"}">${f.pb!=null?(+f.pb).toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td><td class="r" style="color:${f.dy>=5?pos:"#10306A"}">${f.dy!=null?(+f.dy).toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r">${(typeof fundFmtCap==="function")?fundFmtCap(f.mcap):"—"}</td><td class="r" style="color:${f.roe>=15?pos:"#10306A"}">${f.roe!=null?(+f.roe).toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r">${pos52!=null?(pos52*100).toFixed(0)+"%":"—"}</td><td class="r" style="color:${up!=null?(up>=0?pos:neg):fnt}">${up!=null?sg(up,1):"—"}</td></tr>`;}).filter(Boolean).join("");
+    if(fRows){
+      const upd=(typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)?(" · datos al "+(""+FDATA.updatedAt).slice(0,10)):"";
+      secFund=`<section class="pb"><h2><span class="sn">7</span>Fundamentos</h2>
+        <div class="ssub">Ratios de valoración y calidad del negocio${upd} · complementan las métricas de precio de las secciones anteriores</div>
+        <table><thead><tr><th>Acción</th><th class="r">P/U</th><th class="r">P/B</th><th class="r">Yield</th><th class="r">Capitalización</th><th class="r">ROE</th><th class="r">Rango 52s</th><th class="r">Upside</th></tr></thead><tbody>${fRows}</tbody></table>
+        <div class="note"><b>P/U</b> precio/utilidad · <b>P/B</b> precio/valor libro (bajo 1 = cotiza bajo su patrimonio) · <b>Yield</b> dividendos 12m · <b>ROE</b> rentabilidad del patrimonio · <b>Rango 52s</b> posición del precio entre su mínimo y máximo del año · <b>Upside</b> precio objetivo de analistas vs precio actual. Fundamentos del canal de datos; pueden diferir de otras fuentes.</div></section>`;
+    }else{
+      secFund=`<section class="pb"><h2><span class="sn">7</span>Fundamentos</h2><div class="note">Aún no hay fundamentos cargados para estas acciones. Ve a <b>Análisis → Fundamentos → Traer fundamentos ahora</b> para poblarlos.</div></section>`;
+    }
+  }catch(e){}
+
+  const folio="INV-ANA-"+localDay().replace(/-/g,"");
+  const metaHTML=invReportMeta([
+    ["Ventana",esc(winTxt)+" · "+perLbl],
+    ["Acciones",String(STOCKS.length)+(nExcl?(" ("+nExcl+" excluida"+(nExcl>1?"s":"")+")"):"")],
+    ["Benchmark",esc(benchName)],
+    ["Rf / Prima",p0r(RF)+" / "+p0r(PRIMA)],
+    ["Modo",W?"Ventana (<1 año)":"Anualizado"],
+    ["Fundamentos",MFok?"con multifactor":"CAPM"]
+  ]);
+  const bodyHTML=secParams+secScore+secComp+secCapm+secDet+secMF+secFund;
+  const footHTML=`<b>Metodología.</b> β y α por regresión de los retornos de cada acción contra el ${esc(benchName)} en la ventana del análisis (Rf ${p0r(RF)}, prima ${p0r(PRIMA)}). El CAPM exige E(R) = Rf + β × prima; el α de Jensen es el retorno real menos ese exigido. El Sharpe usa el retorno ajustado por la volatilidad. El valor intrínseco triangula DDM (dividendos), múltiplo justo (P/U del universo) y precio objetivo de analistas. El modelo multifactor extiende el CAPM con primas de factor (momentum, value, size, quality, low-vol, yield) tipo APT. ${W?"Ventana menor a un año: los retornos, el α y la SML se expresan en términos de la ventana, no anualizados.":"Retornos, σ y α anualizados."} Documento informativo generado por Investor con los datos reales de la base; no constituye recomendación ni asesoría de inversión.`;
+  const html=invReportShell({
+    docTitle:"Informe de análisis · Investor",
+    title:"Informe de análisis de inversiones",
+    subtitle:esc(winTxt)+" · "+STOCKS.length+" acciones · benchmark "+esc(benchName)+" · emitido el "+fch,
+    hero:{label:"Acciones analizadas",value:String(STOCKS.length),sub:esc(winTxt),subColor:"#CFE0FF"},
+    metaHTML,bodyHTML,footHTML,folio,fch
+  });
+  const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para ver el informe.");
 }
 /* ===== ACCESO CONTROLADO (login) ===== */
 let AUTH=lsGet("inv_auth_v1");
