@@ -111,9 +111,14 @@ const server = http.createServer((req, res) => {
   /* ── estáticos (solo GET, whitelist) ── */
   if (req.method !== "GET" && req.method !== "HEAD") return sendJSON(res, 405, { error: "método no permitido" });
   if (p === "/" || p === "/index.html") return sendFile(res, path.join(ROOT, "index.html"), false);
+  if (p === "/favicon.ico") return sendFile(res, path.join(ROOT, "assets", "investor.ico"), true);
   if (p.startsWith("/data/")) {
     const base = path.basename(p);                       // sin traversal: solo el nombre del archivo
     if (/^[\w.\-]+\.(json|csv)$/.test(base)) return sendFile(res, path.join(ROOT, "data", base), true);
+  }
+  if (p.startsWith("/assets/")) {
+    const base = path.basename(p);
+    if (/^[\w.\-]+\.(ico|png|svg)$/.test(base)) return sendFile(res, path.join(ROOT, "assets", base), true);
   }
   return sendJSON(res, 404, { error: "no encontrado" });
 });
