@@ -1441,6 +1441,7 @@ let invStkSel=null;
 let objEditOn=false;   // editor de pesos objetivo (Composición actual vs objetivo, en Seguimiento)
 let invValFrom="",invValTo="";   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (solo ese gráfico)
 let invCapmFrom="",invCapmTo="";   // rango de fechas del gráfico "Análisis CAPM: real vs exigido" (solo ese gráfico)
+let invRangeOwner=null;   // proyecto DUEÑO de los rangos de fecha: al entrar a OTRO proyecto se limpian solos (cada proyecto filtra independiente, el filtro no "viaja")
 
 // ===== FORMATO =====
 let ink="#0F2747",muted="#52668A",faint="#8DA1C2",green="#0E8C5E",red="#D83A3A",amber="#B57A12",
@@ -1872,8 +1873,9 @@ function viewDetalle(){
       ${tile("Retorno exigido r",(_iv.r*100).toFixed(1)+"%","CAPM · Rf "+(+RF).toFixed(1)+"% + β "+_iv.beta.toFixed(2)+"·"+(+PRIMA).toFixed(1)+"%"+(_iv.g!=null?(" · g "+(_iv.g*100).toFixed(1)+"%"):""),s.c,indigo)}</div>`;
     const met=_iv.methods.map(m=>m.name+" $"+fmt(m.val)).join(" · ");
     const _disp=_iv.disp||0;
-    const _fiab=(_iv.n<2)?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> hay UNA sola ancla (${_iv.methods[0].name}) — sin triangulación entre métodos. Tómalo como referencia gruesa, no un número fino.`:(_disp>0.6?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> los ${_iv.n} métodos discrepan bastante (banda ancha). Tómalo como una referencia gruesa, no un número fino.`:"");
-    const ivNote=notecard(`Valor central = <b>mediana</b> de las anclas (robusta a un método extremo). Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.${_fiab}`);
+    const _fiab=(_iv.n<2)?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> hay UNA sola ancla (${_iv.methods[0].name}) — sin triangulación entre métodos. Tómalo como referencia gruesa, no un número fino.`:(_disp>0.6?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> las anclas cercanas al valor central discrepan entre sí (dispersión robusta ${( _disp*100).toFixed(0)}%). Tómalo como una referencia gruesa, no un número fino.`:((_iv.dispFull||0)>0.6?`<br><b style="color:${green}">✓ Valor corroborado:</b> aunque la banda completa es ancha, ${_iv.n>=3?"dos de las anclas coinciden cerca del valor central":"las anclas se acompañan"} — el método divergente queda visible en la banda, no arrastra el valor (mediana).`:""));
+    const _skip=(_iv.skipped&&_iv.skipped.length)?`<br><span style="color:${muted}">Anclas no disponibles: ${_iv.skipped.join(" · ")}.</span>`:"";
+    const ivNote=notecard(`Valor central = <b>mediana</b> de las anclas (robusta a un método extremo). Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. La <b>fiabilidad</b> se mide con la dispersión <b>robusta</b> de las anclas (coherente con la mediana): si dos de tres coinciden, el valor está corroborado aunque la tercera diverja. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.${_fiab}${_skip}`);
     ivCard=card("Valor intrínseco y margen de seguridad","¿Hay espacio para ganar? Compara lo que "+s.t+" vale (dividendos, múltiplos y target de analistas) con su último cierre de la base",bar+ivTiles+ivNote);
   }
   return selbar+tiles+rrTiles+fTiles+ivCard+`<div class="grid" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">${scl}${corr}</div>`+mr+ph+interp;
@@ -2907,6 +2909,9 @@ function viewInvActive(){
       <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>monto</b> de la operación (usa los de tu corredora — el precio por acción se deriva; hoy: ${fmtP(+ed.ev.price||0)}), corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}<div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button>${(editing&&editIdx!==0)?`<button class="btn" id="delw" style="color:var(--red);border-color:var(--red-line)">🗑 Eliminar este registro${(ed&&ed.ev)?" y su operación":""}</button>`:""}</div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
+  // los rangos de fecha de los gráficos pertenecen a UN proyecto: al cambiar de proyecto se limpian
+  // (sin esto, el filtro puesto en una cartera aparecía aplicado en la otra)
+  if(invRangeOwner!==activeId){invValFrom="";invValTo="";invCapmFrom="";invCapmTo="";invRangeOwner=activeId;}
   if(!IM) return (seg||histPg)?(projbar+summary+notecard("Aún no hay datos registrados. Ve a la pestaña <b>Ingresar datos</b> para registrar la compra inicial y los precios de cada "+fr.u+".")):(projbar+summary+freqBar+form+notecard("Registra la <b>compra inicial</b> (precios de compra de cada acción y el IPSA del día en que invertiste) para comenzar el seguimiento."));
   const L=IM.last,nd=WEEKS.length,gain=L.val-IM.aport;
   const days=IM.elapsedDays, reqRet=Math.pow(1+PF.erCapm/100,IM.elapsedYrs)-1, alphaReal=L.ret-reqRet;
@@ -2918,7 +2923,7 @@ function viewInvActive(){
   const hero=`<div class="card"><div class="bd" style="padding:1.35rem 1.5rem">
     <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;justify-content:space-between">
       <div><div class="genl" style="margin:0">Valor actual del portafolio</div>
-        <div style="font-size:34px;font-weight:800;color:var(--navy);letter-spacing:-.6px;line-height:1.05">${fmtCLP(L.val)}</div>
+        <div style="font-size:34px;font-weight:800;color:${gain>=0?green:red};letter-spacing:-.6px;line-height:1.05" title="${gain>=0?"Sobre":"Bajo"} el capital aportado (${fmtCLP(IM.aport)})">${fmtCLP(L.val)}</div>
         <div style="font-size:11.5px;color:var(--muted);margin-top:5px"><b>${PF.name}</b> · invertido hace <b>${elapsed}</b> desde ${WEEKS[0].date} · ${nd} registro${nd>1?"s":""} · seguimiento ${fr.cap}</div></div>
       <div style="text-align:right;min-width:150px"><div class="genl" style="margin:0">Cambio último ${fr.u}</div>${dayBox}</div>
     </div>
@@ -5294,12 +5299,19 @@ function fundGet(t){return (FDATA&&FDATA.byTicker&&FDATA.byTicker[t])||null;}
    Gordon exige g<r: g (crecimiento) se acota a rangos prudentes; r también. NO es señal de timing: dice si el
    PRECIO de hoy es atractivo, no el momento táctico. */
 function fairPE(excludeNonRec){   // P/U EFECTIVO de referencia = mediana del universo con fundamentos (múltiplo justo)
+  const collect=src=>{const vals=[];
+    src.forEach(t=>{const f=fundGet(t);if(!f)return;
+      if(f.pe==null&&((f.roe!=null&&f.roe<0)||(f.nm!=null&&f.nm<0)))return;   // en PÉRDIDAS (pe null por utilidad negativa): su P/U forward no es un múltiplo de referencia del universo
+      const epe=(f.pe!=null&&f.fpe!=null)?Math.max(f.pe,f.fpe):(f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null));
+      if(epe==null||!(epe>0))return;if(excludeNonRec&&f.fpe!=null&&f.pe!=null&&f.pe>0&&f.fpe>f.pe*2.5)return;vals.push(epe);});
+    return vals;};
   const tk=(typeof pricedbTickers==="function")?pricedbTickers():[];
-  const src=tk.length?tk:Object.keys((FDATA&&FDATA.byTicker)||{});const vals=[];
-  src.forEach(t=>{const f=fundGet(t);if(!f)return;
-    if(f.pe==null&&((f.roe!=null&&f.roe<0)||(f.nm!=null&&f.nm<0)))return;   // en PÉRDIDAS (pe null por utilidad negativa): su P/U forward no es un múltiplo de referencia del universo
-    const epe=(f.pe!=null&&f.fpe!=null)?Math.max(f.pe,f.fpe):(f.pe!=null?f.pe:(f.fpe!=null?f.fpe:null));
-    if(epe==null||!(epe>0))return;if(excludeNonRec&&f.fpe!=null&&f.pe!=null&&f.pe>0&&f.fpe>f.pe*2.5)return;vals.push(epe);});
+  const full=Object.keys((FDATA&&FDATA.byTicker)||{});
+  let vals=collect(tk.length?tk:full);
+  // ROBUSTEZ: con una base de precios chica (<3 acciones con fundamentos) la mediana del universo colapsaba y
+  // TODAS las acciones perdían el ancla del múltiplo justo (fiabilidad "baja" por falta de triangulación).
+  // El P/U de referencia usa entonces el universo COMPLETO de fundamentos — es una referencia de mercado, no de tu base.
+  if(vals.length<3&&tk.length)vals=collect(full);
   if(vals.length<3)return null;vals.sort((a,b)=>a-b);const m=Math.floor(vals.length/2);
   return vals.length%2?vals[m]:(vals[m-1]+vals[m])/2;
 }
@@ -5322,22 +5334,25 @@ function intrinsicValue(t,ctx){
   let pxNow=(ctx.px!=null&&isFinite(ctx.px)&&ctx.px>0)?+ctx.px:null;
   if(pxNow==null){try{const lk=(typeof lastKnownPrice==="function")?lastKnownPrice(t):null;if(lk!=null&&lk!==""&&+lk>0)pxNow=+lk;}catch(e){}}
   if(pxNow==null||!(pxNow>0))pxNow=px;
-  const anchors=[];let lo=Infinity,hi=-Infinity,g=null;
-  const band=v=>{if(v!=null&&isFinite(v)&&v>0){lo=Math.min(lo,v);hi=Math.max(hi,v);}};
-  // 1) DDM / Gordon: valor = dividendo perpetuo (piso sin crecimiento) → con crecimiento sustentable (techo)
+  const anchors=[],skipped=[];let g=null;
+  // 1) DDM / Gordon — SOLO con dividendo económicamente relevante (yield implícito ≥1,5%): con dividendo casi
+  // nulo el Gordon degenera (valor ≈ 0 que no informa) y antes reventaba la banda y la fiabilidad sin razón.
   const D0=(f.dps!=null&&f.dps>0)?f.dps:((f.dy!=null&&f.dy>0)?f.dy/100*px:null);
-  if(D0!=null&&D0>0){
+  if(D0!=null&&D0>0&&D0/px>=0.015){
     const payout=(eps!=null&&eps>0)?Math.max(0,Math.min(1,D0/eps)):null;
     let gEst=null;if(f.roe!=null&&payout!=null)gEst=f.roe/100*(1-payout);else if(f.eg!=null)gEst=f.eg/100;
     if(gEst!=null)g=Math.max(0,Math.min(gEst,r-0.02,0.06));   // g<r con holgura (r−g≥2%) y techo prudente 6%
     const vNo=D0/r,vGr=(g!=null&&g>0)?D0*(1+g)/(r-g):vNo;
-    band(vNo);band(vGr);anchors.push({name:"DDM (dividendos)",val:(vNo+vGr)/2,w:0.5});
-  }
+    anchors.push({name:"DDM (dividendos)",val:(vNo+vGr)/2,w:0.5});
+  }else if(D0!=null&&D0>0)skipped.push("DDM: dividendo <1,5% del precio (el modelo Gordon no aplica)");
+  else skipped.push("DDM: sin dividendos informados");
   // 2) múltiplo justo: si cotizara al P/U de referencia del universo
   const medPE=(ctx.medPE!=null&&ctx.medPE>0)?ctx.medPE:fairPE(true);
-  if(medPE!=null&&eps!=null&&eps>0){const vM=medPE*eps;band(vM);anchors.push({name:"Múltiplo justo (P/U universo)",val:vM,w:0.3});}
+  if(medPE!=null&&eps!=null&&eps>0)anchors.push({name:"Múltiplo justo (P/U universo)",val:medPE*eps,w:0.3});
+  else skipped.push(eps==null?"Múltiplo justo: sin P/U (utilidad negativa o sin dato)":"Múltiplo justo: sin P/U de referencia del universo");
   // 3) precio objetivo de analistas
-  if(f.target!=null&&f.target>0){band(f.target);anchors.push({name:"Target analistas",val:f.target,w:0.2});}
+  if(f.target!=null&&f.target>0)anchors.push({name:"Target analistas",val:f.target,w:0.2});
+  else skipped.push("Target: sin precio objetivo de analistas");
   if(!anchors.length)return null;
   // Valor central = MEDIANA de las anclas (robusta): así una sola ancla extrema —p.ej. el DDM, estructuralmente
   // conservador en bancos de alto payout— NO arrastra la estimación. Con 3 anclas toma la del medio; con 2, el
@@ -5345,15 +5360,23 @@ function intrinsicValue(t,ctx){
   const cv=anchors.map(a=>a.val).slice().sort((a,b)=>a-b),mi=Math.floor(cv.length/2);
   const value=cv.length%2?cv[mi]:(cv[mi-1]+cv[mi])/2;
   if(value==null||!isFinite(value)||value<=0)return null;
-  if(lo===Infinity)lo=value;if(hi===-Infinity)hi=value;
-  const disp=value>0?(hi-lo)/value:0;   // dispersión de las anclas: alto = poco fiable (los métodos no coinciden)
+  // banda = rango de las ANCLAS trianguladas (los mismos números que resume la mediana). Antes incluía el piso
+  // teórico sin-crecimiento del DDM y castigaba doble la fiabilidad de empresas de payout bajo.
+  const lo=cv[0],hi=cv[cv.length-1];
+  // dispersión ROBUSTA (MAD ×2), coherente con la mediana: mide si las anclas CERCANAS al valor central
+  // coinciden. Si 2 de 3 anclas calzan y la tercera diverge, el valor está corroborado (fiabilidad media/alta)
+  // aunque el rango completo sea ancho — ese rango sigue visible en la banda lo–hi. Con 2 anclas equivale al rango.
+  const _dv=cv.map(a=>Math.abs(a-value)).sort((a,b)=>a-b),_mj=Math.floor(_dv.length/2);
+  const _mad=_dv.length%2?_dv[_mj]:(_dv[_mj-1]+_dv[_mj])/2;
+  const disp=value>0?(2*_mad)/value:0;
+  const dispFull=value>0?(hi-lo)/value:0;   // rango completo, para transparencia (la banda)
   const mos=(value-pxNow)/value;   // margen de seguridad: valor intrínseco vs PRECIO ACTUAL (>0 hay margen, <0 cara)
-  return {value,lo,hi,px:pxNow,mos,disp,r,g,beta,methods:anchors.map(a=>({name:a.name,val:Math.round(a.val)})),n:anchors.length};
+  return {value,lo,hi,px:pxNow,mos,disp,dispFull,r,g,beta,methods:anchors.map(a=>({name:a.name,val:Math.round(a.val)})),skipped,n:anchors.length};
 }
 /* etiqueta/color del margen de seguridad para la UI (umbrales prudentes) */
 function mosLabel(mos){if(mos==null)return {txt:"—",cls:"ink"};if(mos>=0.20)return {txt:"margen amplio",cls:"green"};if(mos>=0.08)return {txt:"algo de margen",cls:"green"};if(mos>=-0.05)return {txt:"precio justo",cls:"ink"};if(mos>=-0.18)return {txt:"algo cara",cls:"amber"};return {txt:"cara",cls:"red"};}
 /* resumen de valorización para el agente (get_stock): valor intrínseco, banda, margen de seguridad y regla sin-peros */
-function valorizacionJSON(iv){if(!iv)return null;const disp=iv.disp||0;const fiab=(iv.n<2)?"baja (UNA sola ancla: sin triangulación — referencia gruesa)":disp>0.6?"baja (las anclas discrepan mucho: trátalo como referencia gruesa)":disp>0.35?"media":"alta";return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),fiabilidad:fiab,dispersion:+disp.toFixed(2),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Valor central = MEDIANA de las anclas (robusta a un método extremo). Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no timing. YA está en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR. Es una BANDA estimada; si 'fiabilidad' es baja, los métodos no coinciden y hay que tomarlo con cautela."};}
+function valorizacionJSON(iv){if(!iv)return null;const disp=iv.disp||0;const fiab=(iv.n<2)?"baja (UNA sola ancla: sin triangulación — referencia gruesa)":disp>0.6?"baja (las anclas cercanas a la mediana discrepan: trátalo como referencia gruesa)":disp>0.35?"media":"alta";return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),fiabilidad:fiab,dispersion:+disp.toFixed(2),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Valor central = MEDIANA de las anclas (robusta a un método extremo). Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no timing. YA está en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR. Es una BANDA estimada; si 'fiabilidad' es baja, los métodos no coinciden y hay que tomarlo con cautela."};}
 function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
 async function fundSync(manual){
   const u=fundUrl();
@@ -6485,7 +6508,7 @@ function viewContab(){
   const tiles=`<div class="tiles">
     ${tile("Invertido (compras)",fmtCLP(T.buy),"capital total comprado",indigo,ink)}
     ${tile("Dinero rescatado (ventas)",T.sell?fmtCLP(T.sell):"—","efectivo recibido por ventas",indigo,ink)}
-    ${tile("Valor actual total",fmtCLP(T.val),"posiciones abiertas a hoy",indigo,accentT)}
+    ${tile("Valor actual total",fmtCLP(T.val),"posiciones abiertas a hoy · "+(totGain>=0?"sobre":"bajo")+" el capital",indigo,totGain>=0?green:red)}
     ${tile("Comisiones pagadas",T.fees?fmtCLP(T.fees):"$0",T.feesIva>0?("incluye IVA "+fmtCLP(T.feesIva)):"sin IVA",indigo,red)}
     ${tile("Ganancia realizada",(T.real>=0?"+":"")+fmtCLP(T.real),"por ventas (costo prom.)",indigo,T.real>=0?green:red)}
     ${tile("Ganancia no realizada",(T.unreal>=0?"+":"")+fmtCLP(T.unreal),"posiciones abiertas",indigo,T.unreal>=0?green:red)}
@@ -6532,7 +6555,7 @@ function genContabReport(){
   const tiles=`<div class="kgrid" style="margin-top:11px">
     ${kpi("Invertido (compras)",clp(T.buy),null,"capital total comprado")}
     ${kpi("Dinero rescatado (ventas)",T.sell?clp(T.sell):"—",null,"efectivo recibido por ventas")}
-    ${kpi("Valor actual total",clp(T.val),"#1E5FD1","posiciones abiertas a hoy")}
+    ${kpi("Valor actual total",clp(T.val),cc(totGain),"posiciones abiertas a hoy · "+(totGain>=0?"sobre":"bajo")+" el capital")}
     ${kpi("Comisiones pagadas",T.fees?("−"+clp(T.fees)):"$0",neg,T.feesIva>0?("incluye IVA "+clp(T.feesIva)):"sin IVA")}
   </div><div class="kgrid k3" style="margin-top:10px">
     ${kpi("Ganancia realizada",sgn(T.real),cc(T.real),"por ventas (costo promedio)")}
@@ -7581,6 +7604,7 @@ function seedExamples(){
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
 let homeOpsMode="ops";   // gráfico "Operaciones y comisiones" del Home: "ops" (compras/ventas) | "fees" (comisiones, escala propia)
+let homeTotFrom="",homeTotTo="";   // rango de fechas del gráfico "Patrimonio total gestionado" del Home
 let homeIpsaWin=(()=>{const v=+lsGet("inv_home_ipsa_win");return [3,6,12,24].indexOf(v)>=0?v:24;})();   // VENTANA (meses) del gráfico del IPSA en Home — el gráfico es SIEMPRE mensual; solo se elige cuántos meses ver
 /* ══ INVESTOR SCORE (v3 · piedra angular, riesgo descontado + candado de confianza) ══
    Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
@@ -7817,17 +7841,21 @@ function svgOpsBars(o){
   for(let i=0;i<=4;i++){const v=mx*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"/><text x="${m.l-8}" y="${yy+3.5}" text-anchor="end" font-size="11.5" fill="${faint}">${fmtK(v)}</text>`;}
   g+=`<line x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}" stroke="${AC}" stroke-width="1.1"/>`;
   const xs=[];
+  // etiquetas de VALOR sobre cada barra: con muchas fechas se etiquetan solo las mayores (para no amontonar)
+  const _lblOK=(()=>{if(n<=12)return v=>v>0;const _all=mode==="fees"?o.rows.map(r=>r.fee||0):o.rows.map(r=>Math.max(r.buy||0,r.sell||0));const thr=_all.slice().sort((a,b)=>b-a)[Math.min(7,_all.length-1)];return v=>v>0&&v>=thr;})();
+  const _vl=(x,v,c,an)=>`<text x="${(+x).toFixed(1)}" y="${(Y(v)-4).toFixed(1)}" text-anchor="${an||"middle"}" font-size="9.5" font-weight="800" fill="${c}" style="paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round">${fmtK(v)}</text>`;
   o.dates.forEach((d,i)=>{const cx=m.l+step*(i+0.5);xs.push(cx);const r=o.rows[i];
     if(mode==="fees"){
-      if(r.fee>0)g+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${Y(r.fee).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.fee)).toFixed(1)}" rx="2.5" fill="${OPS_FEE_COL}" opacity=".92"/>`;
+      if(r.fee>0){g+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${Y(r.fee).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.fee)).toFixed(1)}" rx="2.5" fill="${OPS_FEE_COL}" opacity=".92"/>`;if(_lblOK(r.fee))g+=_vl(cx,r.fee,OPS_FEE_COL);}
     }else{
-      if(r.buy>0)g+=`<rect x="${(cx-(r.sell>0?bw+1:bw/2)).toFixed(1)}" y="${Y(r.buy).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.buy)).toFixed(1)}" rx="2.5" fill="var(--accent)" opacity=".92"/>`;
-      if(r.sell>0)g+=`<rect x="${(cx+(r.buy>0?1:-bw/2)).toFixed(1)}" y="${Y(r.sell).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.sell)).toFixed(1)}" rx="2.5" fill="${amber}" opacity=".92"/>`;
+      const both=r.buy>0&&r.sell>0;
+      if(r.buy>0){g+=`<rect x="${(cx-(both?bw+1:bw/2)).toFixed(1)}" y="${Y(r.buy).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.buy)).toFixed(1)}" rx="2.5" fill="var(--accent)" opacity=".92"/>`;if(_lblOK(r.buy))g+=_vl(both?cx-2:cx,r.buy,"var(--accent)",both?"end":"middle");}
+      if(r.sell>0){g+=`<rect x="${(cx+(both?1:-bw/2)).toFixed(1)}" y="${Y(r.sell).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.sell)).toFixed(1)}" rx="2.5" fill="${amber}" opacity=".92"/>`;if(_lblOK(r.sell))g+=_vl(both?cx+2:cx,r.sell,amber,both?"start":"middle");}
     }});
   // etiquetas de fecha: primera, última y algunas intermedias (sin amontonar)
   const _lb=Math.max(1,Math.ceil(n/8));
   o.dates.forEach((d,i)=>{if(i%_lb===0||i===n-1)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" fill="${faint}">${d.slice(8,10)+"/"+d.slice(5,7)}</text>`;});
-  if(o.id)window["__ob_"+o.id]={dates:o.dates,rows:o.rows,xs,W,H,mt:m.t,mb:m.b,mode};
+  if(o.id)window["__ob_"+o.id]={dates:o.dates,rows:o.rows,xs,W,H,mt:m.t,mb:m.b,mode,step};
   return `<svg id="${o.id||""}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${(o.id||"")}hover"></g></svg>`;
 }
 function attachOpsHover(id){
@@ -7835,7 +7863,7 @@ function attachOpsHover(id){
   svg.onmousemove=e=>{const r=svg.getBoundingClientRect();const vx=(e.clientX-r.left)/r.width*g.W;
     let bi=0,bd=1e9;g.xs.forEach((x,i)=>{const d=Math.abs(x-vx);if(d<bd){bd=d;bi=i;}});
     const hv=document.getElementById(id+"hover");
-    if(hv)hv.innerHTML=`<line x1="${g.xs[bi].toFixed(1)}" y1="${g.mt}" x2="${g.xs[bi].toFixed(1)}" y2="${g.H-g.mb}" stroke="${AC}" stroke-width="1" stroke-dasharray="3 3"/>`;
+    if(hv){const _st=g.step||30;hv.innerHTML=`<rect x="${(g.xs[bi]-_st/2).toFixed(1)}" y="${g.mt}" width="${_st.toFixed(1)}" height="${(g.H-g.mb-g.mt).toFixed(1)}" fill="var(--accent)" opacity=".07"/><line x1="${g.xs[bi].toFixed(1)}" y1="${g.mt}" x2="${g.xs[bi].toFixed(1)}" y2="${g.H-g.mb}" stroke="${AC}" stroke-width="1" stroke-dasharray="3 3"/>`;}
     let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
     const d=g.rows[bi];
     const feeLine=`<span style="display:block;color:${OPS_FEE_COL};font-weight:800">Comisiones: −${fmtCLP(d.fee)}</span>`;
@@ -7898,7 +7926,7 @@ function viewHome(){
     ${patSeries.length>1?`<div class="hh-c" title="Rentabilidad neta en el tiempo">${heroSpark(patSeries)}</div>`:""}
     <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(T.gainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
   const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles-consol">
-    ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT,"tw2")}
+    ${tile("Valor actual",fmtCLP(T.value),"a últimos precios · "+(T.gain>=0?"sobre":"bajo")+" el capital aportado",indigo,T.gain>=0?green:red,"tw2")}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
     ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
     ${(()=>{const _gbp=T.aportado>0?T.gain/T.aportado*100:0;return tile("Ganancia bruta",sg(T.gain)+`<div style="font-size:.82em;font-weight:800;letter-spacing:-.2px;color:${col(_gbp)};margin-top:2px">${(_gbp>=0?"+":"")+_gbp.toFixed(2)}%</div>`,"bruta · antes de comisiones",indigo,T.gain>=0?green:red);})()}
@@ -7933,7 +7961,7 @@ function viewHome(){
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,40);
-    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span>${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
+    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span style="color:${pos?green:red};font-weight:800" title="Valor actual · verde = sobre tu capital aportado">${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     const stat=(l,v,c,lc,ti)=>`<div class="fw-stat"${ti?` title="${ti}"`:""}><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
@@ -7941,7 +7969,7 @@ function viewHome(){
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,112);
     // fila 1: dinero y rentabilidad · fila 2: métricas ajustadas por riesgo (todas REALIZADAS, no las esperadas)
     const aR=p.alphaReal!=null?p.alphaReal*100:null;
-    const row1=`<div class="fw-row">${stat("Valor",fmtCLP(p.val))}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2)+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
+    const row1=`<div class="fw-row">${stat("Valor",fmtCLP(p.val),pos?green:red)}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2)+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
     const row2=`<div class="fw-row fw-risk">`
       +stat("β real",p.betaR!=null?p.betaR.toFixed(2):"—",null,"ntr",p.betaR!=null?("β REALIZADO: sensibilidad efectiva al IPSA por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")"):("β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)))
       +stat("α Jensen",aR!=null?((aR>=0?"+":"")+aR.toFixed(2)+"%"):"—",aR!=null?(aR>=0?green:red):null,"ntr","α de Jensen REALIZADO: retorno real − el exigido por CAPM para el riesgo de la cartera, en el período transcurrido. Positivo = batiendo lo exigido por su riesgo.")
@@ -8006,6 +8034,20 @@ function viewHome(){
   const newsCard=homeNewsCard();
   const scoreCard=investorScoreCard();
   // historial de operaciones (compras/ventas) y comisiones — misma fuente que la Contabilidad
+  // patrimonio TOTAL gestionado en el tiempo (CLP), con rango de fechas propio — complementa la curva de
+  // rentabilidad neta: aquí SÍ se ven los saltos de los aportes (capital); allá, solo la rentabilidad
+  const patrCard=(()=>{
+    const mt=_mtH;
+    if(!mt||!mt.totals||mt.totals.length<2)return "";
+    const _ik=mt.dates.map((d,k)=>k).filter(k=>(!homeTotFrom||mt.dates[k]>=homeTotFrom)&&(!homeTotTo||mt.dates[k]<=homeTotTo));
+    const on=!!(homeTotFrom||homeTotTo);
+    const dts=_ik.map(k=>mt.dates[k]),vals=_ik.map(k=>Math.round(mt.totals[k])),fls=_ik.map(k=>(mt.flows&&mt.flows[k])||0);
+    const rangeUI=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;white-space:nowrap"><span class="genl" style="margin:0">Desde</span><input type="date" id="homeTotF" value="${homeTotFrom||""}" min="${mt.dates[0]}" max="${mt.dates[mt.dates.length-1]}" style="width:118px" aria-label="Desde"><span class="genl" style="margin:0">hasta</span><input type="date" id="homeTotT" value="${homeTotTo||""}" min="${mt.dates[0]}" max="${mt.dates[mt.dates.length-1]}" style="width:118px" aria-label="Hasta">${on?`<button class="btn" id="homeTotAll" style="padding:.28rem .5rem;font-size:10.5px" title="Ver todo el historial">✕ Todo</button>`:""}</div>`;
+    const body=dts.length>=2
+      ?`<div class="ipsa-chart">${svgMulti({series:[{label:"Patrimonio",c:indigo,vals,w:2.6,op:1}],labels:dts,h:210,yfmt:fmtK,id:"mgpat",unit:"",area:true,delta:true,flows:fls})}<div class="genl" style="margin:6px 0 0;text-align:right">${dts.length} fechas · patrimonio ${fmtCLP(vals[vals.length-1])} al ${dts[dts.length-1]}</div></div>`
+      :`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`;
+    return card("Patrimonio total gestionado","Valor total de todas tus carteras en el tiempo (CLP)"+(on?` · <b>rango: ${dts[0]||"—"} → ${dts[dts.length-1]||"—"}</b>`:"")+" · en los días de compra el salto es <b>aporte de capital</b>, no rentabilidad (esa va en la curva neta de arriba) · pasa el mouse para el detalle del día",body,rangeUI);
+  })();
   const opsCard=(()=>{
     const os=(typeof homeOpsSeries==="function")?homeOpsSeries():null;
     if(!os)return "";
@@ -8028,7 +8070,7 @@ function viewHome(){
       : "Montos comprados y vendidos por fecha, en todas tus carteras · pasa el cursor para ver el detalle del día (incluye las comisiones pagadas) · el libro completo va en Contabilidad";
     return card("Operaciones y comisiones",sub,body,seg);
   })();
-  return greetStrip+hero+tiles+totalCard+fundsCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
+  return greetStrip+hero+tiles+totalCard+fundsCard+patrCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
 /* color por tramo del score */
 function iscCol(v){return v>=70?green:v>=55?indigo:v>=40?amber:red;}
@@ -8117,6 +8159,10 @@ function attachHome(){
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
   document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
   document.querySelectorAll("[data-opsmode]").forEach(b=>b.onclick=()=>{homeOpsMode=b.dataset.opsmode;render();});
+  {const _keep=fn=>{const m=document.getElementById("main"),st=m?m.scrollTop:0;fn();const m2=document.getElementById("main");if(m2)m2.scrollTop=st;};
+   const tf=document.getElementById("homeTotF");if(tf)tf.onchange=()=>_keep(()=>{homeTotFrom=tf.value||"";render();});
+   const tt2=document.getElementById("homeTotT");if(tt2)tt2.onchange=()=>_keep(()=>{homeTotTo=tt2.value||"";render();});
+   const ta=document.getElementById("homeTotAll");if(ta)ta.onclick=()=>_keep(()=>{homeTotFrom="";homeTotTo="";render();});}
   document.querySelectorAll("[data-ipsawin]").forEach(b=>b.onclick=()=>{homeIpsaWin=+b.dataset.ipsawin||24;try{lsSet("inv_home_ipsa_win",homeIpsaWin);}catch(e){}render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
@@ -8124,6 +8170,7 @@ function attachHome(){
   try{attachMultiHover("ipsahome");}catch(e){}
   try{attachMultiHover("mgret");}catch(e){}   // rentabilidad neta en el tiempo: tooltip con fecha y % al pasar el mouse
   try{attachOpsHover("mgops");}catch(e){}   // operaciones y comisiones: detalle del día al pasar el mouse
+  try{attachMultiHover("mgpat");}catch(e){}   // patrimonio total gestionado: aporte vs rentabilidad del día al pasar el mouse
   document.querySelectorAll("[data-newsretry]").forEach(b=>b.onclick=()=>{try{newsFetch(true);}catch(e){}});
   const _wx=document.querySelector("[data-welcomehide]");if(_wx)_wx.onclick=()=>{try{localStorage.setItem("inv_welcome_hide","1");}catch(e){}render();};
   try{mindAutoRefresh();}catch(e){}   // Home también refresca indicadores vencidos (antes solo si NUNCA se habían cargado)
