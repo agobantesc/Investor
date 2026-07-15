@@ -1379,6 +1379,39 @@
   .mc-goal{display:inline-flex;align-items:center;gap:7px;font:700 12px var(--font);color:var(--ink);cursor:pointer;}
   .mc-goal input[type=number]{width:120px;padding:.44rem .5rem;border:1px solid var(--line2);border-radius:9px;background:var(--card);font:700 12.5px var(--font);color:var(--ink);}
   .mc-goal input[type=number]:disabled{opacity:.45;}
+  /* ── MÓVIL: el menú lateral pasa a cajón (drawer) y el layout se compacta ── */
+  .burger{display:none;align-items:center;justify-content:center;width:38px;height:38px;flex:0 0 auto;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--ink);cursor:pointer;}
+  .nav-bk{display:none;}
+  @media(max-width:920px){
+    .burger{display:inline-flex;}
+    aside{position:fixed;left:0;top:0;bottom:0;z-index:1200;transform:translateX(-104%);transition:transform .22s var(--ease);box-shadow:14px 0 44px rgba(2,10,26,.5);}
+    body.nav-open aside{transform:none;}
+    .nav-bk{position:fixed;inset:0;background:rgba(3,10,24,.55);z-index:1150;backdrop-filter:blur(2px);}
+    body.nav-open .nav-bk{display:block;}
+    .topbar{flex-wrap:wrap;row-gap:7px;padding:10px 12px;height:auto;min-height:0;}
+    .tnav{order:9;width:100%;overflow-x:auto;scrollbar-width:none;}
+    .tnav::-webkit-scrollbar{display:none;}
+    .topnav{white-space:nowrap;}
+    .ptitle{font-size:15px;}
+    .crumb{font-size:8.5px;}
+    #projPillTxt{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .wrap{padding:13px 12px 46px;}
+    .grid{grid-template-columns:1fr !important;}
+    .home-hero{flex-wrap:wrap;gap:14px;}
+    .hh-r{text-align:left;}
+    .cfg-layout{grid-template-columns:1fr;}
+    .cfg-nav{flex-direction:row;overflow-x:auto;}
+    .cfg-nav button{white-space:nowrap;}
+    .sel{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;}
+  }
+  @media(max-width:640px){
+    .tiles,.tiles-consol{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+    .tiles-consol .tw2{grid-column:span 2;}
+    .hh-val{font-size:29px;}
+    .home-fundgrid.n2{grid-template-columns:1fr;}
+    .fw-row{gap:15px;}
+    .stk-cols,.home-mvgrid{grid-template-columns:1fr;}
+  }
 </style>
 </head>
 <body>
@@ -1390,8 +1423,9 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Inicio"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav topnav-beta" id="navMontecarlo" data-mod="montecarlo" title="Montecarlo · proyecciones probabilísticas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg>Montecarlo<span class="beta-tag">beta</span></button></div><button class="mkpill" id="projPill" title="Proyecto activo · ir a Proyectos"><span class="live-dot"></span><span id="projPillTxt">Proyecto</span></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><button class="burger" id="navburger" title="Menú" aria-label="Abrir menú de módulos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Inicio"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav topnav-beta" id="navMontecarlo" data-mod="montecarlo" title="Montecarlo · proyecciones probabilísticas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg>Montecarlo<span class="beta-tag">beta</span></button></div><button class="mkpill" id="projPill" title="Proyecto activo · ir a Proyectos"><span class="live-dot"></span><span id="projPillTxt">Proyecto</span></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
+    <div class="nav-bk" id="navBk"></div>
     <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
   </div>
 </div>
@@ -1923,7 +1957,7 @@ function ck(k){return CLIENT_KEYS[k]?(k+"__"+activeClient):k;}
 function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
 let _saveWarned=false;
 function saveWarn(){if(_saveWarned)return;_saveWarned=true;try{window.alert("⚠ No se pudo guardar en este navegador. El almacenamiento está lleno o el navegador está en modo privado / con cookies bloqueadas. Tus cambios podrían perderse al recargar.\n\nExporta un respaldo desde Configuración → Datos → Respaldar.");}catch(e){}}
-function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));return true;}catch(e){saveWarn();return false;}}
+function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));if(k!=="inv_cloud_v1"){try{cloudSchedulePush();}catch(e){}}return true;}catch(e){saveWarn();return false;}}
 (function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Administración",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
 let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Administración",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Administración",color:"#1E5FD1"}];}})();
 (function(){try{if(localStorage.getItem("inv_mig_admin_v1"))return;localStorage.setItem("inv_mig_admin_v1","1");const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}}catch(e){}})();
@@ -3706,6 +3740,7 @@ function render(){
       <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:13px"><button class="btn btn-pri" data-recover-home>← Volver al inicio</button></div>`);
   }
   const _vk=modulo+"|"+page;
+  if(_vk!==_lastViewKey){try{document.body.classList.remove("nav-open");}catch(e){}}   // móvil: NAVEGAR cierra el cajón (los re-renders de la misma vista no)
   const _mnOld=document.getElementById("main");
   const _keepScroll=(_vk===_lastViewKey);
   const _prevScroll=(_keepScroll&&_mnOld)?_mnOld.scrollTop:0;
@@ -5392,6 +5427,64 @@ async function fundSync(manual){
     return null;
   }
 }
+/* ── NUBE (Render): respalda el navegador en el disco persistente del servidor ──
+   Solo funciona cuando Investor se sirve por http(s) desde server.js (Render o `node server.js` local);
+   en modo archivo (file://) no hay servidor y la sección se muestra deshabilitada. El token viaja en el
+   header x-investor-token y se guarda SOLO en este navegador. */
+var CLOUD=lsGet("inv_cloud_v1")||{token:"",auto:true,lastPush:null};
+function cloudSave(){lsSet("inv_cloud_v1",CLOUD);}
+function cloudServerMode(){try{return /^https?:$/.test(location.protocol);}catch(e){return false;}}
+async function cloudApi(method,pathU,body){
+  const res=await fetch(pathU,{method,headers:Object.assign({"x-investor-token":(CLOUD&&CLOUD.token)||""},body?{"Content-Type":"application/json"}:{}),body:body?JSON.stringify(body):undefined,cache:"no-store"});
+  let j=null;try{j=await res.json();}catch(e){}
+  if(!res.ok)throw new Error((j&&j.error)?j.error:("HTTP "+res.status));
+  return j;
+}
+var _cloudTimer=null,_cloudPushing=false;
+/* auto-respaldo: ~45 s después del último cambio guardado (debounce), si hay token y está activado */
+function cloudSchedulePush(){
+  if(!CLOUD||!CLOUD.token||CLOUD.auto===false||!cloudServerMode())return;
+  clearTimeout(_cloudTimer);_cloudTimer=setTimeout(function(){cloudPush(false).catch(function(){});},45e3);
+}
+async function cloudPush(manual){
+  if(!cloudServerMode())throw new Error("la nube solo funciona en la versión web (URL del servidor)");
+  if(!CLOUD.token)throw new Error("configura primero el token del servidor");
+  if(_cloudPushing)return null;
+  _cloudPushing=true;
+  try{
+    const r=await cloudApi("PUT","/api/backup",backupPayload());
+    CLOUD.lastPush=new Date().toISOString();cloudSave();
+    return r;
+  }finally{_cloudPushing=false;}
+}
+async function cloudRestore(manual){
+  try{
+    const meta=await cloudApi("GET","/api/backup/meta");
+    if(!meta.hasBackup){if(manual)window.alert("Aún no hay respaldos en el servidor.");return false;}
+    const when=meta.savedAt?new Date(meta.savedAt).toLocaleString("es-CL"):"—";
+    if(!window.confirm("Restaurar el respaldo de la nube del "+when+"\n\nREEMPLAZA los datos de este navegador por los del servidor. ¿Continuar?"))return false;
+    const j=await cloudApi("GET","/api/backup");
+    if(!restoreFromPayload(j))throw new Error("el respaldo no se pudo aplicar");
+    window.alert("Respaldo restaurado. Investor se recargará.");location.reload();
+    return true;
+  }catch(e){if(manual)window.alert("No se pudo restaurar: "+e.message);return false;}
+}
+/* al abrir la versión web con el navegador VACÍO (teléfono nuevo, navegador borrado): ofrece restaurar la nube */
+async function cloudBoot(){
+  if(!cloudServerMode())return;
+  try{
+    const localEmpty=(!PROJECTS||!PROJECTS.length)&&(typeof pricedbTickers!=="function"||!pricedbTickers().length);
+    if(!localEmpty)return;
+    if(!CLOUD.token){
+      const h=await fetch("/api/health",{cache:"no-store"}).then(r=>r.json()).catch(()=>null);
+      if(!h||!h.hasBackup)return;
+      const t=window.prompt("Este navegador está vacío, pero tu servidor tiene un respaldo de Investor ("+(h.savedAt?new Date(h.savedAt).toLocaleString("es-CL"):"")+").\n\nPega el token del servidor (SYNC_TOKEN) para restaurarlo:");
+      if(!t)return;
+      CLOUD.token=t.trim();cloudSave();
+    }
+    await cloudRestore(true);
+  }catch(e){}
+}
 function pricedbDeleteTicker(t){delete PRICEDB.px[t];delete PRICEDB.tickers[t];savePriceDB();}
 /* resumen para la vista: por ticker -> n puntos, rango, último precio */
 function pricedbSummary(){const out=[];pricedbTickers().forEach(t=>{const ds=Object.keys(PRICEDB.px[t]).sort();if(!ds.length)return;const m=PRICEDB.tickers[t]||{};out.push({t,n:m.n||t,s:m.s||"",c:m.c||"#1E5FD1",b:m.b,np:ds.length,from:ds[0],to:ds[ds.length-1],last:PRICEDB.px[t][ds[ds.length-1]]});});
@@ -5992,7 +6085,18 @@ function cfgRender(){
       row("Respaldar / restaurar","Exporta o vuelve a un respaldo anterior",'<div style="display:flex;gap:7px"><button class="btn btn-pri" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div>'))+
       sec("Respaldo automático","Una red de seguridad periódica",
         row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkOn" ${(AUTOBK&&AUTOBK.on)?"checked":""}> Respaldo automático activado</label>`,`Te propone descargar una copia cada cierto tiempo · última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b>`,`<select id="cfgBkDays" style="${selStyle}">${daysOpts}</select>`)+
-        row("Copia ahora","Descarga un respaldo o restaura la última copia interna",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgBkNow">⬇ Descargar respaldo</button><button class="btn" id="cfgBkRestore">↩ Restaurar copia interna</button></div>',1));
+        row("Copia ahora","Descarga un respaldo o restaura la última copia interna",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgBkNow">⬇ Descargar respaldo</button><button class="btn" id="cfgBkRestore">↩ Restaurar copia interna</button></div>',1))+
+      (function(){
+        const srv=cloudServerMode();
+        const pill=!srv?'<span class="cfg-pill no">Solo en la versión web</span>':(CLOUD.token?'<span class="cfg-pill ok">Conectada</span>':'<span class="cfg-pill no">Sin token</span>');
+        const sub=srv
+          ?("Servidor: <b>"+(""+location.origin).replace(/</g,"&lt;")+"</b> · último respaldo subido: <b>"+(CLOUD.lastPush?new Date(CLOUD.lastPush).toLocaleString("es-CL"):"—")+"</b>")
+          :"Abre Investor desde tu URL de Render (https://…onrender.com) para activar la nube; en modo archivo local no hay servidor. Guía: docs/DESPLIEGUE_RENDER.md del repo.";
+        return sec("Nube · caja fuerte en tu servidor","Sube tus datos al disco persistente de Render: sobreviven si se borra el navegador y sincronizan tu teléfono",
+          row(`Estado ${pill}`,sub,`<input id="cfgCloudTok" type="password" autocomplete="off" placeholder="${CLOUD.token?'•••••••• guardado · pega uno nuevo para reemplazar':'token del servidor (SYNC_TOKEN)'}" value="" style="${inStyle}" ${srv?"":"disabled"}>`)+
+          row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgCloudAuto" ${CLOUD.auto!==false?"checked":""} ${(srv&&CLOUD.token)?"":"disabled"}> Respaldo automático en la nube</label>`,"Sube una copia ~45 s después de cada cambio (se conservan las últimas 40 versiones en el servidor)",
+            '<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-pri" id="cfgCloudPush" '+(srv?"":"disabled")+'>☁ Guardar ahora</button><button class="btn" id="cfgCloudPull" '+(srv?"":"disabled")+'>⬇ Restaurar de la nube</button><button class="btn" id="cfgCloudTest" '+(srv?"":"disabled")+'>Probar conexión</button></div>',1));
+      })();
   }else if(cfgTab==="perfil"){
     const prof=(invProfile&&invProfile.levels)?`<b>${invProfile.label}</b> · nivel ${invProfile.level}/5`:(invProfile?"Reevaluar (cuestionario actualizado)":"Sin evaluar");
     body=sec("Perfil de inversionista","Define tu tolerancia al riesgo: personaliza al agente IA, el asistente y las alertas de idoneidad",
@@ -6066,6 +6170,12 @@ function cfgRender(){
   const _bd=q("#cfgBkDays");if(_bd)_bd.onchange=()=>{AUTOBK.days=+_bd.value||7;autobkSave();};
   const _bn=q("#cfgBkNow");if(_bn)_bn.onclick=()=>{try{downloadBackup(backupPayload());AUTOBK.lastDL=new Date().toISOString();autobkSave();autobkSnapshot("manual");cfgRender();}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}};
   const _br=q("#cfgBkRestore");if(_br)_br.onclick=()=>autobkRestore();
+  // ── nube (Render) ──
+  const _ctk=q("#cfgCloudTok");if(_ctk)_ctk.onchange=()=>{const v=_ctk.value.trim();if(v){CLOUD.token=v;cloudSave();cfgRender();}};
+  const _cau=q("#cfgCloudAuto");if(_cau)_cau.onchange=()=>{CLOUD.auto=_cau.checked;cloudSave();};
+  const _cpu=q("#cfgCloudPush");if(_cpu)_cpu.onclick=async()=>{try{const r=await cloudPush(true);window.alert("Respaldo guardado en la nube"+((r&&r.savedAt)?(" · "+new Date(r.savedAt).toLocaleString("es-CL")+" · "+(r.versions||1)+" versiones en el servidor"):"")+".");cfgRender();}catch(e){window.alert("No se pudo guardar en la nube: "+e.message);}};
+  const _cpl=q("#cfgCloudPull");if(_cpl)_cpl.onclick=()=>cloudRestore(true);
+  const _cts=q("#cfgCloudTest");if(_cts)_cts.onclick=async()=>{try{const h=await cloudApi("GET","/api/backup/meta");window.alert("Conexión OK ✓\n\nRespaldo en el servidor: "+(h.hasBackup?(new Date(h.savedAt).toLocaleString("es-CL")+" · "+Math.round((h.bytes||0)/1024)+" KB · "+h.versions+" versiones"):"aún no hay (usa ☁ Guardar ahora)"));}catch(e){window.alert("Falló la conexión: "+e.message);}};
   const _cl=q("#cfgClean");if(_cl)_cl.onclick=()=>{
     if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
     const typed=window.prompt('⚠ Doble chequeo de seguridad\n\nEsto deja en cada cartera la compra inicial y sus operaciones, y vacía base/análisis/escenarios. Después cargas planillas y se reconstruye todo.\n\nPara confirmar, escribe en mayúsculas: LIMPIAR');
@@ -8207,10 +8317,15 @@ try{removeExampleClients();}catch(e){}
 try{pricedbAutoSeed();}catch(e){}
 try{projFixTradeDayPrices();}catch(e){}
 try{analysisSystemOnly();}catch(e){}
+/* drawer móvil: la hamburguesa abre/cierra el menú lateral; el fondo lo cierra */
+(function(){const bg=document.getElementById("navburger"),bk=document.getElementById("navBk");
+  if(bg)bg.onclick=()=>document.body.classList.toggle("nav-open");
+  if(bk)bk.onclick=()=>document.body.classList.remove("nav-open");})();
 render();
 try{autobkTick();}catch(e){}
 try{autopxAutoRun();}catch(e){}   // sincroniza los cierres del día desde la fuente automática (si está configurada)
 authInit();
+setTimeout(function(){try{cloudBoot();}catch(e){}},900);   // nube: si este navegador está vacío y el servidor tiene respaldo, ofrece restaurarlo
 </script>
 </body>
 </html>

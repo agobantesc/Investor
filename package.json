@@ -1,0 +1,12 @@
+{
+  "name": "investor",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Investor · plataforma personal de inversiones (IPSA) — app de un archivo + servidor mínimo para Render",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

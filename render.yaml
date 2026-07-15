@@ -1,0 +1,27 @@
+# ═══════════════════════════════════════════════════════════════════
+# Investor · Blueprint de Render
+# En https://dashboard.render.com → New → Blueprint → conecta este repo.
+# El disco persistente requiere un plan de pago (Starter, ~US$7/mes):
+# ahí viven los respaldos, que sobreviven reinicios y deploys.
+# Tras crear el servicio: Environment → SYNC_TOKEN → define tu token
+# secreto (una frase larga), el mismo que pegarás en la app
+# (⚙ Configuración → Respaldo → Nube).
+# ═══════════════════════════════════════════════════════════════════
+services:
+  - type: web
+    name: investor
+    runtime: node
+    plan: starter
+    buildCommand: ""
+    startCommand: node server.js
+    autoDeploy: true          # cada push al repo (incluidos los cierres diarios del bot) redeploya solo
+    healthCheckPath: /api/health
+    disk:
+      name: investor-datos
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: SYNC_TOKEN
+        sync: false           # secreto: se define a mano en el panel de Render
