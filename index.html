@@ -1196,6 +1196,13 @@
   /* acciones destacadas por bloques */
   .home-hdacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .home-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px;}
+  /* franja de KPIs del gráfico de operaciones (lectura ejecutiva del período) */
+  .ops-stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px;}
+  .ops-stat{flex:1 1 120px;min-width:108px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 12px;display:flex;flex-direction:column;gap:2px;}
+  .ops-stat span{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);}
+  .ops-stat b{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+  th[data-fsort],th[data-fsort2]{cursor:pointer;user-select:none;white-space:nowrap;}
+  th[data-fsort]:hover,th[data-fsort2]:hover{color:var(--accent);}
   .home-seg button{border:none;background:transparent;color:var(--mut);font:700 11.5px var(--font);padding:.32rem .6rem;border-radius:7px;cursor:pointer;transition:.12s var(--ease);}
   .home-seg button:hover{color:var(--ink);}
   .home-seg button.on{background:var(--card);color:var(--accent);box-shadow:var(--sh);}
@@ -3746,6 +3753,7 @@ function render(){
   }
   const _vk=modulo+"|"+page;
   if(_vk!==_lastViewKey){try{document.body.classList.remove("nav-open");}catch(e){}}   // móvil: NAVEGAR cierra el cajón (los re-renders de la misma vista no)
+  try{const _tt=document.getElementById("charttip");if(_tt)_tt.style.display="none";}catch(e){}   // el tooltip flotante no debe sobrevivir a un re-render (si el SVG se va, mouseleave nunca dispara)
   const _mnOld=document.getElementById("main");
   const _keepScroll=(_vk===_lastViewKey);
   const _prevScroll=(_keepScroll&&_mnOld)?_mnOld.scrollTop:0;
@@ -5418,12 +5426,30 @@ function mosLabel(mos){if(mos==null)return {txt:"—",cls:"ink"};if(mos>=0.20)re
 /* resumen de valorización para el agente (get_stock): valor intrínseco, banda, margen de seguridad y regla sin-peros */
 function valorizacionJSON(iv){if(!iv)return null;const disp=iv.disp||0;const fiab=(iv.n<2)?"baja (UNA sola ancla: sin triangulación — referencia gruesa)":disp>0.6?"baja (las anclas cercanas a la mediana discrepan: trátalo como referencia gruesa)":disp>0.35?"media":"alta";return {valorIntrinseco:Math.round(iv.value),banda:[Math.round(iv.lo),Math.round(iv.hi)],precio:Math.round(iv.px),margenSeguridad_pct:+(iv.mos*100).toFixed(1),fiabilidad:fiab,dispersion:+disp.toFixed(2),retornoExigido_pct:+(iv.r*100).toFixed(1),crecimiento_g_pct:iv.g!=null?+(iv.g*100).toFixed(1):null,metodos:iv.methods.map(m=>m.name),nota:"Valor central = MEDIANA de las anclas (robusta a un método extremo). Margen de seguridad = colchón entre el valor por fundamentos y el precio: >0 hay espacio para ganar comprando bajo su valor; <0 pagas de más. Es valorización (¿a qué PRECIO entrar?), no timing. YA está en el bloque fundamentos del Investor Score — NO lo uses como 'pero' contra un score alto: si sale caro pese a score alto, es COLOR. Es una BANDA estimada; si 'fiabilidad' es baja, los métodos no coinciden y hay que tomarlo con cautela."};}
 function fundUrl(){if(!AUTOPX_URL)return "";return AUTOPX_URL.replace(/[^/]*$/,"fundamentals.json");}   // mismo directorio que closes.json
+/* edad (días, con decimales) de los fundamentos cargados — null si nunca se han traído o sin fecha */
+function fundAgeDays(){if(!FDATA||!FDATA.updatedAt)return null;try{const ms=Date.now()-new Date(FDATA.updatedAt).getTime();return isFinite(ms)?ms/864e5:null;}catch(e){return null;}}
+let fundLastTry=0;   // evita el reintento en bucle del auto-refresco (máx. cada 10 min)
+/* auto-refresco: si los fundamentos tienen más de ~1 día (la corrida es diaria), se traen SOLOS en segundo
+   plano al abrir el módulo — la actualización constante no depende de que el usuario pulse el botón */
+function fundAutoRefresh(){try{
+  if(!AUTOPX_URL)return;const age=fundAgeDays();
+  if((age==null||age>1.1)&&(Date.now()-fundLastTry>600e3)){fundLastTry=Date.now();fundSync(false).then(j=>{if(j){try{render();}catch(e){}}});}
+}catch(e){}}
 async function fundSync(manual){
-  const u=fundUrl();
-  if(!u){if(manual)window.alert("Configura primero la fuente automática de cierres en ⚙ Configuración → Datos: los fundamentos viajan por el mismo canal (fundamentals.json junto al closes.json).");return null;}
+  const u0=fundUrl();
+  if(!u0){if(manual)window.alert("Configura primero la fuente automática de cierres en ⚙ Configuración → Datos: los fundamentos viajan por el mismo canal (fundamentals.json junto al closes.json).");return null;}
   try{
+    // anti-caché en la traída manual: raw.githubusercontent sirve por CDN y puede entregar el archivo viejo unos minutos
+    const u=manual?(u0+(u0.indexOf("?")>=0?"&":"?")+"_="+Date.now()):u0;
     const res=await fetch(u,{cache:"no-store"});if(!res.ok)throw new Error("HTTP "+res.status);
     const j=await res.json();if(!j||!j.byTicker||typeof j.byTicker!=="object"||!Object.keys(j.byTicker).length)throw new Error("formato inesperado");
+    // FIDELIDAD: nunca retroceder — si el remoto trae una versión MÁS VIEJA que la ya cargada (CDN con caché
+    // rezagada), se conservan los fundamentos locales en vez de pisarlos con datos anteriores.
+    const cur=(FDATA&&FDATA.updatedAt)?(""+FDATA.updatedAt):"";
+    if(j.updatedAt&&cur&&(""+j.updatedAt)<cur){
+      if(manual)window.alert("La fuente remota aún sirve una versión anterior (al "+(""+j.updatedAt).slice(0,10)+"); se conservan los fundamentos ya cargados (al "+cur.slice(0,10)+"). Reintenta en unos minutos.");
+      return FDATA;
+    }
     FDATA=fundSanitize(j);try{localStorage.setItem("inv_fund_v1",JSON.stringify(FDATA));}catch(e){}
     if(manual){try{render();}catch(e){}window.alert("Fundamentos actualizados: "+Object.keys(j.byTicker).length+" acciones (al "+((""+(j.updatedAt||"")).slice(0,10)||"—")+").");}
     return j;
@@ -5977,6 +6003,7 @@ function attachCrear(){
 }
 /* ===================== FUNDAMENTOS (P/U, P/B, dividendos, capitalización) ===================== */
 function fundFmtCap(v){if(v==null||!isFinite(v))return "—";if(v>=1e12)return "$"+(v/1e12).toLocaleString("es-CL",{maximumFractionDigits:1})+" B";if(v>=1e9)return "$"+Math.round(v/1e9).toLocaleString("es-CL")+" mil M";return "$"+Math.round(v/1e6).toLocaleString("es-CL")+" M";}
+let fundSort={k:"pe",dir:1},fundSort2={k:"roe",dir:-1};   // orden activo de las tablas de Fundamentos (clic en encabezados)
 function viewFundamentos(){
   const by=(FDATA&&FDATA.byTicker)||{};
   const tks=Object.keys(by).sort();
@@ -5987,13 +6014,42 @@ function viewFundamentos(){
       <div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap">${syncBtn}</div>
       ${!AUTOPX_URL?'<div class="note" style="margin-top:11px;border-color:var(--red-line)">Requiere la fuente automática configurada (⚙ Configuración → Datos).</div>':''}`);
   }
+  // ── ESTADO DE LOS DATOS: frescura + cobertura, primero y a la vista (transparencia de la fuente) ──
+  const age=fundAgeDays();
+  const fOk=age!=null&&age<=3.2;   // la corrida es lun–vie: un fin de semana largo NO es atraso
+  const upAt=(""+(FDATA.updatedAt||"")).slice(0,10)||"—";
+  const upHace=age==null?"":age<1?"hoy":age<2?"hace 1 día":"hace "+Math.floor(age)+" días";
+  const FCOV=[["pe","P/U"],["fpe","P/U fwd"],["pb","P/B"],["dy","Yield div."],["dps","Div./acción"],["roe","ROE"],["nm","Margen neto"],["eg","Crec. utilidades"],["de","Deuda/Patrim."],["peg","PEG"],["evEbitda","EV/EBITDA"],["target","Precio objetivo"]];
+  const cov=FCOV.map(([k,l])=>({k,l,c:tks.filter(t=>by[t][k]!=null).length}));
+  const covAvg=Math.round(cov.reduce((a,x)=>a+x.c,0)/Math.max(1,cov.length*tks.length)*100);
+  const weak=cov.filter(x=>x.c<tks.length*0.8);
+  const fstat=(l,v,c)=>`<div class="ops-stat"><span>${l}</span><b style="color:${c||"var(--ink)"}">${v}</b></div>`;
+  const fresh=card("Estado de los datos","Frescura y cobertura de los fundamentos · se renuevan cada día hábil junto a los cierres (GitHub Actions → Yahoo Finance) y se traen solos al abrir este módulo si están vencidos",
+    `<div class="ops-stats" style="margin:0">
+      ${fstat("Última actualización",mindDate(upAt)+(upHace?` <span style="font-size:11px;font-weight:700;color:${fOk?"var(--green)":"var(--amber)"}">· ${upHace}</span>`:""),fOk?"var(--green)":"var(--amber)")}
+      ${fstat("Acciones cubiertas",tks.length)}
+      ${fstat("Cobertura media",covAvg+"%",covAvg>=85?"var(--green)":"var(--ink)")}
+      ${fstat("Fuente",(""+(FDATA.source||"Yahoo Finance")).replace(/</g,"&lt;").replace(/ \(.*$/,""))}
+    </div>`
+    +(fOk?"":`<div class="note" style="margin:10px 0 0;color:var(--amber)">⚠ Los fundamentos tienen <b>${age==null?"?":Math.floor(age)} día(s)</b>. Se intenta renovar en segundo plano al abrir este módulo; también puedes forzar con <b>⟳ Traer fundamentos ahora</b> (el workflow corre a diario ~18:05 de Chile).</div>`)
+    +(weak.length?`<div class="note" style="margin:10px 0 0">Cobertura parcial en ${weak.map(x=>`<b>${x.l}</b> ${x.c}/${tks.length}`).join(" · ")} — Yahoo no publica todo para cada papel; lo ausente se muestra “—”, nunca se inventa.</div>`:"")
+    +((()=>{const carr=tks.filter(t=>by[t].carriedFrom);return carr.length?`<div class="note" style="margin:10px 0 0">${carr.length} acción(es) con dato <b>arrastrado</b> de una corrida anterior (la fuente no las trajo esta vez): ${carr.map(t=>`<b>${t}</b> (al ${mindDate(by[t].carriedFrom)})`).join(" · ")}.</div>`:"";})()));
   // mediana de P/U del universo (referencia de "caro/barato" relativa, no absoluta)
   const pes=tks.map(t=>by[t].pe).filter(v=>v!=null&&isFinite(v)&&v>0).sort((a,b)=>a-b);
   const peMed=pes.length?pes[Math.floor(pes.length/2)]:null;
   const esc=s=>(""+(s||"")).replace(/</g,"&lt;");
-  const rows=tks.map(t=>{
-    const f=by[t];const st=(STOCKS||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};
+  // ── ORDEN REAL por columna (clic en el encabezado): nulos siempre al final, flecha en la columna activa ──
+  const arrow=(st,k)=>st.k===k?(st.dir>0?" ↑":" ↓"):"";
+  const _nul=v=>v==null||!isFinite(v);
+  const sortRows=(arr,st)=>arr.slice().sort((a,b)=>{const x=a.v[st.k],y=b.v[st.k];
+    if(st.k==="t")return st.dir*(((""+x)<(""+y))?-1:1);
+    if(_nul(x)&&_nul(y))return 0;if(_nul(x))return 1;if(_nul(y))return -1;return st.dir*(x-y);});
+  const data1=tks.map(t=>{const f=by[t];
     const pos=(f.px!=null&&f.hi52!=null&&f.lo52!=null&&f.hi52>f.lo52)?Math.max(0,Math.min(1,(f.px-f.lo52)/(f.hi52-f.lo52))):null;
+    return {t,f,v:{t,px:f.px,pe:f.pe,fpe:f.fpe,pb:f.pb,dy:f.dy,eps:f.eps,mcap:f.mcap,pos}};});
+  const rows=sortRows(data1,fundSort).map(({t,f,v})=>{
+    const st=(STOCKS||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};
+    const pos=v.pos;
     const sig=[];
     if(f.pe!=null&&peMed&&f.pe<peMed*0.75)sig.push(["P/U bajo vs pares",green]);
     if(f.pe!=null&&peMed&&f.pe>peMed*1.6)sig.push(["P/U alto vs pares",amber]);
@@ -6005,32 +6061,43 @@ function viewFundamentos(){
     const bar=pos!=null?`<div style="display:flex;align-items:center;gap:7px"><div class="cons-bar" style="width:56px;flex:0 0 auto"><i style="width:${(pos*100).toFixed(0)}%;background:${pos>=0.5?green:amber}"></i></div><span class="tnum" style="font-size:11px;color:${muted}">${(pos*100).toFixed(0)}%</span></div>`:`<span style="color:${faint}">—</span>`;
     const nm=`<b style="color:${st.c||"#1E5FD1"}">${t}</b> <span style="color:${muted};font-size:10.5px">${esc(f.name).slice(0,26)}</span>`;
     const fv=(v,d,suf)=>v!=null?`${v.toLocaleString("es-CL",{maximumFractionDigits:d})}${suf||""}`:"—";
-    return {pe:f.pe,html:`<tr><td>${nm}</td><td class="r tnum">${fv(f.px,2)}</td><td class="r tnum" style="font-weight:700;color:${f.pe==null?faint:peMed&&f.pe<peMed?green:ink}">${fv(f.pe,1)}</td><td class="r tnum" style="color:${muted}">${fv(f.fpe,1)}</td><td class="r tnum">${fv(f.pb,2)}</td><td class="r tnum" style="font-weight:700;color:${f.dy>=5?green:f.dy!=null?ink:faint}">${f.dy!=null?f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r tnum" style="color:${muted}">${fv(f.eps,1)}</td><td class="r tnum">${fundFmtCap(f.mcap)}</td><td>${bar}</td><td>${chips}</td></tr>`};
-  }).sort((a,b)=>(a.pe==null?1e9:a.pe)-(b.pe==null?1e9:b.pe)).map(r=>r.html).join("");
+    return `<tr><td>${nm}</td><td class="r tnum">${fv(f.px,2)}</td><td class="r tnum" style="font-weight:700;color:${f.pe==null?faint:peMed&&f.pe<peMed?green:ink}">${fv(f.pe,1)}</td><td class="r tnum" style="color:${muted}">${fv(f.fpe,1)}</td><td class="r tnum">${fv(f.pb,2)}</td><td class="r tnum" style="font-weight:700;color:${f.dy>=5?green:f.dy!=null?ink:faint}">${f.dy!=null?f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r tnum" style="color:${muted}">${fv(f.eps,1)}</td><td class="r tnum">${fundFmtCap(f.mcap)}</td><td>${bar}</td><td>${chips}</td></tr>`;
+  }).join("");
+  const th1=(k,l,cls)=>`<th class="${cls||""}" data-fsort="${k}" title="Ordenar por ${l}">${l}${arrow(fundSort,k)}</th>`;
   const tbl=card("Valorización y dividendos",`P/U, P/B, dividendos, capitalización y posición en el rango de 52 semanas · al ${(""+(FDATA.updatedAt||"")).slice(0,10)||"—"} · fuente Yahoo Finance · clic en un encabezado para ordenar`,
-    {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Precio</th><th class="r">P/U</th><th class="r">P/U fwd</th><th class="r">P/B</th><th class="r">Yield div.</th><th class="r">EPS</th><th class="r">Capitalización</th><th>52 semanas</th><th>Señales</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true},((typeof DATASET!=="undefined"&&DATASET==="import")?'<button class="btn" id="anaReportBtn" title="Genera un PDF con todo el análisis según los Ajustes del análisis activos">📄 Informe del análisis (PDF)</button> ':'')+syncBtn);
+    {html:`<div class="tw"><table><thead><tr>${th1("t","Acción")}${th1("px","Precio","r")}${th1("pe","P/U","r")}${th1("fpe","P/U fwd","r")}${th1("pb","P/B","r")}${th1("dy","Yield div.","r")}${th1("eps","EPS","r")}${th1("mcap","Capitalización","r")}${th1("pos","52 semanas")}<th>Señales</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true},((typeof DATASET!=="undefined"&&DATASET==="import")?'<button class="btn" id="anaReportBtn" title="Genera un PDF con todo el análisis según los Ajustes del análisis activos">📄 Informe del análisis (PDF)</button> ':'')+syncBtn);
   // ── CALIDAD, CRECIMIENTO Y CONSENSO (segunda pasada del pipeline: ROE, márgenes, deuda, analistas) ──
   const hasQ=tks.some(t=>{const f=by[t];return f.roe!=null||f.nm!=null||f.target!=null||f.de!=null||f.peg!=null;});
   const _recL={strong_buy:["Compra fuerte",green],buy:["Compra",green],overweight:["Sobreponderar",green],hold:["Mantener",amber],neutral:["Neutral",amber],underweight:["Subponderar",red],underperform:["Vender",red],sell:["Vender",red]};
   let qCard="";
   if(hasQ){
     const fvq=(v,d,suf)=>v!=null?(v.toLocaleString("es-CL",{maximumFractionDigits:d})+(suf||"")):"—";
-    const qRows=tks.map(t=>{const f=by[t];const st=(STOCKS||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};
-      const nm=`<b style="color:${st.c||"#1E5FD1"}">${t}</b>`;
+    const data2=tks.map(t=>{const f=by[t];
       const up=(f.target!=null&&f.px>0)?((f.target/f.px-1)*100):null;
+      return {t,f,v:{t,roe:f.roe,nm:f.nm,eg:f.eg,de:f.de,peg:f.peg,evEbitda:f.evEbitda,target:f.target,up}};});
+    const qRows=sortRows(data2,fundSort2).map(({t,f,v})=>{
+      const st=(STOCKS||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};
+      const nm=`<b style="color:${st.c||"#1E5FD1"}">${t}</b>`;
+      const up=v.up;
       const rec=f.rec&&_recL[f.rec]?_recL[f.rec]:null;
-      return {roe:f.roe,html:`<tr><td>${nm}</td><td class="r tnum" style="font-weight:700;color:${f.roe==null?faint:f.roe>=15?green:ink}">${fvq(f.roe,1,"%")}</td><td class="r tnum">${fvq(f.nm,1,"%")}</td><td class="r tnum" style="color:${f.eg==null?faint:f.eg>=0?green:red}">${f.eg!=null?((f.eg>=0?"+":"")+f.eg.toLocaleString("es-CL",{maximumFractionDigits:1})+"%"):"—"}</td><td class="r tnum" style="color:${f.de==null?faint:f.de>2?amber:ink}">${fvq(f.de,2,"×")}</td><td class="r tnum">${fvq(f.peg,2)}</td><td class="r tnum">${fvq(f.evEbitda,1)}</td><td class="r tnum">${fvq(f.target,0)}</td><td class="r tnum" style="font-weight:800;color:${up==null?faint:up>=10?green:up>=0?ink:red}">${up!=null?((up>=0?"+":"")+up.toFixed(1)+"%"):"—"}</td><td>${rec?`<span class="badge" style="color:${rec[1]};background:${rec[1]}14;border:1px solid ${rec[1]}33;font-size:9.5px">${rec[0]}${f.nAn?" ("+f.nAn+")":""}</span>`:`<span style="color:${faint}">—</span>`}</td></tr>`};
-    }).sort((a,b)=>(b.roe==null?-1e9:b.roe)-(a.roe==null?-1e9:a.roe)).map(r=>r.html).join("");
-    qCard=card("Calidad, crecimiento y consenso","ROE, margen neto, crecimiento de utilidades, deuda, PEG, EV/EBITDA y precio objetivo del consenso de analistas · ordenado por ROE · clic en un encabezado para reordenar",
-      {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">ROE</th><th class="r">Margen neto</th><th class="r">Crec. utilidades</th><th class="r">Deuda/Patrim.</th><th class="r">PEG</th><th class="r">EV/EBITDA</th><th class="r">Precio objetivo</th><th class="r">Upside</th><th>Consenso</th></tr></thead><tbody>${qRows}</tbody></table></div>`,flush:true});
+      return `<tr><td>${nm}</td><td class="r tnum" style="font-weight:700;color:${f.roe==null?faint:f.roe>=15?green:ink}">${fvq(f.roe,1,"%")}</td><td class="r tnum">${fvq(f.nm,1,"%")}</td><td class="r tnum" style="color:${f.eg==null?faint:f.eg>=0?green:red}">${f.eg!=null?((f.eg>=0?"+":"")+f.eg.toLocaleString("es-CL",{maximumFractionDigits:1})+"%"):"—"}</td><td class="r tnum" style="color:${f.de==null?faint:f.de>2?amber:ink}">${fvq(f.de,2,"×")}</td><td class="r tnum">${fvq(f.peg,2)}</td><td class="r tnum">${fvq(f.evEbitda,1)}</td><td class="r tnum">${fvq(f.target,0)}</td><td class="r tnum" style="font-weight:800;color:${up==null?faint:up>=10?green:up>=0?ink:red}">${up!=null?((up>=0?"+":"")+up.toFixed(1)+"%"):"—"}</td><td>${rec?`<span class="badge" style="color:${rec[1]};background:${rec[1]}14;border:1px solid ${rec[1]}33;font-size:9.5px">${rec[0]}${f.nAn?" ("+f.nAn+")":""}</span>`:`<span style="color:${faint}">—</span>`}</td></tr>`;
+    }).join("");
+    const th2=(k,l,cls)=>`<th class="${cls||""}" data-fsort2="${k}" title="Ordenar por ${l}">${l}${arrow(fundSort2,k)}</th>`;
+    qCard=card("Calidad, crecimiento y consenso","ROE, margen neto, crecimiento de utilidades, deuda, PEG, EV/EBITDA y precio objetivo del consenso de analistas · clic en un encabezado para ordenar",
+      {html:`<div class="tw"><table><thead><tr>${th2("t","Acción")}${th2("roe","ROE","r")}${th2("nm","Margen neto","r")}${th2("eg","Crec. utilidades","r")}${th2("de","Deuda/Patrim.","r")}${th2("peg","PEG","r")}${th2("evEbitda","EV/EBITDA","r")}${th2("target","Precio objetivo","r")}${th2("up","Upside","r")}<th>Consenso</th></tr></thead><tbody>${qRows}</tbody></table></div>`,flush:true});
   }else{
     qCard=card("Calidad, crecimiento y consenso","ROE, márgenes, deuda y precio objetivo de analistas",`<div class="note" style="margin:0">Estos campos los trae la <b>próxima corrida</b> del workflow (se agregaron a la segunda pasada del pipeline). Corre el workflow en GitHub → Actions o espera la corrida diaria de las 18:05, y luego pulsa <b>⟳ Traer fundamentos ahora</b>.</div>`);
   }
   const guia=card("Cómo leer los fundamentos","Qué mide cada indicador y sus límites",`
     <div class="note" style="margin:0"><b>P/U</b> (precio/utilidad): cuántos años de utilidad actual "pagas" por la acción — bajo puede ser barato <i>o</i> un problema que el mercado ya castigó. <b>P/U fwd</b> usa la utilidad esperada. <b>P/B</b> (precio/valor libro): bajo 1 la bolsa la valora menos que su patrimonio contable. <b>Yield div.</b>: dividendos de los últimos 12 meses sobre el precio — en Chile las "dividenderas" (bancos, utilities) reparten 4–8%. <b>EPS</b>: utilidad por acción. <b>52 semanas</b>: dónde está el precio dentro de su rango del año (0% = en el mínimo, 100% = en el máximo).<br><br><b>ROE</b>: utilidad sobre patrimonio — la "calidad" del negocio (≥15% es alto). <b>Margen neto</b>: cuánto de cada peso vendido queda como utilidad. <b>Crec. utilidades</b>: variación interanual. <b>Deuda/Patrimonio</b>: apalancamiento (en banca es naturalmente alto). <b>PEG</b>: P/U dividido por crecimiento (≈1 es "justo"). <b>Precio objetivo / Upside</b>: consenso de analistas que cubren el papel y distancia contra el precio actual — es una opinión de terceros, no una garantía.<br><br><b>Límites:</b> el P/U no es comparable entre sectores (un banco "barato" y una minera "cara" pueden ser normales para su industria) — la señal "vs pares" compara contra la mediana del IPSA, úsala como <b>punto de partida para investigar</b>, no como veredicto. Estos datos complementan al análisis CAPM/multifactor: aquellos miran el <i>comportamiento</i> del precio; estos, el <i>negocio</i> detrás. Los fundamentos reales también alimentan el módulo <b>Multifactor</b> y el <b>Investor Score</b>. No es recomendación de inversión.</div>`);
-  return tbl+qCard+guia;
+  return fresh+tbl+qCard+guia;
 }
-function attachFundamentos(){const b=document.getElementById("fundSyncBtn");if(b)b.onclick=()=>{b.disabled=true;b.textContent="⟳ Trayendo…";fundSync(true).finally(()=>{try{render();}catch(e){}});};}
+function attachFundamentos(){
+  const b=document.getElementById("fundSyncBtn");if(b)b.onclick=()=>{b.disabled=true;b.textContent="⟳ Trayendo…";fundSync(true).finally(()=>{try{render();}catch(e){}});};
+  document.querySelectorAll("[data-fsort]").forEach(th=>th.onclick=()=>{const k=th.dataset.fsort;fundSort=(fundSort.k===k)?{k,dir:-fundSort.dir}:{k,dir:k==="t"?1:-1};render();});
+  document.querySelectorAll("[data-fsort2]").forEach(th=>th.onclick=()=>{const k=th.dataset.fsort2;fundSort2=(fundSort2.k===k)?{k,dir:-fundSort2.dir}:{k,dir:k==="t"?1:-1};render();});
+  fundAutoRefresh();   // fundamentos vencidos (>1 día) → se renuevan solos, sin depender del botón
+}
 /* viewImport/attachImport retirados: los análisis independientes ya no existen (v2: único análisis del sistema) */
 /* ---------------- CONFIGURACIÓN (modal) ---------------- */
 function cfgEnsureDOM(){if(document.getElementById("cfgBack"))return;const back=document.createElement("div");back.className="cfg-back";back.id="cfgBack";back.innerHTML='<div class="cfg-modal" id="cfgModal" role="dialog" aria-modal="true" aria-label="Configuración"></div>';document.body.appendChild(back);back.onclick=e=>{if(e.target===back)cfgClose();};const g=document.getElementById("cfgbtn");if(g)g.onclick=cfgOpen;}
@@ -6312,8 +6379,9 @@ function mindTile(d){
   const o=MIND&&MIND[d.k];const chg=d.spark?mindChange(d.k):null;
   // los indicadores DIARIOS con fecha atrasada (>4 días corridos) se marcan en ámbar; los mensuales (IPC,
   // desempleo, Imacec, UTM, TPM) muestran su fecha normal — su "antigüedad" es esperada, no un problema.
-  let sub=o?("al "+mindDate(o.fecha)+(o.unidad?" · "+o.unidad:"")):(mindBusy?"cargando…":"sin datos");
-  if(o&&MIND_DAILY[d.k]){const days=mindDaysOld(o.fecha);if(days!=null&&days>4)sub=`<span style="color:var(--amber);font-weight:700" title="Este indicador debería moverse cada día hábil; su último dato tiene ${days} días. Se está reintentando la actualización.">⚠ al ${mindDate(o.fecha)} · hace ${days} d</span>`;}
+  let sub=o?("al "+mindDate(o.fecha)+(o.unidad?" · "+o.unidad:"")+(o.src?" · "+o.src:"")):(mindBusy?"cargando…":"sin datos");
+  if(o){const lim=MIND_MAXAGE[d.k]||4,days=mindDaysOld(o.fecha);
+    if(days!=null&&days>lim)sub=`<span style="color:var(--amber);font-weight:700" title="${MIND_DAILY[d.k]?"Este indicador debería moverse cada día hábil":"Para este indicador se espera un dato nuevo a más tardar cada "+lim+" días"}; su último dato tiene ${days} días. Se está reintentando la actualización (consultando también su serie propia en la fuente).">⚠ al ${mindDate(o.fecha)} · hace ${days} d</span>`;}
   return mktTileHTML(d.label, o?mindFmt(o.valor,d.dec,d.unit):'<span class="mkt-na">—</span>', chg, d.spark?MINDH[d.k]:null, sub);
 }
 function oilTile(d){
@@ -6343,6 +6411,24 @@ async function mindCore(){
     const j=await mindGetJson(MIND_URL);const m={};
     MIND_DEF.forEach(d=>{const o=j[d.k];if(o&&isFinite(o.valor))m[d.k]={valor:o.valor,fecha:o.fecha,unidad:o.unidad_medida};});
     if(!Object.keys(m).length)throw new Error("respuesta sin indicadores");
+    // REPARACIÓN por indicador: el endpoint agregado de mindicador a veces sirve valores CONGELADOS en las series
+    // mensuales (caso real: IPC pegado en 01-12-2025 durante meses con fetch "exitoso"). Para cada indicador más
+    // viejo que su antigüedad máxima esperada (o ausente) se consulta su SERIE propia (/api/<indicador>) y se toma
+    // el dato MÁS NUEVO de la serie; solo reemplaza si de verdad es más reciente que lo que trajo el agregado.
+    await Promise.allSettled(MIND_DEF.filter(d=>{const o=m[d.k];if(!o)return true;const days=mindDaysOld(o.fecha);return days!=null&&days>(MIND_MAXAGE[d.k]||4);}).map(async d=>{try{
+      const jj=await mindGetJson(MIND_URL+"/"+d.k);
+      const s=((jj&&jj.serie)||[]).filter(x=>x&&isFinite(+x.valor));if(!s.length)return;
+      const top=s.reduce((a,b)=>(((""+a.fecha)>(""+b.fecha))?a:b));
+      if(!m[d.k]||((""+top.fecha).slice(0,10)>(""+m[d.k].fecha).slice(0,10)))m[d.k]={valor:+top.valor,fecha:top.fecha,unidad:(m[d.k]&&m[d.k].unidad)||jj.unidad_medida};
+    }catch(e){}}));
+    // BITCOIN: mindicador suele quedarse días atrás en cripto. Si sigue con >2 días, se toma el precio vivo de
+    // CoinGecko (API pública con CORS) y se marca la fuente en la tarjeta para plena transparencia.
+    try{const b=m.bitcoin,days=b?mindDaysOld(b.fecha):null;
+      if(!b||days==null||days>2){
+        const cg=await mindGetJson("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",8000);
+        const v=cg&&cg.bitcoin&&+cg.bitcoin.usd;
+        if(isFinite(v)&&v>0)m.bitcoin={valor:v,fecha:new Date().toISOString().slice(0,10),unidad:"Dólar",src:"CoinGecko"};
+      }}catch(e){}
     MIND=m;mindTs=new Date().toISOString();lsSet("inv_mind_v1",MIND);lsSet("inv_mind_ts_v1",mindTs);
     await Promise.allSettled(MIND_DEF.filter(d=>d.spark).map(async d=>{try{
       const jj=await mindGetJson(MIND_URL+"/"+d.k);
@@ -6404,6 +6490,12 @@ let mindLastTry=0;
 /* indicadores que DEBERÍAN moverse cada día hábil (los mensuales — IPC, desempleo, Imacec, UTM, TPM — quedan
    "viejos" por diseño y NO deben marcarse como desactualizados). */
 const MIND_DAILY={dolar:1,euro:1,libra_cobre:1,uf:1,bitcoin:1};
+/* antigüedad MÁXIMA esperada (días corridos) por indicador según su calendario REAL de publicación: los diarios
+   toleran un fin de semana largo; bitcoin cotiza 24/7; UTM y TPM se publican dentro del mes; el IPC sale la
+   primera quincena del mes siguiente (≤45 d); desempleo e Imacec llevan ~2 meses de rezago sobre su fecha de
+   referencia (≤100 d). Sobre su umbral, el dato ESTÁ atrasado aunque el indicador sea mensual — así se detecta
+   un IPC congelado (caso real: pegado en dic-2025), que el filtro "solo diarios" dejaba pasar sin marcar. */
+const MIND_MAXAGE={dolar:4,euro:4,libra_cobre:4,uf:4,bitcoin:2,utm:35,tpm:35,ipc:45,tasa_desempleo:100,imacec:100};
 /* días corridos desde la fecha de un dato (o.fecha "YYYY-MM-DD" o ISO) */
 function mindDaysOld(fecha){if(!fecha)return null;try{const d=new Date((""+fecha).slice(0,10)+"T00:00:00");if(isNaN(d))return null;return Math.floor((Date.now()-d.getTime())/864e5);}catch(e){return null;}}
 /* frescura por FECHA DEL DATO (no solo por hora de fetch): si el indicador DIARIO más reciente tiene >4 días
@@ -6414,7 +6506,10 @@ function mindDataStale(){if(!MIND)return true;
   // de la UF). Se toma el MÁS reciente; si el más fresco de esos ya tiene >4 días, la data está atrasada.
   const KEYS=["dolar","euro","libra_cobre"];let fresh=null,any=false;
   KEYS.forEach(k=>{if(MIND[k]){any=true;const o=mindDaysOld(MIND[k].fecha);if(o!=null&&o>=0&&(fresh==null||o<fresh))fresh=o;}});
-  if(!any)return true;return fresh==null||fresh>4;}
+  if(!any)return true;if(fresh==null||fresh>4)return true;
+  // ADEMÁS, indicador por indicador (incluidos los MENSUALES): si alguno supera su antigüedad máxima esperada,
+  // la data está atrasada y el auto-refresco (con reparación por serie propia) debe intentar renovarlo.
+  return MIND_DEF.some(d=>{const o=MIND[d.k];if(!o)return false;const days=mindDaysOld(o.fecha);return days!=null&&days>(MIND_MAXAGE[d.k]||4);});}
 function mindStale(){if(!mindTs)return true;try{if((Date.now()-new Date(mindTs).getTime())>6*3600e3)return true;}catch(e){return true;}return mindDataStale();}
 function mindAutoRefresh(){try{if(!mindBusy&&mindStale()&&(Date.now()-mindLastTry>600e3)&&typeof mindFetch==="function")mindFetch();}catch(e){}}
 function viewMercados(){
@@ -7947,30 +8042,51 @@ const OPS_FEE_COL="#E0567A";   // color propio de las comisiones (costo) — dis
 /* barras del Home: modo "ops" (compras vs ventas por fecha) o "fees" (solo comisiones, con su PROPIA escala para
    que se vean bien aunque sean mucho menores que las compras). Tooltip con el detalle del día en ambos modos. */
 function svgOpsBars(o){
-  const W=820,H=o.h||210,m={l:56,r:16,t:14,b:30};
+  const W=820,H=o.h||210,m={l:56,r:60,t:16,b:30};   // margen derecho ancho: eje propio del ACUMULADO
   const mode=o.mode==="fees"?"fees":"ops";
-  const n=o.dates.length,step=(W-m.l-m.r)/Math.max(1,n),bw=Math.max(3,Math.min(26,step*0.34));
+  const n=o.dates.length,step=(W-m.l-m.r)/Math.max(1,n),bw=Math.max(4,Math.min(28,step*0.38));
   const mx=mode==="fees"?Math.max(1,...o.rows.map(r=>r.fee||0)):Math.max(1,...o.rows.map(r=>Math.max(r.buy,r.sell)));
   const Y=v=>H-m.b-(v/mx)*(H-m.t-m.b);
-  let g="";
-  for(let i=0;i<=4;i++){const v=mx*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"/><text x="${m.l-8}" y="${yy+3.5}" text-anchor="end" font-size="11.5" fill="${faint}">${fmtK(v)}</text>`;}
+  const uid=(o.id||"ops");
+  // línea de contexto ACUMULADA (eje derecho): en Operaciones el capital NETO invertido (compras − ventas)
+  // y en Comisiones el costo acumulado — da la lectura de "cuánto llevo" que las barras sueltas no muestran
+  let _ac=0;const cum=o.rows.map(r=>_ac+=(mode==="fees"?(r.fee||0):((r.buy||0)-(r.sell||0))));
+  const cmn=Math.min(0,...cum),cmx=Math.max(1,...cum);
+  const Y2=v=>H-m.b-((v-cmn)/(cmx-cmn))*(H-m.t-m.b);
+  // degradés sutiles por serie (remate profesional; el color base se mantiene para consistencia con la leyenda)
+  let g=`<defs>
+    <linearGradient id="og_${uid}_b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".98"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="og_${uid}_s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${amber}" stop-opacity=".98"/><stop offset="1" stop-color="${amber}" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="og_${uid}_f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${OPS_FEE_COL}" stop-opacity=".98"/><stop offset="1" stop-color="${OPS_FEE_COL}" stop-opacity=".55"/></linearGradient>
+  </defs>`;
+  for(let i=0;i<=4;i++){const v=mx*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"${i?` stroke-dasharray="3 4"`:""}/><text x="${m.l-8}" y="${yy+3.5}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">${fmtK(v)}</text>`;}
   g+=`<line x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}" stroke="${AC}" stroke-width="1.1"/>`;
-  const xs=[];
+  // eje derecho (acumulado): solo 0 y máximo, en el color de la línea, sin competir con el eje principal
+  g+=`<text x="${W-m.r+7}" y="${(Y2(cmx)+3.5).toFixed(1)}" text-anchor="start" font-size="10" font-weight="700" fill="${indigo}" style="font-variant-numeric:tabular-nums">${fmtK(cmx)}</text>`;
+  if(cmx>0)g+=`<text x="${W-m.r+7}" y="${(Y2(Math.max(0,cmn))+3.5).toFixed(1)}" text-anchor="start" font-size="10" fill="${faint}" style="font-variant-numeric:tabular-nums">${fmtK(Math.max(0,cmn))}</text>`;
+  const xs=[];for(let i=0;i<n;i++)xs.push(m.l+step*(i+0.5));
   // etiquetas de VALOR sobre cada barra: con muchas fechas se etiquetan solo las mayores (para no amontonar)
   const _lblOK=(()=>{if(n<=12)return v=>v>0;const _all=mode==="fees"?o.rows.map(r=>r.fee||0):o.rows.map(r=>Math.max(r.buy||0,r.sell||0));const thr=_all.slice().sort((a,b)=>b-a)[Math.min(7,_all.length-1)];return v=>v>0&&v>=thr;})();
   const _vl=(x,v,c,an)=>`<text x="${(+x).toFixed(1)}" y="${(Y(v)-4).toFixed(1)}" text-anchor="${an||"middle"}" font-size="9.5" font-weight="800" fill="${c}" style="paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round">${fmtK(v)}</text>`;
-  o.dates.forEach((d,i)=>{const cx=m.l+step*(i+0.5);xs.push(cx);const r=o.rows[i];
+  const _bar=(x,v,fill,col)=>`<rect x="${x.toFixed(1)}" y="${Y(v).toFixed(1)}" width="${bw}" height="${Math.max(1.5,H-m.b-Y(v)).toFixed(1)}" rx="3" fill="url(#og_${uid}_${fill})" stroke="${col}" stroke-opacity=".45" stroke-width=".8"/>`;
+  o.dates.forEach((d,i)=>{const cx=xs[i],r=o.rows[i];
     if(mode==="fees"){
-      if(r.fee>0){g+=`<rect x="${(cx-bw/2).toFixed(1)}" y="${Y(r.fee).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.fee)).toFixed(1)}" rx="2.5" fill="${OPS_FEE_COL}" opacity=".92"/>`;if(_lblOK(r.fee))g+=_vl(cx,r.fee,OPS_FEE_COL);}
+      if(r.fee>0){g+=_bar(cx-bw/2,r.fee,"f",OPS_FEE_COL);if(_lblOK(r.fee))g+=_vl(cx,r.fee,OPS_FEE_COL);}
     }else{
       const both=r.buy>0&&r.sell>0;
-      if(r.buy>0){g+=`<rect x="${(cx-(both?bw+1:bw/2)).toFixed(1)}" y="${Y(r.buy).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.buy)).toFixed(1)}" rx="2.5" fill="var(--accent)" opacity=".92"/>`;if(_lblOK(r.buy))g+=_vl(both?cx-2:cx,r.buy,"var(--accent)",both?"end":"middle");}
-      if(r.sell>0){g+=`<rect x="${(cx+(both?1:-bw/2)).toFixed(1)}" y="${Y(r.sell).toFixed(1)}" width="${bw}" height="${(H-m.b-Y(r.sell)).toFixed(1)}" rx="2.5" fill="${amber}" opacity=".92"/>`;if(_lblOK(r.sell))g+=_vl(both?cx+2:cx,r.sell,amber,both?"start":"middle");}
+      if(r.buy>0){g+=_bar(cx-(both?bw+1:bw/2),r.buy,"b","var(--accent)");if(_lblOK(r.buy))g+=_vl(both?cx-2:cx,r.buy,"var(--accent)",both?"end":"middle");}
+      if(r.sell>0){g+=_bar(cx+(both?1:-bw/2),r.sell,"s",amber);if(_lblOK(r.sell))g+=_vl(both?cx+2:cx,r.sell,amber,both?"start":"middle");}
     }});
+  // línea del acumulado por ENCIMA de las barras, con punto final destacado
+  if(n>=2){
+    const pth="M"+cum.map((v,i)=>xs[i].toFixed(1)+","+Y2(v).toFixed(1)).join(" L");
+    g+=`<path d="${pth}" fill="none" stroke="${indigo}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>`;
+    g+=`<circle cx="${xs[n-1].toFixed(1)}" cy="${Y2(cum[n-1]).toFixed(1)}" r="3.4" fill="${indigo}" stroke="var(--card)" stroke-width="1.6"/>`;
+  }
   // etiquetas de fecha: primera, última y algunas intermedias (sin amontonar)
   const _lb=Math.max(1,Math.ceil(n/8));
   o.dates.forEach((d,i)=>{if(i%_lb===0||i===n-1)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" fill="${faint}">${d.slice(8,10)+"/"+d.slice(5,7)}</text>`;});
-  if(o.id)window["__ob_"+o.id]={dates:o.dates,rows:o.rows,xs,W,H,mt:m.t,mb:m.b,mode,step};
+  if(o.id)window["__ob_"+o.id]={dates:o.dates,rows:o.rows,xs,W,H,mt:m.t,mb:m.b,mode,step,cum};
   return `<svg id="${o.id||""}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${(o.id||"")}hover"></g></svg>`;
 }
 function attachOpsHover(id){
@@ -7984,8 +8100,9 @@ function attachOpsHover(id){
     const feeLine=`<span style="display:block;color:${OPS_FEE_COL};font-weight:800">Comisiones: −${fmtCLP(d.fee)}</span>`;
     const buyLine=d.buy?`<span style="display:block;color:var(--accent);font-weight:${g.mode==="fees"?"600":"800"}">Compras: ${fmtCLP(d.buy)}</span>`:"";
     const sellLine=d.sell?`<span style="display:block;color:${amber};font-weight:${g.mode==="fees"?"600":"800"}">Ventas: ${fmtCLP(d.sell)}</span>`:"";
+    const cumLine=(g.cum&&g.cum[bi]!=null)?`<span style="display:block;color:${indigo};font-weight:700">${g.mode==="fees"?"Comisiones acumuladas: −":"Invertido neto acum.: "}${fmtCLP(Math.abs(g.cum[bi]))}</span>`:"";
     const nLine=`<span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">${d.n} operaci${d.n===1?"ón":"ones"} este día</span>`;
-    tt.innerHTML=`<b>${g.dates[bi]}</b>`+(g.mode==="fees"?(feeLine+buyLine+sellLine):(buyLine+sellLine+feeLine))+nLine;
+    tt.innerHTML=`<b>${g.dates[bi]}</b>`+(g.mode==="fees"?(feeLine+buyLine+sellLine):(buyLine+sellLine+feeLine))+cumLine+nLine;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
@@ -8171,12 +8288,22 @@ function viewHome(){
     // en "Comisiones" el gráfico usa SU PROPIA escala para verlas bien
     const seg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Ver operaciones o comisiones"><button data-opsmode="ops" class="${mode==="ops"?"on":""}" title="Montos comprados y vendidos por fecha">Operaciones</button><button data-opsmode="fees" class="${mode==="fees"?"on":""}" title="Comisiones pagadas por fecha, con su propia escala para verlas bien">Comisiones</button></div></div>`;
     const legend=mode==="fees"
-      ? `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${OPS_FEE_COL}"></span>Comisiones (IVA incl.)</span></div>`
-      : `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:var(--accent)"></span>Compras</span><span><span class="lgdot" style="background:${amber}"></span>Ventas</span></div>`;
+      ? `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${OPS_FEE_COL}"></span>Comisiones (IVA incl.)</span><span><span class="lgdot" style="background:${indigo}"></span>Acumulado</span></div>`
+      : `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:var(--accent)"></span>Compras</span><span><span class="lgdot" style="background:${amber}"></span>Ventas</span><span><span class="lgdot" style="background:${indigo}"></span>Neto acumulado</span></div>`;
+    // franja de KPIs del período (lectura ejecutiva antes del gráfico): totales + costo medio de transar
+    const feePct=(os.tBuy+os.tSell)>0?(os.tFee/(os.tBuy+os.tSell)*100):null;
+    const stat=(l,v,c)=>`<div class="ops-stat"><span>${l}</span><b style="color:${c||"var(--ink)"}">${v}</b></div>`;
+    const stats=`<div class="ops-stats">`
+      +stat("Operaciones",os.tN)
+      +stat("Comprado",fmtCLP(os.tBuy),"var(--accent)")
+      +(os.tSell?stat("Vendido",fmtCLP(os.tSell),amber):"")
+      +stat("Comisiones","−"+fmtCLP(os.tFee),OPS_FEE_COL)
+      +(feePct!=null?stat("Costo medio",feePct.toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+"%",feePct>1?amber:"var(--ink)"):"")
+      +`</div>`;
     const caption=mode==="fees"
-      ? `${os.tN} operaciones · comisiones totales <b style="color:${OPS_FEE_COL}">−${fmtCLP(os.tFee)}</b>${os.tBuy?` · sobre ${fmtCLP(os.tBuy)} comprados`:""}`
-      : `${os.tN} operaciones · comprado ${fmtCLP(os.tBuy)}${os.tSell?` · vendido ${fmtCLP(os.tSell)}`:""} · comisiones −${fmtCLP(os.tFee)}`;
-    const body=`<div class="ipsa-chart">${svgOpsBars({dates:os.dates,rows:os.rows,h:210,id:"mgops",mode})}
+      ? `acumulado <b style="color:${indigo}">−${fmtCLP(os.tFee)}</b> en comisiones${os.tBuy?` · sobre ${fmtCLP(os.tBuy)} comprados`:""}`
+      : `neto acumulado <b style="color:${indigo}">${fmtCLP(os.tBuy-os.tSell)}</b> invertido`;
+    const body=`${stats}<div class="ipsa-chart">${svgOpsBars({dates:os.dates,rows:os.rows,h:210,id:"mgops",mode})}
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0;flex-wrap:wrap">
         ${legend}
         <div class="genl" style="margin:0;text-align:right">${caption}</div></div></div>`;

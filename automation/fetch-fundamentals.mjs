@@ -12,7 +12,7 @@
  * se conserva y el workflow de cierres nunca se rompe por culpa de los fundamentos.
  * Sin dependencias (Node 18+). Uso: node automation/fetch-fundamentals.mjs
  */
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { TICKERS } from "./tickers.mjs";
 
 const UA = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" };
@@ -30,10 +30,15 @@ async function getCrumb() {
 let AUTHC = { cookie: null, crumb: null };   // se comparte entre el batch y los quoteSummary
 async function quoteBatch(symbols) {
   const base = "https://query2.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(symbols.join(","));
-  // 1º sin crumb (a veces basta) · 2º con cookie+crumb (camino estándar)
-  let hdrs = UA, url = base;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt === 1) { AUTHC = await getCrumb(); hdrs = { ...UA, cookie: AUTHC.cookie }; url = base + "&crumb=" + encodeURIComponent(AUTHC.crumb); }
+  // 1º sin crumb (a veces basta) · 2º y 3º con cookie+crumb (camino estándar), con pausa entre intentos:
+  // un traspié transitorio de Yahoo no debe dejar la corrida del día sin fundamentos.
+  let hdrs = UA, url = base, lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt >= 1) {
+      try { AUTHC = await getCrumb(); hdrs = { ...UA, cookie: AUTHC.cookie }; url = base + "&crumb=" + encodeURIComponent(AUTHC.crumb); }
+      catch (e) { lastErr = e; }
+      await new Promise(r => setTimeout(r, attempt * 1500));
+    }
     try {
       const r = await fetch(url, { headers: hdrs });
       if (!r.ok) throw new Error("HTTP " + r.status);
@@ -41,13 +46,15 @@ async function quoteBatch(symbols) {
       const out = j && j.quoteResponse && j.quoteResponse.result;
       if (!Array.isArray(out) || !out.length) throw new Error("respuesta sin resultados");
       return out;
-    } catch (e) { if (attempt === 1) throw e; console.log("Sin crumb falló (" + String(e.message || e) + "); reintentando con cookie+crumb…"); }
+    } catch (e) { lastErr = e; console.log("Batch intento " + (attempt + 1) + " falló (" + String(e.message || e) + ")" + (attempt < 2 ? "; reintentando…" : "")); }
   }
+  throw lastErr || new Error("batch sin respuesta");
 }
-/* detalle por símbolo: ROE, márgenes, crecimiento, deuda y consenso de analistas (v10 quoteSummary) */
+/* detalle por símbolo: ROE, márgenes, crecimiento, deuda, consenso de analistas y DIVIDENDOS
+   (summaryDetail sube la cobertura de yield/dividendo por acción que el batch no siempre trae) */
 async function quoteSummary(sym) {
   const url = "https://query2.finance.yahoo.com/v10/finance/quoteSummary/" + encodeURIComponent(sym)
-    + "?modules=financialData%2CdefaultKeyStatistics" + (AUTHC.crumb ? ("&crumb=" + encodeURIComponent(AUTHC.crumb)) : "");
+    + "?modules=financialData%2CdefaultKeyStatistics%2CsummaryDetail" + (AUTHC.crumb ? ("&crumb=" + encodeURIComponent(AUTHC.crumb)) : "");
   const r = await fetch(url, { headers: AUTHC.cookie ? { ...UA, cookie: AUTHC.cookie } : UA });
   if (!r.ok) throw new Error("HTTP " + r.status);
   const j = await r.json();
@@ -91,7 +98,7 @@ try {
       let rSum;
       try { rSum = await quoteSummary(sym); }
       catch (e) { if (!AUTHC.crumb) { AUTHC = await getCrumb(); rSum = await quoteSummary(sym); } else throw e; }
-      const fd = (rSum && rSum.financialData) || {}, ks = (rSum && rSum.defaultKeyStatistics) || {};
+      const fd = (rSum && rSum.financialData) || {}, ks = (rSum && rSum.defaultKeyStatistics) || {}, sd = (rSum && rSum.summaryDetail) || {};
       const f = byTicker[t];
       const pctOf = v => (raw(v) != null ? raw(v) * 100 : null);
       f.roe = rnd(inRange(pctOf(fd.returnOnEquity), -100, 200), 1);          // rentabilidad del patrimonio %
@@ -109,17 +116,42 @@ try {
       if (f.pb == null) { let pb = inRange(raw(ks.priceToBook), 0, 100); if (pb == null) { const bv = raw(ks.bookValue); if (bv > 0 && f.px > 0) pb = inRange(f.px / bv, 0, 100); } f.pb = rnd(pb, 2); }
       if (f.fpe == null) f.fpe = rnd(inRange(raw(ks.forwardPE), 0, 500), 2);
       if (f.nm == null) f.nm = rnd(inRange(pctOf(ks.profitMargins), -100, 100), 1);
+      // DIVIDENDOS desde summaryDetail cuando el batch no los trajo (cobertura real: Yahoo reparte estos campos
+      // entre endpoints según el papel): monto por acción (dividendRate / trailingAnnualDividendRate) y yield.
+      if (f.dps == null) f.dps = inRange(rnd(raw(sd.dividendRate) != null ? raw(sd.dividendRate) : raw(sd.trailingAnnualDividendRate), 2), 0, Infinity);
+      if (f.dy == null) { let dy2 = raw(sd.dividendYield) != null ? raw(sd.dividendYield) * 100 : (raw(sd.trailingAnnualDividendYield) != null ? raw(sd.trailingAnnualDividendYield) * 100 : null); f.dy = rnd(inRange(dy2, 0, 30), 2); }
       // yield desde la tasa de dividendo si el batch no dio el ratio pero sí el monto
       if (f.dy == null && f.dps != null && f.px > 0) f.dy = rnd(inRange(f.dps / f.px * 100, 0, 30), 2);
       sumOk++;
     } catch (e) { /* sin detalle para este símbolo */ }
     await new Promise(res => setTimeout(res, 300));   // cortesía con la API
   }
-  console.log(`Detalle (ROE/márgenes/analistas): ${sumOk}/${n} símbolos.`);
+  console.log(`Detalle (ROE/márgenes/analistas/dividendos): ${sumOk}/${n} símbolos.`);
+  // ARRASTRE del archivo previo (fidelidad sin agujeros): si un ticker desapareció de ESTA corrida (traspié
+  // puntual de Yahoo con ese símbolo) pero el archivo anterior lo traía y tiene ≤14 días, se conserva su dato
+  // anterior MARCADO con la fecha de origen (carriedFrom) — la app puede mostrar su procedencia. Nunca se
+  // arrastran campos sueltos (un dividendo suspendido debe poder desaparecer); solo tickers completos caídos.
+  try {
+    const prev = JSON.parse(readFileSync("data/fundamentals.json", "utf8"));
+    const prevAge = (Date.now() - new Date(prev.updatedAt || 0).getTime()) / 864e5;
+    if (prev && prev.byTicker && isFinite(prevAge) && prevAge <= 14) {
+      let carried = 0;
+      for (const [t, f] of Object.entries(prev.byTicker)) {
+        if (byTicker[t] || !TICKERS[t]) continue;
+        byTicker[t] = { ...f, carriedFrom: f.carriedFrom || (prev.updatedAt || "").slice(0, 10) };
+        carried++;
+      }
+      if (carried) console.log(`Arrastrados del archivo previo (${(prev.updatedAt || "").slice(0, 10)}): ${carried} ticker(s) que esta corrida no trajo.`);
+    }
+  } catch (e) { /* sin archivo previo utilizable */ }
+  const nOut = Object.keys(byTicker).length;
+  // resumen de COBERTURA por campo (queda en el JSON: transparencia y diagnóstico de la fuente)
+  const FIELDS = ["px", "pe", "fpe", "eps", "pb", "dy", "dps", "mcap", "hi52", "lo52", "vol3m", "roe", "nm", "eg", "rg", "de", "target", "rec", "nAn", "peg", "evEbitda"];
+  const coverage = {}; FIELDS.forEach(k => coverage[k] = Object.values(byTicker).filter(f => f[k] != null).length);
   mkdirSync("data", { recursive: true });
-  writeFileSync("data/fundamentals.json", JSON.stringify({ updatedAt: new Date().toISOString(), source: "Yahoo Finance (v7 quote)", n, byTicker }, null, 1));
+  writeFileSync("data/fundamentals.json", JSON.stringify({ updatedAt: new Date().toISOString(), source: "Yahoo Finance (v7 quote)", n: nOut, coverage, byTicker }, null, 1));
   const conPe = Object.values(byTicker).filter(f => f.pe != null).length;
-  console.log(`OK: fundamentos de ${n} acciones (${conPe} con P/U). Ej BCI: ${JSON.stringify(byTicker.BCI || {})}`);
+  console.log(`OK: fundamentos de ${nOut} acciones (${conPe} con P/U). Cobertura: ${FIELDS.map(k => k + " " + coverage[k]).join(", ")}`);
 } catch (e) {
   // salida SUAVE: los fundamentos son un extra — nunca deben romper el workflow ni borrar el archivo anterior
   console.error("Fundamentos no disponibles en esta corrida: " + String((e && e.message) || e));

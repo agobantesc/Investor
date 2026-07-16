@@ -46,6 +46,27 @@ La sincronización usa **las mismas reglas que una planilla**: fusión por celda
 (sin arrastres ni IPSA por delante del mercado). El JSON trae ~2 semanas de historia, así
 que si no abres la app unos días, al volver se rellenan los días perdidos.
 
+## Fundamentos (fundamentals.json)
+
+En la misma corrida, `fetch-fundamentals.mjs` genera `data/fundamentals.json` (P/U, P/B,
+dividendos, ROE, márgenes, deuda, PEG, EV/EBITDA y consenso de analistas) con estas garantías:
+
+- **Batch con reintentos** (3 intentos con pausa) + segunda pasada por símbolo
+  (`financialData`, `defaultKeyStatistics` y `summaryDetail` — esta última sube la cobertura
+  de yield y dividendo por acción que el batch no siempre trae).
+- **Saneo por rango plausible**: un dato fuera de rango se descarta (`null`), nunca se inventa.
+- **Arrastre marcado**: si un ticker desaparece de una corrida (traspié puntual de la fuente)
+  pero el archivo anterior tiene ≤14 días, se conserva su dato con `carriedFrom` (la app
+  muestra su procedencia). Nunca se arrastran campos sueltos: un dividendo suspendido
+  debe poder desaparecer.
+- **`coverage` en el JSON**: cuántas acciones traen cada campo (diagnóstico de la fuente).
+- **Salida suave**: si Yahoo falla por completo, el script sale con código 0 sin escribir —
+  el archivo anterior se conserva y el workflow de cierres no se rompe.
+
+La app lo sincroniza junto a los cierres, lo vuelve a validar (`fundSanitize`), **nunca
+retrocede** a una versión más vieja (CDN con caché rezagada) y lo re-trae sola si tiene
+más de un día (módulo **Análisis → Fundamentos**, card "Estado de los datos").
+
 ## Ajustes
 
 - **Acciones**: edita el mapa `TICKERS` en `fetch-closes.mjs`
