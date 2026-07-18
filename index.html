@@ -1487,7 +1487,13 @@ let invStkSel=null;
 let objEditOn=false;   // editor de pesos objetivo (Composición actual vs objetivo, en Seguimiento)
 let invValFrom="",invValTo="";   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (solo ese gráfico)
 let invCapmFrom="",invCapmTo="";   // rango de fechas del gráfico "Análisis CAPM: real vs exigido" (solo ese gráfico)
-let invRangeOwner=null;   // proyecto DUEÑO de los rangos de fecha: al entrar a OTRO proyecto se limpian solos (cada proyecto filtra independiente, el filtro no "viaja")
+let invRangeOwner=null;   // proyecto cuyos rangos están CARGADOS en las variables de arriba
+/* rangos de fecha PERSISTENTES por PROYECTO: cada proyecto recuerda su propio filtro (no "viaja" al vecino)
+   y sobrevive al cambio de proyecto y al cierre de Investor (localStorage). {pid:{vf,vt,cf,ct}}
+   Se hidrata en el PRIMER USO: aquí arriba lsGet aún no puede leer (ck/activeClient se definen más abajo). */
+let INV_RANGES=null;
+function invRanges(){if(!INV_RANGES){try{INV_RANGES=lsGet("inv_ranges_v1")||{};}catch(e){INV_RANGES={};}}return INV_RANGES;}
+function invRangeSave(){try{if(activeId==null)return;invRanges()[activeId]={vf:invValFrom,vt:invValTo,cf:invCapmFrom,ct:invCapmTo};lsSet("inv_ranges_v1",INV_RANGES);}catch(e){}}
 
 // ===== FORMATO =====
 let ink="#0F2747",muted="#52668A",faint="#8DA1C2",green="#0E8C5E",red="#D83A3A",amber="#B57A12",
@@ -2957,7 +2963,7 @@ function viewInvActive(){
   const histPg=(page==="historial");
   // los rangos de fecha de los gráficos pertenecen a UN proyecto: al cambiar de proyecto se limpian
   // (sin esto, el filtro puesto en una cartera aparecía aplicado en la otra)
-  if(invRangeOwner!==activeId){invValFrom="";invValTo="";invCapmFrom="";invCapmTo="";invRangeOwner=activeId;}
+  if(invRangeOwner!==activeId){const _r=invRanges()[activeId]||{};invValFrom=_r.vf||"";invValTo=_r.vt||"";invCapmFrom=_r.cf||"";invCapmTo=_r.ct||"";invRangeOwner=activeId;}   // al entrar a un proyecto se cargan SUS rangos guardados (independientes y persistentes)
   if(!IM) return (seg||histPg)?(projbar+summary+notecard("Aún no hay datos registrados. Ve a la pestaña <b>Ingresar datos</b> para registrar la compra inicial y los precios de cada "+fr.u+".")):(projbar+summary+freqBar+form+notecard("Registra la <b>compra inicial</b> (precios de compra de cada acción y el IPSA del día en que invertiste) para comenzar el seguimiento."));
   const L=IM.last,nd=WEEKS.length,gain=L.val-IM.aport;
   const days=IM.elapsedDays, reqRet=Math.pow(1+PF.erCapm/100,IM.elapsedYrs)-1, alphaReal=L.ret-reqRet;
@@ -3488,12 +3494,12 @@ function attachInv(){
   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (conserva el scroll al aplicar)
   (function(){
     const _keep=fn=>{const m=document.getElementById("main"),st=m?m.scrollTop:0;fn();const m2=document.getElementById("main");if(m2)m2.scrollTop=st;};
-    const vf=document.getElementById("invValFrom");if(vf)vf.onchange=()=>_keep(()=>{invValFrom=vf.value||"";render();});
-    const vt=document.getElementById("invValTo");if(vt)vt.onchange=()=>_keep(()=>{invValTo=vt.value||"";render();});
-    const va=document.getElementById("invValAll");if(va)va.onclick=()=>_keep(()=>{invValFrom="";invValTo="";render();});
-    const cf=document.getElementById("invCapmFrom");if(cf)cf.onchange=()=>_keep(()=>{invCapmFrom=cf.value||"";render();});
-    const ct=document.getElementById("invCapmTo");if(ct)ct.onchange=()=>_keep(()=>{invCapmTo=ct.value||"";render();});
-    const ca=document.getElementById("invCapmAll");if(ca)ca.onclick=()=>_keep(()=>{invCapmFrom="";invCapmTo="";render();});
+    const vf=document.getElementById("invValFrom");if(vf)vf.onchange=()=>_keep(()=>{invValFrom=vf.value||"";invRangeSave();render();});
+    const vt=document.getElementById("invValTo");if(vt)vt.onchange=()=>_keep(()=>{invValTo=vt.value||"";invRangeSave();render();});
+    const va=document.getElementById("invValAll");if(va)va.onclick=()=>_keep(()=>{invValFrom="";invValTo="";invRangeSave();render();});
+    const cf=document.getElementById("invCapmFrom");if(cf)cf.onchange=()=>_keep(()=>{invCapmFrom=cf.value||"";invRangeSave();render();});
+    const ct=document.getElementById("invCapmTo");if(ct)ct.onchange=()=>_keep(()=>{invCapmTo=ct.value||"";invRangeSave();render();});
+    const ca=document.getElementById("invCapmAll");if(ca)ca.onclick=()=>_keep(()=>{invCapmFrom="";invCapmTo="";invRangeSave();render();});
   })();
   // ── editor de pesos objetivo (tarjeta "Composición actual vs objetivo") ──
   (function(){
@@ -5351,10 +5357,10 @@ async function autopxSync(manual,bust){
     try{fundSync(false);}catch(e){}   // los fundamentos viajan por el mismo canal: se refrescan con cada sincronización (sin bloquear)
     if(manual)window.alert("Cierres sincronizados desde la fuente automática.\n\n• "+r.added+" precio(s) nuevo(s) · "+r.updated+" actualizado(s)"+(r.skipped?" · "+r.skipped+" ignorado(s) (fin de semana/futuro)":"")+"\n• Seguimientos: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");
     if(r.added||r.updated){
-      // en la sincronización silenciosa no se re-renderiza si estás escribiendo en un formulario (no pisar tu entrada);
-      // los datos ya quedaron en la base y se verán en la próxima navegación
-      const ae=document.activeElement,typing=ae&&/^(INPUT|TEXTAREA|SELECT)$/i.test(ae.tagName);
-      if(manual||!typing){try{render();}catch(e){}}
+      // manual: repinta al instante. Silenciosa: por el render DE FONDO (a lo más cada 5 min y nunca
+      // mientras se escribe) — los datos ya quedaron en la base y se ven con la próxima navegación.
+      if(manual){try{render();}catch(e){}}
+      else{try{(typeof bgRender==="function")?bgRender():render();}catch(e){}}
     }
     return info;
   }catch(e){
@@ -5550,7 +5556,7 @@ let fundLastTry=0;   // evita el reintento en bucle del auto-refresco (máx. cad
    plano al abrir el módulo — la actualización constante no depende de que el usuario pulse el botón */
 function fundAutoRefresh(){try{
   if(!AUTOPX_URL)return;const age=fundAgeDays();
-  if((age==null||age>1.1)&&(Date.now()-fundLastTry>600e3)){fundLastTry=Date.now();fundSync(false).then(j=>{if(j){try{render();}catch(e){}}});}
+  if((age==null||age>1.1)&&(Date.now()-fundLastTry>600e3)){fundLastTry=Date.now();fundSync(false).then(j=>{if(j){try{(typeof bgRender==="function")?bgRender():render();}catch(e){}}});}
 }catch(e){}}
 async function fundSync(manual){
   const u0=fundUrl();
@@ -6458,13 +6464,13 @@ function newsAgo(ts){if(!ts)return "";const m=(Date.now()-ts)/60000;if(m<60)retu
 function newsParse(xml){try{const doc=new DOMParser().parseFromString(xml,"text/xml");return [...doc.querySelectorAll("item")].map(it=>{const t=(it.querySelector("title")||{}).textContent||"",link=(it.querySelector("link")||{}).textContent||"",pub=(it.querySelector("pubDate")||{}).textContent||"";let src=(it.querySelector("source")||{}).textContent||"",title=t;const m=t.match(/^(.*) - ([^-]+)$/);if(m){title=m[1];if(!src)src=m[2];}let ts=0;try{if(pub)ts=new Date(pub).getTime();}catch(e){}return {title:(title||"").trim(),link:(link||"").trim(),src:(src||"").trim(),ts};}).filter(x=>x.title&&/^https?:\/\//.test(x.link));}catch(e){return [];}}
 async function newsFetch(force){
   if(newsBusy)return;if(!force&&NEWS&&NEWS.length&&newsAgeMin()<30)return;
-  newsBusy=true;newsErr="";if(modulo==="inicio")render();
+  newsBusy=true;newsErr="";if(force&&modulo==="inicio")render();
   for(const px of NEWS_PROXIES){
     try{const r=await fetch(px+encodeURIComponent(NEWS_FEED),{cache:"no-store"});if(!r.ok)continue;const txt=await r.text();const items=newsParse(txt);
-      if(items.length){NEWS=items.slice(0,8);newsTs=new Date().toISOString();lsSet("inv_news_v1",NEWS);lsSet("inv_news_ts_v1",newsTs);newsBusy=false;newsErr="";if(modulo==="inicio")render();return;}
+      if(items.length){NEWS=items.slice(0,8);newsTs=new Date().toISOString();lsSet("inv_news_v1",NEWS);lsSet("inv_news_ts_v1",newsTs);newsBusy=false;newsErr="";if(modulo==="inicio"){if(force)render();else bgRender();}return;}
     }catch(e){}
   }
-  newsBusy=false;newsErr="No se pudieron cargar las noticias ahora (revisa tu conexión).";if(modulo==="inicio")render();
+  newsBusy=false;newsErr="No se pudieron cargar las noticias ahora (revisa tu conexión).";if(modulo==="inicio"){if(force)render();else bgRender();}
 }
 
 function mindFmt(v,dec,unit){
@@ -6596,14 +6602,24 @@ async function oilFetch(){
   if(ok){lsSet("inv_oil_v1",OIL);lsSet("inv_oilh_v1",OILH);oilErr="";}
   else if(!OIL)oilErr="fuente no disponible";
 }
-async function mindFetch(){
-  if(mindBusy)return;mindBusy=true;mindLastTry=Date.now();render();
+async function mindFetch(manual){
+  if(mindBusy)return;mindBusy=true;mindLastTry=Date.now();if(manual)render();
   await Promise.allSettled([mindCore(),oilFetch()]);
-  mindBusy=false;render();
+  mindBusy=false;if(manual)render();else bgRender();   // el refresco AUTOMÁTICO no repinta a cada rato (cadencia de fondo)
 }
 /* indicadores VENCIDOS: se refrescan SOLOS al abrir Home/Mercados. mindLastTry evita el reintento en bucle cuando
    la fuente no responde (reintenta cada 10 min como máximo). */
 let mindLastTry=0;
+/* RENDER DE FONDO: los refrescos automáticos (indicadores, noticias, fundamentos, cierres silenciosos) repintan
+   la pantalla A LO MÁS cada 5 minutos y nunca mientras se escribe en un formulario — la pantalla no "salta" a
+   cada rato. Los datos igual quedan guardados y aparecen con la próxima navegación o acción. Todo lo que el
+   usuario hace a mano (botones, filtros, ↻ Actualizar) sigue renderizando AL INSTANTE por su propio camino. */
+const BG_RENDER_MS=300e3;let _bgLastRender=0;
+function bgRender(){try{
+  if(Date.now()-_bgLastRender<BG_RENDER_MS)return;
+  const ae=document.activeElement;if(ae&&/^(INPUT|TEXTAREA|SELECT)$/i.test(ae.tagName))return;
+  _bgLastRender=Date.now();render();
+}catch(e){}}
 /* indicadores que DEBERÍAN moverse cada día hábil (los mensuales — IPC, desempleo, Imacec, UTM, TPM — quedan
    "viejos" por diseño y NO deben marcarse como desactualizados). */
 const MIND_DAILY={dolar:1,euro:1,libra_cobre:1,uf:1,bitcoin:1};
@@ -6656,10 +6672,10 @@ function viewMercados(){
   return head+body+note;
 }
 function attachMercados(){
-  const rl=document.getElementById("mindReload");if(rl)rl.onclick=mindFetch;
+  const rl=document.getElementById("mindReload");if(rl)rl.onclick=()=>mindFetch(true);
   mindAutoRefresh();   // al abrir Mercados con datos vencidos (>6 h), se refrescan solos
-  const rt=document.getElementById("mindRetry");if(rt)rt.onclick=mindFetch;
-  if(!mindAuto){mindAuto=true;if((!MIND||!OIL)&&!mindBusy)mindFetch();}
+  const rt=document.getElementById("mindRetry");if(rt)rt.onclick=()=>mindFetch(true);
+  if(!mindAuto){mindAuto=true;if((!MIND||!OIL)&&!mindBusy)mindFetch(true);}   // primera carga del módulo: con feedback inmediato
 }
 /* ===== OPERACIONES (compra/venta) + CONTABILIDAD ===== */
 let opState={pid:null,side:"buy",tkr:null,qty:"",price:"",date:""};
@@ -7931,7 +7947,10 @@ function seedExamples(){
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
 let homeOpsMode="ops";   // gráfico "Operaciones y comisiones" del Home: "ops" (compras/ventas) | "fees" (comisiones, escala propia)
-let homeTotFrom="",homeTotTo="";   // rango de fechas del gráfico "Patrimonio total gestionado" del Home
+/* rango del gráfico "Patrimonio total gestionado" del Home — PERSISTENTE (sobrevive al cierre de Investor) */
+let homeTotFrom="",homeTotTo="";
+(function(){try{const r=lsGet("inv_home_tot_range")||{};homeTotFrom=r.f||"";homeTotTo=r.t||"";}catch(e){}})();
+function homeTotRangeSave(){try{lsSet("inv_home_tot_range",{f:homeTotFrom,t:homeTotTo});}catch(e){}}
 let homeIpsaWin=(()=>{const v=+lsGet("inv_home_ipsa_win");return [3,6,12,24].indexOf(v)>=0?v:24;})();   // VENTANA (meses) del gráfico del IPSA en Home — el gráfico es SIEMPRE mensual; solo se elige cuántos meses ver
 /* ══ INVESTOR SCORE (v3 · piedra angular, riesgo descontado + candado de confianza) ══
    Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
@@ -8519,9 +8538,9 @@ function attachHome(){
   document.querySelectorAll("[data-stkfreq]").forEach(b=>b.onclick=()=>{homeStkFreq=b.dataset.stkfreq;render();});
   document.querySelectorAll("[data-opsmode]").forEach(b=>b.onclick=()=>{homeOpsMode=b.dataset.opsmode;render();});
   {const _keep=fn=>{const m=document.getElementById("main"),st=m?m.scrollTop:0;fn();const m2=document.getElementById("main");if(m2)m2.scrollTop=st;};
-   const tf=document.getElementById("homeTotF");if(tf)tf.onchange=()=>_keep(()=>{homeTotFrom=tf.value||"";render();});
-   const tt2=document.getElementById("homeTotT");if(tt2)tt2.onchange=()=>_keep(()=>{homeTotTo=tt2.value||"";render();});
-   const ta=document.getElementById("homeTotAll");if(ta)ta.onclick=()=>_keep(()=>{homeTotFrom="";homeTotTo="";render();});}
+   const tf=document.getElementById("homeTotF");if(tf)tf.onchange=()=>_keep(()=>{homeTotFrom=tf.value||"";homeTotRangeSave();render();});
+   const tt2=document.getElementById("homeTotT");if(tt2)tt2.onchange=()=>_keep(()=>{homeTotTo=tt2.value||"";homeTotRangeSave();render();});
+   const ta=document.getElementById("homeTotAll");if(ta)ta.onclick=()=>_keep(()=>{homeTotFrom="";homeTotTo="";homeTotRangeSave();render();});}
   document.querySelectorAll("[data-ipsawin]").forEach(b=>b.onclick=()=>{homeIpsaWin=+b.dataset.ipsawin||24;try{lsSet("inv_home_ipsa_win",homeIpsaWin);}catch(e){}render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
