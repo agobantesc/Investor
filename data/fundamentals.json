@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-07-21T23:04:32.411Z",
+ "updatedAt": "2026-07-21T23:55:12.845Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -288,7 +288,7 @@
    "rec": "hold",
    "nAn": 9,
    "peg": 1.67,
-   "evEbitda": 8.2
+   "evEbitda": 8.4
   },
   "ENTEL": {
    "name": "Empresa Nacional de Telecomunicaciones S.A.",
@@ -360,7 +360,7 @@
    "rec": "buy",
    "nAn": 10,
    "peg": 0.76,
-   "evEbitda": 18
+   "evEbitda": 17.9
   },
   "AGUAS-A": {
    "name": "Aguas Andinas S.A.",
