@@ -5324,6 +5324,8 @@ function pdIndexOf(n,benchName){const s=(""+n).trim();
 function pricedbIdxAll(){const o={};if(PRICEDB.ipsa&&Object.keys(PRICEDB.ipsa).length)o.IPSA=PRICEDB.ipsa;const ix=PRICEDB.idx||{};Object.keys(ix).forEach(k=>{if(ix[k]&&Object.keys(ix[k]).length)o[k]=ix[k];});return o;}
 function pricedbIndexNames(){return Object.keys(pricedbIdxAll());}
 function pricedbIdxMap(name){if(!name||name==="IPSA")return PRICEDB.ipsa||{};return (PRICEDB.idx&&PRICEDB.idx[name])||{};}
+/* ¿el IPSA de esta fecha es ESTIMADO (reconstruido desde las acciones porque el índice oficial no llegó)? */
+function ipsaIsSynth(date){return !!(PRICEDB.ipsaSynth&&date&&PRICEDB.ipsaSynth[date]);}
 /* carga masiva: fusiona series parseadas (formato impFiles: {name,src,dates,closes}) en la base */
 function pricedbMergeFiles(files,benchName,opts){
   let added=0,updated=0,tk=0,skipped=0,pinned=0;
@@ -5386,8 +5388,10 @@ async function autopxSync(manual,bust){
     const days=(Array.isArray(j)?j:(j.days||[j])).filter(d=>d&&d.date);
     if(!days.length)throw new Error("el JSON no trae días de cierre");
     const byT={},ips={dates:[],closes:[]};
+    PRICEDB.ipsaSynth=PRICEDB.ipsaSynth||{};   // fechas cuyo IPSA fue RECONSTRUIDO desde las acciones (estimación fiel, no el cierre oficial)
     days.forEach(d=>{
-      if(d.ipsa!=null&&isFinite(+d.ipsa)&&+d.ipsa>0){ips.dates.push(d.date);ips.closes.push(+d.ipsa);}
+      if(d.ipsa!=null&&isFinite(+d.ipsa)&&+d.ipsa>0){ips.dates.push(d.date);ips.closes.push(+d.ipsa);
+        if(d.ipsaSynth)PRICEDB.ipsaSynth[d.date]=1;else delete PRICEDB.ipsaSynth[d.date];}   // se re-clasifica en cada sync desde la fuente (si vuelve el índice oficial, deja de ser estimado)
       Object.keys(d.prices||{}).forEach(k=>{
         if(!/^[A-ZÑ0-9][A-ZÑ0-9.\-_]{0,13}$/i.test(k))return;   // el JSON es remoto: solo tickers con forma válida (nunca HTML) llegan a la base
         const t=k.toUpperCase();   // normaliza: "bci" remoto no debe crear un ticker paralelo a "BCI"
@@ -8485,7 +8489,9 @@ function viewHome(){
         ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div></div>`;}
       else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes en esta ventana</div></div></div>`;
     }catch(e){}
-    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
+    const _ipEst=(typeof ipsaIsSynth==="function")&&ipsaIsSynth(_ips.lastDate);
+    const _estTag=_ipEst?` <span style="color:var(--amber);font-weight:700" title="El índice oficial no llegó para esta fecha; este valor es una ESTIMACIÓN reconstruida desde las acciones del IPSA (canasta ponderada por capitalización). Se corrige solo cuando la fuente publica el cierre oficial.">· estimado</span>`:"";
+    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}${_estTag}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
     return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base",body);
   })();
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
