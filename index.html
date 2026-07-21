@@ -2980,14 +2980,19 @@ function viewInvActive(){
   const L=IM.last,nd=WEEKS.length,gain=L.val-IM.aport;
   const days=IM.elapsedDays, reqRet=Math.pow(1+PF.erCapm/100,IM.elapsedYrs)-1, alphaReal=L.ret-reqRet;
   const elapsed=days<1?"hoy (compra de hoy)":(days+" días · "+(days/7).toFixed(1)+" sem · "+(days/30.44).toFixed(1)+" meses");
-  const dA=IM.dayAbs,dP=IM.dayPct,dc=dA!=null?col(dA):muted;
-  const dayBox=dA!=null
-    ? `<div style="font-size:27px;font-weight:800;color:${dc};line-height:1.05">${dA>=0?"+":"−"}${fmtCLP(Math.abs(dA))}</div><div style="font-size:15px;font-weight:800;color:${dc};margin-top:2px">${pc(dP*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Entre los dos últimos registros con cierre REAL de mercado (una operación de hoy sin cierre aún no define el día)">cierre ${IM.prevDate} → ${IM.dayTo||""}</div>`
-    : `<div style="font-size:20px;font-weight:800;color:var(--faint);line-height:1.1">—</div><div style="font-size:10.5px;color:var(--faint);margin-top:4px">registra otro ${fr.u} para ver el cambio</div>`;
-  // OVERLAY EN VIVO (solo visual, no toca la historia): si hay precios intradía, el valor grande y la ganancia
-  // se muestran en vivo con la pastilla EN VIVO; el TWR/curva/registros siguen sobre los CIERRES.
+  // OVERLAY EN VIVO (solo visual, no toca la historia): si hay precios intradía, el valor grande, la ganancia y
+  // el cambio del día se muestran en vivo con la pastilla EN VIVO; el TWR/curva/registros siguen sobre CIERRES.
   const _lv=(typeof liveOverlay==="function")?liveOverlay(IM):null;
   const heroVal=_lv?_lv.val:L.val,heroGain=_lv?_lv.gain:gain;
+  const dA=IM.dayAbs,dP=IM.dayPct,dc=dA!=null?col(dA):muted;
+  let dayBox;
+  if(_lv){
+    // EN VIVO: cuánto se movió hoy el portafolio (valor en vivo) contra el ÚLTIMO CIERRE oficial
+    const lda=heroVal-L.val,ldp=L.val>0?(heroVal/L.val-1):0,ldc=col(lda);
+    dayBox=`<div style="font-size:27px;font-weight:800;color:${ldc};line-height:1.05">${lda>=0?"+":"−"}${fmtCLP(Math.abs(lda))}</div><div style="font-size:15px;font-weight:800;color:${ldc};margin-top:2px">${pc(ldp*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Variación INTRADÍA (precios en vivo diferidos ~15 min) del valor de hoy contra el último cierre oficial (${L.date||IM.dayTo||""}). El cambio entre cierres oficiales aparece cuando la Bolsa cierra.">en vivo vs cierre ${L.date||IM.dayTo||""}</div>`;
+  }else dayBox=dA!=null
+    ? `<div style="font-size:27px;font-weight:800;color:${dc};line-height:1.05">${dA>=0?"+":"−"}${fmtCLP(Math.abs(dA))}</div><div style="font-size:15px;font-weight:800;color:${dc};margin-top:2px">${pc(dP*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Entre los dos últimos registros con cierre REAL de mercado (una operación de hoy sin cierre aún no define el día)">cierre ${IM.prevDate} → ${IM.dayTo||""}</div>`
+    : `<div style="font-size:20px;font-weight:800;color:var(--faint);line-height:1.1">—</div><div style="font-size:10.5px;color:var(--faint);margin-top:4px">registra otro ${fr.u} para ver el cambio</div>`;
   const _lvSub=_lv?` · <span class="live-pill" title="Valor con precios intradía diferidos ~15 min (Yahoo). Tu rentabilidad histórica, el TWR y los registros siguen sobre los cierres oficiales — esto es solo el valor de hoy mientras la Bolsa está abierta.">● EN VIVO · ${liveHHMM()}</span>`:"";
   const hero=`<div class="card"><div class="bd" style="padding:1.35rem 1.5rem">
     <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;justify-content:space-between">
@@ -2997,7 +3002,7 @@ function viewInvActive(){
       <div style="text-align:right;min-width:150px"><div class="genl" style="margin:0">Cambio último ${fr.u}</div>${dayBox}</div>
     </div>
     <div class="tiles" style="margin-top:16px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))">
-      ${(()=>{const _gp=IM.aport>0?gain/IM.aport*100:0;return tile("Ganancia / pérdida total",((gain>=0?"+":"−")+fmtCLP(Math.abs(gain)))+`<div style="font-size:1.05em;font-weight:800;letter-spacing:-.3px;color:${col(_gp)};margin-top:3px">${pc(_gp)}</div>`,"rentabilidad sobre "+fmtCLP(IM.aport)+" invertidos · el % del Home",indigo,col(gain));})()}
+      ${(()=>{const _gp=IM.aport>0?heroGain/IM.aport*100:0;return tile("Ganancia / pérdida total"+(_lv?" ●":""),((heroGain>=0?"+":"−")+fmtCLP(Math.abs(heroGain)))+`<div style="font-size:1.05em;font-weight:800;letter-spacing:-.3px;color:${col(_gp)};margin-top:3px">${pc(_gp)}</div>`,(_lv?"EN VIVO · ":"")+"rentabilidad sobre "+fmtCLP(IM.aport)+" invertidos · el % del Home",indigo,col(heroGain));})()}
       ${tile("Retorno acumulado (TWR)",pc(L.ret*100),"rendimiento de la ESTRATEGIA · comparable con el IPSA · no depende del tamaño/fecha de tus aportes",indigo,col(L.ret*100))}
       ${tile("Rentabilidad IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}
       ${tile("vs IPSA",pc(L.diff*100),L.diff>=0?"superando al mercado":"bajo el mercado",indigo,col(L.diff*100))}
@@ -3134,11 +3139,18 @@ function viewInvActive(){
   const qNote=`<div class="note" style="margin-top:11px"><b>Calidad del desempeño.</b> El <b>Sharpe realizado</b> mide tu retorno ajustado por la volatilidad efectiva; el <b>information ratio</b> es el retorno extra sobre el IPSA por unidad de riesgo activo (sobre 0,5 es bueno); <b>aciertos vs IPSA</b> es el % de ${fr.us} en que superaste al mercado. El <b>Sharpe, el tracking error y el information ratio</b> se muestran desde los <b>30 días</b> de seguimiento y ≥8 retornos: con menos, anualizar una racha corta (media × ${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}, volatilidad × √${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}) dispara el ratio y produce un Sharpe irreal.${days<60?` El <b>CAGR</b> se muestra solo a partir de los 60 días, porque anualizar un período tan corto produce valores irreales.`:""}</div>`;
   const qualityCard=nd>=2?card("Calidad y desempeño del seguimiento","Métricas ajustadas por riesgo y desempeño relativo al IPSA",qTiles+qNote):"";
   const riskCard=card("Riesgo: VaR vs pérdida real","VaR diario / semanal / mensual y pérdida real, en % y en pesos",riskKp+varTbl+riskNote);
-  const allocItems=IM.perStock.map(p=>({value:p.val,color:p.hd.c}));
-  const allocLeg=IM.perStock.map(p=>`<span><span class="lgdot" style="background:${p.hd.c}"></span>${p.hd.t} ${((p.val/L.val)*100).toFixed(1)}%</span>`).join("");
-  let mxd=0,mxs=null;IM.perStock.forEach(p=>{const d=Math.abs(p.val/L.val-p.hd.w);if(d>mxd){mxd=d;mxs=p;}});
-  const driftRows=IM.perStock.map(p=>{const cw=p.val/L.val,dr=(cw-p.hd.w)*100;return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${(cw*100).toFixed(1)}%</td><td class="r" style="color:${Math.abs(dr)<0.05?muted:(dr>=0?green:red)};font-weight:700">${(dr>=0?"+":"")+dr.toFixed(1)} pp</td><td class="r">${fmtCLP(p.val)}</td></tr>`;}).join("");
-  const allocBody=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><div style="text-align:center;flex-shrink:0">${svgDonut(allocItems)}<div class="legend" style="justify-content:center;max-width:210px;margin:8px auto 0">${allocLeg}</div></div><div style="flex:1;min-width:300px"><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor</th></tr></thead><tbody>${driftRows}</tbody></table></div></div></div><div class="note" style="margin-top:12px">El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo de compra (por subir o bajar de precio). ${mxs?("La de mayor desviación es <b style='color:"+mxs.hd.c+"'>"+mxs.hd.t+"</b> ("+((mxs.val/L.val-mxs.hd.w)*100>=0?"+":"")+((mxs.val/L.val-mxs.hd.w)*100).toFixed(1)+" pp). "):""}Si el drift crece mucho, considera rebalancear para volver a tu asignación objetivo.</div>`;
+  // VALOR POR ACCIÓN EN VIVO (intradía) para la composición, el drift y el valor por papel: usa el precio en
+  // vivo donde exista (si no, el cierre). Los cierres, la serie y el TWR no se tocan. _pv/_pTot alimentan solo
+  // esta tarjeta de "Composición actual vs objetivo".
+  const _plx=t=>{try{return (typeof liveOf==="function")?liveOf(t):null;}catch(e){return null;}};
+  const _pv=p=>{const lp=_plx(p.hd.t);return p.sh*((lp!=null)?lp:p.cur);};
+  const _pTot=IM.perStock.reduce((a,p)=>a+_pv(p),0)||L.val;
+  const _liveComp=(typeof liveActive==="function")&&liveActive()&&IM.perStock.some(p=>_plx(p.hd.t)!=null);
+  const allocItems=IM.perStock.map(p=>({value:_pv(p),color:p.hd.c}));
+  const allocLeg=IM.perStock.map(p=>`<span><span class="lgdot" style="background:${p.hd.c}"></span>${p.hd.t} ${((_pv(p)/_pTot)*100).toFixed(1)}%</span>`).join("");
+  let mxd=0,mxs=null;IM.perStock.forEach(p=>{const d=Math.abs(_pv(p)/_pTot-p.hd.w);if(d>mxd){mxd=d;mxs=p;}});
+  const driftRows=IM.perStock.map(p=>{const cw=_pv(p)/_pTot,dr=(cw-p.hd.w)*100;return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${(cw*100).toFixed(1)}%</td><td class="r" style="color:${Math.abs(dr)<0.05?muted:(dr>=0?green:red)};font-weight:700">${(dr>=0?"+":"")+dr.toFixed(1)} pp</td><td class="r">${fmtCLP(_pv(p))}${(_plx(p.hd.t)!=null)?' <span style="color:var(--green);font-size:9px;font-weight:800" title="valor EN VIVO (intradía diferido)">●</span>':""}</td></tr>`;}).join("");
+  const allocBody=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><div style="text-align:center;flex-shrink:0">${svgDonut(allocItems)}<div class="legend" style="justify-content:center;max-width:210px;margin:8px auto 0">${allocLeg}</div></div><div style="flex:1;min-width:300px"><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor${_liveComp?" ●":""}</th></tr></thead><tbody>${driftRows}</tbody></table></div></div></div><div class="note" style="margin-top:12px">${_liveComp?'<b style="color:var(--green)">● Valores EN VIVO</b> (intradía diferido ~15 min): los pesos actuales y el valor por acción se mueven con el mercado del día; el objetivo, el drift histórico y el rebalanceo se calculan sobre estos valores del momento. ':""}El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo de compra (por subir o bajar de precio). ${mxs?("La de mayor desviación es <b style='color:"+mxs.hd.c+"'>"+mxs.hd.t+"</b> ("+((_pv(mxs)/_pTot-mxs.hd.w)*100>=0?"+":"")+((_pv(mxs)/_pTot-mxs.hd.w)*100).toFixed(1)+" pp). "):""}Si el drift crece mucho, considera rebalancear para volver a tu asignación objetivo.</div>`;
   const drifts=IM.perStock.map(p=>({p,dr:(p.val/L.val-p.hd.w)*100}));
   const breaches=drifts.filter(d=>Math.abs(d.dr)>5);
   const driftAlert=breaches.length?`<div class="note" style="margin-top:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)"><b>⚠ Alerta de rebalanceo:</b> ${breaches.map(d=>d.p.hd.t+" "+(d.dr>=0?"+":"")+d.dr.toFixed(1)+" pp").join(", ")} ${breaches.length>1?"superan":"supera"} el 5% de desviación respecto al objetivo. Revisa la <b>estrategia de rebalanceo</b> más abajo.</div>`:`<div class="note" style="margin-top:12px;border-color:var(--green-line);background:var(--greenbg);color:var(--green)">✓ Todas las posiciones están dentro de ±5 pp de su objetivo · sin necesidad de rebalancear.</div>`;
@@ -3511,6 +3523,7 @@ function genInvReport(){
 }
 function attachInv(){
   if(modulo!=="inv")return;
+  if(page==="seguimiento"){try{if(typeof liveTick==="function")liveTick();}catch(e){}}   // abrir el Seguimiento dispara una lectura en vivo si toca (gate de 150 s dentro)
   document.querySelectorAll("[data-stksel]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invStkSel=b.dataset.stksel||null;render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (conserva el scroll al aplicar)
   (function(){
@@ -6717,7 +6730,15 @@ async function liveFetch(manual){
   if(got){liveTs=new Date().toISOString();liveErr="";}
   else if(!liveErr)liveErr="la fuente de precios en vivo no respondió (se muestran los cierres)";
   liveBusy=false;
-  if(manual)render();else bgRender();
+  if(manual){render();return;}
+  // repinte del refresco AUTOMÁTICO: el poller corre cada ~3 min, así que un render por lectura no "salta"
+  // (no es el caso de los refrescos de fondo cada pocos segundos). Solo si el precio en vivo cambia algo, la
+  // pestaña está visible, no se está escribiendo en un formulario y estás en una vista que lo muestra.
+  if(got&&liveActive()){try{
+    const ae=document.activeElement,typing=ae&&/^(INPUT|TEXTAREA|SELECT)$/i.test(ae.tagName);
+    const onLiveView=(modulo==="inicio")||(modulo==="inv"&&page==="seguimiento");
+    if(!typing&&onLiveView&&(typeof document==="undefined"||document.visibilityState!=="hidden"))render();
+  }catch(e){}}
 }
 /* poller: refresca cada ~3 min SOLO con la app activada, pestaña visible y la Bolsa abierta. Se auto-agenda. */
 function liveTick(){try{
@@ -7349,10 +7370,17 @@ function analysisSystemOnly(){
 function analysisName(id){const a=analysisList().find(x=>x.id===String(id));return a?a.name:"(no disponible)";}
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
-function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const inv0=p.amount||0;
+function projSummary(p,opts){return withProject(p,()=>{const IM=invMetrics();const inv0=p.amount||0;
+  const _live=!!(opts&&opts.live);
   const since=(p.weeks&&p.weeks.length&&p.weeks[0].date)||p.date||null;   // inicio del proyecto: fecha de la compra inicial (o de creación si aún no invierte)
   if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,gainNet:0,gainNetPct:0,fees:0,hasData:false,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:null,nrec:(p.weeks||[]).length,since};
-  const L=IM.last,inv=IM.aport,val=L.val,gain=val-inv;
+  const L=IM.last,inv=IM.aport;
+  // VALOR EN VIVO opt-in (Home/Proyectos): el valor y la ganancia usan el precio intradía; las SERIES/TWR/β
+  // quedan sobre cierres (la historia no se toca). Por defecto (sin opts.live) todo es cierre — el agente y
+  // los informes PDF nunca ven precios en vivo.
+  let val=L.val,liveOn=false;
+  if(_live){try{const ov=(typeof liveOverlay==="function")?liveOverlay(IM):null;if(ov){val=ov.val;liveOn=true;}}catch(e){}}
+  const gain=val-inv;
   let fees=0;try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{fees+=brokerFee(x.monto);});}catch(e){}
   const gainNet=gain-fees;
   // α de Jensen REALIZADO (no anualizado, sobre el período transcurrido): retorno real − el exigido por CAPM para la β de la cartera.
@@ -7365,7 +7393,7 @@ function projSummary(p){return withProject(p,()=>{const IM=invMetrics();const in
   const _perDate=IM.series.filter((s,i,a)=>i===a.length-1||a[i+1].date!==s.date);
   const serie=_perDate.map(s=>Math.round(s.val));
   const serieRet=_perDate.map(s=>+(100*(1+s.ret)).toFixed(2));
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since};});}
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since,live:liveOn,closeValue:L.val};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
    mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
@@ -7801,7 +7829,8 @@ function clientDelete(id){
 function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=localStorage.getItem("pf_projects_v1__"+id);return v?JSON.parse(v):[];}catch(e){return [];}}
 function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.forEach(p=>{try{const s=projSummary(p);inv+=s.invested;val+=s.value;}catch(e){}});return {inv,val,gain:val-inv,pct:inv>0?(val-inv)/inv*100:0,n:ps.length};}
 /* Resumen de gestión por cliente: aportado/retirado brutos, valor, ganancia y acciones distintas */
-function clientStats(id){
+function clientStats(id,opts){
+  const _live=!!(opts&&opts.live);
   const ps=clientProjects(id)||[];
   let aportado=0,retirado=0,value=0,realized=0,fees=0,withData=0,betaNum=0,betaW=0;const tickers={};
   ps.forEach(p=>{try{withProject(p,function(){
@@ -7809,6 +7838,7 @@ function clientStats(id){
     if(L&&IM&&L.tx&&L.tx.length){
       L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;fees+=brokerFee(x.monto);});
       pv=IM.last.val;
+      if(_live){try{const ov=(typeof liveOverlay==="function")?liveOverlay(IM):null;if(ov)pv=ov.val;}catch(e){}}   // valor EN VIVO (intradía) para el Home; el cierre/historia no se tocan
       realized+=(L.realized||[]).reduce((a,r)=>a+r.gain,0);
       Object.keys(L.sh).forEach(t=>{if((L.sh[t]||0)>1e-6)tickers[t]=1;});
       withData++;
@@ -7822,7 +7852,7 @@ function clientStats(id){
     if(pv>0&&bp>0){betaNum+=bp*pv;betaW+=pv;}
   });}catch(e){}});
   const gain=value+retirado-aportado,gainNet=gain-fees,pct=aportado>0?gainNet/aportado*100:0;
-  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
+  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0,live:_live&&(typeof liveActive==="function"&&liveActive())};
 }
 /* perfil de riesgo por cliente (namespaced) + chip visual */
 function clientProfile(id){if(id===activeClient)return invProfile;try{const v=localStorage.getItem("inv_profile_v1__"+id);return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -8213,10 +8243,10 @@ function investorScore(){
 }
 function investorScoreOf(t){try{const v=investorScore();if(!v)return null;const r=v.rows.find(x=>x.t===t);return r?r.score:null;}catch(e){return null;}}
 function homeData(){
-  const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
-  const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0});
+  const clients=CLIENTS.map(c=>({c,s:clientStats(c.id,{live:true})}));
+  const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;a.live=a.live||!!x.s.live;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0,live:false});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,betaR:(s.betaR!=null?s.betaR:null),twr:(s.twr!=null?s.twr:null),sharpeR:(s.sharpeR!=null?s.sharpeR:null),vol:(s.vol!=null?s.vol:null),alphaReal:(s.alphaReal!=null?s.alphaReal:null),nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],since:s.since||null});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p,{live:true});projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,betaR:(s.betaR!=null?s.betaR:null),twr:(s.twr!=null?s.twr:null),sharpeR:(s.sharpeR!=null?s.sharpeR:null),vol:(s.vol!=null?s.vol:null),alphaReal:(s.alphaReal!=null?s.alphaReal:null),nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],since:s.since||null,live:s.live,closeValue:s.closeValue});}catch(e){}});});
   return {clients,T,projs};
 }
 /* serie agregada de patrimonio (alineada por la cola) para el sparkline del hero */
@@ -8415,21 +8445,21 @@ function viewHome(){
   // El hero dibuja la RENTABILIDAD NETA (no el patrimonio: los aportes lo hacían ver como un escalón plano).
   const _mtH=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
   const patSeries=(_mtH&&_mtH.netPct&&_mtH.netPct.length>1)?_mtH.netPct:aggSeries(D.projs);
-  // OVERLAY EN VIVO del Home (solo visual): el valor total y la ganancia usan el delta intradía; la rentabilidad
-  // neta, la curva y los registros siguen sobre cierres. Etiquetado con la pastilla EN VIVO.
-  const _ld=(typeof liveTotalDelta==="function")?liveTotalDelta():{delta:0,used:0};
-  const _liveOnHome=_ld.used>0;
-  const Tvalue=T.value+(_liveOnHome?_ld.delta:0),Tgain=T.gain+(_liveOnHome?_ld.delta:0),TgainNet=T.gainNet+(_liveOnHome?_ld.delta:0);
+  // OVERLAY EN VIVO del Home: homeData() ya trae T (totales) y cada proyecto con el valor INTRADÍA (opts.live);
+  // la rentabilidad neta, las curvas y los registros siguen sobre cierres. Etiquetado con la pastilla EN VIVO.
+  const _liveOnHome=!!T.live;
+  const Tvalue=T.value,Tgain=T.gain,TgainNet=T.gainNet;
+  const _closeVal=D.projs.reduce((a,p)=>a+((p.hasData&&p.closeValue!=null)?p.closeValue:(p.val||0)),0);   // valor de CIERRE de referencia (para mostrarlo al lado del en vivo)
   const Tpct=T.aportado>0?TgainNet/T.aportado*100:0;
   const _hpos=TgainNet>=0,_hcol=_hpos?"#34D399":"#FB7185";
   const hero=`<div class="home-hero ${_hpos?"pos":"neg"}">
     <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO${_liveOnHome?` &nbsp;<span class="live-pill" title="Valor con precios intradía diferidos ~15 min (Yahoo). Tu rentabilidad neta, la curva y los registros siguen sobre los cierres oficiales. Última lectura ${liveAgo()}.">● EN VIVO · ${liveHHMM()}</span>`:""}</div>
       <div class="hh-val" style="color:${_hcol}">${fmtCLP(Tvalue)}</div>
-      <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}${_liveOnHome?" · cierre "+fmtCLP(T.value):""}</div></div>
+      <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}${_liveOnHome?" · cierre "+fmtCLP(_closeVal):""}</div></div>
     ${patSeries.length>1?`<div class="hh-c" title="Rentabilidad neta en el tiempo">${heroSpark(patSeries)}</div>`:""}
     <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(TgainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
   const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones"+(_liveOnHome?" · <b>valor EN VIVO</b> (intradía diferido); ganancia/rentabilidad neta netas de comisiones sobre cierres":""),`<div class="tiles-consol">
-    ${tile("Valor actual"+(_liveOnHome?" ●":""),fmtCLP(Tvalue),(_liveOnHome?"EN VIVO ~15 min · cierre "+fmtCLP(T.value):"a últimos precios")+" · "+(Tgain>=0?"sobre":"bajo")+" el capital aportado",indigo,Tgain>=0?green:red,"tw2")}
+    ${tile("Valor actual"+(_liveOnHome?" ●":""),fmtCLP(Tvalue),(_liveOnHome?"EN VIVO ~15 min · cierre "+fmtCLP(_closeVal):"a últimos precios")+" · "+(Tgain>=0?"sobre":"bajo")+" el capital aportado",indigo,Tgain>=0?green:red,"tw2")}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
     ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
     ${(()=>{const _gbp=T.aportado>0?Tgain/T.aportado*100:0;return tile("Ganancia bruta",sg(Tgain)+`<div style="font-size:.82em;font-weight:800;letter-spacing:-.2px;color:${col(_gbp)};margin-top:2px">${(_gbp>=0?"+":"")+_gbp.toFixed(2)}%</div>`,"bruta · antes de comisiones",indigo,Tgain>=0?green:red);})()}
@@ -8464,7 +8494,7 @@ function viewHome(){
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,40);
-    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span style="color:${pos?green:red};font-weight:800" title="Valor actual · verde = sobre tu capital aportado">${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
+    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras${p.live?" · valor EN VIVO (intradía diferido ~15 min); cierre "+fmtCLP(p.closeValue):""}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span>${p.live?'<span class="live-pill" title="Valor y rentabilidad EN VIVO (intradía diferido ~15 min)">● VIVO</span>':""}</div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span style="color:${pos?green:red};font-weight:800" title="Valor actual · verde = sobre tu capital aportado">${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     const stat=(l,v,c,lc,ti)=>`<div class="fw-stat"${ti?` title="${ti}"`:""}><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
@@ -8472,7 +8502,7 @@ function viewHome(){
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,112);
     // fila 1: dinero y rentabilidad · fila 2: métricas ajustadas por riesgo (todas REALIZADAS, no las esperadas)
     const aR=p.alphaReal!=null?p.alphaReal*100:null;
-    const row1=`<div class="fw-row">${stat("Valor",fmtCLP(p.val),pos?green:red)}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2)+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
+    const row1=`<div class="fw-row">${stat(`Valor${p.live?' <span class="live-pill" title="Valor EN VIVO (intradía diferido ~15 min) · cierre '+fmtCLP(p.closeValue)+'">● VIVO</span>':""}`,fmtCLP(p.val),pos?green:red,null,p.live?("Valor EN VIVO (intradía diferido ~15 min) · cierre "+fmtCLP(p.closeValue)):"")}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2)+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
     const row2=`<div class="fw-row fw-risk">`
       +stat("β real",p.betaR!=null?p.betaR.toFixed(2):"—",null,"ntr",p.betaR!=null?("β REALIZADO: sensibilidad efectiva al IPSA por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")"):("β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)))
       +stat("α Jensen",aR!=null?((aR>=0?"+":"")+aR.toFixed(2)+"%"):"—",aR!=null?(aR>=0?green:red):null,"ntr","α de Jensen REALIZADO: retorno real − el exigido por CAPM para el riesgo de la cartera, en el período transcurrido. Positivo = batiendo lo exigido por su riesgo.")
@@ -8665,6 +8695,7 @@ function scoreAllModal(){
   try{attachTableSort();}catch(e){}
 }
 function attachHome(){
+  try{if(typeof liveTick==="function")liveTick();}catch(e){}   // abrir el Home dispara una lectura en vivo si toca (gate de 150 s dentro)
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
     try{if(cid!==activeClient){activeClient=cid;localStorage.setItem("inv_active_client",cid);if(typeof clientLoad==="function")clientLoad();}}catch(e){}
     const np=+pid;activeId=(isFinite(np)&&String(np)===pid)?np:pid;try{saveProjects();syncProj();}catch(e){}
