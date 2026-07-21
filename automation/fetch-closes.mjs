@@ -461,11 +461,43 @@ if (nCalco) {
 
 if (!days.length) { console.error("Sin datos. Errores:", errors); process.exit(1); }
 
+/* ── IPSA RECONSTRUIDO desde sus ACCIONES (fallback cuando el índice oficial no llega) ──
+   El ^IPSA de Yahoo se congela por días y las demás fuentes del índice están bloqueadas desde el runner,
+   pero las ~28 ACCIONES del IPSA sí actualizan a diario. Como el IPSA ES una canasta ponderada por
+   capitalización de esas mismas acciones, se reconstruye su nivel para los días sin cierre oficial:
+   se encadena el retorno diario ponderado por market-cap desde el último IPSA REAL (o ya reconstruido).
+   Marcado en ipsaSynth para plena transparencia; se re-ancla en cuanto vuelve un IPSA oficial. Es una
+   ESTIMACIÓN fiel (mismos constituyentes), no el cierre oficial — pero muy superior a dejar el índice
+   congelado o en blanco. Solo para fechas SIN ipsa; nunca pisa un valor real. */
+const ipsaSynth = [];
+try {
+  let caps = {};
+  try { const fj = JSON.parse(readFileSync("data/fundamentals.json", "utf8")); for (const [t, f] of Object.entries(fj.byTicker || {})) if (f && +f.mcap > 0) caps[t] = +f.mcap; } catch (e) {}
+  const capOf = t => caps[t] > 0 ? caps[t] : 1;   // sin capitalización conocida: peso neutro (equivale a igual ponderación)
+  let anchorIpsa = null, anchorPx = null;         // último día con IPSA (real o sintético) y sus precios
+  for (const d of days) {                          // days ya viene ordenado ascendente
+    const px = d.prices || {};
+    if (d.ipsa != null && d.ipsa > 0) { anchorIpsa = d.ipsa; anchorPx = px; continue; }   // día con IPSA real → re-ancla
+    if (anchorIpsa == null || !anchorPx) continue;
+    const common = Object.keys(px).filter(t => anchorPx[t] > 0 && px[t] > 0);
+    if (common.length < 8) continue;               // muy pocas acciones comunes: no estimar (evita ruido)
+    let wsum = 0, rsum = 0;
+    for (const t of common) { const w = capOf(t); wsum += w; rsum += w * (px[t] / anchorPx[t] - 1); }
+    if (!(wsum > 0)) continue;
+    const ret = rsum / wsum;
+    d.ipsa = +(anchorIpsa * (1 + ret)).toFixed(2);
+    d.ipsaSynth = true;                             // sello para la app/diagnóstico
+    ipsaSynth.push(`${d.date}=${d.ipsa} (${common.length} acc, ${(ret * 100).toFixed(2)}%)`);
+    anchorIpsa = d.ipsa; anchorPx = px;             // encadena desde este día
+  }
+  if (ipsaSynth.length) console.log(`IPSA reconstruido desde acciones (índice oficial ausente): ${ipsaSynth.length} día(s) → ${ipsaSynth.join(" · ")}`);
+} catch (e) { console.log("IPSA reconstruido: falló (" + String((e && e.message) || e).slice(0, 80) + ")"); }
+
 const ipsaDays = days.filter(d => d.ipsa != null).length;
 const tickerSet = new Set();
 days.forEach(d => Object.keys(d.prices || {}).forEach(t => tickerSet.add(t)));
 mkdirSync("data", { recursive: true });
 const source = "Yahoo Finance (.SN)" + (process.env.EODHD_KEY ? " + EODHD (cierres oficiales)" : "") + " + cierre oficial Bolsa de Santiago (día) + fuentes IPSA";
-writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
+writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, ipsaSynth, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
 if (ADJUST_LOG.length) console.log(`Ajustes de fuente (cierre oficial/EODHD pisó a Yahoo): ${ADJUST_LOG.length} — ej: ${JSON.stringify(ADJUST_LOG[0])}`);
 console.log(`OK: ${days.length} día(s) (${days[0].date} → ${days[days.length - 1].date}) · ${tickerSet.size} acciones · IPSA en ${ipsaDays} día(s). Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);
