@@ -31,6 +31,7 @@ jobs:
         env:
           RANGE: ${{ github.event.schedule == '0 12 * * 6' && '2y' || github.event.inputs.range || '10d' }}
           TWELVEDATA_KEY: ${{ secrets.TWELVEDATA_KEY }}   # opcional: historia REAL del IPSA de respaldo (twelvedata.com, tier gratuito)
+          EODHD_KEY: ${{ secrets.EODHD_KEY }}             # opcional (pagado ~US$20/mes): cierres OFICIALES de la Bolsa (eodhd.com) — pisan a Yahoo y cuadran con la cartola del corredor
       - name: Obtener fundamentos (P/U, P/B, dividendos, capitalización)
         run: node automation/fetch-fundamentals.mjs   # sale con 0 aunque falle: nunca rompe los cierres
         continue-on-error: true

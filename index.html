@@ -2738,13 +2738,19 @@ function invMetrics(){
     // operaciones el mismo día, lo ganado/perdido al comprar bajo/sobre el cierre se ponderaba sobre el capital
     // intradía ya aumentado: la curva TWR mostraba un "día" distinto al KPI (+0,23% vs +0,75%). Los retornos
     // pr/mr (β, σ, Sharpe, peor día) también pasan a ser por FECHA: los pseudo-pasos entre órdenes ya no los ensucian.
+    const _ipPrevDate=prevIpsa;   // IPSA del último registro de la fecha ANTERIOR (antes de que lastOfDate lo actualice)
     const lastOfDate=(i===WEEKS.length-1)||(WEEKS[i+1].date!==w.date);
     if(lastOfDate){
       if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);}
       prevVal=val;prevIpsa=w.ipsa;dayFlow=0;
     }
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
-    series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:w.ipsa/base.ipsa-1,diff:(twr-1)-(w.ipsa/base.ipsa-1),yrs,inflow,ev:w.ev||null});});
+    // ipsaND: el IPSA de este registro viene ARRASTRADO (sin cierre real del índice para la fecha) — sea por el
+    // sello explícito ipsaFresh:false, o porque repite EXACTO el del día anterior sin sello (dos cierres reales
+    // idénticos al centésimo no existen). La UI lo muestra como "—" en vez de un falso "+0,00%"; se sana solo
+    // cuando la sincronización trae el cierre oficial de esa fecha (pricedbApplyToProjects lo rellena).
+    const ipsaND=(w.ipsaFresh===false)||(w.ipsaFresh!==true&&i>0&&_ipPrevDate>0&&w.ipsa===_ipPrevDate);
+    series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:w.ipsa/base.ipsa-1,diff:(twr-1)-(w.ipsa/base.ipsa-1),yrs,inflow,ipsaND,ev:w.ev||null});});
   // fresh AUSENTE = semana antigua/compra inicial (precios reales por construcción) → se confía; fresh PRESENTE
   // pero sin el ticker = ese precio es arrastre o precio de transacción (no cierre) → se desconfía.
   const freshOK=(w,t)=>w?(w.fresh?w.fresh.indexOf(t)>=0:true):false;
@@ -3086,7 +3092,11 @@ function viewInvActive(){
     // el ✎/✕ de la fila del día apunta al registro de valoración simple; si el día es solo operaciones, la edición vive en las sub-filas
     const ownIdx=plain.length?plain[plain.length-1]:(nOps?null:li);
     const mainBtns=ownIdx!=null?`<button class="wbtn" data-edit="${ownIdx}" title="Editar">✎</button> <button class="wbtn del" data-del="${ownIdx}" title="Eliminar">✕</button>`:`<span style="color:var(--faint);font-size:10px" title="Las operaciones de este día se editan en sus filas">↓</span>`;
-    const main=`<tr><td><b>${k===0?"Compra":fr.pf+k}</b>${opBadge}</td><td>${s.date}</td><td class="r" style="font-weight:700" title="Valor al cierre del día (tras todas las operaciones)">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?`<span title="Rentabilidad real del día: valor de cierre menos ${dayFlow?("los aportes del día ("+fmtCLP(dayFlow)+")"):"aportes"} vs el cierre anterior">${chip(dpo*100)}</span>`:'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?chip(dip*100):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${chip(s.ipsaRet*100)}</td><td class="r">${chip(s.diff*100)}</td><td class="r" style="white-space:nowrap">${mainBtns}</td></tr>`;
+    // IPSA ARRASTRADO (sin cierre del índice para esta fecha aún): "—" honesto en vez de un falso +0,00%,
+    // y las columnas acumuladas del índice quedan marcadas — se completan solas con la próxima sincronización
+    const _ipNA=!!s.ipsaND;
+    const _naIp='<span style="color:'+faint+'" title="Aún sin cierre del IPSA para esta fecha: el índice viene arrastrado del día anterior. Se completa solo con la sincronización de cierres (⟳ o la corrida diaria).">—</span>';
+    const main=`<tr><td><b>${k===0?"Compra":fr.pf+k}</b>${opBadge}</td><td>${s.date}</td><td class="r" style="font-weight:700" title="Valor al cierre del día (tras todas las operaciones)">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?`<span title="Rentabilidad real del día: valor de cierre menos ${dayFlow?("los aportes del día ("+fmtCLP(dayFlow)+")"):"aportes"} vs el cierre anterior">${chip(dpo*100)}</span>`:'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?(_ipNA?_naIp:chip(dip*100)):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${_ipNA?`<span title="Con IPSA arrastrado (pendiente del cierre oficial de la fecha): este acumulado se actualizará con la sincronización">${chip(s.ipsaRet*100)}</span>`:chip(s.ipsaRet*100)}</td><td class="r">${_ipNA?`<span title="Con IPSA arrastrado (pendiente del cierre oficial de la fecha): esta diferencia se actualizará con la sincronización">${chip(s.diff*100)}</span>`:chip(s.diff*100)}</td><td class="r" style="white-space:nowrap">${mainBtns}</td></tr>`;
     const subs=ops.map(i=>{const ev=IM.series[i].ev;return `<tr style="background:var(--soft)"><td style="border-left:3px solid #7C3AED55"></td><td colspan="7" style="font-size:11.5px;color:var(--muted)"><span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33;margin-right:7px">${ev.kind==="inject"?"Aporte":ev.kind==="trade"?(ev.side==="sell"?"Venta":"Compra"):"Rebalanceo"}</span>${_evDesc(ev)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar esta operación">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar esta operación">✕</button></td></tr>`;}).join("");
     return main+subs;}).join("");
   const tbl=card("Historial de seguimiento",_grp.length+" día"+(_grp.length>1?"s":"")+" · las operaciones del día van como sub-filas (✎ individual) · la Δ del día ya netea los aportes · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
@@ -3416,7 +3426,7 @@ function genInvReport(){
     const ops=g.filter(i=>IM.series[i].ev);
     const dpo=pv&&pv.val>0?((s.val-fl)/pv.val-1):null;const dip=pv?((1+s.ipsaRet)/(1+pv.ipsaRet)-1):null;
     const opTag=ops.length?` <span style="color:#7C3AED;font-weight:800;font-size:8.5px">· ${ops.length===1?_evTag(IM.series[ops[0]].ev):(ops.length+" operaciones")}</span>`:"";
-    const main=`<tr><td>${k===0?"<b>Compra</b>":(fr.pf+k)}${opTag}</td><td>${s.date}</td><td class="r" style="font-weight:600">${fmtCLP(s.val)}</td><td class="r" style="color:${dpo!=null?cc(dpo*100):fnt};font-weight:600">${dpo!=null?sg(dpo*100):"—"}</td><td class="r" style="color:${dip!=null?cc(dip*100):fnt}">${dip!=null?sg(dip*100):"—"}</td><td class="r" style="color:${cc(s.ret*100)}">${sg(s.ret*100)}</td><td class="r" style="color:${cc(s.ipsaRet*100)}">${sg(s.ipsaRet*100)}</td><td class="r" style="color:${cc(s.diff*100)}">${sg(s.diff*100)}</td><td class="r">${fl?("+"+fmtCLP(fl)):""}</td></tr>`;
+    const main=`<tr><td>${k===0?"<b>Compra</b>":(fr.pf+k)}${opTag}</td><td>${s.date}</td><td class="r" style="font-weight:600">${fmtCLP(s.val)}</td><td class="r" style="color:${dpo!=null?cc(dpo*100):fnt};font-weight:600">${dpo!=null?sg(dpo*100):"—"}</td><td class="r" style="color:${(dip!=null&&!s.ipsaND)?cc(dip*100):fnt}">${dip!=null?(s.ipsaND?"—":sg(dip*100)):"—"}</td><td class="r" style="color:${cc(s.ret*100)}">${sg(s.ret*100)}</td><td class="r" style="color:${cc(s.ipsaRet*100)}">${sg(s.ipsaRet*100)}${s.ipsaND?"*":""}</td><td class="r" style="color:${cc(s.diff*100)}">${sg(s.diff*100)}${s.ipsaND?"*":""}</td><td class="r">${fl?("+"+fmtCLP(fl)):""}</td></tr>`;
     const subs=ops.map(i=>{const ev=IM.series[i].ev;return `<tr><td style="border-left:2.5px solid #7C3AED66"></td><td colspan="8" style="color:${mut};font-size:9.8px"><b style="color:#7C3AED;font-size:8.5px;letter-spacing:.4px;text-transform:uppercase">${_evTag(ev)}</b> · ${_evDesc(ev)}</td></tr>`;}).join("");
     return main+subs;}).join("");
   // ── 11 · RENTABILIDAD DIARIA POR ACCIÓN (sobre las fechas colapsadas) ──
@@ -3474,7 +3484,7 @@ function genInvReport(){
     <section class="pb"><h2><span class="sn">10</span>Historial de seguimiento (${_grp.length} días · una fila por día)</h2>
     <div class="ssub">Las operaciones del día van como sub-filas · la Δ del día ya netea los aportes (igual que el módulo)</div>
     <table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Aporte del día</th></tr></thead><tbody>${hist}</tbody></table>
-    <div class="note">Δ del día del portafolio = valor de cierre del día (tras todas las operaciones) neteando los aportes del día, contra el cierre del día anterior. El libro de operaciones completo, con comisiones e IVA, va en el informe contable.</div></section>
+    <div class="note">Δ del día del portafolio = valor de cierre del día (tras todas las operaciones) neteando los aportes del día, contra el cierre del día anterior. ${IM.series.some(x=>x.ipsaND)?"Las filas con <b>*</b> aún no tienen el cierre oficial del IPSA de esa fecha (índice arrastrado): su Δ IPSA se muestra «—» y los acumulados del índice se actualizarán con la próxima sincronización de cierres. ":""}El libro de operaciones completo, con comisiones e IVA, va en el informe contable.</div></section>
     <section class="pb"><h2><span class="sn">11</span>Rentabilidad diaria por acción (${dates.length} días)</h2>
     <div class="ssub">Variación del precio de cierre de cada acción respecto al cierre anterior · la fila Acumulado es su crecimiento desde la incorporación</div>
     <table><thead>${dpHead}</thead><tbody>${dpRows}</tbody><tfoot>${dpFoot}</tfoot></table></section>`;

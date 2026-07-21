@@ -188,6 +188,40 @@ async function ipsaFromTwelveData() {
   if (!Object.keys(out).length) throw new Error("TD sin filas");
   return out;
 }
+/* ═════════ PRECISIÓN DE CIERRES (para cuadrar con el corredor, p.ej. BTG Pactual) ═════════
+   Yahoo entrega el ÚLTIMO PRECIO TRANSADO del día, que puede diferir del CIERRE OFICIAL que fija la
+   subasta de cierre de la Bolsa de Santiago — y ese cierre oficial es el que usa la cartola del corredor.
+   Para eliminar esa diferencia se agregan DOS capas que PISAN a Yahoo, por celda (acción × fecha):
+     1) EODHD (https://eodhd.com, pagada ~US$20/mes plan All World, secret EODHD_KEY): historia diaria con
+        cierres oficiales de la Bolsa de Santiago (.SN). Si el secret no está, la capa se omite sin romper nada.
+     2) CIERRE OFICIAL del sitio de la Bolsa de Santiago (gratis): el resumen del día del propio sitio
+        (PRECIO_CIERRE por nemo + valor del IPSA) pisa el dato de HOY. Endpoint no documentado: si cambia,
+        el log del workflow lo muestra y las otras capas siguen funcionando.
+   Prioridad final por celda: Bolsa oficial (hoy) > EODHD > Yahoo. Cada valor pisado queda registrado en
+   'ajustesDeFuente' dentro del JSON (transparencia y diagnóstico de cuánto difería Yahoo). */
+const ADJUST_LOG = [];
+function logAdjust(t, date, de, a, fuente) {
+  if (de == null || a == null || de === a) return;
+  if (ADJUST_LOG.length < 60) ADJUST_LOG.push({ t, date, de, a, dif_pct: +(((a - de) / de) * 100).toFixed(2), fuente });
+}
+function numOf(row, keys) { for (const k of keys) { const v = row?.[k]; if (v != null && v !== "" && isFinite(+v) && +v > 0) return +v; } return null; }
+function strOf(row, keys) { for (const k of keys) { const v = row?.[k]; if (typeof v === "string" && v.trim()) return v.trim().toUpperCase(); } return null; }
+// nemo oficial en la Bolsa = símbolo Yahoo sin ".SN" (BSANTANDER, LTM, SQM-B, …)
+const NEMO_OF = {}; for (const [t, sym] of Object.entries(TICKERS)) NEMO_OF[t] = sym.replace(/\.SN$/, "");
+
+// SELFTEST=1 node automation/fetch-closes.mjs → prueba las funciones puras sin tocar la red (CI/desarrollo)
+if (process.env.SELFTEST) {
+  const row = { NEMO: " bci ", PRECIO_CIERRE: "64477.5", ULTIMO_PRECIO: 64400 };
+  if (strOf(row, ["NEMO"]) !== "BCI") throw new Error("strOf");
+  if (numOf(row, ["PRECIO_CIERRE", "ULTIMO_PRECIO"]) !== 64477.5) throw new Error("numOf prioridad");
+  if (numOf({ X: 0, Y: "" }, ["X", "Y"]) !== null) throw new Error("numOf descarta 0/vacío");
+  logAdjust("BCI", "2026-07-17", 100, 101, "test"); logAdjust("BCI", "2026-07-17", 100, 100, "test"); logAdjust("BCI", "2026-07-17", null, 101, "test");
+  if (ADJUST_LOG.length !== 1 || ADJUST_LOG[0].dif_pct !== 1) throw new Error("logAdjust");
+  if (NEMO_OF.SANTANDER !== "BSANTANDER" || NEMO_OF.LATAM !== "LTM" || NEMO_OF["SQM-B"] !== "SQM-B") throw new Error("NEMO_OF");
+  ADJUST_LOG.length = 0;
+  console.log("SELFTEST OK"); process.exit(0);
+}
+
 // Orden: primero el valor de HOY (chart, fiable), luego las fuentes de HISTORIA real. El merge conserva lo ya
 // obtenido (el valor de hoy) sobre lo nuevo, así nunca se pierde el cierre del día. Yahoo dejó de servir historia
 // de índices (chart=1 día, download=401), por eso se priorizan MarketWatch / investing.com / Twelve Data / Stooq.
@@ -224,6 +258,101 @@ for (const [tick, sym] of Object.entries(TICKERS)) {
   } catch (e) { errors.push(String(e.message || e)); }
   await new Promise(r => setTimeout(r, 350)); // cortesía con la API
 }
+
+/* ── CAPA 2 · EODHD (pagada, opcional): historia con cierres OFICIALES — pisa a Yahoo por celda ── */
+if (process.env.EODHD_KEY) {
+  const key = process.env.EODHD_KEY;
+  const from = new Date(Date.now() - rangeSeconds() * 1000).toISOString().slice(0, 10);
+  let ok = 0; const fails = [];
+  for (const [tick, sym] of Object.entries(TICKERS)) {
+    const code = NEMO_OF[tick] + ".SN";
+    try {
+      const r = await fetch(`https://eodhd.com/api/eod/${encodeURIComponent(code)}?api_token=${encodeURIComponent(key)}&period=d&fmt=json&from=${from}`, { headers: { "User-Agent": BUA, Accept: "application/json" } });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const arr = await r.json();
+      if (!Array.isArray(arr)) throw new Error("respuesta no-lista");
+      let n = 0;
+      for (const row of arr) {
+        const d = ("" + row.date).slice(0, 10), c = +row.close;   // 'close' = cierre oficial SIN ajustar (el de la cartola)
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !isFinite(c) || c <= 0) continue;
+        const e = (byDate[d] ??= { date: d, prices: {} });
+        logAdjust(tick, d, e.prices[tick], +c.toFixed(2), "EODHD");
+        e.prices[tick] = +c.toFixed(2); n++;
+      }
+      if (n) ok++;
+    } catch (e) { fails.push(tick + "=" + String((e && e.message) || e).slice(0, 40)); }
+    await new Promise(r => setTimeout(r, 150));
+  }
+  // IPSA del índice, si el plan lo incluye (si no, las fuentes de índice ya cubiertas siguen mandando)
+  try {
+    const r = await fetch(`https://eodhd.com/api/eod/IPSA.INDX?api_token=${encodeURIComponent(key)}&period=d&fmt=json&from=${from}`, { headers: { "User-Agent": BUA, Accept: "application/json" } });
+    if (r.ok) { const arr = await r.json(); if (Array.isArray(arr)) for (const row of arr) { const d = ("" + row.date).slice(0, 10), c = +row.close; if (/^\d{4}-\d{2}-\d{2}$/.test(d) && isFinite(c) && c > 0) { const e = (byDate[d] ??= { date: d, prices: {} }); logAdjust("IPSA", d, e.ipsa, +c.toFixed(2), "EODHD"); e.ipsa = +c.toFixed(2); } } }
+  } catch (e) {}
+  console.log(`EODHD: ${ok}/${Object.keys(TICKERS).length} acciones con cierres oficiales.` + (fails.length ? " Fallas: " + fails.join(" · ") : ""));
+  if (!ok) errors.push("EODHD sin datos (revisa el plan/símbolos): " + fails.slice(0, 5).join(" · "));
+} else {
+  console.log("EODHD: sin EODHD_KEY (opcional, fuente pagada con cierres oficiales de la Bolsa) — capa omitida.");
+}
+
+/* ── CAPA 3 · CIERRE OFICIAL del día (sitio de la Bolsa de Santiago, gratis) — máxima prioridad ── */
+const officialLog = [];
+try {
+  const jar = [];
+  const keep = res => { try { const sc = res.headers.get("set-cookie"); if (sc) sc.split(/,(?=[^;,]+=)/).forEach(c => { const kv = c.split(";")[0].trim(); if (kv) jar.push(kv); }); } catch (e) {} };
+  const H = extra => Object.assign({ "User-Agent": BUA, Accept: "application/json,text/plain,*/*", Origin: "https://www.bolsadesantiago.com", Referer: "https://www.bolsadesantiago.com/" }, jar.length ? { Cookie: jar.join("; ") } : {}, extra || {});
+  const r0 = await fetch("https://www.bolsadesantiago.com/", { headers: { "User-Agent": BUA, Accept: "text/html,*/*" } }); keep(r0);
+  let csrf = null;
+  for (const u of ["https://www.bolsadesantiago.com/api/Securities/csrfToken", "https://www.bolsadesantiago.com/api/Comunes/getCsrfToken"]) {
+    try { const r = await fetch(u, { headers: H() }); keep(r); if (!r.ok) { officialLog.push(u.split("/api/")[1] + ": HTTP " + r.status); continue; } const j = await r.json(); csrf = (j && (j.csrf || j.token || j.csrfToken)) || null; if (csrf) { officialLog.push("csrf OK"); break; } } catch (e) { officialLog.push("csrf: " + String(e.message || e).slice(0, 40)); }
+  }
+  const post = async path => {
+    const r = await fetch("https://www.bolsadesantiago.com" + path, { method: "POST", headers: H(Object.assign({ "Content-Type": "application/json" }, csrf ? { "X-CSRF-Token": csrf } : {})), body: "{}" });
+    keep(r); if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    return Array.isArray(j) ? j : (j && (j.listaResult || j.payload && j.payload.datos || j.datos || j.result)) || j;
+  };
+  // acciones: el resumen del día con el PRECIO_CIERRE oficial por nemo
+  let stocks = null;
+  for (const path of ["/api/RV_ResumenMercado/getAccionesPrecios", "/api/RV_ResumenMercado/getResumenAccionesPrecios", "/api/RV_Instrumentos/getAccionesPrecios"]) {
+    try {
+      const rows = await post(path);
+      if (!Array.isArray(rows) || !rows.length) { officialLog.push(path + ": sin filas"); continue; }
+      const map = {};
+      rows.forEach(row => { const nemo = strOf(row, ["NEMO", "nemo", "NEMONICO", "SYMBOL"]); const px = numOf(row, ["PRECIO_CIERRE", "precio_cierre", "CIERRE", "PRECIO_ULTIMO", "ULTIMO_PRECIO", "PRECIO"]); if (nemo && px != null) map[nemo] = px; });
+      const hits = Object.values(NEMO_OF).filter(n => map[n] != null).length;
+      officialLog.push(path + ": " + rows.length + " filas, " + hits + " nemos del universo");
+      if (hits >= 10) { stocks = map; break; }   // exige cobertura real antes de confiar en el endpoint
+    } catch (e) { officialLog.push(path + ": " + String(e.message || e).slice(0, 50)); }
+  }
+  // IPSA oficial
+  let ipsaOf = null;
+  for (const path of ["/api/RV_ResumenMercado/getIndices", "/api/RV_Instrumentos/getIndices"]) {
+    try {
+      const rows = await post(path);
+      if (!Array.isArray(rows)) { officialLog.push(path + ": formato inesperado"); continue; }
+      const row = rows.find(x => { const nm = strOf(x, ["NOMBRE", "nombre", "INDICE", "NOMBRE_INDICE", "DESC"]); return nm && /^S&P\/CLX IPSA|^IPSA/.test(nm); });
+      if (row) { ipsaOf = numOf(row, ["VALOR_ACTUAL", "VALORES", "VALOR", "ULTIMO", "VAL_ACTUAL", "PUNTOS"]); if (ipsaOf != null) { officialLog.push(path + ": IPSA " + ipsaOf); break; } }
+      officialLog.push(path + ": IPSA no encontrado");
+    } catch (e) { officialLog.push(path + ": " + String(e.message || e).slice(0, 50)); }
+  }
+  if (stocks) {
+    // el resumen es de la ÚLTIMA sesión: se aplica al día de HOY (hora de Santiago). Si hoy no hubo sesión
+    // (feriado), el vector queda idéntico al día anterior y la limpieza de "día calco" de más abajo lo elimina.
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+    const e = (byDate[today] ??= { date: today, prices: {} });
+    let applied = 0, changed = 0;
+    for (const [tick, nemo] of Object.entries(NEMO_OF)) {
+      const px = stocks[nemo]; if (px == null) continue;
+      if (e.prices[tick] != null && e.prices[tick] !== px) changed++;
+      logAdjust(tick, today, e.prices[tick], px, "Bolsa de Santiago (oficial)");
+      e.prices[tick] = px; applied++;
+    }
+    if (ipsaOf != null) { logAdjust("IPSA", today, e.ipsa, ipsaOf, "Bolsa de Santiago (oficial)"); e.ipsa = ipsaOf; }
+    console.log(`Cierre OFICIAL Bolsa de Santiago: ${applied} acciones aplicadas al ${today} (${changed} difieren de Yahoo)` + (ipsaOf != null ? ` · IPSA ${ipsaOf}` : ""));
+  } else {
+    console.log("Cierre oficial Bolsa de Santiago: no disponible esta corrida (" + officialLog.join(" | ") + ")");
+  }
+} catch (e) { officialLog.push("capa oficial: " + String(e.message || e).slice(0, 80)); console.log("Cierre oficial Bolsa de Santiago: falló (" + String(e.message || e).slice(0, 80) + ")"); }
 
 // Si el run ocurre con la Bolsa de Santiago ABIERTA (antes de ~17:00 hora de Chile), el dato de HOY es un
 // valor intradía, no un cierre: se descarta. El run programado (18:05 Chile) trae el cierre real del día.
@@ -265,5 +394,7 @@ const ipsaDays = days.filter(d => d.ipsa != null).length;
 const tickerSet = new Set();
 days.forEach(d => Object.keys(d.prices || {}).forEach(t => tickerSet.add(t)));
 mkdirSync("data", { recursive: true });
-writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source: "Yahoo Finance (.SN) + fuentes IPSA", ipsaSources, errors, days }, null, 1));
+const source = "Yahoo Finance (.SN)" + (process.env.EODHD_KEY ? " + EODHD (cierres oficiales)" : "") + " + cierre oficial Bolsa de Santiago (día) + fuentes IPSA";
+writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
+if (ADJUST_LOG.length) console.log(`Ajustes de fuente (cierre oficial/EODHD pisó a Yahoo): ${ADJUST_LOG.length} — ej: ${JSON.stringify(ADJUST_LOG[0])}`);
 console.log(`OK: ${days.length} día(s) (${days[0].date} → ${days[days.length - 1].date}) · ${tickerSet.size} acciones · IPSA en ${ipsaDays} día(s). Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);

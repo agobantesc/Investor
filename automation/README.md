@@ -46,6 +46,31 @@ La sincronización usa **las mismas reglas que una planilla**: fusión por celda
 (sin arrastres ni IPSA por delante del mercado). El JSON trae ~2 semanas de historia, así
 que si no abres la app unos días, al volver se rellenan los días perdidos.
 
+## Precisión de cierres (cuadrar con tu corredor, p.ej. BTG Pactual)
+
+**Por qué difieren:** Yahoo entrega el *último precio transado* del día; tu corredor usa el
+**cierre oficial** que fija la **subasta de cierre** de la Bolsa de Santiago. Son precios
+distintos por diseño, y esa diferencia se acumula en el seguimiento. El pipeline lo corrige
+con dos capas que **pisan** a Yahoo, celda a celda:
+
+1. **Cierre oficial del día (gratis, automática):** cada corrida toma el resumen oficial del
+   sitio de la Bolsa de Santiago (PRECIO_CIERRE por nemo + IPSA) y pisa el dato de HOY.
+   Es un endpoint no documentado: si algún día cambia, el log del workflow lo muestra
+   (`fuenteOficial` en el JSON) y las demás capas siguen funcionando.
+2. **EODHD (pagada, opcional, recomendada para la HISTORIA):** [eodhd.com](https://eodhd.com),
+   plan **All World ~US$19,99/mes**, entrega la historia diaria con **cierres oficiales** de
+   la Bolsa (`.SN`). Configuración: crear cuenta → copiar el API token → GitHub → repo →
+   Settings → Secrets and variables → Actions → **New repository secret** → nombre
+   `EODHD_KEY`. Con el secret puesto: la corrida diaria pisa los ~10 últimos días y el
+   **backfill del sábado (2y)** re-escribe TODO el histórico con cierres oficiales — o
+   fuérzalo ya con Actions → Run workflow → `range=2y`.
+
+Prioridad final por celda: **Bolsa oficial (hoy) > EODHD > Yahoo**. Cada valor pisado queda
+registrado en `ajustesDeFuente` dentro de `closes.json` (cuánto difería y de qué fuente vino).
+Los cierres corregidos a mano en la app (ancla/pin en Datos) **nunca** se pisan.
+
+Prueba rápida sin red: `SELFTEST=1 node automation/fetch-closes.mjs`.
+
 ## Fundamentos (fundamentals.json)
 
 En la misma corrida, `fetch-fundamentals.mjs` genera `data/fundamentals.json` (P/U, P/B,
