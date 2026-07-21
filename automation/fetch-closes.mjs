@@ -294,63 +294,114 @@ if (process.env.EODHD_KEY) {
   console.log("EODHD: sin EODHD_KEY (opcional, fuente pagada con cierres oficiales de la Bolsa) — capa omitida.");
 }
 
-/* ── CAPA 3 · CIERRE OFICIAL del día (sitio de la Bolsa de Santiago, gratis) — máxima prioridad ── */
+/* ── CAPA 3 · CIERRE OFICIAL (sitio de la Bolsa de Santiago, gratis) — máxima prioridad ──
+   Estrategia empírica (el sitio tiene protección y API no documentada):
+   A) GET getPointHistGAT?nemo=X — puntos HISTÓRICOS oficiales por nemo (suele no exigir CSRF).
+   B) GET getPointIntradayGAT?nemo=X&frecuencia=1 — el día en curso.
+   C) POST del resumen del día con X-CSRF-Token extraído del HTML del SPA (fallback).
+   Cada intento y la FORMA de la respuesta (keys + fila de muestra) quedan en fuenteOficial dentro del JSON:
+   si la Bolsa cambia el API, el log del workflow muestra exactamente qué devolvió para ajustar el parseo. */
 const officialLog = [];
 try {
   const jar = [];
   const keep = res => { try { const sc = res.headers.get("set-cookie"); if (sc) sc.split(/,(?=[^;,]+=)/).forEach(c => { const kv = c.split(";")[0].trim(); if (kv) jar.push(kv); }); } catch (e) {} };
-  const H = extra => Object.assign({ "User-Agent": BUA, Accept: "application/json,text/plain,*/*", Origin: "https://www.bolsadesantiago.com", Referer: "https://www.bolsadesantiago.com/" }, jar.length ? { Cookie: jar.join("; ") } : {}, extra || {});
-  const r0 = await fetch("https://www.bolsadesantiago.com/", { headers: { "User-Agent": BUA, Accept: "text/html,*/*" } }); keep(r0);
+  const H = extra => Object.assign({ "User-Agent": BUA, Accept: "application/json,text/plain,*/*", "Accept-Language": "es-CL,es;q=0.9", Origin: "https://www.bolsadesantiago.com", Referer: "https://www.bolsadesantiago.com/" }, jar.length ? { Cookie: jar.join("; ") } : {}, extra || {});
+  const r0 = await fetch("https://www.bolsadesantiago.com/", { headers: { "User-Agent": BUA, Accept: "text/html,*/*", "Accept-Language": "es-CL,es;q=0.9" } }); keep(r0);
+  const html = await r0.text();
+  officialLog.push("home HTTP " + r0.status + " · " + jar.length + " cookie(s)");
+  // token CSRF embebido en el HTML del SPA (meta o variable), si existe
   let csrf = null;
-  for (const u of ["https://www.bolsadesantiago.com/api/Securities/csrfToken", "https://www.bolsadesantiago.com/api/Comunes/getCsrfToken"]) {
-    try { const r = await fetch(u, { headers: H() }); keep(r); if (!r.ok) { officialLog.push(u.split("/api/")[1] + ": HTTP " + r.status); continue; } const j = await r.json(); csrf = (j && (j.csrf || j.token || j.csrfToken)) || null; if (csrf) { officialLog.push("csrf OK"); break; } } catch (e) { officialLog.push("csrf: " + String(e.message || e).slice(0, 40)); }
-  }
-  const post = async path => {
-    const r = await fetch("https://www.bolsadesantiago.com" + path, { method: "POST", headers: H(Object.assign({ "Content-Type": "application/json" }, csrf ? { "X-CSRF-Token": csrf } : {})), body: "{}" });
-    keep(r); if (!r.ok) throw new Error("HTTP " + r.status);
-    const j = await r.json();
-    return Array.isArray(j) ? j : (j && (j.listaResult || j.payload && j.payload.datos || j.datos || j.result)) || j;
+  const m = html.match(/name=["']csrf-token["'][^>]*content=["']([^"']+)/i) || html.match(/["']?csrf[_-]?token["']?\s*[:=]\s*["']([A-Za-z0-9_\-]{16,})["']/i) || html.match(/x-csrf-token["']?\s*[:,]\s*["']([A-Za-z0-9_\-]{16,})["']/i);
+  if (m) { csrf = m[1]; officialLog.push("csrf en HTML: sí"); } else officialLog.push("csrf en HTML: no");
+
+  const getJ = async path => {
+    const r = await fetch("https://www.bolsadesantiago.com" + path, { headers: H(csrf ? { "X-CSRF-Token": csrf } : {}) });
+    keep(r);
+    const txt = await r.text();
+    if (!r.ok) throw new Error("HTTP " + r.status + " · " + txt.slice(0, 60).replace(/\s+/g, " "));
+    let j; try { j = JSON.parse(txt); } catch (e) { throw new Error("no-JSON · " + txt.slice(0, 60).replace(/\s+/g, " ")); }
+    return Array.isArray(j) ? j : ((j && (j.listaResult || (j.payload && j.payload.datos) || j.datos || j.result)) || j);
   };
-  // acciones: el resumen del día con el PRECIO_CIERRE oficial por nemo
-  let stocks = null;
-  for (const path of ["/api/RV_ResumenMercado/getAccionesPrecios", "/api/RV_ResumenMercado/getResumenAccionesPrecios", "/api/RV_Instrumentos/getAccionesPrecios"]) {
+  const postJ = async path => {
+    const r = await fetch("https://www.bolsadesantiago.com" + path, { method: "POST", headers: H(Object.assign({ "Content-Type": "application/json;charset=UTF-8" }, csrf ? { "X-CSRF-Token": csrf } : {})), body: "{}" });
+    keep(r); const txt = await r.text();
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    let j; try { j = JSON.parse(txt); } catch (e) { throw new Error("no-JSON · " + txt.slice(0, 50).replace(/\s+/g, " ")); }
+    return Array.isArray(j) ? j : ((j && (j.listaResult || (j.payload && j.payload.datos) || j.datos || j.result)) || j);
+  };
+  // parseo TOLERANTE de un punto {fecha?, precio?}: claves y formatos varían entre endpoints del sitio
+  const DKEYS = ["fec_fij", "FEC_FIJ", "fecha", "FECHA", "fec", "date", "time", "hora", "x", "d"];
+  const VKEYS = ["pre_cie", "PRE_CIE", "precio_cierre", "PRECIO_CIERRE", "cierre", "CIERRE", "valor", "VALOR", "precio", "PRECIO", "close", "y", "v"];
+  const pDate = v => { if (v == null) return null; if (isFinite(+v)) { const n = +v; const ms = n > 1e12 ? n : (n > 1e9 ? n * 1000 : null); if (!ms) return null; return new Date(ms).toLocaleDateString("en-CA", { timeZone: "America/Santiago" }); } const s2 = ("" + v).slice(0, 10); if (/^\d{4}-\d{2}-\d{2}$/.test(s2)) return s2; const dm = ("" + v).match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})/); return dm ? (dm[3] + "-" + dm[2] + "-" + dm[1]) : null; };
+  const pPoint = row => { if (!row || typeof row !== "object") return null; let d = null, val = null; for (const k of DKEYS) if (row[k] != null) { d = pDate(row[k]); if (d) break; } for (const k of VKEYS) { const n = +row[k]; if (row[k] != null && isFinite(n) && n > 0) { val = n; break; } } return (d && val != null) ? { d, val } : null; };
+
+  // A) sonda de HISTORIA oficial con un nemo líquido
+  let mode = null, probe = null;
+  try {
+    probe = await getJ("/api/RV_Instrumentos/getPointHistGAT?nemo=BCI");
+    if (Array.isArray(probe) && probe.length) {
+      officialLog.push("getPointHistGAT BCI: " + probe.length + " punto(s) · keys=" + Object.keys(probe[probe.length - 1] || {}).slice(0, 10).join(",") + " · sample=" + JSON.stringify(probe[probe.length - 1]).slice(0, 140));
+      if (pPoint(probe[probe.length - 1])) mode = "hist";
+      else officialLog.push("hist: fila no parseable con las claves conocidas");
+    } else officialLog.push("getPointHistGAT BCI: vacío/no-lista · " + JSON.stringify(probe).slice(0, 120));
+  } catch (e) { officialLog.push("getPointHistGAT: " + String(e.message || e).slice(0, 90)); }
+  // B) sonda intradía (para el cierre del día si no hay historia)
+  if (!mode) {
     try {
-      const rows = await post(path);
-      if (!Array.isArray(rows) || !rows.length) { officialLog.push(path + ": sin filas"); continue; }
-      const map = {};
-      rows.forEach(row => { const nemo = strOf(row, ["NEMO", "nemo", "NEMONICO", "SYMBOL"]); const px = numOf(row, ["PRECIO_CIERRE", "precio_cierre", "CIERRE", "PRECIO_ULTIMO", "ULTIMO_PRECIO", "PRECIO"]); if (nemo && px != null) map[nemo] = px; });
-      const hits = Object.values(NEMO_OF).filter(n => map[n] != null).length;
-      officialLog.push(path + ": " + rows.length + " filas, " + hits + " nemos del universo");
-      if (hits >= 10) { stocks = map; break; }   // exige cobertura real antes de confiar en el endpoint
-    } catch (e) { officialLog.push(path + ": " + String(e.message || e).slice(0, 50)); }
+      const pi = await getJ("/api/RV_Instrumentos/getPointIntradayGAT?nemo=BCI&frecuencia=1");
+      if (Array.isArray(pi) && pi.length) {
+        officialLog.push("getPointIntradayGAT BCI: " + pi.length + " punto(s) · sample=" + JSON.stringify(pi[pi.length - 1]).slice(0, 140));
+        if (pPoint(pi[pi.length - 1])) mode = "intra";
+      } else officialLog.push("getPointIntradayGAT BCI: vacío/no-lista · " + JSON.stringify(pi).slice(0, 120));
+    } catch (e) { officialLog.push("getPointIntradayGAT: " + String(e.message || e).slice(0, 90)); }
   }
-  // IPSA oficial
-  let ipsaOf = null;
-  for (const path of ["/api/RV_ResumenMercado/getIndices", "/api/RV_Instrumentos/getIndices"]) {
-    try {
-      const rows = await post(path);
-      if (!Array.isArray(rows)) { officialLog.push(path + ": formato inesperado"); continue; }
-      const row = rows.find(x => { const nm = strOf(x, ["NOMBRE", "nombre", "INDICE", "NOMBRE_INDICE", "DESC"]); return nm && /^S&P\/CLX IPSA|^IPSA/.test(nm); });
-      if (row) { ipsaOf = numOf(row, ["VALOR_ACTUAL", "VALORES", "VALOR", "ULTIMO", "VAL_ACTUAL", "PUNTOS"]); if (ipsaOf != null) { officialLog.push(path + ": IPSA " + ipsaOf); break; } }
-      officialLog.push(path + ": IPSA no encontrado");
-    } catch (e) { officialLog.push(path + ": " + String(e.message || e).slice(0, 50)); }
-  }
-  if (stocks) {
-    // el resumen es de la ÚLTIMA sesión: se aplica al día de HOY (hora de Santiago). Si hoy no hubo sesión
-    // (feriado), el vector queda idéntico al día anterior y la limpieza de "día calco" de más abajo lo elimina.
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
-    const e = (byDate[today] ??= { date: today, prices: {} });
-    let applied = 0, changed = 0;
+
+  const cut = new Date(Date.now() - rangeSeconds() * 1000).toISOString().slice(0, 10);
+  if (mode) {
+    // por-nemo: historia (o día) OFICIAL de cada acción del universo, pisando a Yahoo dentro del rango
+    let okN = 0; const failN = [];
     for (const [tick, nemo] of Object.entries(NEMO_OF)) {
-      const px = stocks[nemo]; if (px == null) continue;
-      if (e.prices[tick] != null && e.prices[tick] !== px) changed++;
-      logAdjust(tick, today, e.prices[tick], px, "Bolsa de Santiago (oficial)");
-      e.prices[tick] = px; applied++;
+      try {
+        const rows = tick === "BCI" && mode === "hist" ? probe : await getJ(mode === "hist" ? ("/api/RV_Instrumentos/getPointHistGAT?nemo=" + encodeURIComponent(nemo)) : ("/api/RV_Instrumentos/getPointIntradayGAT?nemo=" + encodeURIComponent(nemo) + "&frecuencia=1"));
+        if (!Array.isArray(rows) || !rows.length) throw new Error("vacío");
+        let n = 0;
+        if (mode === "hist") {
+          for (const row of rows) { const pt = pPoint(row); if (!pt || pt.d < cut) continue; const e = (byDate[pt.d] ??= { date: pt.d, prices: {} }); logAdjust(tick, pt.d, e.prices[tick], +pt.val.toFixed(2), "Bolsa de Santiago (oficial)"); e.prices[tick] = +pt.val.toFixed(2); n++; }
+        } else {
+          const pt = pPoint(rows[rows.length - 1]); // último punto del día = cierre/último oficial
+          if (pt) { const e = (byDate[pt.d] ??= { date: pt.d, prices: {} }); logAdjust(tick, pt.d, e.prices[tick], +pt.val.toFixed(2), "Bolsa de Santiago (oficial)"); e.prices[tick] = +pt.val.toFixed(2); n = 1; }
+        }
+        if (n) okN++;
+      } catch (e) { failN.push(tick + "=" + String(e.message || e).slice(0, 30)); }
+      await new Promise(r => setTimeout(r, 300));
     }
-    if (ipsaOf != null) { logAdjust("IPSA", today, e.ipsa, ipsaOf, "Bolsa de Santiago (oficial)"); e.ipsa = ipsaOf; }
-    console.log(`Cierre OFICIAL Bolsa de Santiago: ${applied} acciones aplicadas al ${today} (${changed} difieren de Yahoo)` + (ipsaOf != null ? ` · IPSA ${ipsaOf}` : ""));
+    console.log(`Cierre OFICIAL Bolsa de Santiago (${mode}): ${okN}/${Object.keys(NEMO_OF).length} acciones aplicadas.` + (failN.length ? " Fallas: " + failN.slice(0, 6).join(" · ") : ""));
+    officialLog.push("aplicadas " + okN + " acciones vía " + mode);
+    // IPSA por la misma vía (algunos GAT aceptan índices como nemo)
+    try { const ri = await getJ("/api/RV_Instrumentos/getPointHistGAT?nemo=IPSA"); if (Array.isArray(ri) && ri.length) { let ni = 0; for (const row of ri) { const pt = pPoint(row); if (!pt || pt.d < cut) continue; const e = (byDate[pt.d] ??= { date: pt.d, prices: {} }); logAdjust("IPSA", pt.d, e.ipsa, +pt.val.toFixed(2), "Bolsa de Santiago (oficial)"); e.ipsa = +pt.val.toFixed(2); ni++; } officialLog.push("IPSA oficial: " + ni + " día(s)"); } } catch (e) { officialLog.push("IPSA GAT: " + String(e.message || e).slice(0, 60)); }
   } else {
-    console.log("Cierre oficial Bolsa de Santiago: no disponible esta corrida (" + officialLog.join(" | ") + ")");
+    // C) fallback: resumen del día por POST (requiere el csrf del HTML)
+    let stocks = null;
+    for (const path of ["/api/RV_ResumenMercado/getAccionesPrecios", "/api/RV_ResumenMercado/getResumenAccionesPrecios"]) {
+      try {
+        const rows = await postJ(path);
+        if (!Array.isArray(rows) || !rows.length) { officialLog.push(path + ": sin filas"); continue; }
+        officialLog.push(path + ": " + rows.length + " filas · sample=" + JSON.stringify(rows[0]).slice(0, 140));
+        const map = {};
+        rows.forEach(row => { const nemo = strOf(row, ["NEMO", "nemo", "NEMONICO", "SYMBOL"]); const px = numOf(row, VKEYS); if (nemo && px != null) map[nemo] = px; });
+        if (Object.values(NEMO_OF).filter(n => map[n] != null).length >= 10) { stocks = map; break; }
+      } catch (e) { officialLog.push(path + ": " + String(e.message || e).slice(0, 50)); }
+    }
+    if (stocks) {
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+      const e = (byDate[today] ??= { date: today, prices: {} });
+      let applied = 0;
+      for (const [tick, nemo] of Object.entries(NEMO_OF)) { const px = stocks[nemo]; if (px == null) continue; logAdjust(tick, today, e.prices[tick], px, "Bolsa de Santiago (oficial)"); e.prices[tick] = px; applied++; }
+      console.log(`Cierre OFICIAL Bolsa de Santiago (resumen): ${applied} acciones aplicadas al ${today}.`);
+      officialLog.push("resumen aplicado: " + applied);
+    } else {
+      console.log("Cierre oficial Bolsa de Santiago: no disponible esta corrida — " + officialLog.join(" | "));
+    }
   }
 } catch (e) { officialLog.push("capa oficial: " + String(e.message || e).slice(0, 80)); console.log("Cierre oficial Bolsa de Santiago: falló (" + String(e.message || e).slice(0, 80) + ")"); }
 
