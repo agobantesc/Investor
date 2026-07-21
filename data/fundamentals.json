@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-07-20T23:06:50.632Z",
+ "updatedAt": "2026-07-21T01:12:55.440Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -408,7 +408,7 @@
    "rec": "none",
    "nAn": 5,
    "peg": 1.19,
-   "evEbitda": 8.2
+   "evEbitda": 8.1
   },
   "ENELAM": {
    "name": "Enel Américas S.A.",

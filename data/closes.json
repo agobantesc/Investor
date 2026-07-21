@@ -1,16 +1,26 @@
 {
- "updatedAt": "2026-07-20T23:06:39.089Z",
- "source": "Yahoo Finance (.SN) + fuentes IPSA",
+ "updatedAt": "2026-07-21T01:12:43.689Z",
+ "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo ^IPSA hoy: 1 día(s)",
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=allorigins/get: respuesta inespera",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 500 | codetabs=HTTP 522 | cor",
   "yahoo ^IPSA period: 1 día(s)"
  ],
+ "fuenteOficial": [
+  "csrf: Unexpected token '<', \"<!DOCTYPE \"... is",
+  "csrf: Unexpected token '<', \"<!DOCTYPE \"... is",
+  "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
+  "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403",
+  "/api/RV_Instrumentos/getAccionesPrecios: HTTP 403",
+  "/api/RV_ResumenMercado/getIndices: HTTP 403",
+  "/api/RV_Instrumentos/getIndices: HTTP 403"
+ ],
+ "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=allorigins/get: respuesta inespera · yahoo ^IPSA period: 1 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 500 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 1 día(s)"
  ],
  "days": [
   {
