@@ -225,7 +225,27 @@ if (process.env.SELFTEST) {
 // Orden: primero el valor de HOY (chart, fiable), luego las fuentes de HISTORIA real. El merge conserva lo ya
 // obtenido (el valor de hoy) sobre lo nuevo, así nunca se pierde el cierre del día. Yahoo dejó de servir historia
 // de índices (chart=1 día, download=401), por eso se priorizan MarketWatch / investing.com / Twelve Data / Stooq.
+// v7 quote con cookie+crumb: el MISMO camino que usa fetch-fundamentals (que sí funciona a diario desde el
+// runner) — entrega el valor y la HORA de la última sesión del ^IPSA aunque el chart esté rezagado días.
+async function ipsaFromYahooQuote() {
+  await yahooAuth();
+  let last = "";
+  for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+    try {
+      const res = await fetch(`https://${host}/v7/finance/quote?symbols=%5EIPSA&crumb=${encodeURIComponent(_yCrumb)}`, { headers: { "User-Agent": BUA, Cookie: _yCookie, Accept: "application/json" } });
+      if (!res.ok) { last = "HTTP " + res.status; continue; }
+      const j = await res.json();
+      const q = j && j.quoteResponse && j.quoteResponse.result && j.quoteResponse.result[0];
+      const px = q && +q.regularMarketPrice, t = q && +q.regularMarketTime;
+      if (!isFinite(px) || px <= 0 || !isFinite(t) || t <= 0) { last = "quote sin precio/hora"; continue; }
+      const d = new Date(t * 1000).toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+      return { [d]: +px.toFixed(2) };
+    } catch (e) { last = String((e && e.message) || e).slice(0, 50); }
+  }
+  throw new Error(last || "v7 quote sin ^IPSA");
+}
 const IPSA_SOURCES = [
+  ["yahoo quote ^IPSA", ipsaFromYahooQuote],
   ["yahoo ^IPSA hoy", () => chart(IPSA_SYMBOL)],
   ["marketwatch spipsa", ipsaFromMarketWatch],
   ["investing 40802", ipsaFromInvesting],

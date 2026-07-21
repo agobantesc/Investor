@@ -1821,7 +1821,7 @@ function viewComparativa(){
   const scatter=card("Mapa Riesgo–Retorno",(W?("Volatilidad anual (X) vs retorno de la ventana (Y) · "):"Volatilidad anual (X) vs retorno anual (Y) · ")+winLong(),svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:W?("Retorno "+winShort()+" (%)"):"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
   const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
   // MARGEN DE SEGURIDAD por acción: valor intrínseco vs último cierre. Verde = cotiza BAJO su valor (hay margen).
-  const mosCell=s=>{let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;}catch(e){}
+  const mosCell=s=>{let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b}):null;}catch(e){}
     if(!iv)return `<td class="tnum num" style="color:${muted}">—</td>`;
     const ml=mosLabel(iv.mos),mc=({green,red,amber,ink})[ml.cls]||ink;
     // fiabilidad visible aquí también: 1 sola ancla o anclas que discrepan mucho = referencia gruesa (⚠).
@@ -1905,7 +1905,7 @@ function viewDetalle(){
   const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.${_lowR2?` <br><b style="color:${amber}">⚠ R² muy bajo (${(a.r2*100).toFixed(0)}%):</b> el IPSA casi no explica el movimiento de ${s.t} (se mueve por factores propios). Con eso su <b>β y su α son estadísticamente poco confiables</b> — no es un error del cálculo, es una acción de baja correlación con el mercado. El Investor Score lo sabe: amortigua su α para no premiar lo que en el fondo es ruido idiosincrático.`:""}`);
   // VALOR INTRÍNSECO Y MARGEN DE SEGURIDAD — ¿hay espacio para ganar antes de comprar? Usa la β de la regresión
   // para el retorno exigido. Si no hay datos suficientes (sin dividendos/utilidad/target), no se muestra (no inventa).
-  const _iv=(typeof intrinsicValue==="function")?intrinsicValue(sel,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;
+  const _iv=(typeof intrinsicValue==="function")?intrinsicValue(sel,{beta:s.b}):null;
   let ivCard="";
   if(_iv){
     const ml=mosLabel(_iv.mos),mc=({green,red,amber,ink})[ml.cls]||ink,mosPct=_iv.mos*100;
@@ -3566,9 +3566,9 @@ function attachInv(){
     // editar un registro que fue una OPERACIÓN (aporte/compra/venta/rebalanceo) conserva la operación:
     // si se perdiera el campo ev, sus acciones y su flujo de caja desaparecerían del TWR y del libro.
     // También se conservan los sellos fresh/ipsaFresh (qué precios son cierre REAL): editar no los cambia.
-    let _owPrices=null;
+    let _owPrices=null,_owIpsa=null;
     if(editIdx!=null&&WEEKS[editIdx]){const _ow=WEEKS[editIdx];
-      _owPrices=Object.assign({},_ow.prices||{});
+      _owPrices=Object.assign({},_ow.prices||{});_owIpsa=_ow.ipsa;
       if(_ow.ev)rec.ev=_ow.ev;
       if(_ow.fresh)rec.fresh=_ow.fresh;
       if(_ow.ipsaFresh)rec.ipsaFresh=_ow.ipsaFresh;}
@@ -3597,6 +3597,14 @@ function attachInv(){
       if(Object.keys(_chg).length){
         WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date){w.prices=w.prices||{};Object.keys(_chg).forEach(t=>{w.prices[t]=_chg[t];});}});
         try{pricedbUpsertDay(rec.date,null,_chg);}catch(e){}
+      }
+      // CORRECCIÓN MANUAL DEL IPSA del día: se marca como cierre real (ipsaFresh), se propaga a los otros
+      // registros de la fecha y se ANCLA en la base (ipsaPin) para que la sincronización automática no la
+      // deshaga — el caso exacto que reportó el usuario: la fuente no trajo el IPSA y él lo cuadró a mano.
+      if(rec.ipsa>0&&isFinite(rec.ipsa)&&rec.ipsa!==_owIpsa){
+        rec.ipsaFresh=true;
+        WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date){w.ipsa=rec.ipsa;w.ipsaFresh=true;}});
+        try{pricedbUpsertDay(rec.date,rec.ipsa,null,{pinIpsa:true});}catch(e){}
       }
     }
     if(editIdx!=null){WEEKS[editIdx]=rec;editIdx=null;}else{WEEKS.push(rec);}
@@ -4369,7 +4377,7 @@ function cpRunTool(name,input){
       else out.fundamentalesIlustrativos={marketCapMM_USD:f.mcap,pb:f.pb,pe:f.pe,roe_pct:f.roe,deudaPatrimonio:f.de,divYield_pct:f.dy,crecimientoEPS_pct:f.eg,margenNeto_pct:f.nm};
       // recomendación de la plataforma con etiqueta de FUENTE (evita confundir el score —base de precios— con el capm/multifactor del set activo)
       try{const d=investorScoreDetail(s.t);if(d)out.investorScore={score:d.score,bloques:{riesgoRetorno:d.rr,fundamentos:d.fund,tendencia:d.tend},confianza_pct:d.confianza,alertas:d.alertas,fuente:"Investor Score = recomendación sobre la BASE DE PRECIOS (universo IPSA completo), NO sobre el set/análisis activo de arriba (capm/multifactor)"};}catch(e){}
-      try{const iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;if(iv)out.valorizacion=valorizacionJSON(iv);}catch(e){}
+      try{const iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b}):null;if(iv)out.valorizacion=valorizacionJSON(iv);}catch(e){}
       return JSON.stringify(out);
     }
     if(name==="get_correlations"){
@@ -5263,12 +5271,15 @@ function validBaseDate(date){if(!date)return false;const m=(""+date).match(/^(\d
 function lastBaseDate(){try{const ds=pricedbAllDates();if(ds.length)return ds[ds.length-1];}catch(e){}return lastTradingDay();}
 /* carga diaria / puntual: escribe un día (fecha + IPSA + precios) en la base. RECHAZA fechas que no corresponden
    (fin de semana o futuras) para que ni un cierre manual ni una planilla puedan ensuciar la base con días inexistentes. */
-function pricedbUpsertDay(date,ipsa,priceMap){
+function pricedbUpsertDay(date,ipsa,priceMap,opts){
   if(!validBaseDate(date))return;
-  if(ipsa!=null&&isFinite(ipsa)&&ipsa>0)PRICEDB.ipsa[date]=+ipsa;
+  // IPSA MANUAL ANCLADO: un valor del índice corregido a mano (opts.pinIpsa) queda protegido — la
+  // sincronización automática no lo pisa (mismo criterio que un cierre de acción manual). Es exactamente el
+  // caso en que la fuente automática NO trajo el IPSA del día y el usuario lo cuadró con la Bolsa/su corredora.
+  if(ipsa!=null&&isFinite(ipsa)&&ipsa>0){PRICEDB.ipsa[date]=+ipsa;if(opts&&opts.pinIpsa){(PRICEDB.ipsaPin=PRICEDB.ipsaPin||{})[date]=1;}}
   Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;
     const nm=pdIndexOf(t,"IPSA");   // "IPSA"/"IGPA" tipeado como acción va al ÍNDICE, no a la base de acciones (igual que en pricedbMergeFiles)
-    if(nm){if(nm==="IPSA"){if(!(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL))PRICEDB.ipsa[date]=+v;}else{((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{})[date]=+v;}return;}   // con fuente automática, el IPSA manual se descarta (única fuente de la verdad)
+    if(nm){if(nm==="IPSA"){if(opts&&opts.pinIpsa){PRICEDB.ipsa[date]=+v;(PRICEDB.ipsaPin=PRICEDB.ipsaPin||{})[date]=1;}else if(!(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL))PRICEDB.ipsa[date]=+v;}else{((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{})[date]=+v;}return;}   // con fuente automática, el IPSA manual sin anclar se descarta (única fuente de la verdad)
     (PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);
     // CIERRE MANUAL PROTEGIDO: un valor ingresado a mano queda ANCLADO — la sincronización automática (Yahoo)
     // no puede volver a pisarlo. Motivo real: Yahoo cambió retroactivamente el cierre de LATAM del 10-07
@@ -5296,8 +5307,9 @@ function pricedbMergeFiles(files,benchName,opts){
   // FUSIÓN por celda (acción × fecha), "el último dato manda": una fila nueva reemplaza el valor de esa
   // acción en esa fecha (p.ej. una planilla oficial pisa un cierre manual del mismo día), pero NUNCA borra
   // otras fechas ni otras acciones. Solo se aceptan días hábiles y no futuros.
+  const _ipsaPinned=d=>!!(opts&&opts.respectPins&&PRICEDB.ipsaPin&&PRICEDB.ipsaPin[d]);
   (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];const nm=pdIndexOf(f.name,benchName);
-    if(nm){const tgt=(nm==="IPSA")?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(tgt[d]!=null)updated++;else added++;tgt[d]=v;}}return;}
+    if(nm){const isIp=nm==="IPSA";const tgt=isIp?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(isIp&&tgt[d]!=null&&_ipsaPinned(d)){pinned++;continue;}if(tgt[d]!=null)updated++;else added++;tgt[d]=v;}}return;}   // IPSA anclado a mano: la fuente automática no lo pisa
     const t=((""+(f.name||"")).trim().toUpperCase())||f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);   // ticker SIEMPRE en mayúsculas: "Falabella" no crea una acción paralela a FALABELLA
     for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(PRICEDB.px[t][d]!=null&&_pinOf(t,d)){pinned++;continue;}if(PRICEDB.px[t][d]!=null)updated++;else added++;PRICEDB.px[t][d]=v;}}   // celda ANCLADA por cierre manual: la fuente automática no la pisa
   });
@@ -5840,13 +5852,21 @@ function pricedbApplyToProjects(){
       // congelado al precio de la compra: descuadre permanente contra la corredora)
       const exIdx={};ws.forEach((w,i)=>{(exIdx[w.date]||(exIdx[w.date]=[])).push(i);});
       let pts=0;
+      // IPSA del DÍA DE COMPRA: es la base de TODA la comparación vs IPSA y quedaba congelado para siempre
+      // (el loop de abajo salta la fecha base para no tocar los PRECIOS de compra — el costo real). El cierre
+      // EXACTO del índice sí debe sanar el registro inicial: solo w.ipsa, los precios de compra jamás se tocan.
+      const _ipPin=(PRICEDB.ipsaPin||{});
+      const ipBase=ipsaM[baseDate];
+      if(ipBase!=null&&!_ipPin[baseDate]){(exIdx[baseDate]||[]).forEach(wi=>{const w=ws[wi];
+        if(w.ipsa!==ipBase){w.ipsa=ipBase;w.ipsaFresh=true;pts++;}
+        else if(w.ipsaFresh!==true){w.ipsaFresh=true;pts++;}});}
       allDates.forEach(D=>{if(D<=baseDate)return;
         if(!held.some(t=>px[t]&&px[t][D]!=null))return;
         const ip=pdAsOf(ipsaM,ik,D);
         if(exIdx[D]!=null){let chD=false;   // OJO: los registros de OPERACIÓN (w.ev) también se valorizan al cierre real del día — antes se saltaban y el seguimiento del día de la compra quedaba con precios arrastrados/desactualizados. El ev (acciones, precio de transacción) queda intacto: los precios del día son solo para VALORIZAR.
           exIdx[D].forEach(wi=>{const w=ws[wi];w.prices=w.prices||{};let ch=false;
             if(!w.fresh)w.fresh=[];
-            held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh.indexOf(t)<0){w.fresh.push(t);ch=true;}}});const ipExact=ipsaM[D];if(ipExact!=null){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}if(!w.ipsaFresh){w.ipsaFresh=true;ch=true;}}if(ch)chD=true;});
+            held.forEach(t=>{if(px[t]&&px[t][D]!=null){if(w.prices[t]!==px[t][D]){w.prices[t]=px[t][D];ch=true;}if(w.fresh.indexOf(t)<0){w.fresh.push(t);ch=true;}}});const ipExact=ipsaM[D];if(ipExact!=null&&!_ipPin[D]){if(w.ipsa!==ipExact){w.ipsa=ipExact;ch=true;}if(!w.ipsaFresh){w.ipsaFresh=true;ch=true;}}if(ch)chD=true;});
           if(chD)pts++;}   // solo IPSA EXACTO de la base; ch también cuando cambian los stamps fresh/ipsaFresh (antes no se persistían para clientes no activos)
         else{const prices={},freshT=[];held.forEach(t=>{const ex=px[t]&&px[t][D]!=null;const v=ex?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));if(ex)freshT.push(t);prices[t]=(v!=null?v:basePrices[t]);});
           const ipEx=ipsaM[D]!=null;
@@ -7007,7 +7027,7 @@ function genAnalysisReport(){
   const perLbl=DATA.perYear===252?"diaria":DATA.perYear===52?"semanal":"mensual";
   const benchName=(typeof IMP!=="undefined"&&IMP&&IMP.bench&&IMP.bench.name)?IMP.bench.name:"IPSA";
   const nExcl=(typeof anaState!=="undefined"&&anaState&&anaState.excl)?Object.keys(anaState.excl).length:0;
-  const ivOf=s=>{try{return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,px:(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null}):null;}catch(e){return null;}};
+  const ivOf=s=>{try{return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b}):null;}catch(e){return null;}};
   // ── gráficos con paleta CLARA (segura para el PDF blanco) ──
   const _pal={GC,AC,ZC,faint,muted,indigo};
   let scatterRR="",scatterSML="";
@@ -8025,7 +8045,7 @@ function investorScoreCompute(){
   // P/U de referencia = mediana del UNIVERSO COMPLETO (fairPE), NO del subconjunto del análisis: así el valor
   // intrínseco de una acción es el MISMO en el score, en Detalle y en el agente (consistencia auditada).
   const medEPE=(typeof fairPE==="function")?fairPE(true):null;
-  const ivs=A.map(s=>{try{const _px=(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null;return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,medPE:medEPE,px:_px}):null;}catch(e){return null;}});
+  const ivs=A.map(s=>{try{const _px=(s.prices&&s.prices.length)?s.prices[s.prices.length-1]:null;return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b,medPE:medEPE}):null;}catch(e){return null;}});
   // margen de seguridad en % (mayor = más barata = mejor value). Se exige n≥2 anclas: un intrínseco de UNA sola
   // ancla (solo el target de analistas) no es triangulación — y ese target YA puntúa aparte como "upside" (20%
   // del bloque), así que contarlo también como mos lo duplicaría. En la UI se sigue mostrando con fiabilidad baja.
