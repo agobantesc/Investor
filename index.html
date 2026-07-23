@@ -6318,7 +6318,7 @@ function cfgRender(){
     const _apxI=(typeof autopxLastInfo==="function")?autopxLastInfo():null;
     const _apxTxt=AUTOPX_URL?(_apxI?(_apxI.error?("última sync: error ("+(""+_apxI.at).slice(0,10)+")"):("última sync: "+(""+_apxI.at).slice(0,16).replace("T"," ")+" · datos hasta "+(_apxI.lastDate||"—"))):"aún sin sincronizar"):"configura la URL de abajo para activarla";
     const ds=DATASET==="import"&&IMP?("Análisis del sistema ("+IMP.assets.length+" acciones)"):"Análisis del sistema no disponible (faltan datos en la base)";
-    const _liveState=(typeof liveActive==="function"&&liveActive())?(" · última lectura "+liveAgo()):((typeof liveMarketOpen==="function"&&!liveMarketOpen())?" · la Bolsa está cerrada ahora":"");
+    const _liveState=(typeof liveActive==="function"&&liveActive())?(" · última lectura "+liveAgo()+(liveSrc?" · fuente: "+liveSrc:"")):((typeof liveMarketOpen==="function"&&!liveMarketOpen())?" · la Bolsa está cerrada ahora":(liveErr?" · "+liveErr:""));
     body=sec("Actualización automática","La base se actualiza sola al abrir la app (una vez al día) desde tu fuente de cierres",
       row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
       row("Sincronizar ahora",_apxTxt,'<button class="btn btn-pri" id="cfgSyncNow">⟳ Sincronizar cierres</button>',1)+
@@ -6676,7 +6676,7 @@ async function mindFetch(manual){
    única fuente de la verdad del seguimiento; esto es un vistazo del día, etiquetado "EN VIVO" con su hora.
    Fuente: Yahoo (v7 quote .SN) vía proxies CORS — mismo camino probado del petróleo; si falla, se muestran los
    cierres sin ruido. Se refresca solo cuando: activado, pestaña visible y la Bolsa de Santiago en horario. */
-let LIVE={},liveTs=null,liveBusy=false,liveErr="",_liveTimer=null,_liveLastTry=0;
+let LIVE={},liveTs=null,liveBusy=false,liveErr="",liveSrc="",_liveTimer=null,_liveLastTry=0;
 let LIVE_ON=(function(){try{const v=localStorage.getItem("inv_live_on");return v==null?true:v==="1";}catch(e){return true;}})();   // opt-in por defecto (el usuario lo pidió); toggle en Configuración → Datos
 const LIVE_SYM={SANTANDER:"BSANTANDER",LATAM:"LTM"};   // símbolo Yahoo por ticker (resto = TICKER.SN)
 function liveSymOf(t){return (LIVE_SYM[t]||t)+".SN";}
@@ -6710,28 +6710,49 @@ function liveOverlay(IM){
   if(!used)return null;
   return {val,byStock,used,aport:IM.aport,gain:val-IM.aport,retPct:IM.aport>0?(val-IM.aport)/IM.aport*100:0};
 }
+/* URL del live.json que publica GitHub Actions cada 15 min (rama live-data): el runner llega a Yahoo sin CORS
+   ni proxies — la fuente EN VIVO más fiable. Derivada de la fuente de cierres ya configurada (AUTOPX_URL). */
+function liveJsonUrl(){try{
+  if(!AUTOPX_URL)return "";
+  const u=new URL(AUTOPX_URL);
+  if(/(^|\.)raw\.githubusercontent\.com$/i.test(u.hostname)){const seg=u.pathname.split("/").filter(Boolean);if(seg.length>=2)return u.origin+"/"+seg[0]+"/"+seg[1]+"/live-data/data/live.json";}
+  return AUTOPX_URL.replace(/closes\.json.*$/,"live.json");   // servidor propio: mismo directorio
+}catch(e){return "";}}
 async function liveFetch(manual){
   if(liveBusy)return;const held=liveHeldTickers();if(!held.length){return;}
   liveBusy=true;_liveLastTry=Date.now();if(manual)render();
   liveErr="";
-  const syms=held.map(liveSymOf);
-  const qurl="https://query1.finance.yahoo.com/v7/finance/quote?symbols="+encodeURIComponent(syms.join(","));
-  const prox=u=>[u,"https://corsproxy.io/?url="+encodeURIComponent(u),"https://api.allorigins.win/raw?url="+encodeURIComponent(u),"https://thingproxy.freeboard.io/fetch/"+u];
   let got=0;
-  for(const u of prox(qurl)){
-    try{const txt=await mktGet(u,"text",9000);const j=(typeof txt==="string")?JSON.parse(txt):txt;
-      const arr=j&&j.quoteResponse&&j.quoteResponse.result;if(!Array.isArray(arr)||!arr.length)continue;
-      arr.forEach(q=>{const px=+q.regularMarketPrice,ts=q.regularMarketTime?(+q.regularMarketTime*1000):Date.now();if(isFinite(px)&&px>0){const t=liveTickFromSym(q.symbol);LIVE[t]={px:+px,ts,chg:(q.regularMarketChangePercent!=null&&isFinite(+q.regularMarketChangePercent))?+q.regularMarketChangePercent:null};got++;}});
-      if(got)break;
-    }catch(e){liveErr=String((e&&e.message)||e).slice(0,60);}
-  }
-  // respaldo por-símbolo vía v8 chart (meta.regularMarketPrice) si el batch no dio nada (Yahoo a veces bloquea el quote)
+  // ── CAPA 1: live.json de GitHub Actions (cada 15 min, sin CORS) — el camino que no depende de proxies ──
+  const lurl=liveJsonUrl();
+  if(lurl){try{
+    const j=await mktGet(lurl+(lurl.indexOf("?")<0?"?":"&")+"t="+Date.now(),"json",9000);
+    const today=liveTodayCL(),qs=(j&&j.quotes)||{};
+    held.forEach(t=>{const q=qs[t];if(q&&q.px>0&&liveDayStamp(q.ts)===today){LIVE[t]={px:+q.px,ts:+q.ts,chg:(q.chg!=null&&isFinite(+q.chg))?+q.chg:null};got++;}});
+    const qi=j&&j.ipsa;if(qi&&qi.px>0&&liveDayStamp(qi.ts)===today)LIVE.IPSA={px:+qi.px,ts:+qi.ts,chg:(qi.chg!=null&&isFinite(+qi.chg))?+qi.chg:null};
+    if(got){liveTs=j.updatedAt||new Date().toISOString();liveSrc="GitHub (cada 15 min)";}
+  }catch(e){liveErr="live.json: "+String((e&&e.message)||e).slice(0,50);}}
+  const prox=u=>[u,"https://corsproxy.io/?url="+encodeURIComponent(u),"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u),"https://api.allorigins.win/raw?url="+encodeURIComponent(u),"https://thingproxy.freeboard.io/fetch/"+u];
+  // ── CAPA 2 (respaldo): Yahoo v7 quote en lote vía proxies CORS del navegador ──
   if(!got){
-    for(const t of held){const yu="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(liveSymOf(t))+"?interval=5m&range=1d";
-      for(const u of prox(yu)){try{const txt=await mktGet(u,"text",8000);const j=JSON.parse(txt);const r=j.chart&&j.chart.result&&j.chart.result[0];const mp=r&&r.meta&&+r.meta.regularMarketPrice,mt=r&&r.meta&&r.meta.regularMarketTime?(+r.meta.regularMarketTime*1000):Date.now();if(isFinite(mp)&&mp>0){LIVE[t]={px:+mp,ts:mt,chg:null};got++;break;}}catch(e){}}
+    const qurl="https://query1.finance.yahoo.com/v7/finance/quote?symbols="+encodeURIComponent(held.map(liveSymOf).join(","));
+    for(const u of prox(qurl)){
+      try{const txt=await mktGet(u,"text",9000);const j=(typeof txt==="string")?JSON.parse(txt):txt;
+        const arr=j&&j.quoteResponse&&j.quoteResponse.result;if(!Array.isArray(arr)||!arr.length)continue;
+        arr.forEach(q=>{const px=+q.regularMarketPrice,ts=q.regularMarketTime?(+q.regularMarketTime*1000):Date.now();if(isFinite(px)&&px>0){const t=liveTickFromSym(q.symbol);LIVE[t]={px:+px,ts,chg:(q.regularMarketChangePercent!=null&&isFinite(+q.regularMarketChangePercent))?+q.regularMarketChangePercent:null};got++;}});
+        if(got)break;
+      }catch(e){liveErr=String((e&&e.message)||e).slice(0,60);}
     }
+  // ── CAPA 3 (último respaldo): v8 chart por símbolo (sin crumb), EN PARALELO, con % del día ──
+    if(!got){
+      await Promise.allSettled(held.map(async t=>{
+        const yu="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(liveSymOf(t))+"?interval=5m&range=1d";
+        for(const u of prox(yu)){try{const txt=await mktGet(u,"text",9000);const j=JSON.parse(txt);const m=j.chart&&j.chart.result&&j.chart.result[0]&&j.chart.result[0].meta;const mp=m&&+m.regularMarketPrice,mt=m&&m.regularMarketTime?(+m.regularMarketTime*1000):Date.now();const pc=m&&+(m.chartPreviousClose||m.previousClose);if(isFinite(mp)&&mp>0){LIVE[t]={px:+mp,ts:mt,chg:(isFinite(pc)&&pc>0)?+((mp/pc-1)*100).toFixed(2):null};got++;return;}}catch(e){}}
+      }));
+    }
+    if(got){liveTs=new Date().toISOString();liveSrc="Yahoo (proxy del navegador)";}
   }
-  if(got){liveTs=new Date().toISOString();liveErr="";}
+  if(got)liveErr="";
   else if(!liveErr)liveErr="la fuente de precios en vivo no respondió (se muestran los cierres)";
   liveBusy=false;
   if(manual){render();return;}
@@ -8491,7 +8512,13 @@ function viewHome(){
     }catch(e){}
     const _ipEst=(typeof ipsaIsSynth==="function")&&ipsaIsSynth(_ips.lastDate);
     const _estTag=_ipEst?` <span style="color:var(--amber);font-weight:700" title="El índice oficial no llegó para esta fecha; este valor es una ESTIMACIÓN reconstruida desde las acciones del IPSA (canasta ponderada por capitalización). Se corrige solo cuando la fuente publica el cierre oficial.">· estimado</span>`:"";
-    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}${_estTag}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
+    // IPSA EN VIVO (intradía ~15 min): si hay lectura fresca de HOY y es un día posterior al último cierre,
+    // se muestra junto al cierre — sin tocar la base ni las celdas de variación (que siguen sobre cierres).
+    let _ipLive="";try{
+      const li=(typeof liveOf==="function")?liveOf("IPSA"):null;
+      if(li!=null&&LIVE.IPSA&&liveTodayCL()>(_ips.lastDate||"")){const lc=LIVE.IPSA.chg;_ipLive=`<span class="live-pill" title="IPSA intradía diferido ~15 min. No altera tus cierres: es un vistazo del índice hoy. Última lectura ${liveHHMM(LIVE.IPSA.ts)}.">● HOY ${(+li).toLocaleString("es-CL",{maximumFractionDigits:2})}${lc!=null?` (${lc>=0?"+":""}${(+lc).toLocaleString("es-CL",{maximumFractionDigits:2})}%)`:""}</span>`;}
+    }catch(e){}
+    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}${_estTag}${_ipLive?" "+_ipLive:""}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
     return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base",body);
   })();
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
