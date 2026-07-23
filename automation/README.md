@@ -46,6 +46,26 @@ La sincronización usa **las mismas reglas que una planilla**: fusión por celda
 (sin arrastres ni IPSA por delante del mercado). El JSON trae ~2 semanas de historia, así
 que si no abres la app unos días, al volver se rellenan los días perdidos.
 
+### Defensas de integridad (automáticas)
+
+- **Día calco**: si una corrida trae para un día un vector de precios idéntico al del día hábil
+  anterior en todas las acciones, es arrastre del upstream y se descarta. Si además ese calco
+  **pisó cierres reales ya guardados** (Yahoo a veces reescribe un día pasado con basura — pasó
+  el 22-07-2026 con el 21-07), el día se **restaura desde el archivo previo** en vez de perderse.
+- **IPSA sintético** (`ipsaSynth`): cuando el índice oficial no llega, se reconstruye encadenando
+  el retorno diario de las acciones ponderado por capitalización. El sello viaja con el valor y
+  **se recalcula en cada corrida** desde los anclajes oficiales vigentes: nunca se hereda como si
+  fuera un cierre oficial, y se corrige solo si la fuente publica el valor real.
+
+## Cotizaciones EN VIVO (live.json, cada 15 min)
+
+`fetch-live.mjs` + workflow `live-quotes.yml`: cada 15 minutos en horario bursátil (L–V
+09:25–17:20 Chile) el runner baja el precio intradía (~15 min de retraso) de todo el universo
++ el IPSA desde Yahoo — sin CORS ni proxies — y publica `data/live.json` en la rama `live-data`
+(force-push: una sola punta, no ensucia el historial). La app lo consume como **capa 1** de su
+vista EN VIVO (Home y Seguimiento); los proxies CORS del navegador quedan solo de respaldo.
+Es **solo visualización**: jamás toca `data/closes.json` ni la historia de cierres.
+
 ## Precisión de cierres (cuadrar con tu corredor, p.ej. BTG Pactual)
 
 **Por qué difieren:** Yahoo entrega el *último precio transado* del día; tu corredor usa el

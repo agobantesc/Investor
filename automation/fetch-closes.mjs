@@ -61,16 +61,26 @@ const errors = [];
 // reemplazarlo. Sin esto, la corrida diaria (10d) truncaba el archivo de 2 años al día siguiente del
 // backfill, y un backfill (2y) borraba los valores diarios del IPSA que Yahoo solo entrega el mismo día.
 // Lo nuevo manda por celda (acción × fecha); lo que la corrida no trae, se conserva.
+const synthLoaded = {};   // fecha -> IPSA sintético heredado del archivo: NUNCA se trata como oficial, se recalcula abajo
 try {
   const prev = JSON.parse(readFileSync("data/closes.json", "utf8"));
   for (const d of prev.days || []) {
     if (!d || !d.date) continue;
     const e = (byDate[d.date] ??= { date: d.date, prices: {} });
-    if (d.ipsa != null && isFinite(+d.ipsa) && +d.ipsa > 0) e.ipsa = +d.ipsa;
+    if (d.ipsa != null && isFinite(+d.ipsa) && +d.ipsa > 0) {
+      e.ipsa = +d.ipsa;
+      if (d.ipsaSynth) { e.ipsaSynth = true; synthLoaded[d.date] = e.ipsa; }   // el sello viaja con el valor (antes se perdía y el sintético quedaba como "oficial")
+    }
     for (const [t, v] of Object.entries(d.prices || {})) if (isFinite(+v) && +v > 0) e.prices[t] = +v;
   }
   console.log(`Archivo previo: ${Object.keys(byDate).length} día(s) conservado(s) como base.`);
 } catch (e) { console.log("Sin archivo previo utilizable (primera corrida)."); }
+// FOTO del archivo previo: si la corrida trae para un día ya guardado un vector "calco" (copia del cierre
+// anterior — Yahoo a veces REESCRIBE un día pasado con datos de arrastre), el merge por celda lo pisa y el
+// filtro calco lo vacía… perdiendo cierres reales. Con esta foto, ese día se RESTAURA en vez de perderse.
+// Caso real: la corrida del 22-07-2026 pisó los 27 cierres reales del 21-07 con copias del 17-07.
+const prevSnap = {};
+for (const [d, e] of Object.entries(byDate)) prevSnap[d] = { ipsa: e.ipsa, ipsaSynth: e.ipsaSynth, prices: { ...e.prices } };
 
 // HISTÓRICO del IPSA: Yahoo NO publica la historia del ^IPSA vía chart (solo el último valor), así que se
 // intenta una CADENA de fuentes hasta juntar historia; cada intento queda registrado en ipsaSources del JSON.
@@ -442,7 +452,7 @@ let days = Object.values(byDate)
 // es un arrastre del upstream — un mercado abierto jamás cierra idéntico en 28/28 papeles — no un cierre real.
 // Se vacían sus precios (el día sobrevive solo si trae un IPSA propio distinto). Caso real: los días
 // 14/15/16-10-2024 repetían el vector del 11-10-2024. Nunca se copia un cierre anterior como dato del día.
-let nCalco = 0;
+let nCalco = 0, nRestore = 0; const restoreLog = [];
 for (let i = days.length - 1; i >= 1; i--) {
   const cur = days[i].prices || {}, ks = Object.keys(cur);
   if (ks.length < 5) continue;
@@ -450,13 +460,37 @@ for (let i = days.length - 1; i >= 1; i--) {
   if (j < 0) continue;
   const prev = days[j].prices || {};
   if (ks.every(t => prev[t] != null && prev[t] === cur[t])) {
-    days[i].prices = {}; nCalco++;
-    if (days[i].ipsa != null && days[i].ipsa === days[j].ipsa) delete days[i].ipsa;
+    // ¿el archivo previo tenía para este día cierres REALES (distintos del día de referencia)? → la corrida
+    // pisó datos buenos con un calco: se restauran los guardados en vez de vaciar el día.
+    const snap = prevSnap[days[i].date], sp = (snap && snap.prices) || {}, spKs = Object.keys(sp);
+    const snapDistinct = spKs.length >= 5 && !spKs.every(t => prev[t] != null && prev[t] === sp[t]);
+    if (snapDistinct) {
+      days[i].prices = { ...sp };
+      if (days[i].ipsa == null && snap.ipsa != null) { days[i].ipsa = snap.ipsa; if (snap.ipsaSynth) days[i].ipsaSynth = true; }
+      nRestore++; restoreLog.push(days[i].date);
+    } else {
+      days[i].prices = {}; nCalco++;
+      if (days[i].ipsa != null && days[i].ipsa === days[j].ipsa) delete days[i].ipsa;
+    }
   }
 }
+if (nRestore) console.log(`Día(s) restaurados del archivo (la corrida los pisó con un calco): ${restoreLog.join(", ")}`);
 if (nCalco) {
   days = days.filter(d => Object.keys(d.prices).length || d.ipsa != null);
   console.log(`Día(s) CALCO descartados (todas las acciones repetían el cierre anterior): ${nCalco}`);
+}
+
+// El IPSA SINTÉTICO heredado se descarta aquí y se RECALCULA más abajo con los precios de ESTA corrida:
+// así nunca se encadena a ciegas sobre una estimación vieja y, si una fuente oficial escribió otro valor
+// para esa fecha, ese valor manda (solo se limpia el sello).
+let nSynthDrop = 0;
+for (const d of days) if (d.ipsaSynth) {
+  if (synthLoaded[d.date] != null && d.ipsa === synthLoaded[d.date]) { delete d.ipsa; nSynthDrop++; }
+  delete d.ipsaSynth;
+}
+if (nSynthDrop) {
+  days = days.filter(d => Object.keys(d.prices).length || d.ipsa != null);
+  console.log(`IPSA sintético heredado: ${nSynthDrop} día(s) se recalculan en esta corrida.`);
 }
 
 if (!days.length) { console.error("Sin datos. Errores:", errors); process.exit(1); }
@@ -477,7 +511,7 @@ try {
   let anchorIpsa = null, anchorPx = null;         // último día con IPSA (real o sintético) y sus precios
   for (const d of days) {                          // days ya viene ordenado ascendente
     const px = d.prices || {};
-    if (d.ipsa != null && d.ipsa > 0) { anchorIpsa = d.ipsa; anchorPx = px; continue; }   // día con IPSA real → re-ancla
+    if (d.ipsa != null && d.ipsa > 0) { if (Object.keys(px).length >= 5) { anchorIpsa = d.ipsa; anchorPx = px; } continue; }   // día con IPSA real → re-ancla SOLO si trae precios propios (un IPSA sin precios no sirve de base de retorno; con base vacía el 22-07-2026 quedó sin reconstruir)
     if (anchorIpsa == null || !anchorPx) continue;
     const common = Object.keys(px).filter(t => anchorPx[t] > 0 && px[t] > 0);
     if (common.length < 8) continue;               // muy pocas acciones comunes: no estimar (evita ruido)
