@@ -1,0 +1,34 @@
+# Titulares financieros/económicos (Chile) para el Home de Investor.
+# - Corre 4 veces al día hábil y publica data/news.json en la rama `news-data` con force-push
+#   (una sola punta, cero ruido en el historial). La app lo lee desde:
+#   https://raw.githubusercontent.com/agobantesc/Investor/news-data/data/news.json
+# - Los proxies CORS del navegador quedan solo de respaldo (eran la causa de "no se ven noticias").
+name: Titulares financieros
+on:
+  schedule:
+    - cron: "0 10,13,16,20 * * 1-5"   # UTC ≈ 06/07, 09/10, 12/13 y 16/17 hora de Chile
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency:
+  group: news
+  cancel-in-progress: true
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Obtener titulares (Google News Chile)
+        run: node automation/fetch-news.mjs
+      - name: Publicar en la rama news-data
+        run: |
+          if [ ! -s data/news.json ]; then echo "Sin news.json"; exit 0; fi
+          git config user.name "news-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -f data/news.json
+          git diff --cached --quiet && { echo "Sin cambios"; exit 0; } || true
+          git commit -m "titulares: $(date -u +%FT%H:%M)Z"
+          git push --force origin HEAD:news-data

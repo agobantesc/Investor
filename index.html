@@ -1199,10 +1199,32 @@
   .home-hdacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
   .home-seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px;}
   /* franja de KPIs del gráfico de operaciones (lectura ejecutiva del período) */
-  .ops-stats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px;}
-  .ops-stat{flex:1 1 120px;min-width:108px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:8px 12px;display:flex;flex-direction:column;gap:2px;}
-  .ops-stat span{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);}
-  .ops-stat b{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+  .ops-stats{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 13px;}
+  .ops-stat{flex:1 1 120px;min-width:108px;background:linear-gradient(180deg,var(--soft),var(--card) 78%);border:1px solid var(--line);border-radius:11px;padding:9px 12px 8px;display:flex;flex-direction:column;gap:2.5px;position:relative;overflow:hidden;transition:border-color .15s ease,box-shadow .15s ease;}
+  .ops-stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line2);border-radius:0 2px 2px 0;}
+  .ops-stat:hover{border-color:var(--line2);box-shadow:var(--sh);}
+  .ops-stat span{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);}
+  .ops-stat b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.015em;}
+  /* ── PULIDO v5 (presentación/orden/profesionalismo): jerarquía tipográfica, tablas, tooltips y focos.
+     Reglas ADITIVAS al final de la hoja: refinan sin re-maquetar (cero cambios de estructura). ── */
+  .ct{font-size:14.5px;letter-spacing:-.015em;}
+  .cs{color:var(--muted);}
+  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:800;}
+  td{font-variant-numeric:tabular-nums;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--soft) 45%,transparent);}
+  tbody tr:hover{background:var(--soft);}
+  .tw{scrollbar-width:thin;}
+  .tw::-webkit-scrollbar{height:8px;}
+  .tw::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px;}
+  .charttip{border-radius:11px;box-shadow:0 6px 18px rgba(20,30,54,.14),0 22px 48px rgba(20,30,54,.16);backdrop-filter:blur(6px);border-color:var(--line2);}
+  .btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:9px;}
+  .legend{font-size:11px;color:var(--muted);}
+  .legend .lgdot{width:9px;height:9px;border-radius:3px;}
+  .genl{letter-spacing:.01em;}
+  .note{border-radius:10px;}
+  .home-greet .hg-hi{letter-spacing:-.02em;}
+  .tiles-consol .tile .v{letter-spacing:-.02em;}
+  .chart{border-radius:8px;}
   th[data-fsort],th[data-fsort2]{cursor:pointer;user-select:none;white-space:nowrap;}
   th[data-fsort]:hover,th[data-fsort2]:hover{color:var(--accent);}
   .home-seg button{border:none;background:transparent;color:var(--mut);font:700 11.5px var(--font);padding:.32rem .6rem;border-radius:7px;cursor:pointer;transition:.12s var(--ease);}
@@ -6507,15 +6529,34 @@ const NEWS_FEED="https://news.google.com/rss/search?q="+encodeURIComponent("econ
 function newsAgeMin(){if(!newsTs)return Infinity;try{return (Date.now()-new Date(newsTs).getTime())/60000;}catch(e){return Infinity;}}
 function newsAgo(ts){if(!ts)return "";const m=(Date.now()-ts)/60000;if(m<60)return "hace "+Math.max(1,Math.round(m))+" min";const h=m/60;if(h<24)return "hace "+Math.round(h)+" h";return "hace "+Math.round(h/24)+" d";}
 function newsParse(xml){try{const doc=new DOMParser().parseFromString(xml,"text/xml");return [...doc.querySelectorAll("item")].map(it=>{const t=(it.querySelector("title")||{}).textContent||"",link=(it.querySelector("link")||{}).textContent||"",pub=(it.querySelector("pubDate")||{}).textContent||"";let src=(it.querySelector("source")||{}).textContent||"",title=t;const m=t.match(/^(.*) - ([^-]+)$/);if(m){title=m[1];if(!src)src=m[2];}let ts=0;try{if(pub)ts=new Date(pub).getTime();}catch(e){}return {title:(title||"").trim(),link:(link||"").trim(),src:(src||"").trim(),ts};}).filter(x=>x.title&&/^https?:\/\//.test(x.link));}catch(e){return [];}}
+/* URL del news.json que publica GitHub Actions (rama news-data) — derivada de la fuente de cierres ya
+   configurada. Es la capa 1 de las noticias: el runner llega a Google News sin CORS; los proxies del
+   navegador (poco fiables — la causa de "no se ven noticias") quedan solo de respaldo. */
+function newsJsonUrl(){try{
+  if(!AUTOPX_URL)return "";
+  const u=new URL(AUTOPX_URL);
+  if(/(^|\.)raw\.githubusercontent\.com$/i.test(u.hostname)){const seg=u.pathname.split("/").filter(Boolean);if(seg.length>=2)return u.origin+"/"+seg[0]+"/"+seg[1]+"/news-data/data/news.json";}
+  return AUTOPX_URL.replace(/closes\.json.*$/,"news.json");   // servidor propio: mismo directorio
+}catch(e){return "";}}
 async function newsFetch(force){
   if(newsBusy)return;if(!force&&NEWS&&NEWS.length&&newsAgeMin()<30)return;
   newsBusy=true;newsErr="";if(force&&modulo==="inicio")render();
+  const done=()=>{newsBusy=false;if(modulo==="inicio"){if(force)render();else bgRender();}};
+  // ── CAPA 1: news.json publicado por GitHub Actions (sin CORS, siempre disponible) ──
+  const nurl=newsJsonUrl();
+  if(nurl){try{
+    const j=await mktGet(nurl+(nurl.indexOf("?")<0?"?":"&")+"t="+Date.now(),"json",9000);
+    const items=(j&&Array.isArray(j.items)?j.items:[]).filter(x=>x&&x.title&&/^https?:\/\//.test(x.link||""))
+      .map(x=>({title:(""+x.title).trim(),link:(""+x.link).trim(),src:(""+(x.src||"")).trim(),ts:+x.ts||0}));
+    if(items.length){NEWS=items.slice(0,12);newsTs=j.updatedAt||new Date().toISOString();lsSet("inv_news_v1",NEWS);lsSet("inv_news_ts_v1",newsTs);newsErr="";done();return;}
+  }catch(e){}}
+  // ── CAPA 2 (respaldo): feed RSS directo vía proxies CORS del navegador ──
   for(const px of NEWS_PROXIES){
     try{const r=await fetch(px+encodeURIComponent(NEWS_FEED),{cache:"no-store"});if(!r.ok)continue;const txt=await r.text();const items=newsParse(txt);
-      if(items.length){NEWS=items.slice(0,8);newsTs=new Date().toISOString();lsSet("inv_news_v1",NEWS);lsSet("inv_news_ts_v1",newsTs);newsBusy=false;newsErr="";if(modulo==="inicio"){if(force)render();else bgRender();}return;}
+      if(items.length){NEWS=items.slice(0,8);newsTs=new Date().toISOString();lsSet("inv_news_v1",NEWS);lsSet("inv_news_ts_v1",newsTs);newsErr="";done();return;}
     }catch(e){}
   }
-  newsBusy=false;newsErr="No se pudieron cargar las noticias ahora (revisa tu conexión).";if(modulo==="inicio"){if(force)render();else bgRender();}
+  newsErr="No se pudieron cargar las noticias ahora (revisa tu conexión).";done();
 }
 
 function mindFmt(v,dec,unit){
@@ -8225,54 +8266,57 @@ function homeOpsSeries(){
   return {dates,rows:dates.map(d=>m[d]),tBuy,tSell,tFee,tN};
 }
 const OPS_FEE_COL="#E0567A";   // color propio de las comisiones (costo) — distinto de compras(accent) y ventas(amber)
-/* barras del Home: modo "ops" (compras vs ventas por fecha) o "fees" (solo comisiones, con su PROPIA escala para
-   que se vean bien aunque sean mucho menores que las compras). Tooltip con el detalle del día en ambos modos. */
+/* barras del Home "Operaciones y comisiones" — REDISEÑO PRO, misma gramática visual que svgMulti:
+   · agregación ADAPTATIVA: por día con pocas fechas (≤16), por MES cuando el historial crece — así las
+     barras siempre respiran, en vez de amontonarse en palitos;
+   · pares compras/ventas con remate superior redondeado, degradé suave y SIN borde ni etiquetas encima
+     (el detalle exacto vive en el tooltip — las etiquetas por barra eran el mayor ruido visual);
+   · línea del ACUMULADO (neto invertido / comisiones) con pastilla de total al borde derecho — como los
+     badges de svgMulti — en vez de un segundo eje numerado que competía con el principal. */
 function svgOpsBars(o){
-  const W=820,H=o.h||210,m={l:56,r:60,t:16,b:30};   // margen derecho ancho: eje propio del ACUMULADO
+  const W=820,H=o.h||230,m={l:56,r:92,t:16,b:34};
   const mode=o.mode==="fees"?"fees":"ops";
-  const n=o.dates.length,step=(W-m.l-m.r)/Math.max(1,n),bw=Math.max(4,Math.min(28,step*0.38));
-  const mx=mode==="fees"?Math.max(1,...o.rows.map(r=>r.fee||0)):Math.max(1,...o.rows.map(r=>Math.max(r.buy,r.sell)));
+  const MESL=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  let labels,rows,per;
+  if(o.dates.length<=16){per="día";labels=o.dates.map(d=>d.slice(8,10)+"/"+d.slice(5,7));rows=o.rows;}
+  else{per="mes";const agg={},ord=[];
+    o.dates.forEach((d,i)=>{const k=d.slice(0,7);if(!agg[k]){agg[k]={buy:0,sell:0,fee:0,n:0};ord.push(k);}const r=o.rows[i];agg[k].buy+=r.buy||0;agg[k].sell+=r.sell||0;agg[k].fee+=r.fee||0;agg[k].n+=r.n||0;});
+    labels=ord.map(k=>MESL[+k.slice(5,7)-1]+" "+k.slice(2,4));rows=ord.map(k=>agg[k]);}
+  const n=rows.length,step=(W-m.l-m.r)/Math.max(1,n);
+  const mx=(mode==="fees"?Math.max(1,...rows.map(r=>r.fee||0)):Math.max(1,...rows.map(r=>Math.max(r.buy||0,r.sell||0))))*1.08;
   const Y=v=>H-m.b-(v/mx)*(H-m.t-m.b);
-  const uid=(o.id||"ops");
-  // línea de contexto ACUMULADA (eje derecho): en Operaciones el capital NETO invertido (compras − ventas)
-  // y en Comisiones el costo acumulado — da la lectura de "cuánto llevo" que las barras sueltas no muestran
-  let _ac=0;const cum=o.rows.map(r=>_ac+=(mode==="fees"?(r.fee||0):((r.buy||0)-(r.sell||0))));
+  let _ac=0;const cum=rows.map(r=>_ac+=(mode==="fees"?(r.fee||0):((r.buy||0)-(r.sell||0))));
   const cmn=Math.min(0,...cum),cmx=Math.max(1,...cum);
-  const Y2=v=>H-m.b-((v-cmn)/(cmx-cmn))*(H-m.t-m.b);
-  // degradés sutiles por serie (remate profesional; el color base se mantiene para consistencia con la leyenda)
+  const Y2=v=>H-m.b-((v-cmn)/((cmx-cmn)||1))*(H-m.t-m.b-8)-4;
+  const uid=(o.id||"ops");
   let g=`<defs>
-    <linearGradient id="og_${uid}_b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".98"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".55"/></linearGradient>
-    <linearGradient id="og_${uid}_s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${amber}" stop-opacity=".98"/><stop offset="1" stop-color="${amber}" stop-opacity=".55"/></linearGradient>
-    <linearGradient id="og_${uid}_f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${OPS_FEE_COL}" stop-opacity=".98"/><stop offset="1" stop-color="${OPS_FEE_COL}" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="og_${uid}_b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".92"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".6"/></linearGradient>
+    <linearGradient id="og_${uid}_s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${amber}" stop-opacity=".92"/><stop offset="1" stop-color="${amber}" stop-opacity=".6"/></linearGradient>
+    <linearGradient id="og_${uid}_f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${OPS_FEE_COL}" stop-opacity=".92"/><stop offset="1" stop-color="${OPS_FEE_COL}" stop-opacity=".6"/></linearGradient>
   </defs>`;
-  for(let i=0;i<=4;i++){const v=mx*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"${i?` stroke-dasharray="3 4"`:""}/><text x="${m.l-8}" y="${yy+3.5}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">${fmtK(v)}</text>`;}
-  g+=`<line x1="${m.l}" y1="${H-m.b}" x2="${W-m.r}" y2="${H-m.b}" stroke="${AC}" stroke-width="1.1"/>`;
-  // eje derecho (acumulado): solo 0 y máximo, en el color de la línea, sin competir con el eje principal
-  g+=`<text x="${W-m.r+7}" y="${(Y2(cmx)+3.5).toFixed(1)}" text-anchor="start" font-size="10" font-weight="700" fill="${indigo}" style="font-variant-numeric:tabular-nums">${fmtK(cmx)}</text>`;
-  if(cmx>0)g+=`<text x="${W-m.r+7}" y="${(Y2(Math.max(0,cmn))+3.5).toFixed(1)}" text-anchor="start" font-size="10" fill="${faint}" style="font-variant-numeric:tabular-nums">${fmtK(Math.max(0,cmn))}</text>`;
+  for(let i=0;i<=4;i++){const v=mx*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">${fmtK(v)}</text>`;}
+  g+=`<line x1="${m.l}" y1="${(H-m.b).toFixed(1)}" x2="${W-m.r}" y2="${(H-m.b).toFixed(1)}" stroke="${AC}" stroke-width="1.1"/>`;
   const xs=[];for(let i=0;i<n;i++)xs.push(m.l+step*(i+0.5));
-  // etiquetas de VALOR sobre cada barra: con muchas fechas se etiquetan solo las mayores (para no amontonar)
-  const _lblOK=(()=>{if(n<=12)return v=>v>0;const _all=mode==="fees"?o.rows.map(r=>r.fee||0):o.rows.map(r=>Math.max(r.buy||0,r.sell||0));const thr=_all.slice().sort((a,b)=>b-a)[Math.min(7,_all.length-1)];return v=>v>0&&v>=thr;})();
-  const _vl=(x,v,c,an)=>`<text x="${(+x).toFixed(1)}" y="${(Y(v)-4).toFixed(1)}" text-anchor="${an||"middle"}" font-size="9.5" font-weight="800" fill="${c}" style="paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round">${fmtK(v)}</text>`;
-  const _bar=(x,v,fill,col)=>`<rect x="${x.toFixed(1)}" y="${Y(v).toFixed(1)}" width="${bw}" height="${Math.max(1.5,H-m.b-Y(v)).toFixed(1)}" rx="3" fill="url(#og_${uid}_${fill})" stroke="${col}" stroke-opacity=".45" stroke-width=".8"/>`;
-  o.dates.forEach((d,i)=>{const cx=xs[i],r=o.rows[i];
-    if(mode==="fees"){
-      if(r.fee>0){g+=_bar(cx-bw/2,r.fee,"f",OPS_FEE_COL);if(_lblOK(r.fee))g+=_vl(cx,r.fee,OPS_FEE_COL);}
-    }else{
-      const both=r.buy>0&&r.sell>0;
-      if(r.buy>0){g+=_bar(cx-(both?bw+1:bw/2),r.buy,"b","var(--accent)");if(_lblOK(r.buy))g+=_vl(both?cx-2:cx,r.buy,"var(--accent)",both?"end":"middle");}
-      if(r.sell>0){g+=_bar(cx+(both?1:-bw/2),r.sell,"s",amber);if(_lblOK(r.sell))g+=_vl(both?cx+2:cx,r.sell,amber,both?"start":"middle");}
-    }});
-  // línea del acumulado por ENCIMA de las barras, con punto final destacado
+  const bw=Math.max(6,Math.min(30,step*(mode==="fees"?0.4:0.32)));
+  const bar=(x,v,fill)=>{const y=Y(v),h0=H-m.b-y;if(h0<=0.6)return "";const r=Math.min(4,bw/2,h0);
+    return `<path d="M${x.toFixed(1)} ${(H-m.b).toFixed(1)} L${x.toFixed(1)} ${(y+r).toFixed(1)} Q${x.toFixed(1)} ${y.toFixed(1)} ${(x+r).toFixed(1)} ${y.toFixed(1)} L${(x+bw-r).toFixed(1)} ${y.toFixed(1)} Q${(x+bw).toFixed(1)} ${y.toFixed(1)} ${(x+bw).toFixed(1)} ${(y+r).toFixed(1)} L${(x+bw).toFixed(1)} ${(H-m.b).toFixed(1)} Z" fill="url(#og_${uid}_${fill})"/>`;};
+  rows.forEach((r,i)=>{const cx=xs[i];
+    if(mode==="fees"){if(r.fee>0)g+=bar(cx-bw/2,r.fee,"f");}
+    else{const both=r.buy>0&&r.sell>0;
+      if(r.buy>0)g+=bar(both?cx-bw-1.5:cx-bw/2,r.buy,"b");
+      if(r.sell>0)g+=bar(both?cx+1.5:cx-bw/2,r.sell,"s");}
+  });
   if(n>=2){
     const pth="M"+cum.map((v,i)=>xs[i].toFixed(1)+","+Y2(v).toFixed(1)).join(" L");
-    g+=`<path d="${pth}" fill="none" stroke="${indigo}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>`;
-    g+=`<circle cx="${xs[n-1].toFixed(1)}" cy="${Y2(cum[n-1]).toFixed(1)}" r="3.4" fill="${indigo}" stroke="var(--card)" stroke-width="1.6"/>`;
+    g+=`<path d="${pth}" fill="none" stroke="${indigo}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" opacity=".92"/>`;
+    g+=`<circle cx="${xs[n-1].toFixed(1)}" cy="${Y2(cum[n-1]).toFixed(1)}" r="3.6" fill="${indigo}" stroke="var(--card)" stroke-width="1.8"/>`;
   }
-  // etiquetas de fecha: primera, última y algunas intermedias (sin amontonar)
-  const _lb=Math.max(1,Math.ceil(n/8));
-  o.dates.forEach((d,i)=>{if(i%_lb===0||i===n-1)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" fill="${faint}">${d.slice(8,10)+"/"+d.slice(5,7)}</text>`;});
-  if(o.id)window["__ob_"+o.id]={dates:o.dates,rows:o.rows,xs,W,H,mt:m.t,mb:m.b,mode,step,cum};
+  const by=Math.max(m.t+9,Math.min(H-m.b-9,n>=1?Y2(cum[n-1]):(m.t+9)));
+  const btxt=(mode==="fees"?"−":"")+fmtK(Math.abs(cum[n-1]||0));
+  g+=`<g title="${mode==="fees"?"comisiones acumuladas":"neto invertido acumulado"}"><rect x="${(W-m.r+6).toFixed(1)}" y="${(by-9).toFixed(1)}" width="${m.r-12}" height="18" rx="5" fill="${indigo}" opacity="0.94"/><text x="${(W-m.r+6+(m.r-12)/2).toFixed(1)}" y="${(by+3.6).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="800" fill="#fff">${btxt}</text></g>`;
+  const kk=Math.max(1,Math.ceil(n/(per==="mes"?12:9)));
+  labels.forEach((lb,i)=>{if(i%kk===0||i===n-1)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" fill="${muted}">${lb}</text>`;});
+  if(o.id)window["__ob_"+o.id]={dates:labels,rows,xs,W,H,mt:m.t,mb:m.b,mode,step,cum,per};
   return `<svg id="${o.id||""}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${(o.id||"")}hover"></g></svg>`;
 }
 function attachOpsHover(id){
@@ -8287,7 +8331,7 @@ function attachOpsHover(id){
     const buyLine=d.buy?`<span style="display:block;color:var(--accent);font-weight:${g.mode==="fees"?"600":"800"}">Compras: ${fmtCLP(d.buy)}</span>`:"";
     const sellLine=d.sell?`<span style="display:block;color:${amber};font-weight:${g.mode==="fees"?"600":"800"}">Ventas: ${fmtCLP(d.sell)}</span>`:"";
     const cumLine=(g.cum&&g.cum[bi]!=null)?`<span style="display:block;color:${indigo};font-weight:700">${g.mode==="fees"?"Comisiones acumuladas: −":"Invertido neto acum.: "}${fmtCLP(Math.abs(g.cum[bi]))}</span>`:"";
-    const nLine=`<span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">${d.n} operaci${d.n===1?"ón":"ones"} este día</span>`;
+    const nLine=`<span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">${d.n} operaci${d.n===1?"ón":"ones"} este ${g.per||"día"}</span>`;
     tt.innerHTML=`<b>${g.dates[bi]}</b>`+(g.mode==="fees"?(feeLine+buyLine+sellLine):(buyLine+sellLine+feeLine))+cumLine+nLine;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
