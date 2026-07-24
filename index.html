@@ -1511,6 +1511,7 @@ let invStkSel=null;
 let objEditOn=false;   // editor de pesos objetivo (Composición actual vs objetivo, en Seguimiento)
 let invValFrom="",invValTo="";   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (solo ese gráfico)
 let invCapmFrom="",invCapmTo="";   // rango de fechas del gráfico "Análisis CAPM: real vs exigido" (solo ese gráfico)
+let invCapmMode="pct";   // gráfico CAPM: "pct" (rentabilidad TWR vs exigida — la vara de DESEMPEÑO) | "clp" (patrimonio vs trayectoria exigida — lectura de LARGO plazo)
 let invRangeOwner=null;   // proyecto cuyos rangos están CARGADOS en las variables de arriba
 /* rangos de fecha PERSISTENTES por PROYECTO: cada proyecto recuerda su propio filtro (no "viaja" al vecino)
    y sobrevive al cambio de proyecto y al cierre de Investor (localStorage). {pid:{vf,vt,cf,ct}}
@@ -3086,6 +3087,16 @@ function viewInvActive(){
       if(s.ev&&s.ev.erCapm!=null)_rate=s.ev.erCapm/100;}   // desde la operación: el exigido usa la tasa de la cartera resultante
   });
   const cseries=[{label:"Valor real",c:indigo,vals:_dix.map(i=>+IM.series[i].val.toFixed(0)),w:2.6,op:1},{label:"Esperado CAPM",c:"#0E8C5E",vals:_dix.map(i=>capmVals[i]),dash:true}];
+  // curva EXIGIDA en RENTABILIDAD (time-weighted): compone la tasa exigida vigente SIN aportes — comparable
+  // 1:1 con el TWR. La brecha entre ambas curvas ES el alpha realizado (misma cifra del tile y del Home).
+  // Es la vara de DESEMPEÑO por defecto: el patrimonio en $ mezcla el calendario de aportes (lectura de largo plazo).
+  const reqPct=[];{let _rate2=_initEr/100,_racc=1;
+    IM.series.forEach((s,i)=>{
+      if(i>0){const dt=Math.max(0,s.yrs-IM.series[i-1].yrs);_racc*=Math.pow(1+_rate2,dt);}
+      reqPct.push(+((_racc-1)*100).toFixed(3));
+      if(s.ev&&s.ev.erCapm!=null)_rate2=s.ev.erCapm/100;   // desde la operación: exige la tasa de la cartera resultante
+    });}
+  const cseriesPct=[{label:"TWR real",c:indigo,vals:_dix.map(i=>+(IM.series[i].ret*100).toFixed(2)),w:2.6,op:1},{label:"Exigido CAPM",c:"#0E8C5E",vals:_dix.map(i=>reqPct[i]),dash:true}];
   const _shortWin=(IM.elapsedDays<30||IM.nret<5);   // muestra corta: el alpha realizado es ruido, no una lectura estable
   const capmKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">
     ${tile("Retorno real",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}
@@ -3097,11 +3108,22 @@ function viewInvActive(){
   const _ckIdx=dates.map((d,k)=>k).filter(k=>(!invCapmFrom||dates[k]>=invCapmFrom)&&(!invCapmTo||dates[k]<=invCapmTo));
   const _crOn=!!(invCapmFrom||invCapmTo);
   const cDates=_ckIdx.map(k=>dates[k]);
-  const cseriesR=cseries.map(s=>Object.assign({},s,{vals:_ckIdx.map(k=>s.vals[k])}));
+  const _cm=(invCapmMode==="clp")?"clp":"pct";
+  const cseriesR=(_cm==="clp"?cseries:cseriesPct).map(s=>Object.assign({},s,{vals:_ckIdx.map(k=>s.vals[k])}));
   const cFlows=_ckIdx.map(k=>_dayFlows[k]);
   const capmRangeUI=_dateRangeUI("invCapm",invCapmFrom,invCapmTo,_crOn);
-  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual)"+(_crOn?` · <b>rango: ${cDates[0]||"—"} → ${cDates[cDates.length-1]||"—"}</b>`:"")+" · la curva exigida <b>incluye tus aportes</b> (compras) y se recalcula desde cada operación — así la brecha es solo rentabilidad, no capital",cDates.length>=2?svgMulti({series:cseriesR,labels:cDates,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:cFlows}):`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,`<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">${capmRangeUI}<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div></div>`):"";
-  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} No es recomendación de inversión.`);
+  const capmSeg=`<div class="home-seg" role="group" aria-label="Ver rentabilidad o patrimonio"><button data-capmmode="pct" class="${_cm==="pct"?"on":""}" title="Rentabilidad TWR vs la exigida por CAPM, ambas time-weighted (sin el efecto del calendario de aportes). La brecha entre las curvas ES el alpha realizado — la vara de DESEMPEÑO.">Rentabilidad %</button><button data-capmmode="clp" class="${_cm==="clp"?"on":""}" title="Tu patrimonio vs el capital creciendo a la tasa exigida (incluye los aportes). El CAPM es una expectativa de LARGO plazo: léela a meses/años, no como veredicto de semanas.">Patrimonio $</button></div>`;
+  const _capmSub=_cm==="pct"
+    ? "Rentabilidad TWR real vs la <b>exigida</b> por el CAPM para el riesgo de tu cartera ("+PF.erCapm.toFixed(2)+"% anual, compuesta al período)"+(_crOn?` · <b>rango: ${cDates[0]||"—"} → ${cDates[cDates.length-1]||"—"}</b>`:"")+" · ambas time-weighted (el calendario de tus aportes no distorsiona) · la <b>brecha entre las curvas es el alpha realizado</b>"
+    : "Trayectoria de tu patrimonio vs el capital creciendo a la tasa exigida ("+PF.erCapm.toFixed(2)+"% anual)"+(_crOn?` · <b>rango: ${cDates[0]||"—"} → ${cDates[cDates.length-1]||"—"}</b>`:"")+" · la curva exigida <b>incluye tus aportes</b> y se recalcula desde cada operación · lectura de <b>largo plazo</b>: en semanas la brecha es más mercado que gestión";
+  const _capmSvg=_cm==="pct"
+    ? svgMulti({series:cseriesR,labels:cDates,h:310,id:"invcapm",unit:"",signBase:0,yfmt:v=>(+v).toFixed(1)+"%",ttfmt:v=>((v>=0?"+":"")+(+v).toFixed(2)+"%")})
+    : svgMulti({series:cseriesR,labels:cDates,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:cFlows});
+  const _capmLeg=_cm==="pct"
+    ? `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${indigo}"></span>TWR real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Exigido CAPM</span></div>`
+    : `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div>`;
+  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido",_capmSub,cDates.length>=2?_capmSvg:`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,`<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">${capmSeg}${capmRangeUI}</div>${_capmLeg}</div>`):"";
+  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
   // HISTORIAL AGRUPADO POR FECHA: varias operaciones el mismo día son varios registros internos (así lo exige
   // el libro y la edición individual), pero el historial muestra UNA fila por día — con la rentabilidad diaria
   // REAL (valor de cierre del día, neteando TODOS los aportes del día, vs el cierre del día anterior) — y las
@@ -3534,6 +3556,7 @@ function genInvReport(){
 function attachInv(){
   if(modulo!=="inv")return;
   document.querySelectorAll("[data-stksel]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invStkSel=b.dataset.stksel||null;render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
+  document.querySelectorAll("[data-capmmode]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invCapmMode=b.dataset.capmmode==="clp"?"clp":"pct";render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (conserva el scroll al aplicar)
   (function(){
     const _keep=fn=>{const m=document.getElementById("main"),st=m?m.scrollTop:0;fn();const m2=document.getElementById("main");if(m2)m2.scrollTop=st;};
