@@ -57,14 +57,8 @@ que si no abres la app unos días, al volver se rellenan los días perdidos.
   **se recalcula en cada corrida** desde los anclajes oficiales vigentes: nunca se hereda como si
   fuera un cierre oficial, y se corrige solo si la fuente publica el valor real.
 
-## Cotizaciones EN VIVO (live.json, cada 15 min)
-
-`fetch-live.mjs` + workflow `live-quotes.yml`: cada 15 minutos en horario bursátil (L–V
-09:25–17:20 Chile) el runner baja el precio intradía (~15 min de retraso) de todo el universo
-+ el IPSA desde Yahoo — sin CORS ni proxies — y publica `data/live.json` en la rama `live-data`
-(force-push: una sola punta, no ensucia el historial). La app lo consume como **capa 1** de su
-vista EN VIVO (Home y Seguimiento); los proxies CORS del navegador quedan solo de respaldo.
-Es **solo visualización**: jamás toca `data/closes.json` ni la historia de cierres.
+> Nota: existió una vista EN VIVO intradía (live.json cada 15 min) que se retiró a pedido del
+> usuario — Investor trabaja exclusivamente con los **cierres oficiales del día** (este pipeline).
 
 ## Precisión de cierres (cuadrar con tu corredor, p.ej. BTG Pactual)
 

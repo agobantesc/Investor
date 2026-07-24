@@ -374,14 +374,8 @@
   .live-dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;background:var(--green);
     opacity:.4;animation:livePulse 1.8s var(--ease-out) infinite;}
   @keyframes livePulse{0%{transform:scale(1);opacity:.45;}70%,100%{transform:scale(2.4);opacity:0;}}
-  /* pastilla EN VIVO (precios intradía diferidos) — verde, discreta, con punto latiendo */
   .livePt{animation:lvpulse 1.7s ease-in-out infinite}
   @keyframes lvpulse{0%,100%{opacity:.14}50%{opacity:.55}}
-  .live-pill{display:inline-flex;align-items:center;gap:5px;padding:.1rem .48rem;border-radius:var(--r-pill);
-    background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4);color:var(--green);
-    font-size:9.5px;font-weight:800;letter-spacing:.03em;white-space:nowrap;vertical-align:middle;line-height:1.5;
-    animation:livePillPulse 2.6s ease-in-out infinite;cursor:help;}
-  @keyframes livePillPulse{0%,100%{border-color:rgba(16,185,129,.35);}50%{border-color:rgba(16,185,129,.75);}}
   .mkpill{display:flex;align-items:center;gap:7px;padding:.32rem .65rem;border-radius:var(--r-pill);
     background:var(--card2);border:1px solid var(--line);font-size:10.5px;font-weight:700;color:var(--muted);}
   .iconbtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--line2);background:var(--card);
@@ -2988,29 +2982,20 @@ function viewInvActive(){
   const L=IM.last,nd=WEEKS.length,gain=L.val-IM.aport;
   const days=IM.elapsedDays, reqRet=Math.pow(1+PF.erCapm/100,IM.elapsedYrs)-1, alphaReal=L.ret-reqRet;
   const elapsed=days<1?"hoy (compra de hoy)":(days+" días · "+(days/7).toFixed(1)+" sem · "+(days/30.44).toFixed(1)+" meses");
-  // OVERLAY EN VIVO (solo visual, no toca la historia): si hay precios intradía, el valor grande, la ganancia y
-  // el cambio del día se muestran en vivo con la pastilla EN VIVO; el TWR/curva/registros siguen sobre CIERRES.
-  const _lv=(typeof liveOverlay==="function")?liveOverlay(IM):null;
-  const heroVal=_lv?_lv.val:L.val,heroGain=_lv?_lv.gain:gain;
+  const heroVal=L.val,heroGain=gain;
   const dA=IM.dayAbs,dP=IM.dayPct,dc=dA!=null?col(dA):muted;
-  let dayBox;
-  if(_lv){
-    // EN VIVO: cuánto se movió hoy el portafolio (valor en vivo) contra el ÚLTIMO CIERRE oficial
-    const lda=heroVal-L.val,ldp=L.val>0?(heroVal/L.val-1):0,ldc=col(lda);
-    dayBox=`<div style="font-size:27px;font-weight:800;color:${ldc};line-height:1.05">${lda>=0?"+":"−"}${fmtCLP(Math.abs(lda))}</div><div style="font-size:15px;font-weight:800;color:${ldc};margin-top:2px">${pc(ldp*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Variación INTRADÍA (precios en vivo diferidos ~15 min) del valor de hoy contra el último cierre oficial (${L.date||IM.dayTo||""}). El cambio entre cierres oficiales aparece cuando la Bolsa cierra.">en vivo vs cierre ${L.date||IM.dayTo||""}</div>`;
-  }else dayBox=dA!=null
+  const dayBox=dA!=null
     ? `<div style="font-size:27px;font-weight:800;color:${dc};line-height:1.05">${dA>=0?"+":"−"}${fmtCLP(Math.abs(dA))}</div><div style="font-size:15px;font-weight:800;color:${dc};margin-top:2px">${pc(dP*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Entre los dos últimos registros con cierre REAL de mercado (una operación de hoy sin cierre aún no define el día)">cierre ${IM.prevDate} → ${IM.dayTo||""}</div>`
     : `<div style="font-size:20px;font-weight:800;color:var(--faint);line-height:1.1">—</div><div style="font-size:10.5px;color:var(--faint);margin-top:4px">registra otro ${fr.u} para ver el cambio</div>`;
-  const _lvSub=_lv?` · <span class="live-pill" title="Valor con precios intradía diferidos ~15 min (Yahoo). Tu rentabilidad histórica, el TWR y los registros siguen sobre los cierres oficiales — esto es solo el valor de hoy mientras la Bolsa está abierta.">● EN VIVO · ${liveHHMM()}</span>`:"";
   const hero=`<div class="card"><div class="bd" style="padding:1.35rem 1.5rem">
     <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;justify-content:space-between">
-      <div><div class="genl" style="margin:0">Valor actual del portafolio${_lv?"":""}</div>
-        <div style="font-size:34px;font-weight:800;color:${heroGain>=0?green:red};letter-spacing:-.6px;line-height:1.05" title="${heroGain>=0?"Sobre":"Bajo"} el capital aportado (${fmtCLP(IM.aport)})${_lv?" · valor EN VIVO (intradía diferido); el cierre de hoy fue "+fmtCLP(L.val):""}">${fmtCLP(heroVal)}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:5px"><b>${PF.name}</b> · invertido hace <b>${elapsed}</b> desde ${WEEKS[0].date} · ${nd} registro${nd>1?"s":""} · seguimiento ${fr.cap}${_lvSub}</div></div>
+      <div><div class="genl" style="margin:0">Valor actual del portafolio</div>
+        <div style="font-size:34px;font-weight:800;color:${heroGain>=0?green:red};letter-spacing:-.6px;line-height:1.05" title="${heroGain>=0?"Sobre":"Bajo"} el capital aportado (${fmtCLP(IM.aport)})">${fmtCLP(heroVal)}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:5px"><b>${PF.name}</b> · invertido hace <b>${elapsed}</b> desde ${WEEKS[0].date} · ${nd} registro${nd>1?"s":""} · seguimiento ${fr.cap}</div></div>
       <div style="text-align:right;min-width:150px"><div class="genl" style="margin:0">Cambio último ${fr.u}</div>${dayBox}</div>
     </div>
     <div class="tiles" style="margin-top:16px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))">
-      ${(()=>{const _gp=IM.aport>0?heroGain/IM.aport*100:0;return tile("Ganancia / pérdida total"+(_lv?" ●":""),((heroGain>=0?"+":"−")+fmtCLP(Math.abs(heroGain)))+`<div style="font-size:1.05em;font-weight:800;letter-spacing:-.3px;color:${col(_gp)};margin-top:3px">${pc(_gp)}</div>`,(_lv?"EN VIVO · ":"")+"rentabilidad sobre "+fmtCLP(IM.aport)+" invertidos · el % del Home",indigo,col(heroGain));})()}
+      ${(()=>{const _gp=IM.aport>0?heroGain/IM.aport*100:0;return tile("Ganancia / pérdida total",((heroGain>=0?"+":"−")+fmtCLP(Math.abs(heroGain)))+`<div style="font-size:1.05em;font-weight:800;letter-spacing:-.3px;color:${col(_gp)};margin-top:3px">${pc(_gp)}</div>`,"rentabilidad sobre "+fmtCLP(IM.aport)+" invertidos · el % del Home",indigo,col(heroGain));})()}
       ${tile("Retorno acumulado (TWR)",pc(L.ret*100),"rendimiento de la ESTRATEGIA · comparable con el IPSA · no depende del tamaño/fecha de tus aportes",indigo,col(L.ret*100))}
       ${tile("Rentabilidad IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}
       ${tile("vs IPSA",pc(L.diff*100),L.diff>=0?"superando al mercado":"bajo el mercado",indigo,col(L.diff*100))}
@@ -3024,12 +3009,6 @@ function viewInvActive(){
   const _dix=[];IM.series.forEach((s,i)=>{if(i===IM.series.length-1||IM.series[i+1].date!==s.date)_dix.push(i);});
   const dates=_dix.map(i=>IM.series[i].date);
   const _dayFlows=_dix.map((i,k)=>{const from=k===0?0:_dix[k-1]+1;let f=0;for(let j=from;j<=i;j++)f+=IM.series[j].inflow||0;return Math.round(f);});
-  // ── punto EN VIVO en los gráficos: HOY (intradía ~15 min) como tramo punteado + punto pulsante al final de
-  //    cada curva. SOLO visual: IM.series, el TWR y los registros no cambian; al llegar el cierre oficial el
-  //    punto punteado se convierte en historia real. Se omite si el rango de fechas del gráfico excluye hoy. ──
-  const _lvLbl=(_lv&&typeof liveChartLbl==="function")?liveChartLbl(dates[dates.length-1]):null;
-  const _ipsaLiveB=(function(){try{const li=liveOf("IPSA");if(li==null||!_lvLbl)return null;const s=ipsaSnapshot("IPSA");return (s&&s.last>0)?li/s.last:null;}catch(e){return null;}})();   // razón intradía del IPSA vs su último cierre (null → la curva IPSA simplemente no se extiende)
-  const datesG=_lvLbl?dates.concat([_lvLbl]):dates;   // eje X con el punto de HOY al final (para los gráficos sin rango propio)
   // SECCIÓN 2 · valor en el tiempo — con RANGO DE FECHAS propio (solo afecta este gráfico)
   const _allVals=_dix.map(i=>+IM.series[i].val.toFixed(0));
   const _vk=dates.map((d,k)=>k).filter(k=>(!invValFrom||dates[k]>=invValFrom)&&(!invValTo||dates[k]<=invValTo));
@@ -3038,10 +3017,8 @@ function viewInvActive(){
   // filtro de fechas COMPACTO, siempre en UNA sola línea (mismo control para Valor y CAPM)
   const _dateRangeUI=(pfx,vF,vT,on)=>`<div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;white-space:nowrap"><span class="genl" style="margin:0">Desde</span><input type="date" id="${pfx}From" value="${vF||""}" min="${dates[0]||""}" max="${dates[dates.length-1]||""}" style="width:118px" aria-label="Desde"><span class="genl" style="margin:0">hasta</span><input type="date" id="${pfx}To" value="${vT||""}" min="${dates[0]||""}" max="${dates[dates.length-1]||""}" style="width:118px" aria-label="Hasta">${on?`<button class="btn" id="${pfx}All" style="padding:.28rem .5rem;font-size:10.5px" title="Ver todo el historial">✕ Todo</button>`:""}</div>`;
   const rangeUI=_dateRangeUI("invVal",invValFrom,invValTo,_rangeOn);
-  const _vLive=!!(_lvLbl&&vDates.length>=2&&vDates[vDates.length-1]===dates[dates.length-1]&&(!invValTo||invValTo>=liveTodayCL()));
-  const vDatesG=_vLive?vDates.concat([_lvLbl]):vDates,vValsG=_vLive?vVals.concat([Math.round(_lv.val)]):vVals,vFlowsG=_vLive?vFlows.concat([0]):vFlows;
-  const valChart=nd>=2?card("2 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP)"+(_rangeOn?` · <b>rango: ${vDates[0]||"—"} → ${vDates[vDates.length-1]||"—"}</b>`:" desde la compra")+" · pasa el mouse: en los días de compra/venta el salto se separa en <b>aporte</b> (capital) y <b>rentabilidad</b> real"+(_vLive?" · el punto punteado ● es HOY EN VIVO (intradía, no es cierre)":""),
-      vDates.length>=2?svgMulti({series:[{label:"Valor",c:indigo,vals:vValsG,w:2.8,op:1}],labels:vDatesG,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true,flows:vFlowsG,live:_vLive}):`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,rangeUI)
+  const valChart=nd>=2?card("2 · Valor de la inversión en el tiempo","Evolución del valor de tu portafolio (CLP)"+(_rangeOn?` · <b>rango: ${vDates[0]||"—"} → ${vDates[vDates.length-1]||"—"}</b>`:" desde la compra")+" · pasa el mouse: en los días de compra/venta el salto se separa en <b>aporte</b> (capital) y <b>rentabilidad</b> real",
+      vDates.length>=2?svgMulti({series:[{label:"Valor",c:indigo,vals:vVals,w:2.8,op:1}],labels:vDates,h:310,yfmt:fmtK,id:"invval",unit:"",area:true,delta:true,flows:vFlows}):`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,rangeUI)
     :card("2 · Valor de la inversión en el tiempo","Aún no hay suficientes registros",`<div class="note" style="border:none;background:none;margin:0">Ingresa al menos <b>2 registros</b> (incluida la compra) para ver la evolución del valor.</div>`);
   let stkSeries=IM.stockSeries;
   if(invStkSel){const f=IM.stockSeries.filter(s=>s.label===invStkSel);if(f.length)stkSeries=f;else invStkSel=null;}
@@ -3055,9 +3032,7 @@ function viewInvActive(){
   const _mktG=(function(){if(!_selSer)return null;for(let i=_selSer.vals.length-1;i>=0;i--)if(_selSer.vals[i]!=null)return _selSer.vals[i]-100;return null;})();
   const selInfo=selP?`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:13px">${tileC("Tu retorno en "+selP.hd.t,pc(selP.ret*100),"pondera tus compras (cuánto y cuándo)",selP.hd.c,col(selP.ret*100))}${_mktG!=null?tileC("Precio desde incorporación",pc(_mktG),"crecimiento de mercado · es lo que dibuja el gráfico",selP.hd.c,col(_mktG)):""}${tileC("Ganancia / pérdida",(selP.gain>=0?"+":"−")+fmtCLP(Math.abs(selP.gain)),"sobre "+fmtCLP(selP.cost)+" invertidos",selP.hd.c,col(selP.gain))}${tileC("Precio compra → actual",fmtP(selP.buy)+" → "+fmtP(selP.cur),selP.sh?(selP.sh.toLocaleString("es-CL",{maximumFractionDigits:2})+" acciones"):"",selP.hd.c,ink)}${tileC("Aporte al retorno total",pc(selP.contribCum*100),"contribución a la cartera",selP.hd.c,col(selP.contribCum*100))}</div>${(_mktG!=null&&Math.abs(_mktG-selP.ret*100)>0.3)?`<div class="note" style="margin:-4px 0 13px;font-size:11px">¿Por qué difieren? El <b>gráfico</b> mide el crecimiento del <b>precio de mercado</b> desde que ${selP.hd.t} entró a la cartera (${pc(_mktG)}). <b>Tu retorno</b> (${pc(selP.ret*100)}) pondera <b>cuándo y cuánto</b> compraste: si compraste la mayor parte después de una subida, tu retorno es menor que el del precio — y al revés.</div>`:""}`
     :`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:13px">${IM.perStock.map(p=>tileC("Retorno "+p.hd.t,pc(p.ret*100),(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),p.hd.c,col(p.ret*100))).join("")}</div>`;
-  // EN VIVO por acción: extiende cada curva con su precio intradía (base 100); sin lectura → la curva no se extiende
-  const stkSeriesG=_lvLbl?stkSeries.map(s=>{const p=IM.perStock.find(x=>x.hd.t===s.label);const lp=p?liveOf(p.hd.t):null;let lastV=null;for(let i=s.vals.length-1;i>=0;i--)if(s.vals[i]!=null&&isFinite(s.vals[i])){lastV=s.vals[i];break;}return Object.assign({},s,{vals:s.vals.concat([(lp!=null&&p&&p.cur>0&&lastV!=null)?+(lastV*lp/p.cur).toFixed(2):null])});}):stkSeries;
-  const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Crecimiento del <b>precio de mercado</b> (base 100 desde su incorporación) · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación) — tu retorno personal, que pondera tus compras, va en las tarjetas y la tabla · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeriesG,labels:datesG,h:280,id:"invstk",unit:"",signBase:100,ttfmt:ret100,area:!!invStkSel,live:!!_lvLbl}),stkBtns):"";
+  const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Crecimiento del <b>precio de mercado</b> (base 100 desde su incorporación) · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación) — tu retorno personal, que pondera tus compras, va en las tarjetas y la tabla · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeries,labels:dates,h:280,id:"invstk",unit:"",signBase:100,ttfmt:ret100,area:!!invStkSel}),stkBtns):"";
   const psSorted=[...IM.perStock].sort((a,b)=>b.contribCum-a.contribCum);
   const _todayBadge=`<span class="altchip" style="border-color:var(--accent);color:var(--accent);padding:1px 5px;font-size:8.5px;margin-left:5px" title="La compraste en este último registro: su Δ es el movimiento de mercado de la acción, no afecta el P/L del día (la compra se netea como aporte).">comprada hoy</span>`;
   // P. compra prom. = costo registrado ÷ acciones — comparable 1:1 con el "P. Compra" de la cartola de la
@@ -3073,11 +3048,7 @@ function viewInvActive(){
   const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
   // SECCIÓN 1 · rentabilidad: portafolio vs IPSA (va ARRIBA: lo primero es cómo rinde la estrategia)
   const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
-  // EN VIVO: el portafolio encadena el TWR de cierre con el movimiento intradía; el IPSA solo si hay lectura de hoy
-  const _evoP=_lvLbl?+(100*(1+L.ret)*(_lv.val/L.val)).toFixed(2):null;
-  const _evoI=(_lvLbl&&_ipsaLiveB)?+(100*(1+L.ipsaRet)*_ipsaLiveB).toFixed(2):null;
-  const evoSeriesG=_lvLbl?[Object.assign({},evoSeries[0],{vals:evoSeries[0].vals.concat([_evoP])}),Object.assign({},evoSeries[1],{vals:evoSeries[1].vals.concat([_evoI])})]:evoSeries;
-  const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?"+(_lvLbl?" · el punto punteado ● es HOY EN VIVO (intradía)":""),svgMulti({series:evoSeriesG,labels:datesG,h:310,id:"invevo",unit:"",signBase:100,ttfmt:ret100,live:!!_lvLbl}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
+  const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",signBase:100,ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
   const ipsaTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(155px,1fr))">${tile("Retorno portafolio",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}${tile("Retorno IPSA",pc(L.ipsaRet*100),"benchmark · mismo período",indigo,col(L.ipsaRet*100))}${tile("Diferencia",pc(L.diff*100),L.diff>=0?"a favor del portafolio":"en contra",indigo,col(L.diff*100))}</div>`;
   const verdict=nd>=1?`<div class="card" style="background:linear-gradient(180deg,#F7FAFF,#fff)"><div class="bd"><div class="note" style="border:none;background:none;margin:0;font-size:14px">Tu portafolio rinde <b style="color:${col(L.ret*100)}">${pc(L.ret*100)}</b> vs el IPSA <b style="color:${col(L.ipsaRet*100)}">${pc(L.ipsaRet*100)}</b> → ${L.diff>=0?`<b style="color:${green}">supera al mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`:`<b style="color:${red}">va bajo el mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`} en estos ${days} días.</div></div></div>`:"";
   // SECCIÓN 3 · CAPM — curva EXIGIDA money-weighted: parte del valor real inicial, crece al retorno exigido y
@@ -3107,12 +3078,7 @@ function viewInvActive(){
   const cseriesR=cseries.map(s=>Object.assign({},s,{vals:_ckIdx.map(k=>s.vals[k])}));
   const cFlows=_ckIdx.map(k=>_dayFlows[k]);
   const capmRangeUI=_dateRangeUI("invCapm",invCapmFrom,invCapmTo,_crOn);
-  // EN VIVO: el valor real se extiende al intradía; la curva exigida repite su último valor (intradía es ≈ plana)
-  const _cLive=!!(_lvLbl&&cDates.length>=2&&cDates[cDates.length-1]===dates[dates.length-1]&&(!invCapmTo||invCapmTo>=liveTodayCL()));
-  const cDatesG=_cLive?cDates.concat([_lvLbl]):cDates;
-  const cseriesG=_cLive?cseriesR.map((s,k)=>{let lastV=null;for(let i=s.vals.length-1;i>=0;i--)if(s.vals[i]!=null&&isFinite(s.vals[i])){lastV=s.vals[i];break;}return Object.assign({},s,{vals:s.vals.concat([k===0?Math.round(_lv.val):lastV])});}):cseriesR;
-  const cFlowsG=_cLive?cFlows.concat([0]):cFlows;
-  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual)"+(_crOn?` · <b>rango: ${cDates[0]||"—"} → ${cDates[cDates.length-1]||"—"}</b>`:"")+" · la curva exigida <b>incluye tus aportes</b> (compras) y se recalcula desde cada operación — así la brecha es solo rentabilidad, no capital"+(_cLive?" · el punto punteado ● es HOY EN VIVO (intradía)":""),cDates.length>=2?svgMulti({series:cseriesG,labels:cDatesG,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:cFlowsG,live:_cLive}):`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,`<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">${capmRangeUI}<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div></div>`):"";
+  const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido","Valor real vs el crecimiento exigido por CAPM ("+PF.erCapm.toFixed(2)+"% anual)"+(_crOn?` · <b>rango: ${cDates[0]||"—"} → ${cDates[cDates.length-1]||"—"}</b>`:"")+" · la curva exigida <b>incluye tus aportes</b> (compras) y se recalcula desde cada operación — así la brecha es solo rentabilidad, no capital",cDates.length>=2?svgMulti({series:cseriesR,labels:cDates,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:cFlows}):`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,`<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">${capmRangeUI}<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div></div>`):"";
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} No es recomendación de inversión.`);
   // HISTORIAL AGRUPADO POR FECHA: varias operaciones el mismo día son varios registros internos (así lo exige
   // el libro y la edición individual), pero el historial muestra UNA fila por día — con la rentabilidad diaria
@@ -3166,18 +3132,13 @@ function viewInvActive(){
   const qNote=`<div class="note" style="margin-top:11px"><b>Calidad del desempeño.</b> El <b>Sharpe realizado</b> mide tu retorno ajustado por la volatilidad efectiva; el <b>information ratio</b> es el retorno extra sobre el IPSA por unidad de riesgo activo (sobre 0,5 es bueno); <b>aciertos vs IPSA</b> es el % de ${fr.us} en que superaste al mercado. El <b>Sharpe, el tracking error y el information ratio</b> se muestran desde los <b>30 días</b> de seguimiento y ≥8 retornos: con menos, anualizar una racha corta (media × ${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}, volatilidad × √${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}) dispara el ratio y produce un Sharpe irreal.${days<60?` El <b>CAGR</b> se muestra solo a partir de los 60 días, porque anualizar un período tan corto produce valores irreales.`:""}</div>`;
   const qualityCard=nd>=2?card("Calidad y desempeño del seguimiento","Métricas ajustadas por riesgo y desempeño relativo al IPSA",qTiles+qNote):"";
   const riskCard=card("Riesgo: VaR vs pérdida real","VaR diario / semanal / mensual y pérdida real, en % y en pesos",riskKp+varTbl+riskNote);
-  // VALOR POR ACCIÓN EN VIVO (intradía) para la composición, el drift y el valor por papel: usa el precio en
-  // vivo donde exista (si no, el cierre). Los cierres, la serie y el TWR no se tocan. _pv/_pTot alimentan solo
-  // esta tarjeta de "Composición actual vs objetivo".
-  const _plx=t=>{try{return (typeof liveOf==="function")?liveOf(t):null;}catch(e){return null;}};
-  const _pv=p=>{const lp=_plx(p.hd.t);return p.sh*((lp!=null)?lp:p.cur);};
+  const _pv=p=>p.sh*p.cur;
   const _pTot=IM.perStock.reduce((a,p)=>a+_pv(p),0)||L.val;
-  const _liveComp=(typeof liveActive==="function")&&liveActive()&&IM.perStock.some(p=>_plx(p.hd.t)!=null);
   const allocItems=IM.perStock.map(p=>({value:_pv(p),color:p.hd.c}));
   const allocLeg=IM.perStock.map(p=>`<span><span class="lgdot" style="background:${p.hd.c}"></span>${p.hd.t} ${((_pv(p)/_pTot)*100).toFixed(1)}%</span>`).join("");
   let mxd=0,mxs=null;IM.perStock.forEach(p=>{const d=Math.abs(_pv(p)/_pTot-p.hd.w);if(d>mxd){mxd=d;mxs=p;}});
-  const driftRows=IM.perStock.map(p=>{const cw=_pv(p)/_pTot,dr=(cw-p.hd.w)*100;return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${(cw*100).toFixed(1)}%</td><td class="r" style="color:${Math.abs(dr)<0.05?muted:(dr>=0?green:red)};font-weight:700">${(dr>=0?"+":"")+dr.toFixed(1)} pp</td><td class="r">${fmtCLP(_pv(p))}${(_plx(p.hd.t)!=null)?' <span style="color:var(--green);font-size:9px;font-weight:800" title="valor EN VIVO (intradía diferido)">●</span>':""}</td></tr>`;}).join("");
-  const allocBody=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><div style="text-align:center;flex-shrink:0">${svgDonut(allocItems)}<div class="legend" style="justify-content:center;max-width:210px;margin:8px auto 0">${allocLeg}</div></div><div style="flex:1;min-width:300px"><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor${_liveComp?" ●":""}</th></tr></thead><tbody>${driftRows}</tbody></table></div></div></div><div class="note" style="margin-top:12px">${_liveComp?'<b style="color:var(--green)">● Valores EN VIVO</b> (intradía diferido ~15 min): los pesos actuales y el valor por acción se mueven con el mercado del día; el objetivo, el drift histórico y el rebalanceo se calculan sobre estos valores del momento. ':""}El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo de compra (por subir o bajar de precio). ${mxs?("La de mayor desviación es <b style='color:"+mxs.hd.c+"'>"+mxs.hd.t+"</b> ("+((_pv(mxs)/_pTot-mxs.hd.w)*100>=0?"+":"")+((_pv(mxs)/_pTot-mxs.hd.w)*100).toFixed(1)+" pp). "):""}Si el drift crece mucho, considera rebalancear para volver a tu asignación objetivo.</div>`;
+  const driftRows=IM.perStock.map(p=>{const cw=_pv(p)/_pTot,dr=(cw-p.hd.w)*100;return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${(cw*100).toFixed(1)}%</td><td class="r" style="color:${Math.abs(dr)<0.05?muted:(dr>=0?green:red)};font-weight:700">${(dr>=0?"+":"")+dr.toFixed(1)} pp</td><td class="r">${fmtCLP(_pv(p))}</td></tr>`;}).join("");
+  const allocBody=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><div style="text-align:center;flex-shrink:0">${svgDonut(allocItems)}<div class="legend" style="justify-content:center;max-width:210px;margin:8px auto 0">${allocLeg}</div></div><div style="flex:1;min-width:300px"><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor</th></tr></thead><tbody>${driftRows}</tbody></table></div></div></div><div class="note" style="margin-top:12px">El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo de compra (por subir o bajar de precio). ${mxs?("La de mayor desviación es <b style='color:"+mxs.hd.c+"'>"+mxs.hd.t+"</b> ("+((_pv(mxs)/_pTot-mxs.hd.w)*100>=0?"+":"")+((_pv(mxs)/_pTot-mxs.hd.w)*100).toFixed(1)+" pp). "):""}Si el drift crece mucho, considera rebalancear para volver a tu asignación objetivo.</div>`;
   const drifts=IM.perStock.map(p=>({p,dr:(p.val/L.val-p.hd.w)*100}));
   const breaches=drifts.filter(d=>Math.abs(d.dr)>5);
   const driftAlert=breaches.length?`<div class="note" style="margin-top:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)"><b>⚠ Alerta de rebalanceo:</b> ${breaches.map(d=>d.p.hd.t+" "+(d.dr>=0?"+":"")+d.dr.toFixed(1)+" pp").join(", ")} ${breaches.length>1?"superan":"supera"} el 5% de desviación respecto al objetivo. Revisa la <b>estrategia de rebalanceo</b> más abajo.</div>`:`<div class="note" style="margin-top:12px;border-color:var(--green-line);background:var(--greenbg);color:var(--green)">✓ Todas las posiciones están dentro de ±5 pp de su objetivo · sin necesidad de rebalancear.</div>`;
@@ -3550,7 +3511,6 @@ function genInvReport(){
 }
 function attachInv(){
   if(modulo!=="inv")return;
-  if(page==="seguimiento"){try{if(typeof liveTick==="function")liveTick();}catch(e){}}   // abrir el Seguimiento dispara una lectura en vivo si toca (gate de 150 s dentro)
   document.querySelectorAll("[data-stksel]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invStkSel=b.dataset.stksel||null;render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (conserva el scroll al aplicar)
   (function(){
@@ -6345,12 +6305,10 @@ function cfgRender(){
     const _apxI=(typeof autopxLastInfo==="function")?autopxLastInfo():null;
     const _apxTxt=AUTOPX_URL?(_apxI?(_apxI.error?("última sync: error ("+(""+_apxI.at).slice(0,10)+")"):("última sync: "+(""+_apxI.at).slice(0,16).replace("T"," ")+" · datos hasta "+(_apxI.lastDate||"—"))):"aún sin sincronizar"):"configura la URL de abajo para activarla";
     const ds=DATASET==="import"&&IMP?("Análisis del sistema ("+IMP.assets.length+" acciones)"):"Análisis del sistema no disponible (faltan datos en la base)";
-    const _liveState=(typeof liveActive==="function"&&liveActive())?(" · última lectura "+liveAgo()+(liveSrc?" · fuente: "+liveSrc:"")):((typeof liveMarketOpen==="function"&&!liveMarketOpen())?" · la Bolsa está cerrada ahora":(liveErr?" · "+liveErr:""));
     body=sec("Actualización automática","La base se actualiza sola al abrir la app (una vez al día) desde tu fuente de cierres",
       row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
       row("Sincronizar ahora",_apxTxt,'<button class="btn btn-pri" id="cfgSyncNow">⟳ Sincronizar cierres</button>',1)+
       row("Completar historia del IPSA","La fuente automática mantiene el índice al día, pero su historia (para β y análisis) se trae una vez desde Stooq",'<button class="btn" id="cfgIpsaFill">🧩 Traer historia del IPSA</button>',1)+
-      row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgLiveOn" ${LIVE_ON?"checked":""}> Precios en vivo (intradía)</label>`,"Mientras la Bolsa está abierta (L–V 09:30–17:15), el <b>valor actual</b> del Home y del Seguimiento se refresca cada ~3 min con precios diferidos ~15 min (Yahoo), etiquetado <b>EN VIVO</b>. <b>No altera tus cierres ni la historia</b>: el TWR, la rentabilidad y los registros siguen sobre los cierres oficiales."+_liveState,'<button class="btn" id="cfgLiveNow" '+(LIVE_ON?"":"disabled")+'>↻ Actualizar en vivo</button>',1)+
       row("Fuente automática de cierres (URL JSON)","Un JSON público actualizado a diario (GitHub Actions → raw.githubusercontent). Formato: {&quot;days&quot;:[{&quot;date&quot;,&quot;ipsa&quot;,&quot;prices&quot;:{...}}]}",`<input id="cfgAutoPx" placeholder="https://raw.githubusercontent.com/usuario/repo/main/data/closes.json" value="${(""+(AUTOPX_URL||"")).replace(/"/g,"&quot;")}" style="${inStyle}">`,1)+
       row("Token de GitHub (opcional)","Hace que «⚡ Forzar actualización» (en Datos) sea de un clic: dispara la corrida y sincroniza. Usa un <b>fine-grained PAT</b> con permiso <b>Actions: Read and write</b> sobre tu repo. Se guarda solo en este navegador. Sin token, el botón abre la pestaña Actions para dispararlo a mano.",`<input id="cfgGhTok" type="password" autocomplete="off" placeholder="${AUTOPX_GH?'•••••••• guardado · pega uno nuevo para reemplazar':'github_pat_… (opcional)'}" value="" style="${inStyle}">`+(AUTOPX_GH?` <button class="btn" id="cfgGhClr" style="margin-top:8px">Quitar token</button>`:""),1))+
       sec("Carga manual","Para poblar historia o registrar un día puntual",
@@ -6438,8 +6396,6 @@ function cfgRender(){
   const _gh=q("#cfgGhTok");if(_gh)_gh.onchange=()=>{const v=(_gh.value||"").trim();if(!v)return;AUTOPX_GH=v;try{localStorage.setItem("inv_autopx_gh",AUTOPX_GH);}catch(e){}_gh.value="";cfgRender();window.alert("Token de GitHub guardado en este navegador.\n\nAhora «⚡ Forzar actualización» (en Datos) dispara la corrida y sincroniza de un clic.");};
   const _ghc=q("#cfgGhClr");if(_ghc)_ghc.onclick=()=>{AUTOPX_GH="";try{localStorage.removeItem("inv_autopx_gh");}catch(e){}cfgRender();};
   const _sn=q("#cfgSyncNow");if(_sn)_sn.onclick=()=>{if(!AUTOPX_URL){window.alert("Primero configura la URL de la fuente automática (campo de abajo).");return;}_sn.disabled=true;_sn.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{try{render();}catch(e){}cfgRender();});};
-  const _lo=q("#cfgLiveOn");if(_lo)_lo.onchange=()=>{if(typeof liveSetOn==="function")liveSetOn(_lo.checked);cfgRender();};
-  const _ln=q("#cfgLiveNow");if(_ln)_ln.onclick=()=>{if(!LIVE_ON)return;_ln.disabled=true;_ln.textContent="↻ Buscando…";Promise.resolve(typeof liveFetch==="function"?liveFetch(true):null).finally(()=>{try{render();}catch(e){}cfgRender();});};
   const _if=q("#cfgIpsaFill");if(_if)_if.onclick=()=>{_if.disabled=true;_if.textContent="🧩 Trayendo historia…";
     ipsaBackfill(2).then(r=>{
       if(r.ok)window.alert("Historia del IPSA cargada desde Stooq.\n\n• "+r.n+" día(s): "+r.from+" → "+r.to+"\n• "+r.added+" nuevo(s) · "+r.updated+" actualizado(s)\n• Seguimientos: "+r.nPts+" punto(s) aplicados.");
@@ -6697,122 +6653,6 @@ async function mindFetch(manual){
   mindBusy=false;if(manual)render();else bgRender();   // el refresco AUTOMÁTICO no repinta a cada rato (cadencia de fondo)
 }
 
-/* ══════════════════ PRECIOS EN VIVO (intradía, diferido ~15 min · Yahoo) ══════════════════
-   Capa de SOLO VISUALIZACIÓN, NUNCA persistente: da el "valor actual" del portafolio mientras la Bolsa está
-   abierta, sin tocar la base de CIERRES (PRICEDB) ni la historia/TWR. Los cierres oficiales siguen siendo la
-   única fuente de la verdad del seguimiento; esto es un vistazo del día, etiquetado "EN VIVO" con su hora.
-   Fuente: Yahoo (v7 quote .SN) vía proxies CORS — mismo camino probado del petróleo; si falla, se muestran los
-   cierres sin ruido. Se refresca solo cuando: activado, pestaña visible y la Bolsa de Santiago en horario. */
-let LIVE={},liveTs=null,liveBusy=false,liveErr="",liveSrc="",_liveTimer=null,_liveLastTry=0;
-let LIVE_ON=(function(){try{const v=localStorage.getItem("inv_live_on");return v==null?true:v==="1";}catch(e){return true;}})();   // opt-in por defecto (el usuario lo pidió); toggle en Configuración → Datos
-const LIVE_SYM={SANTANDER:"BSANTANDER",LATAM:"LTM"};   // símbolo Yahoo por ticker (resto = TICKER.SN)
-function liveSymOf(t){return (LIVE_SYM[t]||t)+".SN";}
-function liveTickFromSym(sym){const base=(""+sym).replace(/\.SN$/i,"").toUpperCase();for(const k in LIVE_SYM)if(LIVE_SYM[k]===base)return k;return base;}
-/* ¿la Bolsa de Santiago está en horario? L–V 09:30–17:15 hora de Chile (subasta de cierre incluida) */
-function liveMarketOpen(){try{
-  const p=new Intl.DateTimeFormat("en-US",{timeZone:"America/Santiago",weekday:"short",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date());
-  const g=k=>{const x=p.find(o=>o.type===k);return x?x.value:"";};
-  const wd=g("weekday");if(["Sat","Sun"].indexOf(wd)>=0)return false;
-  let hh=+g("hour");if(hh===24)hh=0;const mm=+g("minute"),mins=hh*60+mm;
-  return mins>=570&&mins<=1035;   // 09:30–17:15
-}catch(e){return false;}}
-/* ticker → union de acciones con posición ABIERTA hoy en TODAS las carteras (lo que hay que valorizar) */
-function liveHeldTickers(){const set={};try{CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{(p.holdings||[]).forEach(h=>{if(h&&h.t)set[h.t]=1;});});});}catch(e){}return Object.keys(set);}
-/* precio en vivo de un ticker SOLO si es fresco (marca de tiempo de HOY, hora de Santiago): un valor de ayer
-   jamás se muestra como "en vivo". Devuelve null si no aplica → el llamador cae al último cierre. */
-function liveDayStamp(ts){try{return new Date(ts).toLocaleDateString("en-CA",{timeZone:"America/Santiago"});}catch(e){return null;}}
-function liveTodayCL(){return new Date().toLocaleDateString("en-CA",{timeZone:"America/Santiago"});}
-function liveOf(t){if(!LIVE_ON)return null;const o=LIVE[t];if(!o||!(o.px>0))return null;if(liveDayStamp(o.ts)!==liveTodayCL())return null;return o.px;}
-function liveActive(){if(!LIVE_ON)return false;const today=liveTodayCL();return Object.keys(LIVE).some(t=>{const o=LIVE[t];return o&&o.px>0&&liveDayStamp(o.ts)===today;});}
-function liveAgo(){if(!liveTs)return "";const m=Math.round((Date.now()-new Date(liveTs).getTime())/60000);if(m<1)return "recién";if(m<60)return "hace "+m+" min";return "hace "+Math.round(m/60)+" h";}
-function liveHHMM(ts){try{return new Date(ts||liveTs).toLocaleTimeString("es-CL",{timeZone:"America/Santiago",hour:"2-digit",minute:"2-digit",hour12:false});}catch(e){return "";}}
-/* pastilla "EN VIVO" reutilizable (verde, con hora del último dato) */
-function liveBadge(extra){if(!liveActive())return "";return `<span class="live-pill" title="Precios intradía diferidos ~15 min (Yahoo). NO alteran tus cierres ni la historia: son un vistazo del valor de hoy mientras la Bolsa está abierta. Última lectura ${liveAgo()}.">● EN VIVO · ${liveHHMM()}${extra||""}</span>`;}
-/* ¿corresponde dibujar el punto EN VIVO de HOY en un gráfico? Solo si hay lecturas frescas y la fecha de hoy
-   (Santiago) es POSTERIOR al último cierre graficado — nunca pisa un día que ya tiene cierre. Devuelve la
-   etiqueta del punto (o null). Los gráficos lo dibujan aparte (punteado/pulsante): la historia no cambia. */
-function liveChartLbl(lastDate){if(!liveActive())return null;if(!(liveTodayCL()>(lastDate||"")))return null;return "● "+liveHHMM();}
-/* VALOR EN VIVO del portafolio activo: recalcula el último valor usando el precio en vivo donde exista (si no,
-   el último cierre). NO toca IM.series/history. Devuelve null si no hay ningún precio en vivo aplicable. */
-function liveOverlay(IM){
-  if(!IM||!IM.perStock||!liveActive())return null;
-  let val=0,used=0;const byStock={};
-  IM.perStock.forEach(p=>{const lp=liveOf(p.hd.t);const px=(lp!=null)?lp:p.cur;byStock[p.hd.t]={px,live:lp!=null};if(lp!=null)used++;val+=(p.sh||0)*px;});
-  if(!used)return null;
-  return {val,byStock,used,aport:IM.aport,gain:val-IM.aport,retPct:IM.aport>0?(val-IM.aport)/IM.aport*100:0};
-}
-/* URL del live.json que publica GitHub Actions cada 15 min (rama live-data): el runner llega a Yahoo sin CORS
-   ni proxies — la fuente EN VIVO más fiable. Derivada de la fuente de cierres ya configurada (AUTOPX_URL). */
-function liveJsonUrl(){try{
-  if(!AUTOPX_URL)return "";
-  const u=new URL(AUTOPX_URL);
-  if(/(^|\.)raw\.githubusercontent\.com$/i.test(u.hostname)){const seg=u.pathname.split("/").filter(Boolean);if(seg.length>=2)return u.origin+"/"+seg[0]+"/"+seg[1]+"/live-data/data/live.json";}
-  return AUTOPX_URL.replace(/closes\.json.*$/,"live.json");   // servidor propio: mismo directorio
-}catch(e){return "";}}
-async function liveFetch(manual){
-  if(liveBusy)return;const held=liveHeldTickers();if(!held.length){return;}
-  liveBusy=true;_liveLastTry=Date.now();if(manual)render();
-  liveErr="";
-  let got=0;
-  // ── CAPA 1: live.json de GitHub Actions (cada 15 min, sin CORS) — el camino que no depende de proxies ──
-  const lurl=liveJsonUrl();
-  if(lurl){try{
-    const j=await mktGet(lurl+(lurl.indexOf("?")<0?"?":"&")+"t="+Date.now(),"json",9000);
-    const today=liveTodayCL(),qs=(j&&j.quotes)||{};
-    held.forEach(t=>{const q=qs[t];if(q&&q.px>0&&liveDayStamp(q.ts)===today){LIVE[t]={px:+q.px,ts:+q.ts,chg:(q.chg!=null&&isFinite(+q.chg))?+q.chg:null};got++;}});
-    const qi=j&&j.ipsa;if(qi&&qi.px>0&&liveDayStamp(qi.ts)===today)LIVE.IPSA={px:+qi.px,ts:+qi.ts,chg:(qi.chg!=null&&isFinite(+qi.chg))?+qi.chg:null};
-    if(got){liveTs=j.updatedAt||new Date().toISOString();liveSrc="GitHub (cada 15 min)";}
-  }catch(e){liveErr="live.json: "+String((e&&e.message)||e).slice(0,50);}}
-  const prox=u=>[u,"https://corsproxy.io/?url="+encodeURIComponent(u),"https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u),"https://api.allorigins.win/raw?url="+encodeURIComponent(u),"https://thingproxy.freeboard.io/fetch/"+u];
-  // ── CAPA 2 (respaldo): Yahoo v7 quote en lote vía proxies CORS del navegador ──
-  if(!got){
-    const qurl="https://query1.finance.yahoo.com/v7/finance/quote?symbols="+encodeURIComponent(held.map(liveSymOf).join(","));
-    for(const u of prox(qurl)){
-      try{const txt=await mktGet(u,"text",9000);const j=(typeof txt==="string")?JSON.parse(txt):txt;
-        const arr=j&&j.quoteResponse&&j.quoteResponse.result;if(!Array.isArray(arr)||!arr.length)continue;
-        arr.forEach(q=>{const px=+q.regularMarketPrice,ts=q.regularMarketTime?(+q.regularMarketTime*1000):Date.now();if(isFinite(px)&&px>0){const t=liveTickFromSym(q.symbol);LIVE[t]={px:+px,ts,chg:(q.regularMarketChangePercent!=null&&isFinite(+q.regularMarketChangePercent))?+q.regularMarketChangePercent:null};got++;}});
-        if(got)break;
-      }catch(e){liveErr=String((e&&e.message)||e).slice(0,60);}
-    }
-  // ── CAPA 3 (último respaldo): v8 chart por símbolo (sin crumb), EN PARALELO, con % del día ──
-    if(!got){
-      await Promise.allSettled(held.map(async t=>{
-        const yu="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(liveSymOf(t))+"?interval=5m&range=1d";
-        for(const u of prox(yu)){try{const txt=await mktGet(u,"text",9000);const j=JSON.parse(txt);const m=j.chart&&j.chart.result&&j.chart.result[0]&&j.chart.result[0].meta;const mp=m&&+m.regularMarketPrice,mt=m&&m.regularMarketTime?(+m.regularMarketTime*1000):Date.now();const pc=m&&+(m.chartPreviousClose||m.previousClose);if(isFinite(mp)&&mp>0){LIVE[t]={px:+mp,ts:mt,chg:(isFinite(pc)&&pc>0)?+((mp/pc-1)*100).toFixed(2):null};got++;return;}}catch(e){}}
-      }));
-    }
-    if(got){liveTs=new Date().toISOString();liveSrc="Yahoo (proxy del navegador)";}
-  }
-  if(got)liveErr="";
-  else if(!liveErr)liveErr="la fuente de precios en vivo no respondió (se muestran los cierres)";
-  liveBusy=false;
-  if(manual){render();return;}
-  // repinte del refresco AUTOMÁTICO: el poller corre cada ~3 min, así que un render por lectura no "salta"
-  // (no es el caso de los refrescos de fondo cada pocos segundos). Solo si el precio en vivo cambia algo, la
-  // pestaña está visible, no se está escribiendo en un formulario y estás en una vista que lo muestra.
-  if(got&&liveActive()){try{
-    const ae=document.activeElement,typing=ae&&/^(INPUT|TEXTAREA|SELECT)$/i.test(ae.tagName);
-    const onLiveView=(modulo==="inicio")||(modulo==="inv"&&page==="seguimiento");
-    if(!typing&&onLiveView&&(typeof document==="undefined"||document.visibilityState!=="hidden"))render();
-  }catch(e){}}
-}
-/* poller: refresca cada ~3 min SOLO con la app activada, pestaña visible y la Bolsa abierta. Se auto-agenda. */
-function liveTick(){try{
-  if(LIVE_ON&&!liveBusy&&liveMarketOpen()&&(typeof document==="undefined"||document.visibilityState!=="hidden")&&(Date.now()-_liveLastTry>150e3))liveFetch(false);
-}catch(e){}}
-function liveStart(){if(_liveTimer)return;try{liveTick();_liveTimer=setInterval(liveTick,180e3);
-  if(typeof document!=="undefined")document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")liveTick();});
-}catch(e){}}
-function liveSetOn(on){LIVE_ON=!!on;try{localStorage.setItem("inv_live_on",LIVE_ON?"1":"0");}catch(e){}if(LIVE_ON){liveStart();liveTick();}render();}
-/* DELTA en vivo del patrimonio TOTAL (todas las carteras): Σ (valor en vivo − valor de cierre) por proyecto.
-   Aditivo y sin tocar clientStats — el Home suma este delta al total y muestra la pastilla EN VIVO. */
-function liveTotalDelta(){
-  if(!liveActive())return {delta:0,used:0};
-  let delta=0,used=0;
-  try{CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{if(!(p.weeks||[]).length||!(p.holdings||[]).length)return;
-    withProject(p,function(){try{const IM=invMetrics();const ov=liveOverlay(IM);if(ov){delta+=(ov.val-IM.last.val);used+=ov.used;}}catch(e){}});});});}catch(e){}
-  return {delta,used};
-}
 /* indicadores VENCIDOS: se refrescan SOLOS al abrir Home/Mercados. mindLastTry evita el reintento en bucle cuando
    la fuente no responde (reintenta cada 10 min como máximo). */
 let mindLastTry=0;
@@ -7427,15 +7267,11 @@ function analysisName(id){const a=analysisList().find(x=>x.id===String(id));retu
 function scenName(id){const s=(SCEN||[]).find(x=>String(x.id)===String(id));return s?s.name:"(no disponible)";}
 function withProject(p,fn){const _PF=PF,_W=WEEKS;PF=p;WEEKS=p.weeks||[];try{return fn();}finally{PF=_PF;WEEKS=_W;}}
 function projSummary(p,opts){return withProject(p,()=>{const IM=invMetrics();const inv0=p.amount||0;
-  const _live=!!(opts&&opts.live);
+  
   const since=(p.weeks&&p.weeks.length&&p.weeks[0].date)||p.date||null;   // inicio del proyecto: fecha de la compra inicial (o de creación si aún no invierte)
   if(!IM)return {invested:inv0,value:inv0,gain:0,gainPct:0,gainNet:0,gainNetPct:0,fees:0,hasData:false,beta:p.bp||0,sharpe:p.sharpe||0,alphaReal:null,nrec:(p.weeks||[]).length,since};
   const L=IM.last,inv=IM.aport;
-  // VALOR EN VIVO opt-in (Home/Proyectos): el valor y la ganancia usan el precio intradía; las SERIES/TWR/β
-  // quedan sobre cierres (la historia no se toca). Por defecto (sin opts.live) todo es cierre — el agente y
-  // los informes PDF nunca ven precios en vivo.
-  let val=L.val,liveOn=false;
-  if(_live){try{const ov=(typeof liveOverlay==="function")?liveOverlay(IM):null;if(ov){val=ov.val;liveOn=true;}}catch(e){}}
+  const val=L.val;
   const gain=val-inv;
   let fees=0;try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{fees+=brokerFee(x.monto);});}catch(e){}
   const gainNet=gain-fees;
@@ -7449,7 +7285,7 @@ function projSummary(p,opts){return withProject(p,()=>{const IM=invMetrics();con
   const _perDate=IM.series.filter((s,i,a)=>i===a.length-1||a[i+1].date!==s.date);
   const serie=_perDate.map(s=>Math.round(s.val));
   const serieRet=_perDate.map(s=>+(100*(1+s.ret)).toFixed(2));
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since,live:liveOn,closeValue:L.val};});}
+  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
    mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
@@ -7886,7 +7722,7 @@ function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=loc
 function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.forEach(p=>{try{const s=projSummary(p);inv+=s.invested;val+=s.value;}catch(e){}});return {inv,val,gain:val-inv,pct:inv>0?(val-inv)/inv*100:0,n:ps.length};}
 /* Resumen de gestión por cliente: aportado/retirado brutos, valor, ganancia y acciones distintas */
 function clientStats(id,opts){
-  const _live=!!(opts&&opts.live);
+  
   const ps=clientProjects(id)||[];
   let aportado=0,retirado=0,value=0,realized=0,fees=0,withData=0,betaNum=0,betaW=0;const tickers={};
   ps.forEach(p=>{try{withProject(p,function(){
@@ -7894,7 +7730,6 @@ function clientStats(id,opts){
     if(L&&IM&&L.tx&&L.tx.length){
       L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;fees+=brokerFee(x.monto);});
       pv=IM.last.val;
-      if(_live){try{const ov=(typeof liveOverlay==="function")?liveOverlay(IM):null;if(ov)pv=ov.val;}catch(e){}}   // valor EN VIVO (intradía) para el Home; el cierre/historia no se tocan
       realized+=(L.realized||[]).reduce((a,r)=>a+r.gain,0);
       Object.keys(L.sh).forEach(t=>{if((L.sh[t]||0)>1e-6)tickers[t]=1;});
       withData++;
@@ -7908,7 +7743,7 @@ function clientStats(id,opts){
     if(pv>0&&bp>0){betaNum+=bp*pv;betaW+=pv;}
   });}catch(e){}});
   const gain=value+retirado-aportado,gainNet=gain-fees,pct=aportado>0?gainNet/aportado*100:0;
-  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0,live:_live&&(typeof liveActive==="function"&&liveActive())};
+  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
 }
 /* perfil de riesgo por cliente (namespaced) + chip visual */
 function clientProfile(id){if(id===activeClient)return invProfile;try{const v=localStorage.getItem("inv_profile_v1__"+id);return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -8299,10 +8134,10 @@ function investorScore(){
 }
 function investorScoreOf(t){try{const v=investorScore();if(!v)return null;const r=v.rows.find(x=>x.t===t);return r?r.score:null;}catch(e){return null;}}
 function homeData(){
-  const clients=CLIENTS.map(c=>({c,s:clientStats(c.id,{live:true})}));
-  const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;a.live=a.live||!!x.s.live;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0,live:false});
+  const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
+  const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0,live:false});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p,{live:true});projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,betaR:(s.betaR!=null?s.betaR:null),twr:(s.twr!=null?s.twr:null),sharpeR:(s.sharpeR!=null?s.sharpeR:null),vol:(s.vol!=null?s.vol:null),alphaReal:(s.alphaReal!=null?s.alphaReal:null),nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],since:s.since||null,live:s.live,closeValue:s.closeValue});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,betaR:(s.betaR!=null?s.betaR:null),twr:(s.twr!=null?s.twr:null),sharpeR:(s.sharpeR!=null?s.sharpeR:null),vol:(s.vol!=null?s.vol:null),alphaReal:(s.alphaReal!=null?s.alphaReal:null),nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],since:s.since||null});}catch(e){}});});
   return {clients,T,projs};
 }
 /* serie agregada de patrimonio (alineada por la cola) para el sparkline del hero */
@@ -8501,21 +8336,17 @@ function viewHome(){
   // El hero dibuja la RENTABILIDAD NETA (no el patrimonio: los aportes lo hacían ver como un escalón plano).
   const _mtH=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
   const patSeries=(_mtH&&_mtH.netPct&&_mtH.netPct.length>1)?_mtH.netPct:aggSeries(D.projs);
-  // OVERLAY EN VIVO del Home: homeData() ya trae T (totales) y cada proyecto con el valor INTRADÍA (opts.live);
-  // la rentabilidad neta, las curvas y los registros siguen sobre cierres. Etiquetado con la pastilla EN VIVO.
-  const _liveOnHome=!!T.live;
   const Tvalue=T.value,Tgain=T.gain,TgainNet=T.gainNet;
-  const _closeVal=D.projs.reduce((a,p)=>a+((p.hasData&&p.closeValue!=null)?p.closeValue:(p.val||0)),0);   // valor de CIERRE de referencia (para mostrarlo al lado del en vivo)
   const Tpct=T.aportado>0?TgainNet/T.aportado*100:0;
   const _hpos=TgainNet>=0,_hcol=_hpos?"#34D399":"#FB7185";
   const hero=`<div class="home-hero ${_hpos?"pos":"neg"}">
-    <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO${_liveOnHome?` &nbsp;<span class="live-pill" title="Valor con precios intradía diferidos ~15 min (Yahoo). Tu rentabilidad neta, la curva y los registros siguen sobre los cierres oficiales. Última lectura ${liveAgo()}.">● EN VIVO · ${liveHHMM()}</span>`:""}</div>
+    <div class="hh-l"><div class="hh-eyebrow">PATRIMONIO TOTAL GESTIONADO</div>
       <div class="hh-val" style="color:${_hcol}">${fmtCLP(Tvalue)}</div>
-      <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}${_liveOnHome?" · cierre "+fmtCLP(_closeVal):""}</div></div>
+      <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}</div></div>
     ${patSeries.length>1?`<div class="hh-c" title="Rentabilidad neta en el tiempo">${heroSpark(patSeries)}</div>`:""}
     <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(TgainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
-  const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones"+(_liveOnHome?" · <b>valor EN VIVO</b> (intradía diferido); ganancia/rentabilidad neta netas de comisiones sobre cierres":""),`<div class="tiles-consol">
-    ${tile("Valor actual"+(_liveOnHome?" ●":""),fmtCLP(Tvalue),(_liveOnHome?"EN VIVO ~15 min · cierre "+fmtCLP(_closeVal):"a últimos precios")+" · "+(Tgain>=0?"sobre":"bajo")+" el capital aportado",indigo,Tgain>=0?green:red,"tw2")}
+  const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles-consol">
+    ${tile("Valor actual",fmtCLP(Tvalue),"a últimos precios · "+(Tgain>=0?"sobre":"bajo")+" el capital aportado",indigo,Tgain>=0?green:red,"tw2")}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
     ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
     ${(()=>{const _gbp=T.aportado>0?Tgain/T.aportado*100:0;return tile("Ganancia bruta",sg(Tgain)+`<div style="font-size:.82em;font-weight:800;letter-spacing:-.2px;color:${col(_gbp)};margin-top:2px">${(_gbp>=0?"+":"")+_gbp.toFixed(2)}%</div>`,"bruta · antes de comisiones",indigo,Tgain>=0?green:red);})()}
@@ -8538,23 +8369,12 @@ function viewHome(){
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
         // etiqueta MES/AÑO: "DD/MM" se repetiría idéntico entre años
         const labels=rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4));
-        // EN VIVO: el IPSA intradía de HOY como punto punteado al final de la curva mensual (solo visual)
-        const _iLv=(typeof liveOf==="function")?liveOf("IPSA"):null;
-        const _iLive=_iLv!=null&&liveTodayCL()>(_ips.lastDate||"");
-        const iVals=_iLive?rs.map(x=>x.v).concat([+_iLv]):rs.map(x=>x.v);
-        const iLbls=_iLive?labels.concat(["● "+liveHHMM(LIVE.IPSA&&LIVE.IPSA.ts)]):labels;
-        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:iVals,w:2.3,op:1}],labels:iLbls,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts",live:_iLive})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">${cap}${_iLive?" · ● HOY en vivo":""}</div></div></div>`;}
+        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div></div>`;}
       else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes en esta ventana</div></div></div>`;
     }catch(e){}
     const _ipEst=(typeof ipsaIsSynth==="function")&&ipsaIsSynth(_ips.lastDate);
     const _estTag=_ipEst?` <span style="color:var(--amber);font-weight:700" title="El índice oficial no llegó para esta fecha; este valor es una ESTIMACIÓN reconstruida desde las acciones del IPSA (canasta ponderada por capitalización). Se corrige solo cuando la fuente publica el cierre oficial.">· estimado</span>`:"";
-    // IPSA EN VIVO (intradía ~15 min): si hay lectura fresca de HOY y es un día posterior al último cierre,
-    // se muestra junto al cierre — sin tocar la base ni las celdas de variación (que siguen sobre cierres).
-    let _ipLive="";try{
-      const li=(typeof liveOf==="function")?liveOf("IPSA"):null;
-      if(li!=null&&LIVE.IPSA&&liveTodayCL()>(_ips.lastDate||"")){const lc=LIVE.IPSA.chg;_ipLive=`<span class="live-pill" title="IPSA intradía diferido ~15 min. No altera tus cierres: es un vistazo del índice hoy. Última lectura ${liveHHMM(LIVE.IPSA.ts)}.">● HOY ${(+li).toLocaleString("es-CL",{maximumFractionDigits:2})}${lc!=null?` (${lc>=0?"+":""}${(+lc).toLocaleString("es-CL",{maximumFractionDigits:2})}%)`:""}</span>`;}
-    }catch(e){}
-    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}${_estTag}${_ipLive?" "+_ipLive:""}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
+    const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}${_estTag}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
     return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base",body);
   })();
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
@@ -8563,7 +8383,7 @@ function viewHome(){
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span>${sd?`<span title="Inicio del proyecto">desde ${sd}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,40);
-    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras${p.live?" · valor EN VIVO (intradía diferido ~15 min); cierre "+fmtCLP(p.closeValue):""}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span>${p.live?'<span class="live-pill" title="Valor y rentabilidad EN VIVO (intradía diferido ~15 min)">● VIVO</span>':""}</div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span style="color:${pos?green:red};font-weight:800" title="Valor actual · verde = sobre tu capital aportado">${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
+    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span style="color:${pos?green:red};font-weight:800" title="Valor actual · verde = sobre tu capital aportado">${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     const stat=(l,v,c,lc,ti)=>`<div class="fw-stat"${ti?` title="${ti}"`:""}><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
@@ -8571,7 +8391,7 @@ function viewHome(){
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,112);
     // fila 1: dinero y rentabilidad · fila 2: métricas ajustadas por riesgo (todas REALIZADAS, no las esperadas)
     const aR=p.alphaReal!=null?p.alphaReal*100:null;
-    const row1=`<div class="fw-row">${stat(`Valor${p.live?' <span class="live-pill" title="Valor EN VIVO (intradía diferido ~15 min) · cierre '+fmtCLP(p.closeValue)+'">● VIVO</span>':""}`,fmtCLP(p.val),pos?green:red,null,p.live?("Valor EN VIVO (intradía diferido ~15 min) · cierre "+fmtCLP(p.closeValue)):"")}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2)+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
+    const row1=`<div class="fw-row">${stat("Valor",fmtCLP(p.val),pos?green:red)}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2)+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
     const row2=`<div class="fw-row fw-risk">`
       +stat("β real",p.betaR!=null?p.betaR.toFixed(2):"—",null,"ntr",p.betaR!=null?("β REALIZADO: sensibilidad efectiva al IPSA por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")"):("β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)))
       +stat("α Jensen",aR!=null?((aR>=0?"+":"")+aR.toFixed(2)+"%"):"—",aR!=null?(aR>=0?green:red):null,"ntr","α de Jensen REALIZADO: retorno real − el exigido por CAPM para el riesgo de la cartera, en el período transcurrido. Positivo = batiendo lo exigido por su riesgo.")
@@ -8605,12 +8425,7 @@ function viewHome(){
       if(fe)parts.push(`<span style="display:block;color:${red};font-weight:700;font-size:10.5px">↳ comisiones −${fmtCLP(fe)}</span>`);
       if(fl>0&&k>0)parts.push(`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">el % se diluye: la ganancia se reparte sobre el capital nuevo</span>`);
       return parts.join("");});
-    // EN VIVO: punto de HOY = rentabilidad neta con el delta intradía sobre el MISMO capital aportado (los
-    // aportes/comisiones no cambian intradía) — punteado/pulsante, la historia no se toca
-    const _hLbl=(_liveOnHome&&typeof liveChartLbl==="function")?liveChartLbl(mt.dates[mt.dates.length-1]):null;
-    const _liveNet=(_hLbl&&T.aportado>0)?+(lastN+liveTotalDelta().delta/T.aportado*100).toFixed(2):null;
-    const nVals=_liveNet!=null?mt.netPct.concat([_liveNet]):mt.netPct,nDates=_liveNet!=null?mt.dates.concat([_hLbl]):mt.dates;
-    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:nVals,w:2.4,op:1}],labels:nDates,h:210,area:true,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>(+v).toFixed(1)+"%",ttfmt:v=>((v>=0?"+":"")+(+v).toFixed(2)+"%"),live:_liveNet!=null})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2)}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}${_liveNet!=null?` · <b>HOY EN VIVO ${(_liveNet>=0?"+":"")+_liveNet.toFixed(2)}%</b> (punto punteado ●)`:""}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
+    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>(+v).toFixed(1)+"%",ttfmt:v=>((v>=0?"+":"")+(+v).toFixed(2)+"%")})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2)}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
     return card("Rentabilidad neta en el tiempo","Historia de la rentabilidad neta de todas tus carteras · (valor − aportado − comisiones) sobre el capital aportado a cada fecha · el último punto es la misma «Rentabilidad» del resumen de arriba",body);
   })();
   // indicadores que se movieron
@@ -8650,12 +8465,8 @@ function viewHome(){
     const on=!!(homeTotFrom||homeTotTo);
     const dts=_ik.map(k=>mt.dates[k]),vals=_ik.map(k=>Math.round(mt.totals[k])),fls=_ik.map(k=>(mt.flows&&mt.flows[k])||0);
     const rangeUI=`<div style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap;white-space:nowrap"><span class="genl" style="margin:0">Desde</span><input type="date" id="homeTotF" value="${homeTotFrom||""}" min="${mt.dates[0]}" max="${mt.dates[mt.dates.length-1]}" style="width:118px" aria-label="Desde"><span class="genl" style="margin:0">hasta</span><input type="date" id="homeTotT" value="${homeTotTo||""}" min="${mt.dates[0]}" max="${mt.dates[mt.dates.length-1]}" style="width:118px" aria-label="Hasta">${on?`<button class="btn" id="homeTotAll" style="padding:.28rem .5rem;font-size:10.5px" title="Ver todo el historial">✕ Todo</button>`:""}</div>`;
-    // EN VIVO: el patrimonio total de HOY (cierres + delta intradía) como punto punteado al final
-    const _hLbl2=(_liveOnHome&&typeof liveChartLbl==="function")?liveChartLbl(mt.dates[mt.dates.length-1]):null;
-    const _pLive=!!(_hLbl2&&dts.length>=2&&dts[dts.length-1]===mt.dates[mt.dates.length-1]&&(!homeTotTo||homeTotTo>=liveTodayCL()));
-    const dtsG=_pLive?dts.concat([_hLbl2]):dts,valsG=_pLive?vals.concat([Math.round(vals[vals.length-1]+liveTotalDelta().delta)]):vals,flsG=_pLive?fls.concat([0]):fls;
     const body=dts.length>=2
-      ?`<div class="ipsa-chart">${svgMulti({series:[{label:"Patrimonio",c:indigo,vals:valsG,w:2.6,op:1}],labels:dtsG,h:210,yfmt:fmtK,id:"mgpat",unit:"",area:true,delta:true,flows:flsG,live:_pLive})}<div class="genl" style="margin:6px 0 0;text-align:right">${dts.length} fechas · patrimonio ${fmtCLP(vals[vals.length-1])} al ${dts[dts.length-1]}${_pLive?` · <b>HOY EN VIVO ${fmtCLP(valsG[valsG.length-1])}</b> (punto punteado ●)`:""}</div></div>`
+      ?`<div class="ipsa-chart">${svgMulti({series:[{label:"Patrimonio",c:indigo,vals,w:2.6,op:1}],labels:dts,h:210,yfmt:fmtK,id:"mgpat",unit:"",area:true,delta:true,flows:fls})}<div class="genl" style="margin:6px 0 0;text-align:right">${dts.length} fechas · patrimonio ${fmtCLP(vals[vals.length-1])} al ${dts[dts.length-1]}</div></div>`
       :`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`;
     return card("Patrimonio total gestionado","Valor total de todas tus carteras en el tiempo (CLP)"+(on?` · <b>rango: ${dts[0]||"—"} → ${dts[dts.length-1]||"—"}</b>`:"")+" · en los días de compra el salto es <b>aporte de capital</b>, no rentabilidad (esa va en la curva neta de arriba) · pasa el mouse para el detalle del día",body,rangeUI);
   })();
@@ -8773,7 +8584,6 @@ function scoreAllModal(){
   try{attachTableSort();}catch(e){}
 }
 function attachHome(){
-  try{if(typeof liveTick==="function")liveTick();}catch(e){}   // abrir el Home dispara una lectura en vivo si toca (gate de 150 s dentro)
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
     try{if(cid!==activeClient){activeClient=cid;localStorage.setItem("inv_active_client",cid);if(typeof clientLoad==="function")clientLoad();}}catch(e){}
     const np=+pid;activeId=(isFinite(np)&&String(np)===pid)?np:pid;try{saveProjects();syncProj();}catch(e){}
@@ -8838,7 +8648,6 @@ try{autobkTick();}catch(e){}
 try{autopxAutoRun();}catch(e){}   // sincroniza los cierres del día desde la fuente automática (si está configurada)
 authInit();
 setTimeout(function(){try{cloudBoot();}catch(e){}},900);   // nube: si este navegador está vacío y el servidor tiene respaldo, ofrece restaurarlo
-setTimeout(function(){try{if(LIVE_ON&&typeof liveStart==="function")liveStart();}catch(e){}},1200);   // precios en vivo: arranca el poller (solo refresca con la Bolsa abierta y la pestaña visible)
 </script>
 </body>
 </html>
