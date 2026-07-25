@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-07-24T23:09:22.719Z",
+ "updatedAt": "2026-07-25T13:54:08.581Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -7,14 +7,14 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | cor",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=HTTP 500 | codetabs=HTTP 522 | cor",
   "yahoo ^IPSA period: 1 día(s)"
  ],
  "ipsaSynth": [
-  "2026-07-21=10977.7 (27 acc, 0.83%)",
-  "2026-07-22=11040.38 (27 acc, 0.57%)",
-  "2026-07-23=10947.59 (27 acc, -0.84%)",
-  "2026-07-24=10983.77 (28 acc, 0.33%)"
+  "2026-07-21=10977.74 (27 acc, 0.83%)",
+  "2026-07-22=11040.4 (27 acc, 0.57%)",
+  "2026-07-23=10947 (27 acc, -0.85%)",
+  "2026-07-24=10984.34 (28 acc, 0.34%)"
  ],
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
@@ -26,7 +26,7 @@
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 1 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=HTTP 500 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 1 día(s)"
  ],
  "days": [
   {
@@ -16636,7 +16636,7 @@
     "ITAUCL": 21301,
     "CAP": 6247.7
    },
-   "ipsa": 10977.7,
+   "ipsa": 10977.74,
    "ipsaSynth": true
   },
   {
@@ -16670,7 +16670,7 @@
     "ITAUCL": 21500,
     "CAP": 6300
    },
-   "ipsa": 11040.38,
+   "ipsa": 11040.4,
    "ipsaSynth": true
   },
   {
@@ -16705,7 +16705,7 @@
     "ITAUCL": 21300,
     "CAP": 6130
    },
-   "ipsa": 10947.59,
+   "ipsa": 10947,
    "ipsaSynth": true
   },
   {
@@ -16740,7 +16740,7 @@
     "ITAUCL": 21490,
     "CAP": 6060
    },
-   "ipsa": 10983.77,
+   "ipsa": 10984.34,
    "ipsaSynth": true
   }
  ]
