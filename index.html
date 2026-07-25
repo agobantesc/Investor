@@ -1205,6 +1205,18 @@
   .ops-stat:hover{border-color:var(--line2);box-shadow:var(--sh);}
   .ops-stat span{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);}
   .ops-stat b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.015em;}
+  /* Markowitz: composición actual vs óptima (donas + barras de pesos) */
+  .mkw-cmp{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;justify-content:center;}
+  .mkw-don{text-align:center;}
+  .mkw-dt{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;}
+  .mkw-wlist{flex:1;min-width:290px;display:flex;flex-direction:column;gap:9px;}
+  .mkw-wleg{display:flex;gap:14px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;}
+  .mkw-wrow{display:grid;grid-template-columns:92px 1fr 62px;gap:10px;align-items:center;}
+  .mkw-wt{font-size:11.5px;font-weight:800;}
+  .mkw-tracks{display:flex;flex-direction:column;gap:3px;}
+  .mkw-track{height:8px;border-radius:5px;background:var(--soft);overflow:hidden;}
+  .mkw-bar{height:100%;border-radius:5px;}
+  .mkw-wd{font-size:11px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
   /* ── PULIDO v5 (presentación/orden/profesionalismo): jerarquía tipográfica, tablas, tooltips y focos.
      Reglas ADITIVAS al final de la hoja: refinan sin re-maquetar (cero cambios de estructura). ── */
   .ct{font-size:14.5px;letter-spacing:-.015em;}
@@ -7594,6 +7606,50 @@ function mkwCompute(){
   const buys={};deficit.forEach(r=>{buys[r.t]=Math.round(r.delta*cover);});
   return {p,V,A,T,rows,Mc,Mo,outSet,buys,need,cover,mode:mkwMode,sell:mkwSell,wmax:mkwWmax};
 }
+/* FRONTERA EFICIENTE del módulo Markowitz: nube de carteras factibles (pesos aleatorios normalizados),
+   envolvente de Pareto como frontera, la recta del mercado de capitales (solo máx Sharpe), cada acción,
+   la cartera ACTUAL (rombo) y la ÓPTIMA (punto). Todo con los mismos μ/σ/correlaciones de optPrep. */
+function mkwFrontierSVG(R){
+  try{
+    const tickers=R.rows.map(r=>r.t);const P=optPrep(tickers);if(!P||P.n<2)return "";
+    const pstat=w=>{let r=0,v=0;for(let i=0;i<P.n;i++){r+=w[i]*P.mu[i];const ci=P.cov[i];for(let j=0;j<P.n;j++)v+=w[i]*w[j]*ci[j];}return {r,s:Math.sqrt(Math.max(0,v))};};
+    const cloud=[];for(let k=0;k<420;k++){let w=P.mu.map(()=>-Math.log(Math.max(1e-9,Math.random())));const sm=w.reduce((a,b)=>a+b,0);w=w.map(x=>x/sm);cloud.push(pstat(w));}
+    const cur={r:R.Mc.retH,s:R.Mc.sig},opt={r:R.Mo.retH,s:R.Mo.sig};
+    const sing=P.st.map(s=>{const row=R.rows.find(x=>x.t===s.t);return {t:s.t,r:s.a24.ret,s:s.a24.sig,c:row?row.hd.c:"#64748B"};});
+    const frontAll=[...cloud,cur,opt].sort((a,b)=>a.s-b.s);let mxr=-1e9;const fr=[];frontAll.forEach(p=>{if(p.r>mxr){mxr=p.r;fr.push(p);}});
+    const pts=[...cloud,cur,opt,...sing];
+    const smin=Math.min(...pts.map(p=>p.s)),smax=Math.max(...pts.map(p=>p.s));
+    const rmin=Math.min(RF,...pts.map(p=>p.r)),rmax=Math.max(...pts.map(p=>p.r));
+    const W=820,H=330,m={l:58,r:24,t:20,b:46};
+    const spad=(smax-smin)*0.12||1,rpad=(rmax-rmin)*0.1||1;
+    const x0=Math.max(0,smin-spad),x1=smax+spad,y0=rmin-rpad,y1=rmax+rpad;
+    const X=v=>m.l+(v-x0)/(x1-x0)*(W-m.l-m.r),Y=v=>H-m.b-(v-y0)/(y1-y0)*(H-m.t-m.b);
+    let g="";
+    for(let i=0;i<=4;i++){const rv=y0+(y1-y0)*i/4,yy=Y(rv);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end" font-size="10.5" fill="${faint}">${rv.toFixed(0)}%</text>`;}
+    for(let i=0;i<=4;i++){const sv=x0+(x1-x0)*i/4,xx=X(sv);g+=`<line x1="${xx.toFixed(1)}" y1="${m.t}" x2="${xx.toFixed(1)}" y2="${H-m.b}" stroke="${GC}" opacity=".55"/><text x="${xx.toFixed(1)}" y="${H-m.b+16}" text-anchor="middle" font-size="10.5" fill="${faint}">${sv.toFixed(0)}%</text>`;}
+    g+=`<text x="${(m.l+(W-m.l-m.r)/2).toFixed(0)}" y="${H-5}" text-anchor="middle" font-size="11" font-weight="700" fill="${muted}">Riesgo σ (% anual)</text>`;
+    g+=`<text x="13" y="${(m.t+(H-m.t-m.b)/2).toFixed(0)}" text-anchor="middle" font-size="11" font-weight="700" fill="${muted}" transform="rotate(-90 13 ${(m.t+(H-m.t-m.b)/2).toFixed(0)})">Retorno μ (% anual)</text>`;
+    cloud.forEach(p=>{g+=`<circle cx="${X(p.s).toFixed(1)}" cy="${Y(p.r).toFixed(1)}" r="2" fill="var(--accent)" opacity="0.14"/>`;});
+    if(R.mode!=="minvol"&&opt.s>0){const sl=(opt.r-RF)/opt.s,ya=RF+sl*x0,yb=RF+sl*x1;
+      g+=`<line x1="${X(x0).toFixed(1)}" y1="${Y(ya).toFixed(1)}" x2="${X(x1).toFixed(1)}" y2="${Y(yb).toFixed(1)}" stroke="${green}" stroke-width="1.4" stroke-dasharray="5 5" opacity="0.5"/>`;}
+    g+=`<path d="${fr.map((p,i)=>(i?"L":"M")+X(p.s).toFixed(1)+" "+Y(p.r).toFixed(1)).join(" ")}" fill="none" stroke="${indigo}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+    sing.forEach(p=>{g+=`<circle cx="${X(p.s).toFixed(1)}" cy="${Y(p.r).toFixed(1)}" r="3.6" fill="${p.c}" stroke="var(--card)" stroke-width="1.4"/><text x="${X(p.s).toFixed(1)}" y="${(Y(p.r)-7).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="800" fill="${p.c}">${p.t}</text>`;});
+    const dx=X(cur.s),dy=Y(cur.r);
+    g+=`<path d="M${dx.toFixed(1)} ${(dy-6.5).toFixed(1)} L${(dx+6.5).toFixed(1)} ${dy.toFixed(1)} L${dx.toFixed(1)} ${(dy+6.5).toFixed(1)} L${(dx-6.5).toFixed(1)} ${dy.toFixed(1)} Z" fill="${amber}" stroke="var(--card)" stroke-width="1.6"/><text x="${dx.toFixed(1)}" y="${(dy+19).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="${amber}">ACTUAL</text>`;
+    g+=`<circle cx="${X(opt.s).toFixed(1)}" cy="${Y(opt.r).toFixed(1)}" r="6" fill="${green}" stroke="#fff" stroke-width="2"/><text x="${X(opt.s).toFixed(1)}" y="${(Y(opt.r)-10).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="${green}">ÓPTIMA</text>`;
+    window.__mkwFrontGeo={pts:[...sing.map(p=>({x:X(p.s),y:Y(p.r),lbl:p.t,r:p.r,s:p.s})),{x:dx,y:dy,lbl:"Cartera ACTUAL",r:cur.r,s:cur.s},{x:X(opt.s),y:Y(opt.r),lbl:"Cartera ÓPTIMA",r:opt.r,s:opt.s}]};
+    return `<svg id="mkwfront" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+  }catch(e){return "";}
+}
+function mkwAttachFrontier(){
+  const svg=document.getElementById("mkwfront"),G=window.__mkwFrontGeo;if(!svg||!G)return;
+  svg.onmousemove=e=>{const r=svg.getBoundingClientRect();const vx=(e.clientX-r.left)/r.width*820,vy=(e.clientY-r.top)/r.height*330;
+    let bi=-1,bd=420;G.pts.forEach((p,i)=>{const d=(p.x-vx)**2+(p.y-vy)**2;if(d<bd){bd=d;bi=i;}});
+    let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
+    if(bi<0){tt.style.display="none";return;}
+    const p=G.pts[bi];tt.innerHTML=`<b>${p.lbl}</b>Retorno μ ${p.r.toFixed(1)}% anual<span class="ttr">Riesgo σ ${p.s.toFixed(1)}%</span>`;placeTip(tt,e);};
+  svg.onmouseleave=()=>{const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
+}
 function viewMarkowitz(){
   const banner=`<div class="mc-beta">🧪 <b>Markowitz · beta</b> — optimización media-varianza de tu cartera real (máximo Sharpe o mínima volatilidad, sin venta corta). Sugerencia educativa basada en datos históricos; no es asesoría financiera.</div>`;
   const ps=mkwProjects();
@@ -7632,15 +7688,27 @@ function viewMarkowitz(){
       return `<tr><td>${tk(r.hd)}</td><td class="r">${(r.wc*100).toFixed(1)}%</td><td class="r" style="font-weight:800">${(r.wo*100).toFixed(1)}%</td><td class="r" style="color:${(r.wo-r.wc)>=0?green:red}">${((r.wo-r.wc)*100>=0?"+":"")+((r.wo-r.wc)*100).toFixed(1)} pp</td><td class="r">${fmtCLP(r.val)}</td><td class="r">${fmtCLP(r.target)}</td><td class="r">${sug}</td></tr>`;}).join("");
     const coverNote=(!R.sell&&R.need>0)?`<div class="note" style="margin:11px 13px">${R.cover>=1?`✓ Con el aporte de <b>${fmtCLP(R.A)}</b> alcanzas el óptimo <b>sin vender nada</b>: las compras de arriba cubren el 100% del ajuste.`:`Con el aporte de <b>${fmtCLP(R.A)}</b> cubres el <b>${(R.cover*100).toFixed(0)}%</b> del ajuste hacia el óptimo (el ajuste completo requiere ${fmtCLP(R.need)}). El resto exigiría ventas — actívalas arriba para ver el rebalanceo completo.`}</div>`:"";
     const outNote=R.outSet.length?`<div class="note" style="margin:11px 13px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">⚠ Sin datos de análisis (quedan FUERA de la optimización y mantienen su posición): <b>${R.outSet.map(x=>x.hd.t).join(", ")}</b>.</div>`:"";
-    const plan=card("3 · Pesos óptimos y plan de ejecución · "+((""+R.p.name).replace(/</g,"&lt;")),
+    // ── frontera eficiente (riesgo vs retorno) ──
+    const frontSvg=mkwFrontierSVG(R);
+    const frontCard=frontSvg?card("3 · Frontera eficiente: riesgo vs retorno","Cada punto gris es una combinación posible de tus acciones; la curva es la <b>frontera eficiente</b> (máximo retorno para cada nivel de riesgo)"+(R.mode!=="minvol"?" · la línea punteada verde parte de la tasa libre de riesgo y es tangente en la óptima (recta del mercado de capitales)":"")+" · pasa el cursor por los puntos",
+      frontSvg+`<div class="legend" style="margin-top:8px"><span><span class="lgdot" style="background:var(--accent);opacity:.45"></span>Carteras posibles</span><span><span class="lgdot" style="background:${indigo}"></span>Frontera eficiente</span><span><span class="lgdot" style="background:${amber}"></span>Cartera actual</span><span><span class="lgdot" style="background:${green}"></span>Cartera óptima</span><span><span class="lgdot" style="background:#64748B"></span>Acciones individuales</span></div>`):"";
+    // ── composición visual: donas actual vs óptima + barras de pesos por acción ──
+    const donut=key=>svgDonut(R.rows.map(r=>({value:key==="wc"?r.wc:r.wo,color:r.hd.c})));
+    const dLeg=R.rows.map(r=>`<span><span class="lgdot" style="background:${r.hd.c}"></span>${r.t}</span>`).join("");
+    const wmaxBar=Math.max(...R.rows.map(r=>Math.max(r.wc,r.wo)))||1;
+    const wRows=R.rows.map(r=>`<div class="mkw-wrow"><span class="mkw-wt" style="color:${r.hd.c}">${r.t}</span><div class="mkw-tracks"><div class="mkw-track" title="Peso actual: ${(r.wc*100).toFixed(1)}%"><div class="mkw-bar" style="width:${(r.wc/wmaxBar*100).toFixed(1)}%;background:var(--faint);opacity:.55"></div></div><div class="mkw-track" title="Peso óptimo: ${(r.wo*100).toFixed(1)}%"><div class="mkw-bar" style="width:${(r.wo/wmaxBar*100).toFixed(1)}%;background:${r.hd.c}"></div></div></div><span class="mkw-wd" style="color:${Math.abs(r.wo-r.wc)<0.005?muted:((r.wo-r.wc)>=0?green:red)}">${((r.wo-r.wc)*100>=0?"+":"")+((r.wo-r.wc)*100).toFixed(1)} pp</span></div>`).join("");
+    const compCard=card("4 · Composición: actual vs óptima","Los mismos pesos, en visual: dona izquierda = tu cartera de HOY, dona derecha = la sugerida · cada acción con su barra actual (gris) sobre la óptima (color)",
+      `<div class="mkw-cmp"><div class="mkw-don"><div class="mkw-dt">Actual</div>${donut("wc")}</div><div class="mkw-don"><div class="mkw-dt">Óptima</div>${donut("wo")}</div><div class="mkw-wlist"><div class="mkw-wleg"><span style="color:var(--faint)">▬ actual</span><span style="color:var(--accent)">▬ óptima</span></div>${wRows}</div></div><div class="legend" style="justify-content:center;margin-top:11px">${dLeg}</div>`);
+    const plan=card("5 · Pesos óptimos y plan de ejecución · "+((""+R.p.name).replace(/</g,"&lt;")),
       `Objetivo en $ sobre <b>${fmtCLP(R.T)}</b> (valor ${fmtCLP(R.V)}${R.A>0?" + aporte "+fmtCLP(R.A):""}) · plan ${planTitle}`,
       {html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Peso actual</th><th class="r">Peso óptimo</th><th class="r">Δ</th><th class="r">Valor hoy</th><th class="r">Objetivo</th><th class="r">Sugerencia</th></tr></thead><tbody>${rws}</tbody></table></div>${coverNote}${outNote}`,flush:true});
     const note=notecard(`<b>Cómo se calcula.</b> Optimización <b>media-varianza (Markowitz)</b> sin venta corta: busca los pesos que ${R.mode==="minvol"?"minimizan la volatilidad esperada":"maximizan el Sharpe (exceso de retorno por unidad de riesgo)"} usando los retornos históricos (μ), volatilidades (σ) y correlaciones del <b>análisis del sistema</b> — la misma matemática del optimizador del Constructor. El tope del ${R.wmax}% por acción evita soluciones concentradas en un solo papel. <b>Limitaciones:</b> μ y σ son históricos (el futuro puede diferir), la solución es sensible a esos supuestos, y las sugerencias no descuentan comisiones ni impuestos. Úsalo como guía para pensar tus decisiones — no es recomendación de inversión.`);
-    out=met+plan+note;
+    out=met+frontCard+compCard+plan+note;
   }
   return banner+ctrl+out;
 }
 function attachMarkowitz(){
+  mkwAttachFrontier();
   if(modulo!=="markowitz")return;
   document.querySelectorAll("[data-mkw]").forEach(el=>{el.onchange=()=>{const k=el.dataset.mkw;
     if(k==="proj"){mkwProjId=+el.value;mkwRes=null;render();}
