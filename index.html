@@ -3137,6 +3137,33 @@ function viewInvActive(){
     ? `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${indigo}"></span>TWR real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Exigido CAPM</span></div>`
     : `<div class="legend" style="margin:0"><span><span class="lgdot" style="background:${indigo}"></span>Valor real</span><span><span class="lgdot" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div>`;
   const capmChart=nd>=2?card("3 · Análisis CAPM: real vs exigido",_capmSub,cDates.length>=2?_capmSvg:`<div class="note" style="margin:0">El rango elegido tiene menos de <b>2 días</b> con registro. Amplíalo o pulsa <b>✕ Todo</b>.</div>`,`<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">${capmSeg}${capmRangeUI}</div>${_capmLeg}</div>`):"";
+  // ── SECURITY MARKET LINE del período: ¿te pagó el mercado el riesgo sistemático que tomaste? ──
+  // Prorrateada al período del seguimiento (SIN anualizar, coherente con el alpha del tile): la "línea" es el
+  // retorno exigido (1+Rf+β·prima)^años−1 para cada β — por eso la distancia vertical del portafolio a la
+  // línea ES exactamente el alpha realizado. El IPSA real (β=1) muestra cuánto del resultado es MERCADO.
+  const smlCard=(function(){try{
+    if(nd<2||!(IM.elapsedYrs>0))return "";
+    const yrsE=IM.elapsedYrs;
+    const req=b=>(Math.pow(1+(RF+b*PRIMA)/100,yrsE)-1)*100;
+    const bp=PF.bp||1,bR=IM.betaR;
+    const pR=L.ret*100,iR=L.ipsaRet*100;
+    const bmax=Math.max(1.4,bp*1.25,(bR||0)*1.25);
+    const NL=28;const lines=[];for(let i=0;i<NL;i++){const b0=bmax*i/NL,b1=bmax*(i+1)/NL;lines.push({x1:b0,y1:req(b0),x2:b1,y2:req(b1),c:indigo,dash:false});}   // la SML compuesta es levemente curva: polilínea densa
+    const pts=[
+      {x:0,y:req(0),c:muted,label:"Libre de riesgo",r:5},
+      {x:1,y:req(1),c:"#64748B",label:"Mercado exigido",r:5.5},
+      {x:1,y:iR,c:"#475569",label:"IPSA real",shape:"tri",r:7},
+      {x:bp,y:pR,c:indigo,label:(""+PF.name).slice(0,14),shape:"diamond",r:7.5}
+    ];
+    if(bR!=null&&isFinite(bR))pts.push({x:bR,y:pR,c:accentT,label:"β realizado",r:5});
+    const ys=pts.map(p=>p.y).concat([req(bmax),req(0)]);
+    const ymin=Math.min(...ys),ymax=Math.max(...ys);const pad=(ymax-ymin)*0.18||1;
+    const svg=svgScatter({id:"invsml",pts,lines,xmin:0,xmax:bmax,ymin:ymin-pad,ymax:ymax+pad,xlab:"β (riesgo sistemático)",ylab:"Retorno del período (%)",fx:v=>v.toFixed(1),fy:v=>v.toFixed(1)+"%",w:820,h:330});
+    const aP=pR-req(bp),aM=iR-req(1);
+    const leg=`<div class="legend" style="margin-top:8px"><span><span class="lgdot" style="background:${indigo}"></span>SML exigida (Rf ${RF.toFixed(1)}% + β·prima ${PRIMA.toFixed(1)}%, compuesta al período)</span><span><span class="lgdot" style="background:${indigo}"></span>◆ Portafolio</span><span><span class="lgdot" style="background:#475569"></span>▲ IPSA real</span>${bR!=null&&isFinite(bR)?`<span><span class="lgdot" style="background:${accentT}"></span>β realizado</span>`:""}</div>`;
+    const body=svg+leg+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar). Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → queda <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b> — exactamente tu alpha realizado. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} que se le "esperaba" → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${bR!=null&&isFinite(bR)?` El punto pequeño marca tu <b>β realizado</b> (${bR.toFixed(2)}): la sensibilidad efectiva de tus retornos al IPSA en el período.`:""}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
+    return card("Security Market Line: ¿te pagó el riesgo que tomaste?","Retorno del período vs β · la distancia vertical de tu portafolio (◆) a la línea ES el alpha realizado · el IPSA (▲) separa cuánto del resultado es mercado y cuánto gestión · pasa el cursor por los puntos",body);
+  }catch(e){return "";}})();
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
   // HISTORIAL AGRUPADO POR FECHA: varias operaciones el mismo día son varios registros internos (así lo exige
   // el libro y la edición individual), pero el historial muestra UNA fila por día — con la rentabilidad diaria
@@ -3219,7 +3246,7 @@ function viewInvActive(){
       `<div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" data-invtab="operar">⇄ Operar (comprar / vender)</button><button class="btn" data-gomod="proyectos">📁 Proyectos (crear nueva inversión)</button></div>`);
     return projbar+summary+invDetailCard()+opHint;
   }
-  return projbar+invTools+hero+summary+evoChart+valChart+psTbl+allocCard+stkChart+ipsaTiles+verdict+capmKp+capmChart+capmNote+riskCard+qualityCard;
+  return projbar+invTools+hero+summary+evoChart+valChart+psTbl+allocCard+stkChart+ipsaTiles+verdict+capmKp+capmChart+smlCard+capmNote+riskCard+qualityCard;
 }
 
 function compraPreview(){
