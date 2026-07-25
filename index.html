@@ -2768,6 +2768,11 @@ function invMetrics(){
   // asimetría descuadraba Valor actual, Ganancia total y el KPI del día por el monto entero de la posición.
   const lastPx={};PF.holdings.forEach(hd=>{lastPx[hd.t]=b0[hd.t]||0;});
   let twr=1,prevVal=null,prevIpsa=null,dayFlow=0;const series=[],pr=[],mr=[],prCLP=[];
+  // mrOK marca las observaciones cuyo retorno de MERCADO es REAL (cierre del índice en AMBOS extremos del par).
+  // Cuando el IPSA viene arrastrado, mr guarda un 0% que NO ocurrió: si esas observaciones entraran a la
+  // regresión, el β realizado, el tracking error, el information ratio y los "aciertos vs IPSA" quedarían
+  // sesgados por días de mercado inventados. Se calculan solo sobre el subconjunto con índice real.
+  const mrOK=[];let prevIpsaOK=false;
   WEEKS.forEach((w,i)=>{
     let inflow=0;
     if(w.ev){
@@ -2785,9 +2790,12 @@ function invMetrics(){
     // pr/mr (β, σ, Sharpe, peor día) también pasan a ser por FECHA: los pseudo-pasos entre órdenes ya no los ensucian.
     const _ipPrevDate=prevIpsa;   // IPSA del último registro de la fecha ANTERIOR (antes de que lastOfDate lo actualice)
     const lastOfDate=(i===WEEKS.length-1)||(WEEKS[i+1].date!==w.date);
+    // ¿el IPSA de ESTE registro es un cierre REAL del índice? (mismo criterio que ipsaND, adelantado aquí
+    // para poder marcar la observación del par de retornos antes de que prevIpsa se actualice)
+    const _ipReal=(w.ipsa>0)&&(w.ipsaFresh===true||(w.ipsaFresh!==false&&!(i>0&&_ipPrevDate>0&&w.ipsa===_ipPrevDate)));
     if(lastOfDate){
-      if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);}
-      prevVal=val;prevIpsa=w.ipsa;dayFlow=0;
+      if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);mrOK.push(!!(prevIpsa>0&&prevIpsaOK&&_ipReal));}
+      prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;dayFlow=0;
     }
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
     // ipsaND: el IPSA de este registro viene ARRASTRADO (sin cierre real del índice para la fecha) — sea por el
@@ -2836,9 +2844,14 @@ function invMetrics(){
      }}
     const openedLast=!!(firstBuy[hd.t]&&firstBuy[hd.t].idx===WEEKS.length-1);   // comprada en el último registro
     return {hd,sh:shx,buy:avg,cur,val:v,ret:cst>0?gain/cst:(b0[hd.t]>0?cur/b0[hd.t]-1:0),dayRet,dayFrom,dayTo,openedLast,gain,contribCum:aport>0?gain/aport:0,cost:cst};});
+  // PARES CON ÍNDICE REAL: todo lo que se mide CONTRA el mercado (β, correlación, tracking error, information
+  // ratio, aciertos) usa solo estas observaciones. Las fechas con IPSA arrastrado quedan fuera en vez de entrar
+  // como un "0% de mercado" que nunca ocurrió. La volatilidad y el Sharpe NO dependen del índice: usan todo pr.
+  const _prB=[],_mrB=[];for(let i=0;i<pr.length;i++)if(mrOK[i]){_prB.push(pr[i]);_mrB.push(mr[i]);}
+  const nretIdx=_prB.length;
   let betaR=null,corrR=null;
-  if(pr.length>=4){const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,mp=mean(pr),mm=mean(mr);let cov=0,vm=0,vp=0;
-    for(let i=0;i<pr.length;i++){cov+=(pr[i]-mp)*(mr[i]-mm);vm+=(mr[i]-mm)**2;vp+=(pr[i]-mp)**2;}
+  if(_prB.length>=4){const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,mp=mean(_prB),mm=mean(_mrB);let cov=0,vm=0,vp=0;
+    for(let i=0;i<_prB.length;i++){cov+=(_prB[i]-mp)*(_mrB[i]-mm);vm+=(_mrB[i]-mm)**2;vp+=(_prB[i]-mp)**2;}
     if(vm>0){betaR=cov/vm;corrR=vp>0?cov/Math.sqrt(vm*vp):null;}}
   const perY=PF.freq==="semanal"?52:PF.freq==="mensual"?12:252;
   let realizedVol=null;if(pr.length>=2){const mp=pr.reduce((a,b)=>a+b,0)/pr.length;const v=pr.reduce((a,b)=>a+(b-mp)**2,0)/(pr.length-1);realizedVol=Math.sqrt(v)*Math.sqrt(perY)*100;}
@@ -2868,9 +2881,12 @@ function invMetrics(){
   // Sharpe irreal (5, 50, 150…). Se piden ≥30 días de seguimiento y ≥8 retornos; bajo eso quedan en null ("—" en
   // la UI), igual criterio que el CAGR (que se reporta recién a los 60 días). La volatilidad sí se muestra antes.
   const _ratioSample=(elapsedDays>=30&&pr.length>=8);
-  if(_ratioSample&&realizedVol){const retAnn=avg(pr)*perY;sharpeR=(retAnn-RF/100)/(realizedVol/100);const act=pr.map((x,i)=>x-mr[i]),ma=avg(act);const va=act.reduce((a,b)=>a+(b-ma)**2,0)/(act.length-1),teP=Math.sqrt(va);trackingError=teP*Math.sqrt(perY)*100;infoRatio=teP>0?(ma*Math.sqrt(perY))/teP:null;winRate=act.filter(x=>x>0).length/act.length*100;}
+  if(_ratioSample&&realizedVol){const retAnn=avg(pr)*perY;sharpeR=(retAnn-RF/100)/(realizedVol/100);}
+  // vs MERCADO: solo con pares de índice real (≥8) — si el IPSA falta en buena parte del período, estas tres
+  // quedan en "—" antes que entregar un número construido sobre días de mercado inventados.
+  if(_prB.length>=8){const act=_prB.map((x,i)=>x-_mrB[i]),ma=avg(act);const va=act.reduce((a,b)=>a+(b-ma)**2,0)/(act.length-1),teP=Math.sqrt(va);trackingError=teP*Math.sqrt(perY)*100;infoRatio=teP>0?(ma*Math.sqrt(perY))/teP:null;winRate=act.filter(x=>x>0).length/act.length*100;}
   let peak=-Infinity,maxDD=0,maxDDCLP=0;series.forEach(s=>{if(s.val>peak)peak=s.val;const dd=s.val/peak-1;if(dd<maxDD){maxDD=dd;maxDDCLP=s.val-peak;}});
-  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,nret:pr.length,worstRet,bestRet,maxDD,maxDDCLP,worstLossCLP,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
+  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,nret:pr.length,nretIdx,worstRet,bestRet,maxDD,maxDDCLP,worstLossCLP,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
 }
 
 const FREQ={diario:{u:"día",uc:"Día",us:"días",adj:"diario",cap:"Diario",det:"el día",per:"del día",pf:"D"},semanal:{u:"semana",uc:"Semana",us:"semanas",adj:"semanal",cap:"Semanal",det:"la semana",per:"de la semana",pf:"S"},mensual:{u:"mes",uc:"Mes",us:"meses",adj:"mensual",cap:"Mensual",det:"el mes",per:"del mes",pf:"M"}};
@@ -3173,7 +3189,7 @@ function viewInvActive(){
     const body=svg+leg+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar). Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → queda <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b> — exactamente tu alpha realizado. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} que se le "esperaba" → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${bR!=null&&isFinite(bR)?` El punto pequeño marca tu <b>β realizado</b> (${bR.toFixed(2)}): la sensibilidad efectiva de tus retornos al IPSA en el período.`:""}${stkPts.length?` Cada <b>acción del portafolio</b> va en su β con el crecimiento de su <b>precio de mercado</b> desde que entró a la cartera (la serie del gráfico "Crecimiento por acción"): sobre la línea = le pagó su riesgo; muy bajo la línea = el lastre de tu alpha. Una acción incorporada después lleva menos días que la línea (comparación referencial).`:""}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
     return card("Security Market Line: ¿te pagó el riesgo que tomaste?","Retorno del período vs β · la distancia vertical de tu portafolio (◆) a la línea ES el alpha realizado · el IPSA (▲) separa cuánto del resultado es mercado y cuánto gestión · pasa el cursor por los puntos",body);
   }catch(e){return "";}})();
-  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA ("+IM.nret+" observaciones); compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ registros</b> calcularé el β realizado por regresión de tus retornos vs el IPSA.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
+  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA sobre las <b>"+(IM.nretIdx!=null?IM.nretIdx:IM.nret)+" fechas con cierre REAL del índice</b>"+((IM.nretIdx!=null&&IM.nret>IM.nretIdx)?(" (de "+IM.nret+" registros; las fechas sin índice quedan fuera para no inventar días de mercado)"):"")+"; compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ fechas con cierre real del IPSA</b> calcularé el β realizado por regresión de tus retornos vs el índice.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
   // HISTORIAL AGRUPADO POR FECHA: varias operaciones el mismo día son varios registros internos (así lo exige
   // el libro y la edición individual), pero el historial muestra UNA fila por día — con la rentabilidad diaria
   // REAL (valor de cierre del día, neteando TODOS los aportes del día, vs el cierre del día anterior) — y las
@@ -4298,7 +4314,7 @@ MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máxim
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
 
-REGLA DE DINERO (credibilidad no negociable): las cifras en pesos tienen semántica ESTRICTA y jamás se intercambian. 'valorActualCLP' = lo que la cartera VALE HOY — es la ÚNICA cifra válida cuando el usuario pregunta cuánto tiene, cuánto vale o el monto de su cartera. 'capitalAportadoCLP'/'capitalRealInvertidoCLP' = lo que puso de su bolsillo. 'montoInicialPlan_CLP' = el plan de la compra INICIAL (dato histórico de referencia): PROHIBIDO presentarlo como el monto o valor de la cartera. 'costoCLP' por acción = costo de compra, no valor. Al citar la cartera nombra siempre las tres magnitudes por separado (aportado, valor actual, ganancia) y si no hay seguimiento con valor actual, di que aún no hay valorización — NUNCA uses el plan inicial como sustituto.
+REGLA DE DINERO (credibilidad no negociable): las cifras en pesos tienen semántica ESTRICTA y jamás se intercambian. 'valorActualCLP' = lo que la cartera VALE HOY — es la ÚNICA cifra válida cuando el usuario pregunta cuánto tiene, cuánto vale o el monto de su cartera. 'capitalAportadoCLP' = TODO lo que puso de su bolsillo hasta hoy (compra inicial + aportes posteriores, neto de ventas) y es el ÚNICO denominador válido para calcular rentabilidad. 'compraInicialRealCLP' = lo pagado SOLO en la compra inicial: si hubo aportes posteriores NO es el capital aportado — jamás lo uses como denominador ni lo llames "lo invertido". 'montoInicialPlan_CLP' = el plan de la compra INICIAL (dato histórico de referencia): PROHIBIDO presentarlo como el monto o valor de la cartera. 'costoCLP' por acción = costo de compra, no valor. Al citar la cartera nombra siempre las tres magnitudes por separado (aportado, valor actual, ganancia) y si no hay seguimiento con valor actual, di que aún no hay valorización — NUNCA uses el plan inicial como sustituto.
 
 REGLA DE ESTADO: NUNCA afirmes un ESTADO de la plataforma —si hay o no cartera activa, si "el sistema está limpio", si hay o no datos— sin verificarlo con la tool que lo establece. El bloque **ESTADO DEL SISTEMA** (abajo, se recalcula cada turno) es la VERDAD del estado: no lo contradigas ni lo adivines a la baja. "Sin análisis formal" **≠** "sin datos ni cartera": el **Investor Score** (get_investor_score), la **cartera activa** (get_active_portfolio), su **seguimiento** (get_performance_summary) y las **proyecciones** (get_projection) NO dependen del análisis formal — funcionan siempre que exista base de precios (score) o una cartera con seguimiento (tracking); no los des por muertos por falta de análisis formal. Ante cualquier pregunta sobre la cartera, llama get_active_portfolio ANTES de decir una palabra sobre si existe. **Prohibido abrir negando lo que no verificaste** (ni "no tengo tu cartera", ni "no hay métricas", antes de mirarlas).
 
@@ -4416,10 +4432,15 @@ function cpRunTool(name,input){
       const _pv={};if(_IMw)_IMw.perStock.forEach(p=>{_pv[p.hd.t]=Math.round(p.val);});
       const out={nombre:PF.name,aplicada:PF.date,
         valorActualCLP:(_IMw&&_V>0)?Math.round(_V):null,
-        capitalRealInvertidoCLP:_IMw?Math.round(realCap()):0,
+        // CAPITAL APORTADO = TODO lo puesto de su bolsillo hasta hoy (compra inicial + aportes posteriores,
+        // neto de ventas) — es el denominador de la rentabilidad. Antes esta clave llevaba realCap(), que es
+        // SOLO la compra inicial: con aportes posteriores subestimaba el capital y el agente podía informar
+        // una rentabilidad varias veces mayor que la real. La compra inicial va aparte, con su propio nombre.
+        capitalAportadoCLP:_IMw?Math.round(_IMw.aport):0,
+        compraInicialRealCLP:_IMw?Math.round(realCap()):0,
         sinCompraRegistrada:!_IMw,   // sin seguimiento: NO se ha invertido — aportado/valor = 0/null, el plan NO cuenta
         montoInicialPlan_CLP:PF.amount,
-        notaDinero:"'valorActualCLP' = lo que la cartera VALE HOY (la única cifra válida para '¿cuánto tengo/vale?'). 'capitalRealInvertidoCLP' = lo aportado (0 si sinCompraRegistrada). 'montoInicialPlan_CLP' = solo el plan de la compra inicial: NUNCA lo presentes como el monto/valor de la cartera. Por acción: 'costoCLP' = costo de compra; 'valorActualCLP' = valor de mercado hoy.",
+        notaDinero:"'valorActualCLP' = lo que la cartera VALE HOY (la única cifra válida para '¿cuánto tengo/vale?'). 'capitalAportadoCLP' = TODO el capital aportado hasta hoy (compra inicial + aportes posteriores, neto de ventas): es el ÚNICO denominador válido de la rentabilidad. 'compraInicialRealCLP' = lo pagado SOLO en la compra inicial (sirve para contrastarlo con el plan; NO es el capital aportado si hubo aportes posteriores). 'montoInicialPlan_CLP' = solo el plan de la compra inicial: NUNCA lo presentes como el monto/valor de la cartera. Por acción: 'costoCLP' = costo de compra; 'valorActualCLP' = valor de mercado hoy.",
         betaEsperado:+PF.bp.toFixed(2),erCapm:+PF.erCapm.toFixed(2),sigmaEsperada:+PF.sig.toFixed(1),frecuencia:PF.freq,
         notaPesos:"pesoObjetivo = plan (referencia del drift); pesoActual = peso real hoy por valor de mercado. Una acción comprada después de la cartera inicial YA queda incorporada al objetivo y a β/σ.",
         holdings:PF.holdings.map(h=>({t:h.t,empresa:h.n,sector:h.s,pesoObjetivo:+(h.w*100).toFixed(1),pesoActual:_aw[h.t]!=null?_aw[h.t]:null,costoCLP:Math.round(h.monto),valorActualCLP:_pv[h.t]!=null?_pv[h.t]:null,beta:h.b}))};
@@ -5982,7 +6003,7 @@ function pricedbApplyToProjects(){
           if(chD)pts++;}   // solo IPSA EXACTO de la base; ch también cuando cambian los stamps fresh/ipsaFresh (antes no se persistían para clientes no activos)
         else{const prices={},freshT=[];held.forEach(t=>{const ex=px[t]&&px[t][D]!=null;const v=ex?px[t][D]:(pdAsOf(px[t]||{},sk[t]||[],D));if(ex)freshT.push(t);prices[t]=(v!=null?v:basePrices[t]);});
           const ipEx=ipsaM[D]!=null;
-          ws.push({date:D,ipsa:ipEx?ipsaM[D]:(ip!=null?ip:(ws[0].ipsa||0)),prices,fresh:freshT,ipsaFresh:ipEx});pts++;}   // fresh/ipsaFresh marcan qué es cierre REAL del día: los arrastres (as-of) no vuelven a la base ni generan retornos 0% espurios
+          ws.push({date:D,ipsa:ipEx?ipsaM[D]:(ip!=null?ip:(ws[0].ipsa!=null?ws[0].ipsa:null)),prices,fresh:freshT,ipsaFresh:ipEx});pts++;}   // sin IPSA conocido se deja NULL: un índice en 0 puntos sería un dato inventado (y contaminaba β/α)   // fresh/ipsaFresh marcan qué es cierre REAL del día: los arrastres (as-of) no vuelven a la base ni generan retornos 0% espurios
       });
       if(pts){const tg=ws.map((w,i)=>({w,i}));tg.sort((a,b)=>a.w.date<b.w.date?-1:a.w.date>b.w.date?1:a.i-b.i);p.weeks=tg.map(x=>x.w);touched=true;nProj++;nPts+=pts;}
     });
