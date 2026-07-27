@@ -524,7 +524,35 @@ try {
     ipsaSynth.push(`${d.date}=${d.ipsa} (${common.length} acc, ${(ret * 100).toFixed(2)}%)`);
     anchorIpsa = d.ipsa; anchorPx = px;             // encadena desde este día
   }
-  if (ipsaSynth.length) console.log(`IPSA reconstruido desde acciones (índice oficial ausente): ${ipsaSynth.length} día(s) → ${ipsaSynth.join(" · ")}`);
+  // ── HACIA ATRÁS: mismo encadenamiento, en reversa desde el PRIMER día con índice ──
+  //   Las fuentes del IPSA solo entregan el valor del día (su historia está bloqueada), así que el archivo
+  //   tenía índice únicamente desde la primera corrida. Sin historia del índice NO se puede construir el
+  //   análisis del sistema (β, σ, correlaciones, E(R)) y la app se quedaba sin benchmark. Se reconstruye el
+  //   nivel del IPSA para todas las fechas anteriores dividiendo por el retorno cap-ponderado del tramo.
+  //   Es la MISMA matemática que hacia adelante y queda marcado ipsaSynth (estimación, no cierre oficial).
+  let firstIp = -1;
+  for (let i = 0; i < days.length; i++) if (days[i].ipsa != null && days[i].ipsa > 0) { firstIp = i; break; }
+  let nBack = 0;
+  if (firstIp > 0) {
+    for (let i = firstIp - 1; i >= 0; i--) {
+      const cur = days[i].prices || {}, nxt = days[i + 1].prices || {};
+      const ipNext = days[i + 1].ipsa;
+      if (!(ipNext > 0)) continue;
+      const common = Object.keys(cur).filter(t => nxt[t] > 0 && cur[t] > 0);
+      if (common.length < 8) continue;
+      let wsum = 0, rsum = 0;
+      for (const t of common) { const w = capOf(t); wsum += w; rsum += w * (nxt[t] / cur[t] - 1); }
+      if (!(wsum > 0)) continue;
+      const ret = rsum / wsum;                 // retorno del tramo i → i+1
+      if (!(1 + ret > 0.2)) continue;          // guarda contra divisiones absurdas
+      days[i].ipsa = +(ipNext / (1 + ret)).toFixed(2);
+      days[i].ipsaSynth = true;
+      nBack++;
+    }
+    if (nBack) console.log(`IPSA reconstruido HACIA ATRÁS (historia del índice no publicada por la fuente): ${nBack} día(s) → ${days[0].date}=${days[0].ipsa} … ${days[firstIp].date}=${days[firstIp].ipsa} (ancla oficial)`);
+  }
+  if (nBack) ipsaSynth.push(`${nBack} día(s) hacia atrás hasta ${days[0].date}`);
+  if (ipsaSynth.length) console.log(`IPSA reconstruido desde acciones (índice oficial ausente): ${ipsaSynth.length} entrada(s) → ${ipsaSynth.join(" · ")}`);
 } catch (e) { console.log("IPSA reconstruido: falló (" + String((e && e.message) || e).slice(0, 80) + ")"); }
 
 const ipsaDays = days.filter(d => d.ipsa != null).length;

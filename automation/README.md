@@ -56,6 +56,21 @@ que si no abres la app unos días, al volver se rellenan los días perdidos.
   el retorno diario de las acciones ponderado por capitalización. El sello viaja con el valor y
   **se recalcula en cada corrida** desde los anclajes oficiales vigentes: nunca se hereda como si
   fuera un cierre oficial, y se corrige solo si la fuente publica el valor real.
+- **Reconstrucción hacia atrás**: ninguna fuente gratuita publica la *historia* del IPSA, así que
+  un backfill de 2 años llegaba con precios en ~500 días pero índice en apenas los últimos días.
+  Desde el primer anclaje oficial hacia el pasado, el índice se despeja al revés con el mismo
+  retorno ponderado por capitalización (`ipsa[i] = ipsa[i+1] / (1 + r)`), exigiendo ≥8 acciones
+  en común entre los dos días. Queda sellado `ipsaSynth` igual que la reconstrucción hacia
+  adelante. Sin esto el benchmark no existe y el análisis del sistema (β, correlaciones,
+  Markowitz, Investor Score) no se puede construir.
+
+### Por qué esto importa: Investor no usa datos de ejemplo
+
+La app **ya no trae un set de demostración**. μ, σ, β, correlaciones, la frontera de Markowitz,
+la Security Market Line y el Investor Score **solo existen si el análisis se construyó desde
+esta base de precios**; si no hay historia suficiente (mínimo 12 meses alineados con el
+benchmark), los módulos lo dicen explícitamente en vez de mostrar números inventados. Este
+pipeline es la única fuente de esos análisis.
 
 > Nota: existió una vista EN VIVO intradía (live.json cada 15 min) que se retiró a pedido del
 > usuario — Investor trabaja exclusivamente con los **cierres oficiales del día** (este pipeline).

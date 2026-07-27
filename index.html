@@ -1487,7 +1487,18 @@ const DATA = {"window": "jun-2024 a may-2026", "n": 23, "labels": ["jul-24", "ag
 
 // ===== PARÁMETROS =====
 let RF=DATA.rf, PRIMA=DATA.prima, ERM=DATA.erm;
+// ══ JAMÁS DATOS DE EJEMPLO EN LOS ANÁLISIS ══
+// El set de demostración que este archivo trae embebido se PURGA al arrancar: STOCKS/CORR/MKT quedan VACÍOS
+// hasta que systemAnalysisRefresh() construya el análisis desde TU base de precios real. Si la base no
+// alcanza, la app muestra un estado vacío con el motivo — nunca μ, σ, β ni correlaciones inventadas, porque
+// alimentan Markowitz, el Investor Score, la SML, el CAPM de los proyectos y las decisiones de inversión.
+// (RF, PRIMA y ERM son parámetros del modelo, no datos de mercado: se conservan.)
+const IPSA_CORE_META=(DATA.stocks||[]).map(s=>({t:s.t,n:s.n,s:s.s,c:s.c,b:s.b}));   // metadatos del núcleo: nombre, sector, color y β referencial (NO son datos de mercado estimados)
+DATA.stocks=[];DATA.corr=[];DATA.tickers=[];DATA.labels=[];DATA.window="";DATA.n=0;
+DATA.market={ret:0,sig:0,tot:0,rets:[],sharpe:0};
 let STOCKS=DATA.stocks, MKT=DATA.market, CORR=DATA.corr, TICK=DATA.tickers;
+/* ¿hay un análisis REAL activo (construido desde la base)? Todo lo que alimente decisiones debe exigirlo. */
+function anaReady(){try{return (typeof DATASET!=="undefined"&&DATASET==="import")&&Array.isArray(STOCKS)&&STOCKS.length>=2;}catch(e){return false;}}
 // ===== UNIVERSO IPSA COMPLETO (~30 acciones) =====
 // Metadatos para OPERAR, INVERTIR y RECONOCER planillas/cierres de todas las acciones del IPSA.
 // Las 14 con historial demo viven en DATA.stocks; estas 16 son solo metadatos (sus analíticas reales
@@ -1513,12 +1524,15 @@ const IPSA_EXTRA=[
 // stock "sintético" para el universo canónico: metadatos + analíticas neutras (sin historial demo)
 function _uniSynth(m){const sg=(m.s==="Sanitarias"||m.s==="Eléctrico")?18:(m.s==="Banca"||m.s==="Holding")?22:26;
   return {t:m.t,n:m.n,s:m.s,c:m.c,b:m.b,rets:[],prices:[],a24:{ret:0,sig:sg,r2:0,corr:0,alphaR:0,jensen:0,sharpe:0,er:+(RF+m.b*PRIMA).toFixed(2),tot:0}};}
-const DATA_UNIVERSE=(DATA.stocks||[]).concat(IPSA_EXTRA.map(_uniSynth));
+// UNIVERSO OPERABLE = metadatos de las 30 acciones del IPSA. Sus métricas (a24) van en CERO a propósito: el
+// universo sirve para reconocer, operar y valorizar; los μ/σ/β reales llegan cuando el análisis se construye
+// desde la base. Nunca se rellena con estimaciones de ejemplo.
+const DATA_UNIVERSE=IPSA_CORE_META.map(_uniSynth).concat(IPSA_EXTRA.map(_uniSynth));
 const UNIVERSE_TICK=DATA_UNIVERSE.map(s=>s.t);
 // resolutor de metadatos para CUALQUIER ticker del IPSA (análisis activo → universo → genérico)
 function uniStk(t){return (STOCKS||[]).find(s=>s.t===t)||DATA_UNIVERSE.find(s=>s.t===t)||null;}
 function uniMeta(t){const s=uniStk(t);return s?{t:s.t,n:s.n,s:s.s,c:s.c,b:(s.b!=null?s.b:1)}:{t:t,n:t,s:"—",c:"#1E5FD1",b:1};}
-let modulo="inicio", page="home", sel=STOCKS[0].t;
+let modulo="inicio", page="home", sel=(STOCKS[0]||{}).t||null;
 let invStkSel=null;
 let objEditOn=false;   // editor de pesos objetivo (Composición actual vs objetivo, en Seguimiento)
 let invValFrom="",invValTo="";   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (solo ese gráfico)
@@ -3165,7 +3179,8 @@ function viewInvActive(){
     const pR=L.ret*100,iR=L.ipsaRet*100;
     // acciones del portafolio: β del análisis y crecimiento del PRECIO de mercado desde su incorporación
     // (la misma serie base-100 del gráfico "Crecimiento por acción" — mide al ACTIVO, no tu timing de compras)
-    const stkPts=(IM.stockSeries||[]).map(s=>{
+    const _anaOK=(typeof anaReady==="function")&&anaReady();   // el β de cada acción viene del análisis: sin análisis real, no se dibujan
+    const stkPts=!_anaOK?[]:(IM.stockSeries||[]).map(s=>{
       const hd=(PF.holdings||[]).find(h=>h.t===s.label);if(!hd||!(hd.b>0))return null;
       let lv=null;for(let i=s.vals.length-1;i>=0;i--)if(s.vals[i]!=null&&isFinite(s.vals[i])){lv=s.vals[i];break;}
       if(lv==null)return null;
@@ -4121,7 +4136,7 @@ function attribView(t){
     <div class="note" style="margin-top:10px">Sobre la base CAPM (Rf ${p0(RF)} + β·prima = <b>${p0(capm)}</b>), cada factor suma o resta prima según la exposición de ${t}. Total multifactor = <b>${p0(mf)}</b>.</div>`;
 }
 
-let mfSel=STOCKS[0].t, mfProfile="moderado";
+let mfSel=(STOCKS[0]||{}).t||null, mfProfile="moderado";
 /* resumen de cobertura de fundamentos REALES en el análisis activo (para las notas de honestidad) */
 function mfCoverageNote(){
   try{
@@ -5122,8 +5137,7 @@ function attachPerfil(){
 }
 
 /* ---------------- DATASET ACTIVO (demo <-> importado) ---------------- */
-const DEMO={stocks:DATA.stocks,market:DATA.market,corr:DATA.corr,tickers:DATA.tickers,labels:DATA.labels,window:DATA.window,n:DATA.n,rf:DATA.rf,prima:DATA.prima,erm:DATA.erm,perYear:12};
-let DATASET="demo";
+let DATASET="none";   // nunca arranca en demo: sin análisis real construido, la app queda en estado vacío honesto
 /* etiqueta corta de la ventana del análisis activo (n períodos + unidad), para no fijar '24m' en la UI */
 function winShort(){const u=DATA.perYear===252?'d':DATA.perYear===52?'sem':'m';return DATA.n+u;}
 function winLong(){const u=DATA.perYear===252?'días':DATA.perYear===52?'semanas':'meses';return DATA.n+' '+u;}
@@ -5141,7 +5155,7 @@ function setActive(s){
   if(!s||!Array.isArray(s.stocks)||!s.stocks.length){console.warn("setActive: dataset vacío, se ignora");return false;}
   DATA.stocks=s.stocks;DATA.market=s.market;DATA.corr=s.corr;DATA.tickers=s.tickers;DATA.labels=s.labels;DATA.window=s.window;DATA.n=s.n;DATA.rf=s.rf;DATA.prima=s.prima;DATA.perYear=s.perYear;
   STOCKS=s.stocks;MKT=s.market;CORR=s.corr;TICK=s.tickers;RF=s.rf;PRIMA=s.prima;MF=computeFactors(STOCKS);
-  sel=STOCKS[0].t;mfSel=STOCKS[0].t;simState.sel={};invStkSel=null;return true;
+  sel=(STOCKS[0]||{}).t||null;mfSel=(STOCKS[0]||{}).t||null;simState.sel={};invStkSel=null;return true;
 }
 function impToActive(){const A=IMP.assets;return {stocks:A,market:{ret:IMP.bench.ret,sig:IMP.bench.sig,tot:IMP.bench.tot,rets:IMP.bench.rets,sharpe:IMP.bench.sharpe},corr:IMP.corr,tickers:A.map(a=>a.t),labels:IMP.labels,window:IMP.window+" · benchmark "+IMP.bench.name,n:IMP.n,rf:IMP.rf,prima:IMP.prima,perYear:IMP.perYear};}
 function applyDataset(which){
@@ -5390,7 +5404,7 @@ function pricedbAllDates(){const s={};Object.keys(PRICEDB.ipsa||{}).forEach(d=>s
 /* último valor ≤ D en un mapa fecha→valor (sus claves ya ordenadas) */
 function pdAsOf(map,sortedKeys,D){let lo=null;for(let i=0;i<sortedKeys.length;i++){if(sortedKeys[i]<=D)lo=sortedKeys[i];else break;}return lo!=null?map[lo]:null;}
 /* metadatos por defecto de un ticker (toma del universo demo si existe) */
-function pdMeta(t,srcName){const st=((typeof DEMO!=="undefined"&&DEMO.stocks)||(typeof STOCKS!=="undefined"?STOCKS:[])||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};const ci=Object.keys(PRICEDB.tickers).length;return {n:srcName||st.n||t,s:st.s||"",c:st.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci%IMP_PAL.length]:"#1E5FD1"),b:(st.b!=null?st.b:null)};}
+function pdMeta(t,srcName){const st=((typeof STOCKS!=="undefined"?STOCKS:[])||[]).find(s=>s.t===t)||(typeof DATA_UNIVERSE!=="undefined"?DATA_UNIVERSE.find(s=>s.t===t):null)||{};const ci=Object.keys(PRICEDB.tickers).length;return {n:srcName||st.n||t,s:st.s||"",c:st.c||(typeof IMP_PAL!=="undefined"?IMP_PAL[ci%IMP_PAL.length]:"#1E5FD1"),b:(st.b!=null?st.b:null)};}
 /* ¿es una fecha válida para la base? Debe EXISTIR en el calendario (un "2025-13-03" o un 30 de febrero
    pasarían el chequeo de string y entrarían como fecha fantasma), ser día hábil y no futura. */
 function validBaseDate(date){if(!date)return false;const m=(""+date).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return false;
@@ -5924,7 +5938,7 @@ function anaEnsure(){
 function anaSave(){try{lsSet("inv_analysis_cfg_v1",anaState);}catch(e){}}
 function anaClear(msg){anaLastErr=msg||"";anaEffMonths=null;
   IMP=null;impActiveId=null;lsSet("inv_import_v1",null);lsSet("inv_imp_active_id",null);
-  if(typeof DATASET!=="undefined"&&DATASET==="import"){DATASET="none";lsSet("inv_dataset_active","none");}}
+  DATASET="none";lsSet("inv_dataset_active","none");}   // sin análisis real NO se cae a ningún set de ejemplo
 /* (Re)construye el análisis del sistema desde la base. Honesto y resiliente:
    · acciones sin historial suficiente se EXCLUYEN SOLAS (anaAutoDrop, visibles en Ajustes) — una acción nueva
      no rompe el análisis del resto y se reincorpora sola cuando junta ventana;
@@ -7645,6 +7659,7 @@ function mkwCompute(){
   let IMd=null;try{IMd=withProject(p,()=>invMetrics());}catch(e){}
   if(!IMd||!IMd.perStock||!IMd.perStock.length)return {err:"El proyecto no tiene posiciones valorizadas todavía."};
   const pos=IMd.perStock.filter(x=>x.sh>0&&x.val>0);
+  if(!(typeof anaReady==="function"&&anaReady()))return {err:"El análisis del sistema no está construido, así que no hay μ, σ ni correlaciones REALES con qué optimizar. Sincroniza los cierres en ⚙ Configuración → Datos (con ~12 meses de precios e índice el análisis se arma solo). Investor nunca optimiza con datos de ejemplo."};
   const inSet=pos.filter(x=>STOCKS.find(s=>s.t===x.hd.t));
   const outSet=pos.filter(x=>!STOCKS.find(s=>s.t===x.hd.t));
   if(inSet.length<2)return {err:"Se necesitan al menos 2 acciones con datos del análisis (μ, σ y correlaciones). Sincroniza cierres en ⚙ Configuración → Datos para ampliar el análisis del sistema."};
@@ -7970,8 +7985,11 @@ function clientLoad(){
   IMP=lsGet("inv_import_v1")||null;
   PRICEDB=(function(){const d=lsGet("inv_pricedb_v1");return (d&&d.px)?d:{tickers:{},px:{},ipsa:{}};})();pricedbFreq=lsGet("inv_pricedb_freq")||"mensual";
   invProfile=lsGet("inv_profile_v1")||null;profAns=lsGet("inv_profile_ans_v1")||{};profGoal=lsGet("inv_profile_goal_v1")||{};profEdit=false;
-  try{ if(IMP&&lsGet("inv_dataset_active")==="import"){setActive(impToActive());DATASET="import";} else {setActive(DEMO);DATASET="demo";} }
-  catch(e){ try{setActive(DEMO);}catch(_){} DATASET="demo"; }
+  // ARRANQUE: se restaura el análisis del sistema si existe; si no, se INTENTA reconstruir desde la base real.
+  // Si tampoco alcanza, queda "none" (estado vacío honesto). Jamás se activa el set de ejemplo.
+  try{ if(IMP&&lsGet("inv_dataset_active")==="import"){setActive(impToActive());DATASET="import";}
+       else { DATASET="none"; try{if(typeof systemAnalysisRefresh==="function")systemAnalysisRefresh();}catch(_){} } }
+  catch(e){ DATASET="none"; }
   try{pricedbAutoSeed();}catch(e){}   // base poblada (demo + cierres) una vez por cliente
   try{pricedbSanitize();}catch(e){}   // auto-saneo en cada carga: sin fines de semana ni arrastres (fidelidad de la base)
   try{projFixTradeDayPrices();}catch(e){}   // operaciones guardadas con valorización de arrastre → precio real de la transacción
@@ -8238,7 +8256,7 @@ function clientFormRender(){
 function seedExamples(){
   try{
     if(localStorage.getItem("inv_seed_examples_v1"))return;
-    const SRC=(typeof DEMO!=="undefined"&&DEMO.stocks&&DEMO.stocks.length)?DEMO.stocks:STOCKS;
+    const SRC=STOCKS;   // sin set de ejemplo: si no hay análisis real construido, NO se siembra nada
     if(!SRC||!SRC.length)return;
     localStorage.setItem("inv_seed_examples_v1","1");
     const N=90, START="2026-02-02";
