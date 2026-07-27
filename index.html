@@ -2250,12 +2250,24 @@ function withCanonicalUniverse(fn){
 }
 /* pMetrics sobre el universo IPSA completo (30) MÁS sintéticos para los tickers de sel que no estén en él
    (p.ej. holdings de un análisis importado no-IPSA): así ningún peso se descarta del β/σ del portafolio.
-   betaOf(t) permite entregar la β guardada del holding en vez de asumir 1. */
+   betaOf(t) permite entregar la β guardada del holding en vez de asumir 1.
+   CON ANÁLISIS REAL construido: las β, σ, retornos y correlaciones salen del ANÁLISIS para toda acción que
+   cubra (los metadatos referenciales del universo quedan solo de respaldo para las no cubiertas). Sin esto,
+   el "β esperado" del proyecto se calculaba con β de catálogo y NO coincidía con el β del optimizador de
+   Markowitz ni con ninguna métrica del análisis — dos varas distintas para la misma cartera. */
 function pMetricsUniverse(sel,betaOf){
   const sv={STOCKS,MKT,CORR,TICK,RF,PRIMA};
   try{
-    const extra=Object.keys(sel).filter(t=>!DATA_UNIVERSE.some(s=>s.t===t)).map(t=>{const b=(betaOf&&isFinite(betaOf(t)))?betaOf(t):1;
-      return {t,n:t,s:"fuera del IPSA",c:"#1E5FD1",b,rets:[],prices:[],a24:{ret:0,sig:24,r2:0,corr:0,alphaR:0,jensen:0,sharpe:0,er:+(DATA.rf+b*DATA.prima).toFixed(2),tot:0}};});
+    const anaOK=(typeof anaReady==="function")&&anaReady();
+    const synth=t=>{const b=(betaOf&&isFinite(betaOf(t)))?betaOf(t):1;
+      return {t,n:t,s:"fuera del IPSA",c:"#1E5FD1",b,rets:[],prices:[],a24:{ret:0,sig:24,r2:0,corr:0,alphaR:0,jensen:0,sharpe:0,er:+(DATA.rf+b*DATA.prima).toFixed(2),tot:0}};};
+    if(anaOK){
+      // análisis activo intacto (β/σ/CORR reales) + relleno SOLO para los tickers de sel que no cubre
+      const extra=Object.keys(sel).filter(t=>!sv.STOCKS.some(s=>s.t===t)).map(t=>DATA_UNIVERSE.find(s=>s.t===t)||synth(t));
+      STOCKS=extra.length?sv.STOCKS.concat(extra):sv.STOCKS;
+      return pMetrics(sel);   // MKT/CORR/TICK/RF/PRIMA ya son los del análisis (pares sin correlación conocida caen a 0,4)
+    }
+    const extra=Object.keys(sel).filter(t=>!DATA_UNIVERSE.some(s=>s.t===t)).map(synth);
     STOCKS=extra.length?DATA_UNIVERSE.concat(extra):DATA_UNIVERSE;MKT=DATA.market;CORR=DATA.corr;TICK=STOCKS.map(s=>s.t);RF=DATA.rf;PRIMA=DATA.prima;
     return pMetrics(sel);
   }finally{STOCKS=sv.STOCKS;MKT=sv.MKT;CORR=sv.CORR;TICK=sv.TICK;RF=sv.RF;PRIMA=sv.PRIMA;}
@@ -2838,6 +2850,11 @@ function invMetrics(){
       if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);sh[t]=(sh[t]||0)+q;cost[t]=(cost[t]||0)+al[t];if(!firstBuy[t]&&q>0)firstBuy[t]={idx:i,price:al[t]/q};});inflow=w.ev.amount||0;aport+=inflow;}   // ev.shares = cantidades reales compradas (los aportes antiguos sin shares se derivan del precio)
       else if(w.ev.kind==="rebal"&&w.ev.shares){PF.holdings.forEach(hd=>{const old=sh[hd.t]||0,nw=w.ev.shares[hd.t]!=null?w.ev.shares[hd.t]:old,p=w.prices[hd.t]||base.prices[hd.t]||1;if(nw<old)cost[hd.t]=(cost[hd.t]||0)*(old>0?nw/old:1);else if(nw>old)cost[hd.t]=(cost[hd.t]||0)+(nw-old)*p;sh[hd.t]=nw;});}
       else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;if(sh[tt]<=1e-9)delete firstBuy[tt];}else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;if(!firstBuy[tt]&&qy>0)firstBuy[tt]={idx:i,price:pp};}}
+      // DIVIDENDO: efectivo que SALE de la cartera hacia el usuario (dinero rescatado) sin tocar acciones ni
+      // costos. Como flujo negativo, el TWR del día lo CUENTA como retorno — (val + D)/prev − 1 — que es
+      // exactamente lo que corresponde: el precio ex-dividendo ya cayó en el mercado y el dividendo compensa.
+      // Y como aport baja en D, la ganancia (val − aport) sube en D: el dividendo es GANANCIA de la gestión.
+      else if(w.ev.kind==="div"){const amt=+w.ev.amount||0;if(amt>0){inflow=-amt;aport+=inflow;}}
     }
     PF.holdings.forEach(hd=>{const p=w.prices[hd.t];if(p!=null&&p>0)lastPx[hd.t]=p;});   // actualiza el último precio conocido con los cierres reales del registro
     const val=PF.holdings.reduce((a,hd)=>{const p=w.prices[hd.t];const px=(p!=null&&p>0)?p:(lastPx[hd.t]||0);return a+(sh[hd.t]||0)*px;},0);
@@ -3093,7 +3110,9 @@ function viewInvActive(){
     : `<div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div>`;
   const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:localDay()}"></div>${_ipsaHead}</div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo · y si compras sobre/bajo el valor intrínseco (columna «vs valor»: verde = bajo su valor)</div><div id="compraprev" style="margin-top:6px"></div>':''}${(editing&&ed.ev&&ed.ev.kind==="trade")?`<div class="genl" style="margin-top:15px">✎ Operación de este registro · <b style="color:${ed.ev.side==="sell"?"var(--red)":"var(--green)"}">${ed.ev.side==="sell"?"VENTA":"COMPRA"} de ${ed.ev.t}</b></div>
       <div class="simhead" style="margin-top:6px"><div><div class="genl">Cantidad (acciones)</div><input type="number" step="any" id="evqty" value="${ed.ev.shares}"></div><div><div class="genl">Monto total de la operación ($)</div><input type="number" step="any" id="evmonto" value="${Math.round((+ed.ev.shares||0)*(+ed.ev.price||0))}"></div></div>
-      <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>monto</b> de la operación (usa los de tu corredora — el precio por acción se deriva; hoy: ${fmtP(+ed.ev.price||0)}), corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}<div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button>${(editing&&editIdx!==0)?`<button class="btn" id="delw" style="color:var(--red);border-color:var(--red-line)">🗑 Eliminar este registro${(ed&&ed.ev)?" y su operación":""}</button>`:""}</div>`);
+      <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>monto</b> de la operación (usa los de tu corredora — el precio por acción se deriva; hoy: ${fmtP(+ed.ev.price||0)}), corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}${(editing&&ed.ev&&ed.ev.kind==="div")?`<div class="genl" style="margin-top:15px">✎ Operación de este registro · <b style="color:var(--green)">DIVIDENDO de ${ed.ev.t}</b></div>
+      <div class="simhead" style="margin-top:6px"><div><div class="genl">Dividendo recibido ($)</div><input type="number" step="any" id="evdiv" value="${Math.round(+ed.ev.amount||0)}"></div></div>
+      <div class="note" style="margin-top:8px;font-size:11px">Corrige aquí el <b>monto líquido</b> del dividendo abonado: se recalculan la ganancia, el dinero rescatado y el resumen anual. La <b>fecha</b> de arriba mueve la operación de día.</div>`:""}<div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button>${(editing&&editIdx!==0)?`<button class="btn" id="delw" style="color:var(--red);border-color:var(--red-line)">🗑 Eliminar este registro${(ed&&ed.ev)?" y su operación":""}</button>`:""}</div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
   // los rangos de fecha de los gráficos pertenecen a UN proyecto: al cambiar de proyecto se limpian
@@ -3276,6 +3295,7 @@ function viewInvActive(){
   const _grp=[];IM.series.forEach((s,i)=>{if(!_grp.length||IM.series[_grp[_grp.length-1][0]].date!==s.date)_grp.push([i]);else _grp[_grp.length-1].push(i);});
   const _evDesc=ev=>{if(!ev)return "";if(ev.kind==="inject")return "Aporte de capital · "+fmtCLP(ev.amount||0);
     if(ev.kind==="trade")return (ev.side==="sell"?"Venta":"Compra")+" "+ev.t+" · "+(+ev.shares).toLocaleString("es-CL",{maximumFractionDigits:2})+" × "+fmtP(+ev.price||0)+" = "+fmtCLP(Math.round((+ev.shares||0)*(+ev.price||0)));
+    if(ev.kind==="div")return "Dividendo "+ev.t+" · +"+fmtCLP(ev.amount||0)+" (ganancia cobrada, dinero rescatado)";
     return "Rebalanceo";};
   const rows=_grp.map((g,k)=>{const li=g[g.length-1],s=IM.series[li];
     const pv=k>0?IM.series[_grp[k-1][_grp[k-1].length-1]]:null;
@@ -3285,7 +3305,7 @@ function viewInvActive(){
     const ops=g.filter(i=>IM.series[i].ev);
     const plain=g.filter(i=>!IM.series[i].ev);
     const nOps=ops.length;
-    const opBadge=nOps?` <span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33">${nOps===1?(IM.series[ops[0]].ev.kind==="inject"?"Aporte":IM.series[ops[0]].ev.kind==="trade"?(IM.series[ops[0]].ev.side==="sell"?"Venta":"Compra"):"Rebalanceo"):nOps+" operaciones"}</span>`:"";
+    const opBadge=nOps?` <span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33">${nOps===1?(IM.series[ops[0]].ev.kind==="inject"?"Aporte":IM.series[ops[0]].ev.kind==="trade"?(IM.series[ops[0]].ev.side==="sell"?"Venta":"Compra"):IM.series[ops[0]].ev.kind==="div"?"Dividendo":"Rebalanceo"):nOps+" operaciones"}</span>`:"";
     // el ✎/✕ de la fila del día apunta al registro de valoración simple; si el día es solo operaciones, la edición vive en las sub-filas
     const ownIdx=plain.length?plain[plain.length-1]:(nOps?null:li);
     const mainBtns=ownIdx!=null?`<button class="wbtn" data-edit="${ownIdx}" title="Editar">✎</button> <button class="wbtn del" data-del="${ownIdx}" title="Eliminar">✕</button>`:`<span style="color:var(--faint);font-size:10px" title="Las operaciones de este día se editan en sus filas">↓</span>`;
@@ -3294,7 +3314,7 @@ function viewInvActive(){
     const _ipNA=!!s.ipsaND;
     const _naIp='<span style="color:'+faint+'" title="Aún sin cierre del IPSA para esta fecha: el índice viene arrastrado del día anterior. Se completa solo con la sincronización de cierres (⟳ o la corrida diaria).">—</span>';
     const main=`<tr><td><b>${k===0?"Compra":fr.pf+k}</b>${opBadge}</td><td>${s.date}</td><td class="r" style="font-weight:700" title="Valor al cierre del día (tras todas las operaciones)">${fmtCLP(s.val)}</td><td class="r">${dpo!=null?`<span title="Rentabilidad real del día: valor de cierre menos ${dayFlow?("los aportes del día ("+fmtCLP(dayFlow)+")"):"aportes"} vs el cierre anterior">${chip(dpo*100)}</span>`:'<span style="color:'+faint+'">—</span>'}</td><td class="r">${dip!=null?(_ipNA?_naIp:chip(dip*100)):'<span style="color:'+faint+'">—</span>'}</td><td class="r">${chip(s.ret*100)}</td><td class="r">${_ipNA?`<span title="Con IPSA arrastrado (pendiente del cierre oficial de la fecha): este acumulado se actualizará con la sincronización">${chip(s.ipsaRet*100)}</span>`:chip(s.ipsaRet*100)}</td><td class="r">${_ipNA?`<span title="Con IPSA arrastrado (pendiente del cierre oficial de la fecha): esta diferencia se actualizará con la sincronización">${chip(s.diff*100)}</span>`:chip(s.diff*100)}</td><td class="r" style="white-space:nowrap">${mainBtns}</td></tr>`;
-    const subs=ops.map(i=>{const ev=IM.series[i].ev;return `<tr style="background:var(--soft)"><td style="border-left:3px solid #7C3AED55"></td><td colspan="7" style="font-size:11.5px;color:var(--muted)"><span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33;margin-right:7px">${ev.kind==="inject"?"Aporte":ev.kind==="trade"?(ev.side==="sell"?"Venta":"Compra"):"Rebalanceo"}</span>${_evDesc(ev)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar esta operación">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar esta operación">✕</button></td></tr>`;}).join("");
+    const subs=ops.map(i=>{const ev=IM.series[i].ev;return `<tr style="background:var(--soft)"><td style="border-left:3px solid #7C3AED55"></td><td colspan="7" style="font-size:11.5px;color:var(--muted)"><span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33;margin-right:7px">${ev.kind==="inject"?"Aporte":ev.kind==="trade"?(ev.side==="sell"?"Venta":"Compra"):ev.kind==="div"?"Dividendo":"Rebalanceo"}</span>${_evDesc(ev)}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="${i}" title="Editar esta operación">✎</button> <button class="wbtn del" data-del="${i}" title="Eliminar esta operación">✕</button></td></tr>`;}).join("");
     return main+subs;}).join("");
   const tbl=card("Historial de seguimiento",_grp.length+" día"+(_grp.length>1?"s":"")+" · las operaciones del día van como sub-filas (✎ individual) · la Δ del día ya netea los aportes · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
   const vaRf=(pY)=>{const sp=(PF.sig/100)/Math.sqrt(pY),mp=Math.pow(1+PF.erCapm/100,1/pY)-1,v=mp-1.645*sp;return {pct:v,loss:L.val*Math.max(0,-v)};};
@@ -3402,7 +3422,8 @@ function viewOperar(){
   const UNI=operarUniverse();   // universo libre: IPSA completo + holdings (independiente del análisis)
   const sellOpts=IM.perStock.filter(p=>p.sh>1e-4).map(p=>p.hd.t);
   const buyOpts=UNI.map(s=>s.t);
-  const tkrOpts=(opState.side==="sell"?sellOpts:buyOpts);
+  const isDivOp=opState.side==="div";
+  const tkrOpts=(opState.side==="buy"?buyOpts:sellOpts);   // vender y dividendo: solo acciones EN cartera
   if(opState.tkr&&tkrOpts.indexOf(opState.tkr)<0)opState.tkr=null;
   const osel=opState.tkr||tkrOpts[0]||"";
   const lastPrice=(lastW.prices[osel]!=null?lastW.prices[osel]:"");
@@ -3410,16 +3431,17 @@ function viewOperar(){
   // el precio por acción se DERIVA = monto/cantidad y se muestra en vivo
   const _oq0=parseFloat(opState.qty),_om0=parseFloat(opState.monto);
   const derPrice=(_oq0>0&&_om0>0)?_om0/_oq0:null;
-  const opBody=`<div class="op-form"><div class="op-side" role="group" aria-label="Tipo de operación"><button type="button" class="opbtn buy ${opState.side==="buy"?"on":""}" data-opside="buy" aria-pressed="${opState.side==="buy"}">Comprar</button><button type="button" class="opbtn sell ${opState.side==="sell"?"on":""}" data-opside="sell" aria-pressed="${opState.side==="sell"}">Vender</button></div>
+  const opBody=`<div class="op-form"><div class="op-side" role="group" aria-label="Tipo de operación"><button type="button" class="opbtn buy ${opState.side==="buy"?"on":""}" data-opside="buy" aria-pressed="${opState.side==="buy"}">Comprar</button><button type="button" class="opbtn sell ${opState.side==="sell"?"on":""}" data-opside="sell" aria-pressed="${opState.side==="sell"}">Vender</button><button type="button" class="opbtn ${isDivOp?"on":""}" data-opside="div" aria-pressed="${isDivOp}" title="Registra un pago de dividendos recibido: cuenta como ganancia de la gestión y dinero rescatado" style="${isDivOp?`color:${green}`:""}">Dividendo</button></div>
     <div class="op-grid">
-      <div><label class="genl" for="optkr">Acción</label><select id="optkr" aria-label="Acción a operar">${tkrOpts.length?tkrOpts.map(t=>{const st=UNI.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones para vender</option>'}</select></div>
-      <div><label class="genl" for="opqty">Cantidad (acciones)</label><input type="number" step="any" id="opqty" value="${opState.qty}" placeholder="Ej: 100" aria-label="Cantidad de acciones"></div>
-      <div><label class="genl" for="opmonto">Monto total ${opState.side==="sell"?"recibido":"invertido"} (CLP)</label><input type="number" step="any" id="opmonto" value="${opState.monto||""}" placeholder="el de tu corredora" aria-label="Monto total de la operación en pesos"></div>
+      <div><label class="genl" for="optkr">Acción</label><select id="optkr" aria-label="Acción a operar">${tkrOpts.length?tkrOpts.map(t=>{const st=UNI.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones en cartera</option>'}</select></div>
+      ${isDivOp?"":`<div><label class="genl" for="opqty">Cantidad (acciones)</label><input type="number" step="any" id="opqty" value="${opState.qty}" placeholder="Ej: 100" aria-label="Cantidad de acciones"></div>`}
+      <div><label class="genl" for="opmonto">${isDivOp?"Dividendo recibido (CLP)":`Monto total ${opState.side==="sell"?"recibido":"invertido"} (CLP)`}</label><input type="number" step="any" id="opmonto" value="${opState.monto||""}" placeholder="${isDivOp?"monto líquido abonado":"el de tu corredora"}" aria-label="${isDivOp?"Monto del dividendo recibido en pesos":"Monto total de la operación en pesos"}"></div>
       <div><label class="genl" for="opdate">Fecha</label><input type="date" id="opdate" value="${opState.date||localDay()}" aria-label="Fecha de la operación"></div>
     </div>
     ${opState.side==="buy"?`<div id="opval" class="op-val" style="margin-top:12px;padding:11px 13px;border:1px solid var(--line2);border-radius:11px;background:var(--soft);font-size:12.5px;line-height:1.5">${opValHTML(osel,derPrice||"")}</div>`:""}
-    <div class="op-foot"><div class="op-amt">Precio por acción (derivado): <b>${derPrice?fmtP(derPrice):"—"}</b>${lastPrice?` <span style="color:var(--faint);font-weight:600;font-size:11px">· último cierre ${fmtP(lastPrice)}</span>`:""}</div><button class="btn btn-pri" id="opdo">✓ Registrar ${opState.side==="sell"?"venta":"compra"}</button></div></div>`;
-  const opCard=card("Registrar compra o venta","Compra o vende una acción (precio y cantidad). Comprar también sirve para <b>aportar capital nuevo</b>: cada compra suma el monto al capital aportado y recalcula el valor de la cartera y el drift — sin que cuente como rentabilidad.",opBody+`<div class="helpline" style="margin-top:12px">¿Ingresaste mal un precio o una cantidad? Corrige la operación en <b>Historial</b> con el lápiz <b>✎</b> del registro (campos «Operación de este registro»).</div><div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
+    ${isDivOp?`<div class="note" style="margin-top:12px">El dividendo se registra como <b>ganancia de la gestión</b> cobrada en efectivo (<b>dinero rescatado</b>): no cambia tus acciones ni tu costo, sube tu rentabilidad y queda en el libro de Contabilidad y en el resumen anual para tu declaración. No paga comisión de corredora.</div>`:""}
+    <div class="op-foot"><div class="op-amt">${isDivOp?"":`Precio por acción (derivado): <b>${derPrice?fmtP(derPrice):"—"}</b>${lastPrice?` <span style="color:var(--faint);font-weight:600;font-size:11px">· último cierre ${fmtP(lastPrice)}</span>`:""}`}</div><button class="btn btn-pri" id="opdo">✓ Registrar ${isDivOp?"dividendo":opState.side==="sell"?"venta":"compra"}</button></div></div>`;
+  const opCard=card("Registrar compra, venta o dividendo","Compra o vende una acción (precio y cantidad), o registra un <b>pago de dividendos</b>. Comprar también sirve para <b>aportar capital nuevo</b>: cada compra suma el monto al capital aportado y recalcula el valor de la cartera y el drift — sin que cuente como rentabilidad.",opBody+`<div class="helpline" style="margin-top:12px">¿Ingresaste mal un precio o una cantidad? Corrige la operación en <b>Historial</b> con el lápiz <b>✎</b> del registro (campos «Operación de este registro»).</div><div class="genl" style="margin-top:18px">Posiciones actuales y su drift</div>`+posTable);
   return projbar+summary+opCard;
 }
 
@@ -3484,6 +3506,10 @@ function invReportShell(o){
     .note{font-size:10px;color:#405577;line-height:1.6;background:#F8FAFD;border:1px solid #E7EEF8;border-left:3px solid #BFD3EF;border-radius:9px;padding:10px 13px;margin-top:10px;break-inside:avoid;}
     svg{max-width:100%;height:auto;}
     .chartbox{border:1px solid #EDF2FA;border-radius:11px;padding:10px 12px 6px;background:#FDFEFF;break-inside:avoid;page-break-inside:avoid;}
+    .exec{margin:14px 34px 0;border:1px solid #DCE7F7;border-left:4px solid #1E5FD1;border-radius:11px;background:linear-gradient(180deg,#F7FAFF,#FDFEFF);padding:13px 17px;break-inside:avoid;}
+    .exec .xt{font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:800;color:#1E5FD1;margin-bottom:6px;}
+    .exec p{font-size:11px;line-height:1.65;color:#22355C;}
+    .exec b{color:#10306A;}
     .sig{display:flex;gap:44px;margin:38px 34px 0;break-inside:avoid;}
     .sig .s1{flex:1;max-width:250px;border-top:1.5px solid #9FB2CF;padding-top:6px;font-size:9.5px;color:#52668A;text-align:center;line-height:1.5;}
     .foot{margin:22px 34px 26px;border-top:1.5px solid #E1EAF6;padding-top:11px;font-size:9px;color:#7A8CA8;line-height:1.7;}
@@ -3493,6 +3519,7 @@ function invReportShell(o){
   <div class="band">${invReportLogo(44)}<div><div class="beye">Investor · Inteligencia que genera valor</div><h1>${o.title}</h1><div class="bsub">${o.subtitle||""}</div></div>
     ${o.hero?`<div class="bhero"><div class="bhl">${o.hero.label}</div><div class="bhv">${o.hero.value}</div>${o.hero.sub?`<div class="bhs" style="color:${o.hero.subColor||'#CFE0FF'}">${o.hero.sub}</div>`:""}</div>`:""}</div>
   ${o.metaHTML?`<div class="meta">${o.metaHTML}</div>`:""}
+  ${o.execHTML?`<div class="exec"><div class="xt">Resumen ejecutivo</div><p>${o.execHTML}</p></div>`:""}
   <div class="page">${o.bodyHTML}</div>
   ${o.sigHTML||""}
   <div class="foot">${o.footHTML||""}<div class="brandline"><span>Investor · Inteligencia que genera valor</span><span>${o.folio||""}</span><span>Emitido el ${o.fch||""}</span></div></div>
@@ -3617,8 +3644,9 @@ function genInvReport(){
   const _grp=[];IM.series.forEach((s,i)=>{if(!_grp.length||IM.series[_grp[_grp.length-1][0]].date!==s.date)_grp.push([i]);else _grp[_grp.length-1].push(i);});
   const _evDesc=ev=>{if(!ev)return "";if(ev.kind==="inject")return "Aporte de capital · "+fmtCLP(ev.amount||0);
     if(ev.kind==="trade")return (ev.side==="sell"?"Venta":"Compra")+" "+ev.t+" · "+(+ev.shares).toLocaleString("es-CL",{maximumFractionDigits:2})+" × "+fmtP(+ev.price||0)+" = "+fmtCLP(Math.round((+ev.shares||0)*(+ev.price||0)));
+    if(ev.kind==="div")return "Dividendo "+ev.t+" · +"+fmtCLP(ev.amount||0);
     return "Rebalanceo";};
-  const _evTag=ev=>ev.kind==="inject"?"Aporte":ev.kind==="trade"?(ev.side==="sell"?"Venta":"Compra"):"Rebalanceo";
+  const _evTag=ev=>ev.kind==="inject"?"Aporte":ev.kind==="trade"?(ev.side==="sell"?"Venta":"Compra"):ev.kind==="div"?"Dividendo":"Rebalanceo";
   const hist=_grp.map((g,k)=>{const li=g[g.length-1],s=IM.series[li];
     const pv=k>0?IM.series[_grp[k-1][_grp[k-1].length-1]]:null;
     let fl=0;g.forEach(i=>{fl+=IM.series[i].inflow||0;});
@@ -3687,13 +3715,15 @@ function genInvReport(){
     <section class="pb"><h2><span class="sn">11</span>Rentabilidad diaria por acción (${dates.length} días)</h2>
     <div class="ssub">Variación del precio de cierre de cada acción respecto al cierre anterior · la fila Acumulado es su crecimiento desde la incorporación</div>
     <table><thead>${dpHead}</thead><tbody>${dpRows}</tbody><tfoot>${dpFoot}</tfoot></table></section>`;
-  const footHTML=`<b>Metodología y supuestos.</b> Rentabilidad time-weighted (TWR), que aísla el efecto de aportes y rebalanceos. Ganancia = valor actual − capital aportado total (los aportes no cuentan como rentabilidad). Los gráficos muestran un punto por fecha (varias operaciones el mismo día se netean juntas), igual que el módulo Seguimiento. CAPM con benchmark IPSA: Rf ${RF}%, prima ${PRIMA}%, β del portafolio ${PF.bp.toFixed(2)}; la curva exigida parte del valor real inicial, crece a la tasa exigida de la composición vigente y escalona por aportes/retiros, recalculando la tasa desde cada operación. VaR 95% paramétrico (μ − 1,645·σ), asume normalidad y subestima los eventos extremos; el «peor real» usa ventanas de días calendario neteando todos los aportes de la ventana. β realizado, tracking error e information ratio se estiman contra los retornos del IPSA del mismo período. El CAGR se reporta solo con ≥60 días. Documento informativo generado por Investor; no constituye recomendación ni asesoría de inversión.`;
+  const footHTML=`<b>Metodología y supuestos.</b> Rentabilidad time-weighted (TWR), que aísla el efecto de aportes y rebalanceos. Ganancia = valor actual − capital aportado total (los aportes no cuentan como rentabilidad; los <b>dividendos cobrados</b> sí son ganancia: entran como flujo rescatado). Los gráficos muestran un punto por fecha (varias operaciones el mismo día se netean juntas), igual que el módulo Seguimiento. CAPM con benchmark IPSA: Rf ${RF}%, prima ${PRIMA}%, β del portafolio ${PF.bp.toFixed(2)}; la curva exigida parte del valor real inicial, crece a la tasa exigida de la composición vigente y escalona por aportes/retiros, recalculando la tasa desde cada operación. VaR 95% paramétrico (μ − 1,645·σ), asume normalidad y subestima los eventos extremos; el «peor real» usa ventanas de días calendario neteando todos los aportes de la ventana y se mide sobre el patrimonio total del momento. El máximo drawdown se calcula sobre la rentabilidad (flujos neteados). β realizado, tracking error e information ratio se estiman contra los retornos del IPSA del mismo período. El CAGR se reporta solo con ≥60 días. Documento informativo generado por Investor; no constituye recomendación ni asesoría de inversión.`;
+  const _execVs=L.diff!=null?(L.diff>=0?`superando al IPSA por <b>${(L.diff*100).toFixed(2)} pts</b>`:`bajo el IPSA por <b>${Math.abs(L.diff*100).toFixed(2)} pts</b>`):"";
+  const execHTML=`El portafolio <b>${(""+PF.name).replace(/</g,"&lt;")}</b> vale hoy <b>${fmtCLP(L.val)}</b> sobre <b>${fmtCLP(IM.aport)}</b> aportados netos: una ganancia de <b>${sgnC(gain)}</b> (TWR <b>${sg(L.ret*100)}</b> en ${days} días${_execVs?", "+_execVs:""}). ${IM.betaR!=null?`El β realizado es <b>${IM.betaR.toFixed(2)}</b> (esperado ${PF.bp.toFixed(2)})`:`β esperado <b>${PF.bp.toFixed(2)}</b>`}${IM.realizedVol!=null?`, con volatilidad realizada de <b>${IM.realizedVol.toFixed(1)}%</b>`:""}. La peor caída diaria fue <b>${IM.worstRet!=null?sg(IM.worstRet*100):"—"}</b>${IM.worstRetDate?` (${IM.worstRetDate}${IM.worstBaseVal!=null?`, sobre ${fmtCLP(IM.worstBaseVal)}`:""})`:""} y el drawdown máximo <b>${sg(IM.maxDD*100)}</b>. El detalle de cada sección sigue a continuación.`;
   const html=invReportShell({
     docTitle:"Informe de seguimiento · "+PF.name,
     title:"Informe de seguimiento de inversión",
     subtitle:(""+PF.name).replace(/</g,"&lt;")+" · emitido el "+fch,
     hero:{label:"Valor actual del portafolio",value:fmtCLP(L.val),sub:sgnC(gain)+" ("+sg(L.ret*100)+" TWR)",subColor:gain>=0?"#9FE8C4":"#FFB3B3"},
-    metaHTML,bodyHTML,footHTML,folio,fch
+    metaHTML,execHTML,bodyHTML,footHTML,folio,fch
   });
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para ver el informe.");
 }
@@ -3784,6 +3814,13 @@ function attachInv(){
       // sin cierre real del papel ese día, el precio del día es el de la transacción corregida (guardia ±15%)
       if(rec.fresh&&rec.fresh.indexOf(rec.ev.t)<0){const _cur=rec.prices[rec.ev.t];if(!(_cur>0)||Math.abs(np/_cur-1)<=0.15)rec.prices[rec.ev.t]=np;}
     }
+    // corrección del MONTO de un dividendo mal ingresado
+    const _edv=document.getElementById("evdiv");
+    if(rec.ev&&rec.ev.kind==="div"&&_edv){
+      const nd2=parseFloat(_edv.value);
+      if(!(nd2>0)){alert("El dividendo necesita un monto válido (mayor a 0).");return;}
+      if(Math.round(nd2)!==Math.round(+rec.ev.amount||0)){rec.ev=Object.assign({},rec.ev,{amount:Math.round(nd2)});_evTouched=true;}
+    }
     // CORRECCIÓN MANUAL DE UN CIERRE desde el Historial: si el usuario cambió el PRECIO DEL DÍA de una
     // acción (no la operación), la corrección se propaga a TODOS los registros de esa fecha (con varias
     // operaciones el mismo día, el que manda en la valorización es el último) y se ANCLA en la base de
@@ -3821,7 +3858,7 @@ function attachInv(){
   };
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
   document.querySelectorAll("[data-holdrm]").forEach(b=>b.onclick=(e)=>{e.preventDefault();holdingRemove(b.dataset.holdrm);});
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;const _ev=WEEKS[i]&&WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra"):"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";if(window.confirm(_msg)){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;if(_ev){try{projSyncReal(PF);}catch(e){}}saveProjects();render();}});
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;const _ev=WEEKS[i]&&WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra"):_ev.kind==="div"?"dividendo":"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";if(window.confirm(_msg)){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;if(_ev){try{projSyncReal(PF);}catch(e){}}saveProjects();render();}});
   document.querySelectorAll("[data-godatos]").forEach(b=>b.onclick=()=>{modulo="datos";page=b.dataset.godatos;render();});
   document.querySelectorAll("[data-invtab]").forEach(b=>b.onclick=()=>{page=b.dataset.invtab;render();});
   document.querySelectorAll("[data-gomod]").forEach(b=>b.onclick=()=>{modulo=b.dataset.gomod;if(modulo==="proyectos")page="hub";render();});
@@ -3829,7 +3866,7 @@ function attachInv(){
   const ce=document.getElementById("canceledit");if(ce)ce.onclick=()=>{editIdx=null;render();};
   // eliminar el registro DESDE el editor (mismo comportamiento que el ✕ del Historial): compras/ventas incluidas
   const dw=document.getElementById("delw");if(dw)dw.onclick=()=>{const i=editIdx;if(i==null||!WEEKS[i])return;
-    const _ev=WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra")+" de "+_ev.t:"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";
+    const _ev=WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra")+" de "+_ev.t:_ev.kind==="div"?"dividendo de "+_ev.t:"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";
     if(!window.confirm(_msg))return;
     WEEKS.splice(i,1);editIdx=null;
     if(_ev){try{const IMx=invMetrics();if(IMx&&IMx.cost)PF.holdings.forEach(h=>{h.monto=Math.round(IMx.cost[h.t]||0);});projSyncReal(PF);}catch(e){}}
@@ -4392,7 +4429,7 @@ MARCO: Markowitz (correlaciones, presupuesto de riesgo por contribución, máxim
 
 REGLA DE ORO: toda cifra (precio, métrica, indicador, titular) sale de las HERRAMIENTAS — llámalas antes de afirmar. Nunca inventes. Si una tool no trae datos, dilo y di dónde refrescar; no rellenes con supuestos. En get_market_indicators: dólar/cobre/UF/IPC/TPM/Imacec/desempleo son en vivo; petróleo y S&P 500 son manuales y pueden faltar (si faltan, dilo, sugiere cargarlos en Mercados). get_market_news y get_ipsa_snapshot pueden venir vacíos: indícalo.
 
-REGLA DE DINERO (credibilidad no negociable): las cifras en pesos tienen semántica ESTRICTA y jamás se intercambian. 'valorActualCLP' = lo que la cartera VALE HOY — es la ÚNICA cifra válida cuando el usuario pregunta cuánto tiene, cuánto vale o el monto de su cartera. 'capitalAportadoCLP' = TODO lo que puso de su bolsillo hasta hoy (compra inicial + aportes posteriores, neto de ventas) y es el ÚNICO denominador válido para calcular rentabilidad. 'compraInicialRealCLP' = lo pagado SOLO en la compra inicial: si hubo aportes posteriores NO es el capital aportado — jamás lo uses como denominador ni lo llames "lo invertido". 'montoInicialPlan_CLP' = el plan de la compra INICIAL (dato histórico de referencia): PROHIBIDO presentarlo como el monto o valor de la cartera. 'costoCLP' por acción = costo de compra, no valor. Al citar la cartera nombra siempre las tres magnitudes por separado (aportado, valor actual, ganancia) y si no hay seguimiento con valor actual, di que aún no hay valorización — NUNCA uses el plan inicial como sustituto.
+REGLA DE DINERO (credibilidad no negociable): las cifras en pesos tienen semántica ESTRICTA y jamás se intercambian. 'valorActualCLP' = lo que la cartera VALE HOY — es la ÚNICA cifra válida cuando el usuario pregunta cuánto tiene, cuánto vale o el monto de su cartera. 'capitalAportadoCLP' = TODO lo que puso de su bolsillo hasta hoy (compra inicial + aportes posteriores, neto de ventas y dividendos cobrados) y es el ÚNICO denominador válido para calcular rentabilidad. Los DIVIDENDOS recibidos son GANANCIA de la gestión cobrada en efectivo (dinero rescatado): reducen el aportado neto como un retiro y JAMÁS se presentan como aporte ni como pérdida. 'compraInicialRealCLP' = lo pagado SOLO en la compra inicial: si hubo aportes posteriores NO es el capital aportado — jamás lo uses como denominador ni lo llames "lo invertido". 'montoInicialPlan_CLP' = el plan de la compra INICIAL (dato histórico de referencia): PROHIBIDO presentarlo como el monto o valor de la cartera. 'costoCLP' por acción = costo de compra, no valor. Al citar la cartera nombra siempre las tres magnitudes por separado (aportado, valor actual, ganancia) y si no hay seguimiento con valor actual, di que aún no hay valorización — NUNCA uses el plan inicial como sustituto.
 
 REGLA DE ESTADO: NUNCA afirmes un ESTADO de la plataforma —si hay o no cartera activa, si "el sistema está limpio", si hay o no datos— sin verificarlo con la tool que lo establece. El bloque **ESTADO DEL SISTEMA** (abajo, se recalcula cada turno) es la VERDAD del estado: no lo contradigas ni lo adivines a la baja. "Sin análisis formal" **≠** "sin datos ni cartera": el **Investor Score** (get_investor_score), la **cartera activa** (get_active_portfolio), su **seguimiento** (get_performance_summary) y las **proyecciones** (get_projection) NO dependen del análisis formal — funcionan siempre que exista base de precios (score) o una cartera con seguimiento (tracking); no los des por muertos por falta de análisis formal. Ante cualquier pregunta sobre la cartera, llama get_active_portfolio ANTES de decir una palabra sobre si existe. **Prohibido abrir negando lo que no verificaste** (ni "no tengo tu cartera", ni "no hay métricas", antes de mirarlas).
 
@@ -4721,24 +4758,25 @@ function cpRunTool(name,input){
       const projs=(PROJECTS||[]).filter(p=>(p.weeks||[]).length&&(p.holdings||[]).length);
       if(!projs.length)return "No hay operaciones registradas aún (ningún proyecto con seguimiento). El libro completo vive en Inversión → Contabilidad.";
       const lim=Math.max(1,Math.min(200,parseInt(input&&input.limit,10)||40));
-      const ops=[];let tBuy=0,tSell=0,tFee=0;const byT={};const perProj=[];
+      const ops=[];let tBuy=0,tSell=0,tDiv=0,tFee=0;const byT={};const perProj=[];
       projs.forEach(p=>{let A=null;try{A=contabAggFor(p);}catch(e){}
         if(!A||!A.L||!A.L.tx.length)return;
-        A.L.tx.forEach(x=>{const fee=brokerFee(x.monto);
-          const o={proyecto:p.name,fecha:x.date,tipo:x.side==="sell"?"venta":"compra",ticker:x.t,acciones:+(+x.shares).toFixed(4),precio:x.price,montoCLP:Math.round(x.monto),comisionCLP:fee};
+        A.L.tx.forEach(x=>{const fee=x.side==="div"?0:brokerFee(x.monto);
+          const o={proyecto:p.name,fecha:x.date,tipo:x.side==="sell"?"venta":x.side==="div"?"dividendo":"compra",ticker:x.t,acciones:x.side==="div"?null:+(+x.shares).toFixed(4),precio:x.side==="div"?null:x.price,montoCLP:Math.round(x.monto),comisionCLP:fee};
           if(x.side==="sell"){o.costoCLP=Math.round(x.cost||0);o.resultadoBrutoCLP=Math.round(x.gain||0);}
-          ops.push(o);tFee+=fee;if(x.side==="sell")tSell+=x.monto;else tBuy+=x.monto;
-          const a=byT[x.t]||(byT[x.t]={ticker:x.t,compradoCLP:0,vendidoCLP:0,comisionesCLP:0,operaciones:0});
-          a.operaciones++;a.comisionesCLP+=fee;if(x.side==="sell")a.vendidoCLP+=Math.round(x.monto);else a.compradoCLP+=Math.round(x.monto);});
-        perProj.push({proyecto:p.name,compradoCLP:Math.round(A.totBuy),vendidoCLP:Math.round(A.totSell),comisionesCLP:Math.round(A.fees),resultadoRealizadoCLP:Math.round(A.totReal),resultadoNoRealizadoCLP:Math.round(A.totUnreal),gananciaNetaCLP:Math.round(A.netGain)});});
+          if(x.side==="div")o.resultadoBrutoCLP=Math.round(x.monto);
+          ops.push(o);tFee+=fee;if(x.side==="sell")tSell+=x.monto;else if(x.side==="div")tDiv+=x.monto;else tBuy+=x.monto;
+          const a=byT[x.t]||(byT[x.t]={ticker:x.t,compradoCLP:0,vendidoCLP:0,dividendosCLP:0,comisionesCLP:0,operaciones:0});
+          a.operaciones++;a.comisionesCLP+=fee;if(x.side==="sell")a.vendidoCLP+=Math.round(x.monto);else if(x.side==="div")a.dividendosCLP+=Math.round(x.monto);else a.compradoCLP+=Math.round(x.monto);});
+        perProj.push({proyecto:p.name,compradoCLP:Math.round(A.totBuy),vendidoCLP:Math.round(A.totSell),dividendosCLP:Math.round(A.totDiv||0),comisionesCLP:Math.round(A.fees),resultadoRealizadoCLP:Math.round(A.totReal),resultadoNoRealizadoCLP:Math.round(A.totUnreal),gananciaNetaCLP:Math.round(A.netGain)});});
       if(!ops.length)return "No hay operaciones registradas aún. El libro completo vive en Inversión → Contabilidad.";
       ops.sort((a,b)=>a.fecha<b.fecha?1:(a.fecha>b.fecha?-1:0));
       const movido=tBuy+tSell;
       return JSON.stringify({operador:brokerSummary(),
-        totales:{operaciones:ops.length,compradoCLP:Math.round(tBuy),vendidoCLP:Math.round(tSell),comisionesCLP:Math.round(tFee),costoMedioDeTransar_pct:movido>0?+(tFee/movido*100).toFixed(2):null},
+        totales:{operaciones:ops.length,compradoCLP:Math.round(tBuy),vendidoCLP:Math.round(tSell),dividendosRecibidosCLP:Math.round(tDiv),comisionesCLP:Math.round(tFee),costoMedioDeTransar_pct:movido>0?+(tFee/movido*100).toFixed(2):null},
         porProyecto:perProj,
         porAccion:Object.values(byT).sort((a,b)=>b.compradoCLP-a.compradoCLP),
-        nota:"Comisiones ESTIMADAS con el operador configurado (IVA incl. si aplica). 'resultadoBrutoCLP' de una venta = realizado antes de comisión. Si costoMedioDeTransar_pct es alto (>1%), el usuario está pagando caro por operar: recomienda agrupar movimientos o operar menos.",
+        nota:"Comisiones ESTIMADAS con el operador configurado (IVA incl. si aplica). 'resultadoBrutoCLP' de una venta = realizado antes de comisión. Los DIVIDENDOS son ganancia cobrada en efectivo (dinero rescatado): no pagan comisión, reducen el capital aportado neto como un retiro y JAMÁS cuentan como aporte. Si costoMedioDeTransar_pct es alto (>1%), el usuario está pagando caro por operar: recomienda agrupar movimientos o operar menos.",
         operaciones:ops.slice(0,lim)});
     }
     if(name==="get_rebalance_plan"){
@@ -6946,6 +6984,7 @@ function opDo(){
   const selEl=document.getElementById("optkr"),qEl=document.getElementById("opqty"),mEl=document.getElementById("opmonto"),dEl=document.getElementById("opdate");
   const t=selEl?selEl.value:opState.tkr,side=opState.side,q=parseFloat(qEl?qEl.value:opState.qty),m=parseFloat(mEl?mEl.value:opState.monto);
   if(!t){window.alert("Elige una acción.");return;}
+  if(side==="div"){opDoDiv(t,m,(dEl&&dEl.value)||opState.date||localDay());return;}
   if(!(q>0)){window.alert("Indica la cantidad de acciones (mayor que 0).");return;}
   if(!(m>0)){window.alert("Indica el monto total de la operación (el de tu corredora, mayor que 0).");return;}
   const p=m/q;   // precio por acción DERIVADO: así el monto en Investor cuadra AL PESO con la cartola
@@ -7018,6 +7057,30 @@ function opDo(){
   opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
   render();
 }
+/* Registrar un PAGO DE DIVIDENDOS: ev {kind:"div"} — no cambia acciones ni costos; es ganancia de la
+   gestión cobrada en efectivo (dinero rescatado). El registro del día lleva los cierres reales de la fecha
+   si la base los tiene (misma regla que una compra/venta), para que el seguimiento quede valorizado bien. */
+function opDoDiv(t,m,date){
+  if(!(m>0)){window.alert("Indica el monto del dividendo recibido (mayor que 0).");return;}
+  const IM=invMetrics();const ps=IM&&IM.perStock.find(x=>x.hd.t===t);const held=ps?ps.sh:0;
+  if(held<=1e-9){window.alert("No tienes acciones de "+t+" en cartera para registrar su dividendo.");return;}
+  const last=WEEKS.length?WEEKS[WEEKS.length-1]:null;
+  let basePrices=last?last.prices:{},ipsa=last?last.ipsa:1;
+  const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev);
+  if(sameIdx>=0){const sw=PF.weeks[sameIdx];basePrices=sw.prices||basePrices;if(sw.ipsa!=null)ipsa=sw.ipsa;PF.weeks.splice(sameIdx,1);}
+  const prices=Object.assign({},basePrices);
+  const fresh=[];let _ipFresh=false;
+  try{const C=consolidatedSeries();if(C){
+    PF.holdings.forEach(h=>{const mp=C.tick[h.t];if(mp&&mp[date]!=null){prices[h.t]=mp[date];if(fresh.indexOf(h.t)<0)fresh.push(h.t);}});
+    if(C.ipsaMap&&C.ipsaMap[date]!=null){ipsa=C.ipsaMap[date];_ipFresh=true;}
+  }}catch(e){}
+  const _wk={date,prices,ipsa,fresh,ev:{kind:"div",t,amount:Math.round(m)}};if(_ipFresh)_wk.ipsaFresh=true;
+  PF.weeks.push(_wk);
+  PF.weeks.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
+  saveProjects();
+  opState={pid:activeId,side:"div",tkr:null,qty:"",price:"",monto:"",date:""};
+  render();
+}
 
 /* libro de operaciones reconstruido evento a evento, con costo promedio */
 /* ===== OPERADOR (corredora) Y COSTOS — global, todos los clientes ===== */
@@ -7050,30 +7113,51 @@ function ledger(){
     if(!hasQty&&!inB)return;   // no estaba al inicio: se incorpora por un ev posterior, no acá
     let p=base.prices[hd.t];if(p==null){const fw=WEEKS.find(w=>w.prices[hd.t]!=null);p=fw?fw.prices[hd.t]:null;}   // fallback de precio como invMetrics: sin él una venta posterior saldría con costo 0
     if(p==null||!(p>0))return;
-    const q=hasQty?base.qty[hd.t]:(hd.monto/p);buy(base.date,hd.t,q,p,"Compra inicial");
+    const q=hasQty?base.qty[hd.t]:(hd.monto/p);buy(base.date,hd.t,q,p,"Compra");
   });
+  // el libro identifica SOLO la operación (Compra / Venta / Dividendo) — sin "Compra inicial", "Aporte" ni
+  // "Rebalanceo" como tipos aparte: contablemente son compras y ventas; el origen vive en el seguimiento
   for(let i=1;i<WEEKS.length;i++){const w=WEEKS[i];if(!w.ev)continue;
-    if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);buy(w.date,t,q,q>0?al[t]/q:0,"Aporte");});}
+    if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);buy(w.date,t,q,q>0?al[t]/q:0,"Compra");});}
     else if(w.ev.kind==="trade"){const t=w.ev.t,p=w.ev.price||w.prices[t]||1;if(w.ev.side==="sell")sell(w.date,t,+w.ev.shares,p,"Venta");else buy(w.date,t,+w.ev.shares,p,"Compra");}
-    else if(w.ev.kind==="rebal"&&w.ev.shares){Object.keys(w.ev.shares).forEach(t=>{const ns=w.ev.shares[t],old=sh[t]||0,p=w.prices[t]||base.prices[t]||1;if(ns>old+1e-9)buy(w.date,t,ns-old,p,"Rebalanceo");else if(ns<old-1e-9)sell(w.date,t,old-ns,p,"Rebalanceo");});}
+    else if(w.ev.kind==="rebal"&&w.ev.shares){Object.keys(w.ev.shares).forEach(t=>{const ns=w.ev.shares[t],old=sh[t]||0,p=w.prices[t]||base.prices[t]||1;if(ns>old+1e-9)buy(w.date,t,ns-old,p,"Compra");else if(ns<old-1e-9)sell(w.date,t,old-ns,p,"Venta");});}
+    else if(w.ev.kind==="div"){const amt=+w.ev.amount||0;if(amt>0)tx.push({date:w.date,t:w.ev.t,side:"div",shares:0,price:0,monto:amt,tipo:"Dividendo",gain:amt});}
   }
   return {tx,realized,sh,avg};
 }
 function contabAgg(){
   const L=ledger(),IM=invMetrics();if(!L||!IM||!L.tx.length)return null;
   const lastW=WEEKS[WEEKS.length-1];
-  const perT={};L.tx.forEach(x=>{const o=perT[x.t]||(perT[x.t]={t:x.t,buyMonto:0,buyQty:0,sellMonto:0,sellQty:0,realized:0});if(x.side==="buy"){o.buyMonto+=x.monto;o.buyQty+=x.shares;}else{o.sellMonto+=x.monto;o.sellQty+=x.shares;o.realized+=(x.gain||0);}});
+  const perT={};L.tx.forEach(x=>{const o=perT[x.t]||(perT[x.t]={t:x.t,buyMonto:0,buyQty:0,sellMonto:0,sellQty:0,divMonto:0,realized:0});if(x.side==="buy"){o.buyMonto+=x.monto;o.buyQty+=x.shares;}else if(x.side==="div"){o.divMonto+=x.monto;}else{o.sellMonto+=x.monto;o.sellQty+=x.shares;o.realized+=(x.gain||0);}});
   const rows=Object.values(perT).map(o=>{const sh=L.sh[o.t]||0,avg=L.avg[o.t]||0,cur=(lastW.prices[o.t]!=null?lastW.prices[o.t]:avg),val=sh*cur,unreal=(cur-avg)*sh;return Object.assign(o,{sh,avg,cur,val,unreal});});
   const totBuy=L.tx.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0);
   const totSell=L.tx.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0);
+  const totDiv=L.tx.filter(x=>x.side==="div").reduce((a,x)=>a+x.monto,0);
   const totReal=L.realized.reduce((a,r)=>a+r.gain,0);
   const totUnreal=rows.reduce((a,o)=>a+o.unreal,0);
-  let feesBuy=0,feesSell=0,feesIva=0;L.tx.forEach(x=>{const fp=feeParts(x.monto);x.fee=fp.total;x.feeBase=fp.base;x.feeIva=fp.iva;feesIva+=fp.iva;if(x.side==="sell")feesSell+=fp.total;else feesBuy+=fp.total;});
+  // los DIVIDENDOS no pagan comisión de corredora: quedan fuera del cálculo de fees
+  let feesBuy=0,feesSell=0,feesIva=0;L.tx.forEach(x=>{const fp=x.side==="div"?{total:0,base:0,iva:0}:feeParts(x.monto);x.fee=fp.total;x.feeBase=fp.base;x.feeIva=fp.iva;feesIva+=fp.iva;if(x.side==="sell")feesSell+=fp.total;else if(x.side!=="div")feesBuy+=fp.total;});
   const fees=feesBuy+feesSell;
-  const netGain=(totReal+totUnreal)-fees;         /* ganancia real: bruta − comisiones (IVA incluido) */
-  return {L,IM,rows,totBuy,totSell,totReal,totUnreal,V:IM.last.val,lastW,feesBuy,feesSell,fees,feesIva,netGain};
+  const netGain=(totReal+totUnreal+totDiv)-fees;   /* ganancia real: realizada + no realizada + dividendos − comisiones (IVA incl.) */
+  return {L,IM,rows,totBuy,totSell,totDiv,totReal,totUnreal,V:IM.last.val,lastW,feesBuy,feesSell,fees,feesIva,netGain};
 }
 function contabAggFor(p){return withProject(p,function(){return contabAgg();});}
+/* RESUMEN ANUAL para la declaración de impuestos: por año calendario — comprado, vendido, costo de lo
+   vendido, mayor valor realizado (venta − costo promedio), dividendos cobrados y comisiones. Es la base
+   ordenada que pide el contador; el tratamiento tributario definitivo (corrección monetaria, régimen,
+   fechas de adquisición) lo aplica él. tx debe venir del ledger DESPUÉS de contabAgg (trae fee/feeIva). */
+function contabYearly(allTx){
+  const ys={};
+  allTx.forEach(x=>{const y=x.date.slice(0,4);const o=ys[y]=ys[y]||{y,n:0,buy:0,sellP:0,sellCost:0,real:0,div:0,fee:0,feeIva:0};
+    o.n++;o.fee+=x.fee||0;o.feeIva+=x.feeIva||0;
+    if(x.side==="buy")o.buy+=x.monto;
+    else if(x.side==="div")o.div+=x.monto;
+    else{o.sellP+=x.monto;o.sellCost+=x.cost||0;o.real+=x.gain||0;}});
+  return Object.values(ys).sort((a,b)=>a.y<b.y?-1:1).map(o=>Object.assign(o,{neto:o.real+o.div-o.fee}));
+}
+function contabYearlyRows(years,fmt){
+  return years.map(o=>`<tr><td><b>${o.y}</b></td><td class="r">${o.n}</td><td class="r">${fmt(o.buy)}</td><td class="r">${o.sellP?fmt(o.sellP):"—"}</td><td class="r">${o.sellCost?fmt(o.sellCost):"—"}</td><td class="r" style="font-weight:700;color:${o.real>=0?"#0E8C5E":"#D83A3A"}">${o.sellP?((o.real>=0?"+":"−")+fmt(Math.abs(o.real))):"—"}</td><td class="r" style="color:#0E8C5E;font-weight:700">${o.div?("+"+fmt(o.div)):"—"}</td><td class="r">${o.fee?fmt(o.fee):"—"}</td><td class="r" style="font-weight:800;color:${o.neto>=0?"#0E8C5E":"#D83A3A"}">${(o.neto>=0?"+":"−")+fmt(Math.abs(o.neto))}</td></tr>`).join("");
+}
 let contabTxTab="all";   // pestaña activa del libro de operaciones (all | id de proyecto)
 function viewContab(){
   syncProj();
@@ -7083,20 +7167,20 @@ function viewContab(){
   const head=card("Contabilidad consolidada","Todos tus proyectos de inversión: compras, ventas, fechas y montos · rentabilidad realizada y no realizada para tu contador",
     `<button class="btn btn-pri" id="contabreport">🧾 Informe consolidado para el contador</button>`);
   if(!withOps.length)return head+notecard("Tus proyectos aún no tienen operaciones registradas. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>, o compras/ventas en <b>Operar</b>.");
-  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0,feesIva:0,costOpen:0};
-  withOps.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;T.costOpen+=(A.rows||[]).reduce((a,o)=>a+o.avg*o.sh,0);});
-  const totGain=T.real+T.unreal,netInv=T.buy-T.sell,totPct=netInv>0?totGain/netInv*100:0;
+  const T={buy:0,sell:0,div:0,real:0,unreal:0,val:0,fees:0,feesIva:0,costOpen:0};
+  withOps.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.div+=A.totDiv||0;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;T.costOpen+=(A.rows||[]).reduce((a,o)=>a+o.avg*o.sh,0);});
+  const totGain=T.real+T.unreal+T.div,netInv=T.buy-T.sell-T.div,totPct=netInv>0?totGain/netInv*100:0;
   const netGain=totGain-T.fees,netPct=T.buy>0?netGain/T.buy*100:0;
   const sgM=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
   const netCard=card("Resultado real (neto de comisiones e IVA)","Tu ganancia después de descontar las comisiones del operador (IVA incluido) · "+brokerSummary(),
     `<div class="net-strip">
-      <div class="net-it"><span>Ganancia bruta</span><b style="color:${totGain>=0?green:red}">${sgM(totGain)}</b></div>
+      <div class="net-it"><span>Ganancia bruta${T.div?" (incl. dividendos)":""}</span><b style="color:${totGain>=0?green:red}">${sgM(totGain)}</b></div>
       <div class="net-op">−</div>
       <div class="net-it"><span>Comisiones (IVA incl.)</span><b style="color:${red}">${T.fees>0?fmtCLP(T.fees):"$0"}</b></div>
       <div class="net-op">=</div>
       <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)}&nbsp;&nbsp;<span style="font-weight:700;opacity:.7">(${(netPct>=0?"+":"")+netPct.toFixed(2)}%)</span></b></div>
     </div>
-    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary()})${T.feesIva>0?`, de las cuales <b>${fmtCLP(T.feesIva)}</b> corresponden a <b>IVA</b>`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy.</div>`);
+    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary()})${T.feesIva>0?`, de las cuales <b>${fmtCLP(T.feesIva)}</b> corresponden a <b>IVA</b>`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy${T.div?`; los <b>dividendos</b> (${fmtCLP(T.div)}) son ganancia cobrada en efectivo, sin comisión`:""}.</div>`);
   // Resultado realizado por venta — lo más importante para la declaración de renta
   const sales=realizedSales(withOps);
   let realizedCard="";
@@ -7110,10 +7194,11 @@ function viewContab(){
   }
   const tiles=`<div class="tiles">
     ${tile("Invertido (compras)",fmtCLP(T.buy),"capital total comprado",indigo,ink)}
-    ${tile("Dinero rescatado (ventas)",T.sell?fmtCLP(T.sell):"—","efectivo recibido por ventas",indigo,ink)}
+    ${tile("Dinero rescatado",T.sell+T.div?fmtCLP(T.sell+T.div):"—",T.div?("ventas "+fmtCLP(T.sell)+" + dividendos "+fmtCLP(T.div)):"efectivo recibido por ventas",indigo,ink)}
     ${tile("Valor actual total",fmtCLP(T.val),"posiciones abiertas a hoy · "+(totGain>=0?"sobre":"bajo")+" el capital",indigo,totGain>=0?green:red)}
     ${tile("Comisiones pagadas",T.fees?fmtCLP(T.fees):"$0",T.feesIva>0?("incluye IVA "+fmtCLP(T.feesIva)):"sin IVA",indigo,red)}
     ${tile("Ganancia realizada",(T.real>=0?"+":"")+fmtCLP(T.real),"por ventas (costo prom.)",indigo,T.real>=0?green:red)}
+    ${tile("Dividendos recibidos",T.div?("+"+fmtCLP(T.div)):"—","ganancia cobrada en efectivo",indigo,T.div?green:muted)}
     ${tile("Ganancia no realizada",(T.unreal>=0?"+":"")+fmtCLP(T.unreal),"posiciones abiertas",indigo,T.unreal>=0?green:red)}
     ${tile("Rentabilidad total",(totPct>=0?"+":"")+totPct.toFixed(2)+"%",(totGain>=0?"+":"")+fmtCLP(totGain),indigo,totGain>=0?green:red)}</div>`;
   const projRows=per.map(({p,A})=>{const s=projSummary(p);const act=p.id===activeId;
@@ -7126,15 +7211,20 @@ function viewContab(){
   if(multi&&contabTxTab!=="all"&&!withOps.some(x=>String(x.p.id)===String(contabTxTab)))contabTxTab="all";
   const showProj=multi&&contabTxTab==="all";   // la columna "Proyecto" solo tiene sentido en la vista consolidada
   const txShown=(multi&&contabTxTab!=="all")?allTx.filter(x=>String(x.projId)===String(contabTxTab)):allTx;
-  const txRow=x=>{const st=STOCKS.find(s=>s.t===x.t)||{t:x.t,c:muted};const efectivo=x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0));return `<tr>${showProj?`<td style="color:var(--faint)">${(""+x.proj).replace(/</g,"&lt;")}</td>`:""}<td>${x.date}</td><td><b style="color:${st.c}">${x.t}</b></td><td><span class="badge ${x.side==="sell"?"neg":"pos"}">${x.tipo}</span></td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(x.price)}</td><td class="r">${fmtCLP(x.monto)}</td><td class="r" style="color:var(--mut)">${x.fee?fmtCLP(x.fee):"—"}</td><td class="r" style="color:var(--faint)">${x.feeIva?fmtCLP(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(efectivo)}</td><td class="r" style="color:${x.gain!=null?(x.gain>=0?green:red):muted};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?((x.gain>=0?"+":"")+fmtCLP(x.gain)):"—"}</td></tr>`;};
+  const txRow=x=>{const st=STOCKS.find(s=>s.t===x.t)||{t:x.t,c:muted};const isDiv=x.side==="div";const efectivo=isDiv?x.monto:(x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0)));return `<tr>${showProj?`<td style="color:var(--faint)">${(""+x.proj).replace(/</g,"&lt;")}</td>`:""}<td>${x.date}</td><td><b style="color:${st.c}">${x.t}</b></td><td><span class="badge ${x.side==="sell"?"neg":"pos"}"${isDiv?` style="color:${green}"`:""}>${x.tipo}</span></td><td class="r">${isDiv?"—":x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${isDiv?"—":fmtCLP(x.price)}</td><td class="r">${fmtCLP(x.monto)}</td><td class="r" style="color:var(--mut)">${x.fee?fmtCLP(x.fee):"—"}</td><td class="r" style="color:var(--faint)">${x.feeIva?fmtCLP(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(efectivo)}</td><td class="r" style="color:${x.gain!=null?(x.gain>=0?green:red):muted};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?((x.gain>=0?"+":"")+fmtCLP(x.gain)):"—"}</td></tr>`;};
   const txRows=txShown.map(txRow).join("");
   const txTabs=multi?`<div class="ctx-tabs"><button class="ctxtab ${contabTxTab==="all"?"on":""}" data-ctxtab="all">Todos</button>${withOps.map(({p})=>`<button class="ctxtab ${String(contabTxTab)===String(p.id)?"on":""}" data-ctxtab="${p.id}">${(""+p.name).replace(/</g,"&lt;")}</button>`).join("")}</div>`:"";
   const _selName=(multi&&contabTxTab!=="all")?(withOps.find(x=>String(x.p.id)===String(contabTxTab))||{}).p:null;
   const txSub=multi?(contabTxTab==="all"?`${allTx.length} operaciones en ${withOps.length} proyectos · consolidado · en orden cronológico (la más antigua arriba)`:`${txShown.length} operación${txShown.length!==1?"es":""} de "${_selName?(""+_selName.name).replace(/</g,"&lt;"):""}" · en orden cronológico (la más antigua arriba)`):`${allTx.length} operaciones · fecha, precio, monto, comisión e IVA de cada compra/venta · en orden cronológico (la más antigua arriba)`;
   const txCard=card("Libro de operaciones"+(multi?" por proyecto":""),txSub,
     `${txTabs}<div class="tw"><table><thead><tr>${showProj?"<th>Proyecto</th>":""}<th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r" title="${(BROKER&&BROKER.iva)?"Comisión del operador CON IVA (19%) incluido":"Comisión del operador"}">${(BROKER&&BROKER.iva)?"Com + IVA":"Comisión"}</th><th class="r" title="IVA ya incluido en la columna Com + IVA (se muestra desglosado)">IVA</th><th class="r">Efectivo</th><th class="r">Ganancia (venta)</th></tr></thead><tbody>${txRows}</tbody></table></div>`+(multi?`<div class="note" style="margin:11px 0 0">El <b>informe consolidado para el contador</b> incluye el libro completo de <b>todos</b> los proyectos.</div>`:"")+`<div class="note" style="margin:11px 0 0;font-size:10.5px">${(BROKER&&BROKER.iva)?"La columna <b>Com + IVA</b> es la comisión total del operador con el IVA (19%) ya incluido; la columna <b>IVA</b> desglosa cuánto de esa comisión es IVA.":"Comisiones sin IVA (el operador configurado no lo aplica)."}</div>`);
-  const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto. El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). ¿Una operación con precio o cantidad mal ingresados? Corrígela en <b>Inversión → Historial</b> con el lápiz <b>✎</b> del registro. Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen y fechas de adquisición). Entrega el <b>informe consolidado</b> a tu contador como respaldo ordenado.");
-  return head+netCard+tiles+realizedCard+projCard+txCard+disc;
+  const disc=notecard("Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto. El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión; dividendo = monto íntegro). ¿Una operación con precio o cantidad mal ingresados? Corrígela en <b>Inversión → Historial</b> con el lápiz <b>✎</b> del registro. Para tu declaración en Chile, el cálculo tributario del mayor valor puede diferir (corrección monetaria, régimen y fechas de adquisición). Entrega el <b>informe consolidado</b> a tu contador como respaldo ordenado.");
+  // ── resumen ANUAL: la base ordenada para la declaración de renta (mayor valor realizado + dividendos por año) ──
+  const years=contabYearly(allTx);
+  const yearCard=years.length?card("Resumen anual (base para tu declaración)","Por año calendario: compras, ventas con su costo, mayor valor realizado, dividendos y comisiones · el tratamiento tributario definitivo lo aplica tu contador",
+    `<div class="tw"><table><thead><tr><th>Año</th><th class="r">Ops.</th><th class="r">Comprado</th><th class="r">Vendido</th><th class="r">Costo de lo vendido</th><th class="r">Mayor valor realizado</th><th class="r">Dividendos</th><th class="r">Comisiones (IVA incl.)</th><th class="r">Resultado del año</th></tr></thead><tbody>${contabYearlyRows(years,fmtCLP)}</tbody></table></div>
+    <div class="note" style="margin-top:11px">El <b>resultado del año</b> = mayor valor realizado + dividendos − comisiones (solo lo CONCRETADO ese año; la ganancia no realizada de posiciones abiertas no tributa hasta venderse). Los <b>dividendos</b> tributan como renta en el año en que se perciben.</div>`):"";
+  return head+netCard+tiles+realizedCard+yearCard+projCard+txCard+disc;
 }
 function genContabReport(){
   const per=PROJECTS.map(p=>({p,A:contabAggFor(p)})).filter(x=>x.A);
@@ -7145,27 +7235,28 @@ function genContabReport(){
   const sgn=n=>(n>=0?"+":"−")+"$"+Math.round(Math.abs(n||0)).toLocaleString("es-CL");
   const pos="#0E8C5E",neg="#C0392B",mut="#52668A",cc=v=>v>=0?pos:neg;
   const kpi=(l,v,c,s)=>`<div class="kpi"><div class="kl">${l}</div><div class="kv" style="color:${c||'#10306A'}">${v}</div>${s?`<div class="ks">${s}</div>`:""}</div>`;
-  const T={buy:0,sell:0,real:0,unreal:0,val:0,fees:0,feesIva:0,costOpen:0};per.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;T.costOpen+=(A.rows||[]).reduce((a,o)=>a+o.avg*o.sh,0);});
-  const totGain=T.real+T.unreal,netInv=T.buy-T.sell,totPct=netInv>0?totGain/netInv*100:0;
+  const T={buy:0,sell:0,div:0,real:0,unreal:0,val:0,fees:0,feesIva:0,costOpen:0};per.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.div+=A.totDiv||0;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;T.costOpen+=(A.rows||[]).reduce((a,o)=>a+o.avg*o.sh,0);});
+  const totGain=T.real+T.unreal+T.div,netInv=T.buy-T.sell-T.div,totPct=netInv>0?totGain/netInv*100:0;
   const netGain=totGain-T.fees,netPct=T.buy>0?netGain/T.buy*100:0;
   // ── 1 · RESULTADO REAL: la misma franja GANANCIA BRUTA − COMISIONES = GANANCIA REAL del módulo ──
   const strip=`<div style="display:flex;align-items:stretch;gap:9px;flex-wrap:wrap">
-    <div class="kpi" style="flex:1;min-width:165px"><div class="kl">Ganancia bruta</div><div class="kv" style="color:${cc(totGain)}">${sgn(totGain)}</div><div class="ks">realizada + no realizada</div></div>
+    <div class="kpi" style="flex:1;min-width:165px"><div class="kl">Ganancia bruta</div><div class="kv" style="color:${cc(totGain)}">${sgn(totGain)}</div><div class="ks">realizada + no realizada${T.div?" + dividendos":""}</div></div>
     <div style="align-self:center;font-size:19px;font-weight:800;color:#8DA1C2">−</div>
     <div class="kpi" style="flex:1;min-width:165px"><div class="kl">Comisiones (IVA incl.)</div><div class="kv" style="color:${neg}">${T.fees>0?clp(T.fees):"$0"}</div><div class="ks">${T.feesIva>0?("incluye IVA "+clp(T.feesIva)):"sin IVA"}</div></div>
     <div style="align-self:center;font-size:19px;font-weight:800;color:#8DA1C2">=</div>
     <div class="kpi hero" style="flex:1.25;min-width:195px"><div class="kl">Ganancia real</div><div class="kv" style="color:${cc(netGain)}">${sgn(netGain)} <span style="font-size:11px;font-weight:700;opacity:.75">(${(netPct>=0?"+":"")+netPct.toFixed(2)}%)</span></div><div class="ks">neta de comisiones e IVA</div></div></div>`;
   const tiles=`<div class="kgrid" style="margin-top:11px">
     ${kpi("Invertido (compras)",clp(T.buy),null,"capital total comprado")}
-    ${kpi("Dinero rescatado (ventas)",T.sell?clp(T.sell):"—",null,"efectivo recibido por ventas")}
+    ${kpi("Dinero rescatado",T.sell+T.div?clp(T.sell+T.div):"—",null,T.div?("ventas "+clp(T.sell)+" + dividendos "+clp(T.div)):"efectivo recibido por ventas")}
     ${kpi("Valor actual total",clp(T.val),cc(totGain),"posiciones abiertas a hoy · "+(totGain>=0?"sobre":"bajo")+" el capital")}
     ${kpi("Comisiones pagadas",T.fees?("−"+clp(T.fees)):"$0",neg,T.feesIva>0?("incluye IVA "+clp(T.feesIva)):"sin IVA")}
-  </div><div class="kgrid k3" style="margin-top:10px">
+  </div><div class="kgrid" style="margin-top:10px">
     ${kpi("Ganancia realizada",sgn(T.real),cc(T.real),"por ventas (costo promedio)")}
+    ${kpi("Dividendos recibidos",T.div?("+"+clp(T.div)):"—",T.div?pos:mut,"ganancia cobrada en efectivo")}
     ${kpi("Ganancia no realizada",sgn(T.unreal),cc(T.unreal),"posiciones abiertas")}
     ${kpi("Rentabilidad total",(totPct>=0?"+":"")+totPct.toFixed(2)+"%",cc(totGain),sgn(totGain))}
   </div>`;
-  const netNote=`<div class="note">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary().replace(/</g,"&lt;")})${T.feesIva>0?`, de las cuales <b>${clp(T.feesIva)}</b> corresponden a <b>IVA</b> (19%)`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy.</div>`;
+  const netNote=`<div class="note">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary().replace(/</g,"&lt;")})${T.feesIva>0?`, de las cuales <b>${clp(T.feesIva)}</b> corresponden a <b>IVA</b> (19%)`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy${T.div?`; los <b>dividendos</b> (${clp(T.div)}) son ganancia cobrada en efectivo, sin comisión`:""}.</div>`;
   // ── 2 · POR PROYECTO (mismas columnas del módulo, incluida Ops.) ──
   const projRows=per.map(({p,A})=>{const s=projSummary(p);return `<tr><td><b>${(""+p.name).replace(/</g,"&lt;")}</b></td><td>${p.date||"—"}</td><td class="r">${clp(s.invested)}</td><td class="r">${s.hasData?clp(s.value):"—"}</td><td class="r" style="color:${cc(s.gain)};font-weight:600">${s.hasData?sgn(s.gain):"—"}</td><td class="r" style="color:${cc(s.gainPct)};font-weight:600">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</td><td class="r" style="color:${mut}">${A?A.L.tx.length:0}</td></tr>`;}).join("");
   // ── 3 · DETALLE DE VENTAS REALIZADAS (mismas columnas del módulo; por año tributario si cruza años) ──
@@ -7195,7 +7286,7 @@ function genContabReport(){
   allTx.sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:0));
   const multi=per.length>1;
   const txHead=`<tr>${multi?"<th>Proyecto</th>":""}<th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">${(BROKER&&BROKER.iva)?"Com + IVA":"Comisión"}</th><th class="r">IVA</th><th class="r">Efectivo</th><th class="r">Ganancia (venta)</th></tr>`;
-  const txRows=allTx.map(x=>{const efectivo=x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0));return `<tr>${multi?`<td style="color:${mut}">${(""+x.proj).replace(/</g,"&lt;")}</td>`:""}<td>${x.date}</td><td><b>${x.t}</b></td><td style="color:${x.side==="sell"?neg:pos};font-weight:700">${x.tipo}</td><td class="r">${x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(x.price)}</td><td class="r">${clp(x.monto)}</td><td class="r">${x.fee?clp(x.fee):"—"}</td><td class="r" style="color:${mut}">${x.feeIva?clp(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${clp(efectivo)}</td><td class="r" style="color:${x.gain!=null?cc(x.gain):mut};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?sgn(x.gain):"—"}</td></tr>`;}).join("");
+  const txRows=allTx.map(x=>{const isDiv=x.side==="div";const efectivo=isDiv?x.monto:(x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0)));return `<tr>${multi?`<td style="color:${mut}">${(""+x.proj).replace(/</g,"&lt;")}</td>`:""}<td>${x.date}</td><td><b>${x.t}</b></td><td style="color:${x.side==="sell"?neg:pos};font-weight:700">${x.tipo}</td><td class="r">${isDiv?"—":x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${isDiv?"—":clp(x.price)}</td><td class="r">${clp(x.monto)}</td><td class="r">${x.fee?clp(x.fee):"—"}</td><td class="r" style="color:${mut}">${x.feeIva?clp(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${clp(efectivo)}</td><td class="r" style="color:${x.gain!=null?cc(x.gain):mut};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?sgn(x.gain):"—"}</td></tr>`;}).join("");
   const tFees=allTx.reduce((a,x)=>a+(x.fee||0),0),tIva=allTx.reduce((a,x)=>a+(x.feeIva||0),0);
   const txFoot=`<tfoot><tr><td colspan="${multi?7:6}">Total comisiones del libro</td><td class="r" style="color:${neg}">${tFees?clp(tFees):"—"}</td><td class="r" style="color:${mut}">${tIva?clp(tIva):"—"}</td><td></td><td></td></tr></tfoot>`;
   const libroNote=`<div class="note">${(BROKER&&BROKER.iva)?"La columna <b>Com + IVA</b> es la comisión total del operador con el IVA (19%) ya incluido; la columna <b>IVA</b> desglosa cuánto de esa comisión es IVA.":"Comisiones sin IVA (el operador configurado no lo aplica)."} El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto.</div>`;
@@ -7219,18 +7310,23 @@ function genContabReport(){
     <section class="sec-a pb"><h2><span class="sn">3</span>Detalle de ventas realizadas</h2>
     <div class="ssub">${ventasSub}</div>
     ${ventas}</section>
-    <section class="pb"><h2><span class="sn">4</span>Libro de operaciones${multi?" (consolidado)":""}</h2>
-    <div class="ssub">${allTx.length} operaciones${multi?(" en "+per.length+" proyectos"):""} · fecha, precio, monto, comisión e IVA de cada compra/venta · en orden cronológico (la más antigua arriba)</div>
+    <section class="sec-a"><h2><span class="sn">4</span>Resumen anual (base para la declaración)</h2>
+    <div class="ssub">Por año calendario: compras, ventas con su costo, mayor valor realizado, dividendos percibidos y comisiones</div>
+    <table><thead><tr><th>Año</th><th class="r">Ops.</th><th class="r">Comprado</th><th class="r">Vendido</th><th class="r">Costo de lo vendido</th><th class="r">Mayor valor realizado</th><th class="r">Dividendos</th><th class="r">Comisiones (IVA incl.)</th><th class="r">Resultado del año</th></tr></thead><tbody>${contabYearlyRows(contabYearly(allTx),clp)}</tbody></table>
+    <div class="note">El <b>resultado del año</b> = mayor valor realizado + dividendos − comisiones (solo lo CONCRETADO ese año; la ganancia no realizada de posiciones abiertas no tributa hasta venderse). Los <b>dividendos</b> tributan como renta en el año en que se perciben.</div></section>
+    <section class="pb"><h2><span class="sn">5</span>Libro de operaciones${multi?" (consolidado)":""}</h2>
+    <div class="ssub">${allTx.length} operaciones${multi?(" en "+per.length+" proyectos"):""} · fecha, precio, monto, comisión e IVA de cada compra, venta y dividendo · en orden cronológico (la más antigua arriba)</div>
     <table><thead>${txHead}</thead><tbody>${txRows}</tbody>${txFoot}</table>
     ${libroNote}</section>`;
-  const footHTML=`<b>Notas metodológicas.</b> Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> (IVA incluido) se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación; el <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). El <b>resultado realizado por venta</b> es la base relevante para el mayor valor del ejercicio; su tratamiento tributario en Chile puede diferir (corrección monetaria, régimen, fechas de adquisición y eventual exención por presencia bursátil — art. 107 LIR). Consúltelo con su contador. Documento de respaldo generado por Investor; no constituye asesoría tributaria ni de inversión.`;
+  const footHTML=`<b>Notas metodológicas.</b> Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> (IVA incluido) se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación; el <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión; dividendo = monto íntegro, sin comisión). Los <b>dividendos</b> se registran como ganancia percibida en efectivo. El <b>resultado realizado por venta</b> es la base relevante para el mayor valor del ejercicio; su tratamiento tributario en Chile puede diferir (corrección monetaria, régimen, fechas de adquisición y eventual exención por presencia bursátil — art. 107 LIR). Consúltelo con su contador. Documento de respaldo generado por Investor; no constituye asesoría tributaria ni de inversión.`;
   const sigHTML=`<div class="sig"><div class="s1">Titular de la cuenta<br><span style="color:#9FB2CF">Nombre y firma</span></div><div class="s1">Contador<br><span style="color:#9FB2CF">Nombre, RUT y firma</span></div></div>`;
+  const execHTML=`Durante el período se invirtieron <b>${clp(T.buy)}</b> en ${allTx.filter(x=>x.side==="buy").length} compra(s)${T.sell?`, se rescataron <b>${clp(T.sell)}</b> en ${allTx.filter(x=>x.side==="sell").length} venta(s)`:""}${T.div?` y se percibieron <b>${clp(T.div)}</b> en dividendos`:""}. Las posiciones abiertas valen hoy <b>${clp(T.val)}</b>. La ganancia bruta asciende a <b>${sgn(totGain)}</b> (${sgn(T.real)} realizada por ventas${T.div?`, +${clp(T.div)} en dividendos`:""} y ${sgn(T.unreal)} no realizada) y, descontadas comisiones por <b>${clp(T.fees)}</b> (IVA incluido), la <b>ganancia real neta es ${sgn(netGain)}</b> (${(netPct>=0?"+":"")+netPct.toFixed(2)}% sobre lo comprado). El detalle por año para la declaración de renta va en la sección 4.`;
   const html=invReportShell({
     docTitle:"Informe contable consolidado · Investor",
     title:"Informe contable consolidado de inversiones",
     subtitle:"Respaldo para contabilidad y declaración de renta · emitido el "+fch,
     hero:{label:"Ganancia real del período (neta)",value:sgn(netGain),sub:"valor actual "+clp(T.val),subColor:netGain>=0?"#9FE8C4":"#FFB3B3"},
-    metaHTML,bodyHTML,footHTML,sigHTML,folio,fch
+    metaHTML,execHTML,bodyHTML,footHTML,sigHTML,folio,fch
   });
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
 }
@@ -7391,12 +7487,18 @@ function genAnalysisReport(){
   ]);
   const bodyHTML=secParams+secScore+secComp+secCapm+secDet+secMF+secFund;
   const footHTML=`<b>Metodología.</b> β y α por regresión de los retornos de cada acción contra el ${esc(benchName)} en la ventana del análisis (Rf ${p0r(RF)}, prima ${p0r(PRIMA)}). El CAPM exige E(R) = Rf + β × prima; el α de Jensen es el retorno real menos ese exigido. El Sharpe usa el retorno ajustado por la volatilidad. El valor intrínseco triangula DDM (dividendos), múltiplo justo (P/U del universo) y precio objetivo de analistas. El modelo multifactor extiende el CAPM con primas de factor (momentum, value, size, quality, low-vol, yield) tipo APT. ${W?"Ventana menor a un año: los retornos, el α y la SML se expresan en términos de la ventana, no anualizados.":"Retornos, σ y α anualizados."} Documento informativo generado por Investor con los datos reales de la base; no constituye recomendación ni asesoría de inversión.`;
+  const execHTML=(function(){try{
+    const byS=STOCKS.slice().sort((a,b)=>(b.a24.sharpe||0)-(a.a24.sharpe||0));
+    const top=byS[0];let sc=null;try{sc=investorScore();}catch(e){}
+    const scTop=sc&&sc.rows&&sc.rows.length?sc.rows[0]:null;
+    return `Análisis del sistema construido sobre <b>${STOCKS.length} acciones</b> del IPSA con <b>${esc(winTxt)}</b> de historia real (benchmark ${esc(benchName)}, retorno del mercado <b>${sg(mktRet)}</b>). El mejor retorno ajustado por riesgo es <b>${esc(top.t)}</b> (Sharpe ${f2(top.a24.sharpe)}, β ${f2(top.b)})${scTop?`; la mejor puntuación global de la plataforma es <b>${esc(scTop.t)}</b> (Investor Score ${scTop.score})`:""}. β, α, σ y correlaciones salen de la regresión de cada acción contra el índice — sin datos de ejemplo. El detalle por acción, la comparativa CAPM/multifactor y la valorización intrínseca siguen a continuación.`;
+  }catch(e){return "";}})();
   const html=invReportShell({
     docTitle:"Informe de análisis · Investor",
     title:"Informe de análisis de inversiones",
     subtitle:esc(winTxt)+" · "+STOCKS.length+" acciones · benchmark "+esc(benchName)+" · emitido el "+fch,
     hero:{label:"Acciones analizadas",value:String(STOCKS.length),sub:esc(winTxt),subColor:"#CFE0FF"},
-    metaHTML,bodyHTML,footHTML,folio,fch
+    metaHTML,execHTML,bodyHTML,footHTML,folio,fch
   });
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para ver el informe.");
 }
@@ -7733,6 +7835,9 @@ function mkwCompute(){
   const selCur={};inSet.forEach(x=>{selCur[x.hd.t]=x.val/V*100;});
   const selOpt={};tickers.forEach(t=>{selOpt[t]=opt.sel[t]||0;});
   const Mc=pMetrics(selCur),Mo=pMetrics(selOpt);
+  // MISMA VARA que el proyecto: se refrescan sus métricas (β esperado, σ, E(R)) con el análisis real vigente,
+  // para que el "β cartera actual" de esta tabla y el "β esperado" del Seguimiento sean el mismo número.
+  try{projSyncReal(p);saveProjects();}catch(e){}
   const rows=inSet.map(x=>{const t=x.hd.t,wo=(opt.sel[t]||0)/100;const target=Math.round(wo*T),delta=target-Math.round(x.val);
     return {t,hd:x.hd,val:Math.round(x.val),wc:x.val/V,wo,target,delta};}).sort((a,b)=>b.wo-a.wo);
   // plan SOLO-COMPRAS: prorratea el aporte según el déficit de cada acción frente a su objetivo
@@ -7813,8 +7918,8 @@ function viewMarkowitz(){
       ${mrow("E(R) CAPM (anual)",R.Mc.erCapm,R.Mo.erCapm,2,"%")}
       ${mrow("Volatilidad σ (anual)",R.Mc.sig,R.Mo.sig,1,"%",true)}
       ${mrow("Sharpe",R.Mc.sharpe,R.Mo.sharpe,2,"")}
-      ${mrow("β de la cartera",R.Mc.bp,R.Mo.bp,2,"","neutral")}
-      </tbody></table></div>`,flush:true});
+      ${mrow("β de la cartera (esperado)",R.Mc.bp,R.Mo.bp,2,"","neutral")}
+      </tbody></table></div>${(R.p&&R.p.bp!=null&&Math.abs(R.Mc.bp-R.p.bp)>0.015)?`<div class="note" style="margin:11px 13px">El β "Actual" (${R.Mc.bp.toFixed(2)}) difiere levemente del β esperado del proyecto (${(+R.p.bp).toFixed(2)}) porque la optimización solo pondera las acciones CON datos del análisis${R.outSet.length?` — quedan fuera ${R.outSet.map(x=>x.hd.t).join(", ")}`:""}. Ambos usan las mismas β reales del análisis.</div>`:""}`,flush:true});
     const planTitle=R.sell?"con compras y ventas (rebalanceo completo)":"solo con el aporte (sin vender lo que tienes)";
     const rws=R.rows.map(r=>{
       const sug=R.sell
@@ -8093,7 +8198,7 @@ function clientStats(id,opts){
   ps.forEach(p=>{try{withProject(p,function(){
     const w=p.weeks||[];const L=w.length?ledger():null,IM=w.length?invMetrics():null;let pv=0;
     if(L&&IM&&L.tx&&L.tx.length){
-      L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;fees+=brokerFee(x.monto);});
+      L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;fees+=(x.side==="div"?0:brokerFee(x.monto));});   // dividendo = dinero rescatado (entra a "retirado"), sin comisión
       pv=IM.last.val;
       realized+=(L.realized||[]).reduce((a,r)=>a+r.gain,0);
       Object.keys(L.sh).forEach(t=>{if((L.sh[t]||0)>1e-6)tickers[t]=1;});
@@ -8361,6 +8466,7 @@ function seedExamples(){
 }
 /* ===================== HOME / RESUMEN GENERAL ===================== */
 let homeStkFreq="diario";
+let homeOpsMonthSel=null;   // mes seleccionado (clic en el gráfico de operaciones) → detalle de sus operaciones
 /* rango del gráfico "Patrimonio total gestionado" del Home — PERSISTENTE (sobrevive al cierre de Investor) */
 let homeTotFrom="",homeTotTo="";
 (function(){try{const r=lsGet("inv_home_tot_range")||{};homeTotFrom=r.f||"";homeTotTo=r.t||"";}catch(e){}})();
@@ -8583,10 +8689,13 @@ function managedTotalSeries(){
    agregado desde el libro de operaciones de todos los proyectos (misma fuente que la Contabilidad) */
 function homeOpsSeries(){
   const m={};
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const LG=withProject(p,()=>ledger());if(LG&&LG.tx)LG.tx.forEach(x=>{const o=(m[x.date]=m[x.date]||{buy:0,sell:0,fee:0,n:0});o.fee+=brokerFee(x.monto);o.n++;if(x.side==="sell")o.sell+=x.monto;else o.buy+=x.monto;});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const LG=withProject(p,()=>ledger());if(LG&&LG.tx)LG.tx.forEach(x=>{const o=(m[x.date]=m[x.date]||{buy:0,sell:0,div:0,fee:0,n:0,ops:[]});
+    const fee=x.side==="div"?0:brokerFee(x.monto);o.fee+=fee;o.n++;
+    if(x.side==="sell")o.sell+=x.monto;else if(x.side==="div")o.div+=x.monto;else o.buy+=x.monto;
+    o.ops.push({date:x.date,t:x.t,side:x.side,tipo:x.tipo,shares:x.shares,price:x.price,monto:x.monto,fee,proj:p.name});});}catch(e){}});});
   const dates=Object.keys(m).sort();if(!dates.length)return null;
-  let tBuy=0,tSell=0,tFee=0,tN=0;dates.forEach(d=>{tBuy+=m[d].buy;tSell+=m[d].sell;tFee+=m[d].fee;tN+=m[d].n;});
-  return {dates,rows:dates.map(d=>m[d]),tBuy,tSell,tFee,tN};
+  let tBuy=0,tSell=0,tDiv=0,tFee=0,tN=0;dates.forEach(d=>{tBuy+=m[d].buy;tSell+=m[d].sell;tDiv+=m[d].div||0;tFee+=m[d].fee;tN+=m[d].n;});
+  return {dates,rows:dates.map(d=>m[d]),tBuy,tSell,tDiv,tFee,tN};
 }
 const OPS_FEE_COL="#E0567A";   // color propio de las comisiones (costo) — distinto de compras(accent) y ventas(amber)
 /* "Operaciones y comisiones" — REDISEÑO v2 desde cero: panel de FLUJO en una sola vista.
@@ -8600,11 +8709,11 @@ const OPS_FEE_COL="#E0567A";   // color propio de las comisiones (costo) — dis
 function svgOpsBars(o){
   const W=820,H=o.h||250,FL=46,GAP=13,m={l:56,r:18,t:14,b:30};
   const MESL=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  let labels,rows,per;
-  if(o.dates.length<=16){per="día";labels=o.dates.map(d=>d.slice(8,10)+"/"+d.slice(5,7));rows=o.rows;}
-  else{per="mes";const agg={},ord=[];
-    o.dates.forEach((d,i)=>{const k=d.slice(0,7);if(!agg[k]){agg[k]={buy:0,sell:0,fee:0,n:0};ord.push(k);}const r=o.rows[i];agg[k].buy+=r.buy||0;agg[k].sell+=r.sell||0;agg[k].fee+=r.fee||0;agg[k].n+=r.n||0;});
-    labels=ord.map(k=>MESL[+k.slice(5,7)-1]+" "+k.slice(2,4));rows=ord.map(k=>agg[k]);}
+  // SIEMPRE MENSUAL: un mes = una columna (pedido explícito) — el detalle fino de cada operación del mes
+  // se abre con un CLIC en la columna (tabla bajo el gráfico), además del tooltip con los totales.
+  const per="mes",agg={},ord=[];
+  o.dates.forEach((d,i)=>{const k=d.slice(0,7);if(!agg[k]){agg[k]={buy:0,sell:0,div:0,fee:0,n:0,ops:[]};ord.push(k);}const r=o.rows[i];agg[k].buy+=r.buy||0;agg[k].sell+=r.sell||0;agg[k].div+=r.div||0;agg[k].fee+=r.fee||0;agg[k].n+=r.n||0;if(r.ops)agg[k].ops=agg[k].ops.concat(r.ops);});
+  const labels=ord.map(k=>MESL[+k.slice(5,7)-1]+" "+k.slice(2,4)),rows=ord.map(k=>agg[k]),mks=ord;
   const n=rows.length,step=(W-m.l-m.r)/Math.max(1,n);
   const xs=[];for(let i=0;i<n;i++)xs.push(m.l+step*(i+0.5));
   // panel principal: el cero se ubica según cuánto pesa cada lado (sin ventas, las compras usan todo el alto)
@@ -8623,6 +8732,8 @@ function svgOpsBars(o){
   // cada tick exige ≥14px de aire contra la línea cero y contra su vecino (con un lado pequeño, sin tick: el hover lo cubre)
   const tks=[];const tB=nice(mxB);if(tB&&z-yV(tB)>=14){tks.push(tB);if(yV(tB/2)>yV(tB)+16&&z-yV(tB/2)>=14)tks.push(tB/2);}
   const tS=nice(mxS);if(tS&&yV(-tS)-z>=14){tks.push(-tS);if(yV(-tS/2)<yV(-tS)-16&&yV(-tS/2)-z>=14)tks.push(-tS/2);}
+  // mes SELECCIONADO (clic): franja de realce detrás de la columna, antes de la rejilla
+  if(o.selKey){const si=mks.indexOf(o.selKey);if(si>=0)g+=`<rect x="${(m.l+step*si).toFixed(1)}" y="${m.t}" width="${step.toFixed(1)}" height="${(H-m.b-m.t).toFixed(1)}" rx="7" fill="var(--accent)" opacity="0.09"/>`;}
   tks.forEach(v=>{const yy=yV(v);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">${(v<0?"−":"")+fmtK(Math.abs(v))}</text>`;});
   g+=`<line x1="${m.l}" y1="${z.toFixed(1)}" x2="${W-m.r}" y2="${z.toFixed(1)}" stroke="${AC}" stroke-width="1.2"/><text x="${m.l-9}" y="${(z+3.5).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">$0</text>`;
   // barra con remate redondeado en el extremo LIBRE y recta en la base (wd = ancho: principal o carril)
@@ -8640,10 +8751,10 @@ function svgOpsBars(o){
   const fw=Math.max(3,Math.min(12,bw*0.5));
   rows.forEach((r,i)=>{if(!(r.fee>0))return;const h0=Math.max(2,(r.fee/mxF)*(FL-19));
     g+=rbar(xs[i]-fw/2,fB-3,fB-3-h0,OPS_FEE_COL,fw,"0.85");});
-  const kk=Math.max(1,Math.ceil(n/(per==="mes"?12:9)));
-  labels.forEach((lb,i)=>{if(i%kk===0||i===n-1)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" fill="${muted}">${lb}</text>`;});
-  if(o.id)window["__ob_"+o.id]={dates:labels,rows,xs,W,H,mt:m.t,mb:m.b,step,cum,per};
-  return `<svg id="${o.id||""}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${(o.id||"")}hover"></g></svg>`;
+  const kk=Math.max(1,Math.ceil(n/12));
+  labels.forEach((lb,i)=>{const on=o.selKey&&mks[i]===o.selKey;if(i%kk===0||i===n-1||on)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" font-weight="${on?"800":"400"}" fill="${on?"var(--accent)":muted}">${lb}</text>`;});
+  if(o.id)window["__ob_"+o.id]={dates:labels,rows,xs,W,H,mt:m.t,mb:m.b,step,cum,per,mks};
+  return `<svg id="${o.id||""}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet" style="cursor:pointer">${g}<g id="${(o.id||"")}hover"></g></svg>`;
 }
 function attachOpsHover(id){
   const svg=document.getElementById(id),g=window["__ob_"+id];if(!svg||!g)return;
@@ -8655,12 +8766,20 @@ function attachOpsHover(id){
     const d=g.rows[bi];
     const buyLine=d.buy?`<span style="display:block;color:var(--accent);font-weight:800">Compras: ${fmtCLP(d.buy)}</span>`:"";
     const sellLine=d.sell?`<span style="display:block;color:${amber};font-weight:800">Ventas: ${fmtCLP(d.sell)}</span>`:"";
+    const divLine=d.div?`<span style="display:block;color:${green};font-weight:800">Dividendos: +${fmtCLP(d.div)}</span>`:"";
     const feeLine=`<span style="display:block;color:${OPS_FEE_COL};font-weight:800">Comisiones: −${fmtCLP(d.fee)}</span>`;
     const cumLine=(g.cum&&g.cum[bi]!=null)?`<span style="display:block;color:${indigo};font-weight:700">Invertido neto acum.: ${fmtCLP(g.cum[bi])}</span>`:"";
-    const nLine=`<span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">${d.n} operaci${d.n===1?"ón":"ones"} este ${g.per||"día"}</span>`;
-    tt.innerHTML=`<b>${g.dates[bi]}</b>`+buyLine+sellLine+feeLine+cumLine+nLine;
+    const nLine=`<span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">${d.n} operaci${d.n===1?"ón":"ones"} este mes · clic para el detalle</span>`;
+    tt.innerHTML=`<b>${g.dates[bi]}</b>`+buyLine+sellLine+divLine+feeLine+cumLine+nLine;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
+  // CLIC en una columna: abre/cierra el detalle de las operaciones de ese mes bajo el gráfico
+  svg.onclick=e=>{const r=svg.getBoundingClientRect();const vx=(e.clientX-r.left)/r.width*g.W;
+    let bi=0,bd=1e9;g.xs.forEach((x,i)=>{const d2=Math.abs(x-vx);if(d2<bd){bd=d2;bi=i;}});
+    const k=g.mks&&g.mks[bi];if(!k)return;
+    homeOpsMonthSel=(homeOpsMonthSel===k)?null:k;
+    const tt=document.getElementById("charttip");if(tt)tt.style.display="none";
+    render();};
 }
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
@@ -8853,16 +8972,36 @@ function viewHome(){
       +stat("Operaciones",os.tN)
       +stat("Comprado",fmtCLP(os.tBuy),"var(--accent)")
       +(os.tSell?stat("Vendido",fmtCLP(os.tSell),amber):"")
+      +(os.tDiv?stat("Dividendos","+"+fmtCLP(os.tDiv),green):"")
       +stat("Neto invertido",fmtCLP(os.tBuy-os.tSell),indigo)
       +stat("Comisiones","−"+fmtCLP(os.tFee),OPS_FEE_COL)
       +(feePct!=null?stat("Costo medio",feePct.toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+"%",feePct>1?amber:"var(--ink)"):"")
       +`</div>`;
     const caption=`neto acumulado <b style="color:${indigo}">${fmtCLP(os.tBuy-os.tSell)}</b> invertido · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(os.tFee)}</b>`;
-    const body=`${stats}<div class="ipsa-chart">${svgOpsBars({dates:os.dates,rows:os.rows,h:250,id:"mgops"})}
+    // DETALLE DEL MES seleccionado (clic en una columna): cada operación con fecha, tipo, monto y comisión
+    const MESL=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    let detail="";
+    if(homeOpsMonthSel){
+      const ops=[];os.dates.forEach((d,i)=>{if(d.slice(0,7)===homeOpsMonthSel&&os.rows[i].ops)ops.push(...os.rows[i].ops);});
+      if(!ops.length)homeOpsMonthSel=null;
+      else{
+        const mName=MESL[+homeOpsMonthSel.slice(5,7)-1]+" "+homeOpsMonthSel.slice(0,4);
+        const mBuy=ops.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0),mSell=ops.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0),mDiv=ops.filter(x=>x.side==="div").reduce((a,x)=>a+x.monto,0),mFee=ops.reduce((a,x)=>a+(x.fee||0),0);
+        const tag=x=>x.side==="sell"?`<span class="badge neg">Venta</span>`:x.side==="div"?`<span class="badge pos" style="color:${green}">Dividendo</span>`:`<span class="badge pos">Compra</span>`;
+        const rows=ops.sort((a,b)=>a.date<b.date?-1:1).map(x=>`<tr><td>${x.date}</td><td>${tag(x)}</td><td><b>${x.t}</b></td><td style="color:var(--faint)">${(""+(x.proj||"")).replace(/</g,"&lt;")}</td><td class="r">${x.side==="div"?"—":(+x.shares).toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${x.side==="div"?"—":fmtP(x.price)}</td><td class="r" style="font-weight:700">${fmtCLP(x.monto)}</td><td class="r" style="color:${OPS_FEE_COL}">${x.fee?("−"+fmtCLP(x.fee)):"—"}</td></tr>`).join("");
+        detail=`<div style="margin-top:13px;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--card2)">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:.65rem .85rem;border-bottom:1px solid var(--line)">
+            <b style="font-size:12.5px;color:var(--navy);text-transform:capitalize">${mName}</b>
+            <span class="genl" style="margin:0">${ops.length} operaci${ops.length===1?"ón":"ones"}${mBuy?` · comprado <b style="color:var(--accent)">${fmtCLP(mBuy)}</b>`:""}${mSell?` · vendido <b style="color:${amber}">${fmtCLP(mSell)}</b>`:""}${mDiv?` · dividendos <b style="color:${green}">+${fmtCLP(mDiv)}</b>`:""}${mFee?` · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(mFee)}</b>`:""}</span>
+            <button class="btn btnu" data-opsdetclose style="margin-left:auto">✕ Cerrar</button></div>
+          <div class="tw"><table><thead><tr><th>Fecha</th><th>Operación</th><th>Acción</th><th>Proyecto</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+      }
+    }
+    const body=`${stats}<div class="ipsa-chart">${svgOpsBars({dates:os.dates,rows:os.rows,h:250,id:"mgops",selKey:homeOpsMonthSel})}
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0;flex-wrap:wrap">
         ${legend}
-        <div class="genl" style="margin:0;text-align:right">${caption}</div></div></div>`;
-    const sub="Compras hacia arriba y ventas hacia abajo desde la línea cero, con las comisiones en su carril inferior (IVA incluido, escala propia) · pasa el cursor para el detalle del "+((os.dates||[]).length>16?"mes":"día")+" · el libro completo va en Contabilidad";
+        <div class="genl" style="margin:0;text-align:right">${caption}</div></div>${detail}</div>`;
+    const sub="Un mes por columna: compras hacia arriba, ventas hacia abajo y las comisiones en su carril inferior (IVA incluido, escala propia) · <b>haz clic en un mes para ver el detalle de sus operaciones</b> · el libro completo va en Contabilidad";
     return card("Operaciones y comisiones",sub,body);
   })();
   return greetStrip+hero+tiles+totalCard+fundsCard+patrCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
@@ -8963,7 +9102,8 @@ function attachHome(){
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
   try{attachMultiHover("ipsahome");}catch(e){}
   try{attachMultiHover("mgret");}catch(e){}   // rentabilidad neta en el tiempo: tooltip con fecha y % al pasar el mouse
-  try{attachOpsHover("mgops");}catch(e){}   // operaciones y comisiones: detalle del día al pasar el mouse
+  try{attachOpsHover("mgops");}catch(e){}   // operaciones y comisiones: tooltip mensual + clic abre el detalle del mes
+  {const _oc=document.querySelector("[data-opsdetclose]");if(_oc)_oc.onclick=()=>{homeOpsMonthSel=null;render();};}
   try{attachMultiHover("mgpat");}catch(e){}   // patrimonio total gestionado: aporte vs rentabilidad del día al pasar el mouse
   document.querySelectorAll("[data-newsretry]").forEach(b=>b.onclick=()=>{try{newsFetch(true);}catch(e){}});
   const _wx=document.querySelector("[data-welcomehide]");if(_wx)_wx.onclick=()=>{try{localStorage.setItem("inv_welcome_hide","1");}catch(e){}render();};
