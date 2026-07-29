@@ -12,7 +12,11 @@ services:
     name: investor
     runtime: node
     plan: starter
-    buildCommand: ""
+    # RAMA que se despliega. Debe ser la MISMA a la que el bot de cierres hace push,
+    # para que la app publicada sirva siempre el closes.json más nuevo. Si algún día
+    # mueves el trabajo a otra rama (p.ej. main), cámbiala aquí y en el panel de Render.
+    branch: claude/inversor-2-design-upgrade-k864ts
+    buildCommand: ""          # la app es un archivo y el servidor no tiene dependencias: nada que construir
     startCommand: node server.js
     autoDeploy: true          # cada push al repo (incluidos los cierres diarios del bot) redeploya solo
     healthCheckPath: /api/health
