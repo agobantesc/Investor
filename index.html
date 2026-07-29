@@ -2838,7 +2838,7 @@ function invMetrics(){
   // valoriza a su último precio conocido — NO a 0. Antes `val` usaba `||0` mientras perStock caía a b0, y esa
   // asimetría descuadraba Valor actual, Ganancia total y el KPI del día por el monto entero de la posición.
   const lastPx={};PF.holdings.forEach(hd=>{lastPx[hd.t]=b0[hd.t]||0;});
-  let twr=1,prevVal=null,prevIpsa=null,dayFlow=0;const series=[],pr=[],mr=[],prCLP=[],prD=[],prBase=[];
+  let twr=1,prevVal=null,prevIpsa=null,dayFlow=0,_prevD=null;const series=[],pr=[],mr=[],prCLP=[],prD=[],prBase=[],prFrom=[];
   // mrOK marca las observaciones cuyo retorno de MERCADO es REAL (cierre del índice en AMBOS extremos del par).
   // Cuando el IPSA viene arrastrado, mr guarda un 0% que NO ocurrió: si esas observaciones entraran a la
   // regresión, el β realizado, el tracking error, el information ratio y los "aciertos vs IPSA" quedarían
@@ -2870,8 +2870,8 @@ function invMetrics(){
     // para poder marcar la observación del par de retornos antes de que prevIpsa se actualice)
     const _ipReal=(w.ipsa>0)&&(w.ipsaFresh===true||(w.ipsaFresh!==false&&!(i>0&&_ipPrevDate>0&&w.ipsa===_ipPrevDate)));
     if(lastOfDate){
-      if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);prD.push(w.date);prBase.push(prevVal);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);mrOK.push(!!(prevIpsa>0&&prevIpsaOK&&_ipReal));}   // prD/prBase: fecha y PATRIMONIO TOTAL sobre el que se midió cada retorno (el registro de una pérdida lleva su base)
-      prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;dayFlow=0;
+      if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);prD.push(w.date);prBase.push(prevVal);prFrom.push(_prevD);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);mrOK.push(!!(prevIpsa>0&&prevIpsaOK&&_ipReal));}   // prD/prFrom/prBase: cada retorno lleva su fecha, la fecha BASE del tramo y el PATRIMONIO sobre el que se midió
+      prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;dayFlow=0;_prevD=w.date;
     }
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
     // ipsaND: el IPSA de este registro viene ARRASTRADO (sin cierre real del índice para la fecha) — sea por el
@@ -2944,13 +2944,19 @@ function invMetrics(){
   const L1=series[_di],L0=_dj>=0?series[_dj]:null;
   let _flow=0;for(let i=_dj+1;i<=_di;i++)_flow+=series[i].inflow||0;
   const dayAbs=L0?(L1.val-_flow)-L0.val:null,dayPct=L0?((L1.val-_flow)/L0.val-1):null,prevDate=L0?L0.date:null,dayTo=L0?L1.date:null;
-  const worstRet=pr.length?Math.min(...pr):null,bestRet=pr.length?Math.max(...pr):null;
-  let worstIdx=-1;if(pr.length){let mn=Infinity;pr.forEach((r,i)=>{if(r<mn){mn=r;worstIdx=i;}});}
-  // el REGISTRO de la mayor pérdida viaja completo: % (ya medido sobre el patrimonio total al cierre anterior,
-  // con los aportes del día neteados), CLP alineado, la FECHA y el PATRIMONIO BASE del momento — así la UI y el
-  // agente pueden mostrar "−$X (−y%) el D sobre un patrimonio de $B" sin ambigüedad de denominador.
+  // "PEOR DÍA" exige que el tramo sea REALMENTE de un período (gap dentro de la tolerancia de la cadencia):
+  // un hueco de registros (días sin abrir la app, vacaciones) acumula VARIOS días de mercado en un solo paso
+  // y presentarlo como "peor día" infla la pérdida — parecía "% del peor día × más patrimonio". El registro
+  // viaja completo: % sobre el patrimonio del cierre anterior (aportes neteados), CLP, fecha y base.
+  let worstIdx=-1,bestIdx=-1,worstRet=null,bestRet=null;
+  for(let i=0;i<pr.length;i++){if(prFrom[i]==null||_gapD(prFrom[i],prD[i])>_tolD)continue;
+    if(worstRet==null||pr[i]<worstRet){worstRet=pr[i];worstIdx=i;}
+    if(bestRet==null||pr[i]>bestRet){bestRet=pr[i];bestIdx=i;}}
   const worstLossCLP=worstIdx>=0?prCLP[worstIdx]:null;
   const worstRetDate=worstIdx>=0?prD[worstIdx]:null,worstBaseVal=worstIdx>=0?prBase[worstIdx]:null;
+  // el peor TRAMO (cualquier gap): si es peor que el peor día real se informa APARTE, como tramo — jamás como "día"
+  let worstStep=null;{let wi=-1,mn=Infinity;for(let i=0;i<pr.length;i++)if(pr[i]<mn){mn=pr[i];wi=i;}
+    if(wi>=0&&wi!==worstIdx&&(worstRet==null||pr[wi]<worstRet-1e-12))worstStep={ret:pr[wi],clp:prCLP[wi],from:prFrom[wi],to:prD[wi],days:prFrom[wi]!=null?Math.round(_gapD(prFrom[wi],prD[wi])):null,base:prBase[wi]};}
   const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
   let elapsedYrs=last.yrs;if(elapsedYrs<1/365.25&&series.length>1){const pd=PF.freq==="semanal"?7:PF.freq==="mensual"?30:1;elapsedYrs=(series.length-1)*pd/365.25;}
   const elapsedDays=Math.round(elapsedYrs*365.25);
@@ -2966,12 +2972,15 @@ function invMetrics(){
   // quedan en "—" antes que entregar un número construido sobre días de mercado inventados.
   if(_prB.length>=8){const act=_prB.map((x,i)=>x-_mrB[i]),ma=avg(act);const va=act.reduce((a,b)=>a+(b-ma)**2,0)/(act.length-1),teP=Math.sqrt(va);trackingError=teP*Math.sqrt(perY)*100;infoRatio=teP>0?(ma*Math.sqrt(perY))/teP:null;winRate=act.filter(x=>x>0).length/act.length*100;}
   // MÁXIMO DRAWDOWN sobre el ÍNDICE TWR (1+ret), NO sobre el valor bruto: el valor sube con un aporte y baja
-  // con un retiro sin que eso sea rentabilidad — medirlo sobre `val` inventaba una "pérdida" del tamaño de un
-  // retiro (vender la mitad marcaba −50% de drawdown) y un aporte maquillaba una caída real. El CLP se expresa
-  // sobre el PATRIMONIO DEL MOMENTO del valle: val − val/(1+dd) = lo que ese capital perdió desde su máximo.
-  let peakIdx=-Infinity,maxDD=0,maxDDCLP=0,maxDDDate=null;
-  series.forEach(s=>{const ix=1+s.ret;if(ix>peakIdx)peakIdx=ix;const dd=ix/peakIdx-1;if(dd<maxDD){maxDD=dd;maxDDCLP=s.val-s.val/(1+dd);maxDDDate=s.date;}});
-  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,nret:pr.length,nretIdx,worstRet,bestRet,maxDD,maxDDCLP,maxDDDate,worstLossCLP,worstRetDate,worstBaseVal,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
+  // con un retiro sin que eso sea rentabilidad. El CLP es la SUMA de las variaciones de MERCADO en pesos
+  // (prCLP, flujos ya neteados) entre el máximo y el valle: el dinero que de verdad se perdió, con el capital
+  // que había EN CADA MOMENTO — no dd% × patrimonio del valle, que inflaba la cifra cuando un aporte entraba
+  // a mitad de la caída (capital que nunca vivió la primera parte del retroceso).
+  let _cumC=0;const cumCLP=prCLP.map(v=>(_cumC+=v));
+  let _ix=1,peakIx=1,peakK=-1,maxDD=0,maxDDCLP=0,maxDDDate=null,maxDDFrom=null;
+  for(let k=0;k<pr.length;k++){_ix*=(1+pr[k]);if(_ix>peakIx){peakIx=_ix;peakK=k;}
+    const dd=_ix/peakIx-1;if(dd<maxDD){maxDD=dd;maxDDCLP=cumCLP[k]-(peakK>=0?cumCLP[peakK]:0);maxDDDate=prD[k];maxDDFrom=peakK>=0?prD[peakK]:(prFrom[0]||null);}}
+  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,nret:pr.length,nretIdx,worstRet,bestRet,maxDD,maxDDCLP,maxDDDate,maxDDFrom,worstLossCLP,worstRetDate,worstBaseVal,worstStep,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
 }
 
 const FREQ={diario:{u:"día",uc:"Día",us:"días",adj:"diario",cap:"Diario",det:"el día",per:"del día",pf:"D"},semanal:{u:"semana",uc:"Semana",us:"semanas",adj:"semanal",cap:"Semanal",det:"la semana",per:"de la semana",pf:"S"},mensual:{u:"mes",uc:"Mes",us:"meses",adj:"mensual",cap:"Mensual",det:"el mes",per:"del mes",pf:"M"}};
@@ -3320,7 +3329,7 @@ function viewInvActive(){
   const vaRf=(pY)=>{const sp=(PF.sig/100)/Math.sqrt(pY),mp=Math.pow(1+PF.erCapm/100,1/pY)-1,v=mp-1.645*sp;return {pct:v,loss:L.val*Math.max(0,-v)};};
   const vD=vaRf(252),vW=vaRf(52),vM=vaRf(12),vP=PF.freq==="semanal"?vW:PF.freq==="mensual"?vM:vD;
   const worst=IM.worstRet,breach=worst!=null&&worst<vP.pct;
-  const riskKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("VaR 95% ("+fr.u+")",pc(vP.pct*100),"pérdida máx esperada / "+fr.u,indigo,red)}${tile("Peor "+fr.u+" real",worst!=null?pc(worst*100):"—",worst!=null?((IM.worstRetDate?("el "+IM.worstRetDate+" · "):"")+(breach?"excedió el VaR":"dentro del VaR")):"sin datos",indigo,worst!=null?col(worst*100):muted)}${tile("Pérdida ese "+fr.u+" (CLP)",IM.worstLossCLP!=null?fmtCLP(IM.worstLossCLP):"—",IM.worstBaseVal!=null?("sobre un patrimonio de "+fmtCLP(IM.worstBaseVal)):("VaR "+fr.u+": "+fmtCLP(-vP.loss)),indigo,IM.worstLossCLP!=null?red:muted)}${tile("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):pc(IM.maxDD*100),pc(IM.maxDD*100)+" desde un máximo"+(IM.maxDDDate?(" · "+IM.maxDDDate):""),indigo,col(IM.maxDD*100))}${tile("Volatilidad realizada",IM.realizedVol!=null?p0(IM.realizedVol):"—",IM.realizedVol!=null?("esperada σ "+p0(PF.sig)):"≥3 registros",indigo,accentT)}</div>`;
+  const riskKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("VaR 95% ("+fr.u+")",pc(vP.pct*100),"pérdida máx esperada / "+fr.u,indigo,red)}${tile("Peor "+fr.u+" real",worst!=null?pc(worst*100):"—",worst!=null?((IM.worstRetDate?("el "+IM.worstRetDate+" · "):"")+(breach?"excedió el VaR":"dentro del VaR")):"sin datos",indigo,worst!=null?col(worst*100):muted)}${tile("Pérdida ese "+fr.u+" (CLP)",IM.worstLossCLP!=null?fmtCLP(IM.worstLossCLP):"—",IM.worstBaseVal!=null?("sobre un patrimonio de "+fmtCLP(IM.worstBaseVal)):("VaR "+fr.u+": "+fmtCLP(-vP.loss)),indigo,IM.worstLossCLP!=null?red:muted)}${tile("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):pc(IM.maxDD*100),pc(IM.maxDD*100)+" desde un máximo"+(IM.maxDDFrom&&IM.maxDDDate?(" · "+IM.maxDDFrom+" → "+IM.maxDDDate):(IM.maxDDDate?(" · "+IM.maxDDDate):"")),indigo,col(IM.maxDD*100))}${tile("Volatilidad realizada",IM.realizedVol!=null?p0(IM.realizedVol):"—",IM.realizedVol!=null?("esperada σ "+p0(PF.sig)):"≥3 registros",indigo,accentT)}</div>`;
   // peor caída REAL por horizonte, con ventana de días CALENDARIO (no por nº fijo de registros: con ~1 mes de
   // seguimiento el conteo fijo de 21 registros dejaba el "peor mensual" en "—" aunque el mes ya se cumplió)
   const stepLoss=()=>{const v=IM.series;let mn=Infinity;for(let i=1;i<v.length;i++){const d=(v[i].val-(v[i].inflow||0))-v[i-1].val;if(d<mn)mn=d;}return mn===Infinity?null:Math.min(mn,0);};
@@ -3334,7 +3343,7 @@ function viewInvActive(){
   const hzD=[["Diario",vD,PF.freq==="diario"?stepLoss():null],["Semanal",vW,realLossDays(7)],["Mensual",vM,realLossDays(31)]];
   const varRows=hzD.map(a=>`<tr><td><b>${a[0]}</b></td><td class="r">${pc(a[1].pct*100)}</td><td class="r" style="color:${red};font-weight:700">${fmtCLP(-a[1].loss)}</td><td class="r" style="font-weight:700;color:${a[2]!=null&&a[2]<0?red:muted}">${a[2]!=null?fmtCLP(a[2]):"—"}</td></tr>`).join("");
   const varTbl=`<div class="tw" style="margin-top:6px"><table><thead><tr><th>Horizonte</th><th class="r">VaR 95%</th><th class="r">Pérdida máx (VaR)</th><th class="r">Peor real (CLP)</th></tr></thead><tbody>${varRows}</tbody></table></div>`;
-  const riskNote=`<div class="note" style="margin-top:11px">El <b>VaR 95%</b> es la pérdida máxima esperada en un período normal (salvo 1 de cada 20). ${worst!=null?("Tu peor "+fr.u+" real fue "+pc(worst*100)+" ("+fmtCLP(IM.worstLossCLP)+")"+(IM.worstRetDate?(" el <b>"+IM.worstRetDate+"</b>"):"")+(IM.worstBaseVal!=null?(", medido sobre el <b>patrimonio total de ese momento</b> ("+fmtCLP(IM.worstBaseVal)+", con los aportes del día neteados)"):"")+" → "+(breach?"<b style=\"color:"+red+"\">excedió el VaR "+fr.u+"</b>, un evento de cola":"<b style=\"color:"+green+"\">dentro del VaR</b>")+". "):""}El <b>máximo drawdown</b> (${pc(IM.maxDD*100)}${IM.maxDDCLP?", "+fmtCLP(IM.maxDDCLP):""}${IM.maxDDDate?(", al "+IM.maxDDDate):""}) es la peor caída acumulada desde un máximo de la <b>rentabilidad</b> — los aportes y retiros se netean (un retiro no es pérdida ni un aporte recuperación) y el CLP se expresa sobre el patrimonio del momento. El VaR paramétrico asume normalidad y subestima los extremos.</div>`;
+  const riskNote=`<div class="note" style="margin-top:11px">El <b>VaR 95%</b> es la pérdida máxima esperada en un período normal (salvo 1 de cada 20). ${worst!=null?("Tu peor "+fr.u+" real fue "+pc(worst*100)+" ("+fmtCLP(IM.worstLossCLP)+")"+(IM.worstRetDate?(" el <b>"+IM.worstRetDate+"</b>"):"")+(IM.worstBaseVal!=null?(", medido sobre el <b>patrimonio total de ese momento</b> ("+fmtCLP(IM.worstBaseVal)+", con los aportes del día neteados)"):"")+" → "+(breach?"<b style=\"color:"+red+"\">excedió el VaR "+fr.u+"</b>, un evento de cola":"<b style=\"color:"+green+"\">dentro del VaR</b>")+". "):""}${IM.worstStep?("Además, entre el <b>"+IM.worstStep.from+"</b> y el <b>"+IM.worstStep.to+"</b> ("+IM.worstStep.days+" días sin registros intermedios) la cartera varió "+pc(IM.worstStep.ret*100)+" ("+fmtCLP(IM.worstStep.clp)+" sobre "+fmtCLP(IM.worstStep.base)+"): es un <b>tramo acumulado</b>, no un día — por eso no aparece como «peor "+fr.u+"». "):""}El <b>máximo drawdown</b> (${pc(IM.maxDD*100)}${IM.maxDDCLP?", "+fmtCLP(IM.maxDDCLP):""}${IM.maxDDFrom&&IM.maxDDDate?(", del "+IM.maxDDFrom+" al "+IM.maxDDDate):""}) es la peor caída acumulada desde un máximo de la <b>rentabilidad</b>: los aportes y retiros se netean (un retiro no es pérdida ni un aporte recuperación) y el CLP suma lo que el mercado le quitó al capital <b>que había en cada momento</b> del retroceso. El VaR paramétrico asume normalidad y subestima los extremos.</div>`;
   const cagrReady=IM.cagr!=null&&days>=60;
   const qTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("Retorno anualizado (CAGR)",cagrReady?pc(IM.cagr*100):"—",cagrReady?"ritmo anualizado":"≥60 días para un valor realista",indigo,cagrReady?col(IM.cagr*100):muted)}${tile("Sharpe realizado",IM.sharpeR!=null?IM.sharpeR.toFixed(2):"—","retorno por unidad de riesgo",indigo,IM.sharpeR!=null?(IM.sharpeR>=0?green:red):muted)}${tile("Tracking error",IM.trackingError!=null?p0(IM.trackingError):"—","desvío anual vs IPSA",indigo,accentT)}${tile("Information ratio",IM.infoRatio!=null?IM.infoRatio.toFixed(2):"—","retorno activo / TE",indigo,IM.infoRatio!=null?col(IM.infoRatio*100):muted)}${tile("Aciertos vs IPSA",IM.winRate!=null?p0(IM.winRate):"—","% de "+fr.us+" sobre el mercado",indigo,accentT)}${tile("Mejor / peor "+fr.u,(IM.bestRet!=null?`<span style="color:${col(IM.bestRet*100)}">${pc(IM.bestRet*100)}</span>`:"—")+` <span style="color:${faint};font-weight:600">/</span> `+(IM.worstRet!=null?`<span style="color:${col(IM.worstRet*100)}">${pc(IM.worstRet*100)}</span>`:"—"),"rango por período",indigo,ink)}</div>`;
   const qNote=`<div class="note" style="margin-top:11px"><b>Calidad del desempeño.</b> El <b>Sharpe realizado</b> mide tu retorno ajustado por la volatilidad efectiva; el <b>information ratio</b> es el retorno extra sobre el IPSA por unidad de riesgo activo (sobre 0,5 es bueno); <b>aciertos vs IPSA</b> es el % de ${fr.us} en que superaste al mercado. El <b>Sharpe, el tracking error y el information ratio</b> se muestran desde los <b>30 días</b> de seguimiento y ≥8 retornos: con menos, anualizar una racha corta (media × ${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}, volatilidad × √${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}) dispara el ratio y produce un Sharpe irreal.${days<60?` El <b>CAGR</b> se muestra solo a partir de los 60 días, porque anualizar un período tan corto produce valores irreales.`:""}</div>`;
@@ -3626,10 +3635,10 @@ function genInvReport(){
     ${kpi("VaR 95% ("+fr.u+")",sg(vP.pct*100),neg,"pérdida máx esperada / "+fr.u)}
     ${kpi("Peor "+fr.u+" real",worst!=null?sg(worst*100):"—",worst!=null?cc(worst*100):mut,worst!=null?((IM.worstRetDate?("el "+IM.worstRetDate+" · "):"")+(breach?"excedió el VaR":"dentro del VaR")):"sin datos")}
     ${kpi("Pérdida ese "+fr.u+" (CLP)",IM.worstLossCLP!=null?fmtCLP(IM.worstLossCLP):"—",IM.worstLossCLP!=null?neg:mut,IM.worstBaseVal!=null?("sobre un patrimonio de "+fmtCLP(IM.worstBaseVal)):("VaR "+fr.u+": "+fmtCLP(-vP.loss)))}
-    ${kpi("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):sg(IM.maxDD*100),neg,sg(IM.maxDD*100)+" desde un máximo"+(IM.maxDDDate?(" · "+IM.maxDDDate):""))}
+    ${kpi("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):sg(IM.maxDD*100),neg,sg(IM.maxDD*100)+" desde un máximo"+(IM.maxDDFrom&&IM.maxDDDate?(" · "+IM.maxDDFrom+" → "+IM.maxDDDate):(IM.maxDDDate?(" · "+IM.maxDDDate):"")))}
     ${kpi("Volatilidad realizada",IM.realizedVol!=null?IM.realizedVol.toFixed(1)+"%":"—",null,"esperada σ "+PF.sig.toFixed(1)+"%")}
   </div>`;
-  const riskNote=`<div class="note">El <b>VaR 95%</b> es la pérdida máxima esperada en un período normal (salvo 1 de cada 20). ${worst!=null?("Tu peor "+fr.u+" real fue "+sg(worst*100)+(IM.worstLossCLP!=null?(" ("+fmtCLP(IM.worstLossCLP)+")"):"")+(IM.worstRetDate?(" el <b>"+IM.worstRetDate+"</b>"):"")+(IM.worstBaseVal!=null?(", medido sobre el patrimonio total de ese momento ("+fmtCLP(IM.worstBaseVal)+", aportes del día neteados)"):"")+" → "+(breach?`<b style="color:${neg}">excedió el VaR ${fr.u}</b>, un evento de cola`:`<b style="color:${pos}">dentro del VaR</b>`)+". "):""}El <b>máximo drawdown</b> (${sg(IM.maxDD*100)}${IM.maxDDCLP?(", "+fmtCLP(IM.maxDDCLP)):""}) es la peor caída acumulada desde un máximo de la rentabilidad — los aportes y retiros se netean y el CLP se expresa sobre el patrimonio del momento. El VaR paramétrico asume normalidad y subestima los extremos. El «peor real» semanal/mensual usa ventanas de días calendario y netea TODOS los aportes dentro de la ventana.</div>`;
+  const riskNote=`<div class="note">El <b>VaR 95%</b> es la pérdida máxima esperada en un período normal (salvo 1 de cada 20). ${worst!=null?("Tu peor "+fr.u+" real fue "+sg(worst*100)+(IM.worstLossCLP!=null?(" ("+fmtCLP(IM.worstLossCLP)+")"):"")+(IM.worstRetDate?(" el <b>"+IM.worstRetDate+"</b>"):"")+(IM.worstBaseVal!=null?(", medido sobre el patrimonio total de ese momento ("+fmtCLP(IM.worstBaseVal)+", aportes del día neteados)"):"")+" → "+(breach?`<b style="color:${neg}">excedió el VaR ${fr.u}</b>, un evento de cola`:`<b style="color:${pos}">dentro del VaR</b>`)+". "):""}${IM.worstStep?("Entre el <b>"+IM.worstStep.from+"</b> y el <b>"+IM.worstStep.to+"</b> ("+IM.worstStep.days+" días sin registros intermedios) la cartera varió "+sg(IM.worstStep.ret*100)+" ("+fmtCLP(IM.worstStep.clp)+"): es un tramo acumulado, no un día. "):""}El <b>máximo drawdown</b> (${sg(IM.maxDD*100)}${IM.maxDDCLP?(", "+fmtCLP(IM.maxDDCLP)):""}${IM.maxDDFrom&&IM.maxDDDate?(", del "+IM.maxDDFrom+" al "+IM.maxDDDate):""}) es la peor caída acumulada desde un máximo de la rentabilidad — los flujos se netean y el CLP suma lo que el mercado le quitó al capital que había en cada momento. El VaR paramétrico asume normalidad y subestima los extremos. El «peor real» semanal/mensual usa ventanas de días calendario y netea TODOS los aportes dentro de la ventana.</div>`;
   // ── 9 · CALIDAD Y DESEMPEÑO DEL SEGUIMIENTO (mismas 6 tarjetas del módulo) ──
   const qK=`<div class="kgrid k3">
     ${kpi("Retorno anualizado (CAGR)",cagrOk?sg(IM.cagr*100):"—",cagrOk?cc(IM.cagr*100):mut,cagrOk?"ritmo anualizado":"≥60 días para un valor realista")}
@@ -4749,8 +4758,8 @@ function cpRunTool(name,input){
       const byDate=[];IM.series.forEach(p=>{if(byDate.length&&byDate[byDate.length-1].date===p.date)byDate[byDate.length-1]=p;else byDate.push(p);});
       const pts=byDate.slice(-lim).map(p=>({fecha:p.date,valorCLP:Math.round(p.val),aportadoCLP:Math.round(p.aport),retornoTWR_pct:+(p.ret*100).toFixed(2),vsIPSA_pts:+(p.diff*100).toFixed(2),aporteDelDiaCLP:p.inflow?Math.round(p.inflow):0}));
       return JSON.stringify({proyecto:PF.name,fechasTotales:byDate.length,mostrando:pts.length,
-        mejorDia_pct:(IM.bestRet!=null?+(IM.bestRet*100).toFixed(2):null),peorDia_pct:(IM.worstRet!=null?+(IM.worstRet*100).toFixed(2):null),peorPerdidaDiaCLP:(IM.worstLossCLP!=null?Math.round(IM.worstLossCLP):null),peorDia_fecha:(IM.worstRetDate||null),peorDia_patrimonioBaseCLP:(IM.worstBaseVal!=null?Math.round(IM.worstBaseVal):null),maxDrawdown_pct:+(IM.maxDD*100).toFixed(2),
-        nota:"retornoTWR_pct = retorno acumulado encadenado por fecha (los APORTES no cuentan como rentabilidad — el salto de valorCLP en un día con aporteDelDiaCLP>0 es capital, no ganancia). vsIPSA_pts = diferencia acumulada contra el índice. peorDia: % y CLP medidos sobre el PATRIMONIO TOTAL al cierre anterior (peorDia_patrimonioBaseCLP), con los aportes de ese día neteados. maxDrawdown: sobre la rentabilidad, neteando aportes/retiros (un retiro no es pérdida).",
+        mejorDia_pct:(IM.bestRet!=null?+(IM.bestRet*100).toFixed(2):null),peorDia_pct:(IM.worstRet!=null?+(IM.worstRet*100).toFixed(2):null),peorPerdidaDiaCLP:(IM.worstLossCLP!=null?Math.round(IM.worstLossCLP):null),peorDia_fecha:(IM.worstRetDate||null),peorDia_patrimonioBaseCLP:(IM.worstBaseVal!=null?Math.round(IM.worstBaseVal):null),peorTramoSinRegistros:(IM.worstStep?{desde:IM.worstStep.from,hasta:IM.worstStep.to,dias:IM.worstStep.days,ret_pct:+(IM.worstStep.ret*100).toFixed(2),clp:Math.round(IM.worstStep.clp),nota:"tramo ACUMULADO entre registros distantes: NO es un día"}:null),maxDrawdown_pct:+(IM.maxDD*100).toFixed(2),maxDrawdown_desde:(IM.maxDDFrom||null),maxDrawdown_hasta:(IM.maxDDDate||null),
+        nota:"retornoTWR_pct = retorno acumulado encadenado por fecha (los APORTES no cuentan como rentabilidad — el salto de valorCLP en un día con aporteDelDiaCLP>0 es capital, no ganancia). vsIPSA_pts = diferencia acumulada contra el índice. peorDia: % y CLP medidos sobre el PATRIMONIO TOTAL al cierre anterior (peorDia_patrimonioBaseCLP), con los aportes de ese día neteados, y SOLO entre registros de días consecutivos (un hueco de registros no es un día: va en peorTramoSinRegistros). maxDrawdown: sobre la rentabilidad, flujos neteados; su CLP suma lo que el mercado quitó al capital presente en cada momento del retroceso.",
         curva:pts});
     }
     if(name==="get_ledger"){
@@ -7731,22 +7740,32 @@ function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));
 /* ===================================================================== */
 let mcState=null;
 function mcRandn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
-/* parámetros por defecto: toma μ/σ/valor del proyecto activo si existe; si no, del mercado (IPSA) */
-function mcDefaults(){
-  try{syncProj();}catch(e){}
-  const p=(typeof curProj==="function")?curProj():null;
-  let v0=1000000, mu=RF+PRIMA, sg=(MKT&&MKT.sig)||14, src="Mercado · IPSA (sin proyecto activo)";
-  if(p){let s=null;try{s=projSummary(p);}catch(e){}
-    const val=(s&&s.hasData&&s.value)?s.value:((typeof realCap==="function"&&realCap())||p.amount||0);
+/* CARTERA A SIMULAR: se elige de una LISTA (igual que Markowitz) y los parámetros salen solos de ella —
+   capital = valor actual de la cartera, μ = su E(R) CAPM, σ = su volatilidad (refrescados con el análisis
+   real vigente vía projSyncReal). Sin cartera elegida, quedan los del mercado (IPSA) y se ajustan a mano. */
+function mcProjList(){return (typeof mkwProjects==="function")?mkwProjects():[];}
+function mcParamsFrom(p){
+  let v0=1000000, mu=RF+PRIMA, sg=(MKT&&MKT.sig)||14, src="Mercado · IPSA (parámetros manuales)";
+  if(p){
+    try{projSyncReal(p);}catch(e){}   // μ/σ/β de la cartera al día con el análisis real (misma vara que Markowitz)
+    let s=null;try{s=projSummary(p);}catch(e){}
+    const val=(s&&s.hasData&&s.value)?s.value:(p.amount||0);
     if(val>0)v0=Math.round(val);
     if(isFinite(p.erCapm)&&p.erCapm)mu=p.erCapm;
     if(isFinite(p.sig)&&p.sig>0)sg=p.sig;
-    src="Proyecto activo · "+(p.name||"cartera");
+    src="Cartera · "+(p.name||"proyecto");
   }
-  return {v0:Math.round(v0),mu:+(+mu).toFixed(2),sig:+(+sg).toFixed(2),horizonY:5,contrib:0,goalOn:false,goal:Math.round(v0*2),paths:500,src,_pid:(typeof activeId!=="undefined"?activeId:null)};
+  return {v0:Math.round(v0),mu:+(+mu).toFixed(2),sig:+(+sg).toFixed(2),src};
+}
+function mcDefaults(){
+  try{syncProj();}catch(e){}
+  const ps=mcProjList();
+  const p=ps.find(x=>typeof activeId!=="undefined"&&x.id===activeId)||ps[0]||null;
+  const base=mcParamsFrom(p);
+  return Object.assign({horizonY:5,contrib:0,goalOn:false,goal:Math.round(base.v0*2),paths:500,projId:p?p.id:null},base);
 }
 function mcEnsure(){
-  if(mcState&&typeof activeId!=="undefined"&&mcState._pid!==activeId)mcState=null;   // cambió el proyecto activo: re-derivar capital/μ/σ (no proyectar con la cartera anterior)
+  if(mcState&&mcState.projId!=null&&!mcProjList().find(p=>p.id===mcState.projId))mcState=null;   // la cartera simulada ya no existe
   if(!mcState)mcState=mcDefaults();return mcState;}
 /* motor GBM log-normal: N trayectorias, pasos mensuales, con aporte mensual opcional; devuelve percentiles por paso */
 function mcSimulate(st){
@@ -7967,7 +7986,10 @@ function viewMontecarlo(){
   const v0=Math.max(0,+st.v0||0),mu=+st.mu||0,sg=Math.max(0,+st.sig||0);
   const hzns=[1,3,5,10],pathsOpts=[200,500,1000];
   const betaBanner=`<div class="mc-beta">🧪 <b>Montecarlo · beta</b> — módulo experimental de proyección probabilística. Resultados estadísticos con fines educativos; no es asesoría ni garantía de rentabilidad.</div>`;
+  const _ps=mcProjList();
+  const projSel=`<label class="mc-fld">Cartera a simular<select data-mc-proj aria-label="Cartera a simular">${_ps.map(x=>`<option value="${x.id}" ${st.projId===x.id?"selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}<option value="" ${st.projId==null?"selected":""}>— Manual / mercado —</option></select></label>`;
   const ctrl=`<div class="mc-form">
+      ${projSel}
       <label class="mc-fld">Capital inicial (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mc="v0" value="${v0}"></label>
       <label class="mc-fld">Retorno esperado μ (% anual)<input type="number" step="0.1" inputmode="decimal" data-mc="mu" value="${mu}"></label>
       <label class="mc-fld">Volatilidad σ (% anual)<input type="number" step="0.1" min="0" inputmode="decimal" data-mc="sig" value="${sg}"></label>
@@ -7977,11 +7999,11 @@ function viewMontecarlo(){
       <span class="mc-seglab">Horizonte</span><div class="home-seg">${hzns.map(y=>`<button data-mchz="${y}" class="${st.horizonY===y?"on":""}">${y} año${y>1?"s":""}</button>`).join("")}</div>
       <span class="mc-seglab">Trayectorias</span><div class="home-seg">${pathsOpts.map(pn=>`<button data-mcp="${pn}" class="${st.paths===pn?"on":""}">${pn}</button>`).join("")}</div>
       <label class="mc-goal"><input type="checkbox" data-mc-goalon ${st.goalOn?"checked":""}> Meta<input type="number" min="0" step="any" data-mc="goal" value="${st.goal||0}" ${st.goalOn?"":"disabled"}></label>
-      <button class="btn" data-mc-sync title="Reutilizar el capital, retorno y riesgo del proyecto activo">↺ Usar proyecto activo</button>
+      <button class="btn" data-mc-sync title="Volver a tomar el capital, μ y σ actuales de la cartera seleccionada (descarta ajustes manuales)">↺ Re-sincronizar</button>
       <button class="btn btn-pri" data-mc-run>🎲 Volver a simular</button>
     </div>`;
-  const head=card("Simulación Monte Carlo","Proyección probabilística del capital por trayectorias aleatorias (modelo GBM log-normal). Fuente de parámetros: "+st.src+".",ctrl);
-  if(v0<=0){return betaBanner+head+notecard(`Ingresa un <b>capital inicial</b> mayor a 0 para proyectar. Los parámetros μ (retorno esperado) y σ (riesgo) se toman del <b>proyecto activo</b> si existe, o del mercado (IPSA); también puedes ajustarlos a mano arriba.`);}
+  const head=card("Simulación Monte Carlo","Elige la <b>cartera</b> y sus parámetros se cargan solos (capital = valor actual, μ = E(R) CAPM, σ = volatilidad, con el análisis real); mantén tu <b>aporte mensual</b> y el <b>horizonte</b>. Fuente actual: "+st.src+".",ctrl);
+  if(v0<=0){return betaBanner+head+notecard(`Ingresa un <b>capital inicial</b> mayor a 0 para proyectar. Elige una <b>cartera</b> en la lista para cargar sus parámetros automáticamente, o ajústalos a mano.`);}
   // la simulación se CACHEA por sus insumos (capital/μ/σ/horizonte/aporte/trayectorias): editar la meta u otro
   // control no vuelve a sortear trayectorias (los números no "saltan"); "Volver a simular" fuerza un sorteo nuevo
   const _mck=[v0,mu,sg,st.horizonY,st.contrib||0,st.paths,st.reroll||0].join("|");
@@ -8015,7 +8037,7 @@ function viewMontecarlo(){
   const hitos=yrs.length?card("Hitos por año","La distribución de resultados en cada año cumplido del horizonte"+(st.goalOn?" · última columna: probabilidad de haber alcanzado la meta ese año":""),{html:`<div class="tw"><table><thead><tr><th>Hito</th><th class="r">Adverso (p5)</th><th class="r">p25</th><th class="r">Mediana</th><th class="r">p75</th><th class="r">Optimista (p95)</th><th class="r">Mediana vs aportado</th>${st.goalOn?'<th class="r">Prob. meta</th>':''}</tr></thead><tbody>${hitosRows}</tbody></table></div>`,flush:true}):"";
   const guia=card("Cómo leer esta proyección","Guía rápida del método y sus límites",`
     <div class="proj-steps">
-      <div class="pstep"><span class="pstep-n">1</span><div class="pstep-b"><b>Parámetros</b><span>μ (retorno esperado) y σ (riesgo) vienen del <b>proyecto activo</b> — su E(R) CAPM y su volatilidad — o los ajustas a mano. El capital inicial es el valor actual de la cartera.</span></div></div>
+      <div class="pstep"><span class="pstep-n">1</span><div class="pstep-b"><b>Parámetros</b><span>Eliges la <b>cartera</b> en la lista y sus parámetros se cargan solos: capital = valor actual, μ = su E(R) CAPM y σ = su volatilidad (del análisis real). También puedes ajustarlos a mano o simular en modo manual.</span></div></div>
       <div class="pstep"><span class="pstep-n">2</span><div class="pstep-b"><b>Simulación</b><span>Se sortean ${st.paths} trayectorias posibles del capital (modelo GBM log-normal, pasos mensuales). No predice el futuro: muestra el <b>rango</b> de futuros compatibles con μ y σ.</span></div></div>
       <div class="pstep"><span class="pstep-n">3</span><div class="pstep-b"><b>Lectura</b><span>La <b>mediana</b> es el escenario central (50/50). El rango <b>p25–p75</b> concentra la mitad de los casos. <b>p5/p95</b> son los extremos razonables: no techos ni pisos absolutos.</span></div></div>
       <div class="pstep"><span class="pstep-n">4</span><div class="pstep-b"><b>Decisiones</b><span>Usa la <b>prob. de meta</b> para calibrar aporte mensual y horizonte, y las <b>caídas del camino</b> para saber qué retrocesos deberías tolerar sin vender.</span></div></div>
@@ -8031,7 +8053,12 @@ function attachMontecarlo(){
   document.querySelectorAll("[data-mchz]").forEach(b=>b.onclick=()=>{st.horizonY=+b.dataset.mchz;render();});
   document.querySelectorAll("[data-mcp]").forEach(b=>b.onclick=()=>{st.paths=+b.dataset.mcp;render();});
   const gon=document.querySelector("[data-mc-goalon]");if(gon)gon.onchange=()=>{st.goalOn=gon.checked;render();};
-  const sy=document.querySelector("[data-mc-sync]");if(sy)sy.onclick=()=>{mcState=mcDefaults();render();};
+  // selector de cartera: carga capital/μ/σ de la elegida CONSERVANDO aporte mensual, horizonte, meta y trayectorias
+  const pj=document.querySelector("[data-mc-proj]");if(pj)pj.onchange=()=>{const v=pj.value;const p=v?mcProjList().find(x=>String(x.id)===v):null;
+    Object.assign(st,mcParamsFrom(p),{projId:p?p.id:null});
+    if(!st.goalOn)st.goal=Math.round(st.v0*2);
+    render();};
+  const sy=document.querySelector("[data-mc-sync]");if(sy)sy.onclick=()=>{const p=st.projId!=null?mcProjList().find(x=>x.id===st.projId):null;Object.assign(st,mcParamsFrom(p));render();};
   const rn=document.querySelector("[data-mc-run]");if(rn)rn.onclick=()=>{st.reroll=(st.reroll||0)+1;render();};   // sorteo nuevo explícito (invalida el cache)
 }
 
