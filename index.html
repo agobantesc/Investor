@@ -2919,7 +2919,28 @@ function invMetrics(){
        if(j>=0&&_gapD(WEEKS[j].date,WEEKS[i].date)<=_tolD){dayRet=WEEKS[i].prices[hd.t]/WEEKS[j].prices[hd.t]-1;dayFrom=WEEKS[j].date;dayTo=WEEKS[i].date;}
      }}
     const openedLast=!!(firstBuy[hd.t]&&firstBuy[hd.t].idx===WEEKS.length-1);   // comprada en el último registro
-    return {hd,sh:shx,buy:avg,cur,val:v,ret:cst>0?gain/cst:(b0[hd.t]>0?cur/b0[hd.t]-1:0),dayRet,dayFrom,dayTo,openedLast,gain,contribCum:aport>0?gain/aport:0,cost:cst};});
+    // β REALIZADO DE LA ACCIÓN en el período del seguimiento: regresión OLS de SUS retornos contra los del
+    // IPSA, con la MISMA disciplina que el β de la cartera — solo pares donde la acción Y el índice tienen
+    // cierre REAL, en fechas consecutivas dentro de la tolerancia de la cadencia. Un precio arrastrado o una
+    // fecha sin índice quedarían como "0% de movimiento" y aplanarían la β hacia 0: se excluyen.
+    // Mide al ACTIVO (su sensibilidad de precio al mercado), no a tu timing de compras.
+    let betaSt=null,corrSt=null,r2St=null,nSt=0;
+    {const rs=[],rm=[];let pPx=null,pIp=null,pD=null,pIpOK=false;
+     for(let i=0;i<WEEKS.length;i++){
+       const w=WEEKS[i];
+       if(i<WEEKS.length-1&&WEEKS[i+1].date===w.date)continue;             // solo el ÚLTIMO registro de cada fecha
+       const okPx=freshOK(w,hd.t)&&w.prices[hd.t]>0;
+       const ipOK=(w.ipsa>0)&&(w.ipsaFresh===true||(w.ipsaFresh!==false&&!(pIp>0&&w.ipsa===pIp)));
+       if(okPx&&ipOK&&pPx>0&&pIp>0&&pIpOK&&pD&&_gapD(pD,w.date)<=_tolD){rs.push(w.prices[hd.t]/pPx-1);rm.push(w.ipsa/pIp-1);}
+       if(okPx){pPx=w.prices[hd.t];pD=w.date;}
+       if(ipOK||w.ipsa>0){pIp=w.ipsa;pIpOK=ipOK;}
+     }
+     nSt=rs.length;
+     if(nSt>=4){const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,ms=mean(rs),mm=mean(rm);
+       let cov=0,vm=0,vs=0;for(let k=0;k<nSt;k++){cov+=(rs[k]-ms)*(rm[k]-mm);vm+=(rm[k]-mm)**2;vs+=(rs[k]-ms)**2;}
+       if(vm>0){betaSt=cov/vm;corrSt=vs>0?cov/Math.sqrt(vm*vs):null;r2St=corrSt!=null?corrSt*corrSt:null;}}}
+    return {hd,sh:shx,buy:avg,cur,val:v,ret:cst>0?gain/cst:(b0[hd.t]>0?cur/b0[hd.t]-1:0),dayRet,dayFrom,dayTo,openedLast,gain,contribCum:aport>0?gain/aport:0,cost:cst,
+      betaExp:(hd.b!=null&&isFinite(hd.b))?+hd.b:null,betaR:betaSt,corrR:corrSt,r2:r2St,nBeta:nSt};});
   // PARES CON ÍNDICE REAL: todo lo que se mide CONTRA el mercado (β, correlación, tracking error, information
   // ratio, aciertos) usa solo estas observaciones. Las fechas con IPSA arrastrado quedan fuera en vez de entrar
   // como un "0% de mercado" que nunca ocurrió. La volatilidad y el Sharpe NO dependen del índice: usan todo pr.
@@ -3186,7 +3207,17 @@ function viewInvActive(){
   const _todayBadge=`<span class="altchip" style="border-color:var(--accent);color:var(--accent);padding:1px 5px;font-size:8.5px;margin-left:5px" title="La compraste en este último registro: su Δ es el movimiento de mercado de la acción, no afecta el P/L del día (la compra se netea como aporte).">comprada hoy</span>`;
   // P. compra prom. = costo registrado ÷ acciones — comparable 1:1 con el "P. Compra" de la cartola de la
   // corredora; si difiere, el costo de algún tramo (p.ej. la compra inicial) quedó mal ingresado → Historial ✎
-  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r" title="Precio promedio de compra registrado (costo ÷ acciones). Compáralo con el «P. Compra» de tu corredora: si difiere, corrige el tramo mal ingresado en Historial ✎.">${(p.sh>0&&p.buy>0)?fmtP(p.buy):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?`<span title="entre sus dos últimos cierres reales: ${p.dayFrom} → ${p.dayTo}">${chip(p.dayRet*100)}</span>`:'<span style="color:var(--faint)" title="Esta acción aún no tiene DOS cierres reales vigentes (recién comprada, o su cierre aún no llega): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
+  // β ESPERADO (del análisis, lo que se le pedía a la acción) vs β REALIZADO (regresión de SUS retornos contra
+  // el IPSA en TU período de seguimiento). Un β realizado muy distinto del esperado avisa que la acción se está
+  // comportando distinto a su historia; el r² dice cuánto confiar en esa lectura.
+  const _bCell=p=>{
+    if(p.betaR==null)return `<span style="color:var(--faint)" title="Se necesitan al menos 4 períodos con cierre REAL de la acción y del IPSA. Van ${p.nBeta||0}.">—</span>`;
+    const d=p.betaExp!=null?(p.betaR-p.betaExp):null;
+    const weak=(p.r2!=null&&p.r2<0.10);
+    const c=d==null?ink:(Math.abs(d)<0.15?muted:(d>0?amber:accentT));
+    return `<span style="font-weight:800;color:${c}" title="Regresión de los retornos de ${p.hd.t} vs el IPSA sobre ${p.nBeta} período(s) con cierre real de ambos. r² ${p.r2!=null?(p.r2*100).toFixed(0)+"%":"—"}${d!=null?(" · "+(d>=0?"+":"")+d.toFixed(2)+" vs su β esperado"):""}.${weak?" ⚠ r² bajo: el IPSA explica poco su movimiento, la β es poco confiable.":""}">${p.betaR.toFixed(2)}${weak?' <span style="color:var(--amber);font-weight:700">⚠</span>':""}</span>`;
+  };
+  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r" title="Precio promedio de compra registrado (costo ÷ acciones). Compáralo con el «P. Compra» de tu corredora: si difiere, corrige el tramo mal ingresado en Historial ✎.">${(p.sh>0&&p.buy>0)?fmtP(p.buy):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?`<span title="entre sus dos últimos cierres reales: ${p.dayFrom} → ${p.dayTo}">${chip(p.dayRet*100)}</span>`:'<span style="color:var(--faint)" title="Esta acción aún no tiene DOS cierres reales vigentes (recién comprada, o su cierre aún no llega): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" title="β del análisis del sistema: la sensibilidad al IPSA que se le estima a la acción por su historia larga.">${p.betaExp!=null?p.betaExp.toFixed(2):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${_bCell(p)}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
   const bestS=psSorted[0],worstS=psSorted[psSorted.length-1];
   // el rango del pie sale del PAR DE CIERRES REALES efectivamente usado (no del último registro, que puede ser
   // una operación de hoy sin cierre aún); si el último registro no tiene cierres, se explica que el Δ llega con el cierre
@@ -3194,7 +3225,13 @@ function viewInvActive(){
   const _lastNoClose=(function(){const w=WEEKS[WEEKS.length-1];return !!(w&&w.fresh&&!w.fresh.length);})();
   const _srcNote=(WEEKS.length>=2)?`<div class="note" style="margin-top:8px;font-size:10.5px">Δ ${fr.u} = entre los <b>dos últimos cierres reales</b> de cada acción${_dPair?(` (en general <b>${_dPair.dayFrom}</b> → <b>${_dPair.dayTo}</b>; el par exacto va en el tooltip de cada Δ)`):""}.${_lastNoClose?` El registro más nuevo (<b>${WEEKS[WEEKS.length-1].date}</b>) es una operación sin cierre de mercado aún: su Δ aparecerá cuando llegue el cierre del día (sincronización ~18:05).`:""} Fuente: base de precios del proyecto (Yahoo/planilla). Puede diferir del feed de tu bróker (BTG usa otro proveedor de datos): pequeñas diferencias de centavos son normales.</div>`:"";
   const psNote=`<div class="note" style="margin-top:11px">Mayor aporte al retorno: <b style="color:${bestS.hd.c}">${bestS.hd.t}</b> (${pc(bestS.contribCum*100)}). Mayor lastre: <b style="color:${worstS.hd.c}">${worstS.hd.t}</b> (${pc(worstS.contribCum*100)}). La <b>contribución</b> = ganancia de la acción ÷ capital invertido; suma el retorno total de la cartera.</div>`;
-  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último período, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${psNote}</div>`,flush:true});
+  // lectura de las dos β por acción (y aviso honesto cuando la muestra aún no alcanza)
+  const _bReady=IM.perStock.filter(p=>p.betaR!=null),_bPend=IM.perStock.filter(p=>p.betaR==null);
+  const _bDiv=_bReady.filter(p=>p.betaExp!=null&&Math.abs(p.betaR-p.betaExp)>=0.3).sort((a,b)=>Math.abs(b.betaR-b.betaExp)-Math.abs(a.betaR-a.betaExp));
+  const betaNote=`<div class="note" style="margin-top:11px"><b>Las dos β por acción.</b> La <b>β esperada</b> viene del análisis del sistema (su sensibilidad al IPSA según la historia larga: ${winLong?winLong():"la ventana del análisis"}). La <b>β realizada</b> se estima por regresión de los retornos de esa acción contra el IPSA <b>solo en tu período de seguimiento</b>, usando únicamente fechas con cierre REAL de la acción y del índice (${_bReady.length?("hasta "+Math.max(..._bReady.map(p=>p.nBeta))+" observaciones"):"aún sin observaciones suficientes"}); se muestra desde 4 observaciones. Mide al <b>activo</b>, no a tu timing de compras.
+    ${_bDiv.length?`Hoy se despega${_bDiv.length>1?"n":""} de lo esperado: ${_bDiv.slice(0,3).map(p=>`<b style="color:${p.hd.c}">${p.hd.t}</b> (${p.betaR.toFixed(2)} vs ${p.betaExp.toFixed(2)} esperado)`).join(", ")} — en una muestra corta esto suele ser ruido; si persiste, la acción cambió de carácter.`:(_bReady.length?"Ninguna se despega materialmente de su β esperada (todas dentro de ±0,30).":"")}
+    ${_bPend.length?`Sin β realizada todavía (muestra insuficiente): <b>${_bPend.map(p=>p.hd.t).join(", ")}</b>.`:""} El símbolo <b style="color:${amber}">⚠</b> marca un <b>r² bajo</b> (&lt;10%): el IPSA explica poco su movimiento y esa β es poco confiable.</div>`;
+  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último período, <b>β esperada vs realizada</b>, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r" title="β del análisis del sistema (historia larga): cuánto se espera que la acción se mueva con el IPSA">β esperada</th><th class="r" title="β estimada por regresión con los cierres reales de TU período de seguimiento">β realizada</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${betaNote}${psNote}</div>`,flush:true});
   // SECCIÓN 1 · rentabilidad: portafolio vs IPSA (va ARRIBA: lo primero es cómo rinde la estrategia)
   const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
   const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",signBase:100,ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
@@ -3579,7 +3616,7 @@ function genInvReport(){
   // ── 4 · DETALLE Y CONTRIBUCIÓN POR ACCIÓN (mismas columnas del módulo) ──
   const psSorted=[...IM.perStock].sort((a,b)=>b.contribCum-a.contribCum);
   const _hoy=`<span style="color:#7C3AED;font-weight:800;font-size:8px"> · comprada hoy</span>`;
-  const detRows=psSorted.map(p=>`<tr><td><span class="dot" style="background:${p.hd.c}"></span><b>${p.hd.t}</b>${p.openedLast?_hoy:""}</td><td class="r">${(p.sh>0&&p.buy>0)?fmtP(p.buy):"—"}</td><td class="r">${fmtP(p.cur)}</td><td class="r" style="color:${p.dayRet!=null?cc(p.dayRet*100):fnt};font-weight:600">${p.dayRet!=null?sg(p.dayRet*100):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(p.val)}</td><td class="r" style="color:${cc(p.gain)};font-weight:600">${sgnC(p.gain)}</td><td class="r" style="color:${cc(p.ret*100)}">${sg(p.ret*100)}</td><td class="r" style="color:${cc(p.contribCum*100)};font-weight:700">${sg(p.contribCum*100)}</td></tr>`).join("");
+  const detRows=psSorted.map(p=>`<tr><td><span class="dot" style="background:${p.hd.c}"></span><b>${p.hd.t}</b>${p.openedLast?_hoy:""}</td><td class="r">${(p.sh>0&&p.buy>0)?fmtP(p.buy):"—"}</td><td class="r">${fmtP(p.cur)}</td><td class="r" style="color:${p.dayRet!=null?cc(p.dayRet*100):fnt};font-weight:600">${p.dayRet!=null?sg(p.dayRet*100):"—"}</td><td class="r">${p.betaExp!=null?p.betaExp.toFixed(2):"—"}</td><td class="r" style="font-weight:700">${p.betaR!=null?(p.betaR.toFixed(2)+(p.r2!=null&&p.r2<0.10?" ⚠":"")):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(p.val)}</td><td class="r" style="color:${cc(p.gain)};font-weight:600">${sgnC(p.gain)}</td><td class="r" style="color:${cc(p.ret*100)}">${sg(p.ret*100)}</td><td class="r" style="color:${cc(p.contribCum*100)};font-weight:700">${sg(p.contribCum*100)}</td></tr>`).join("");
   const bestS=psSorted[0],worstS=psSorted[psSorted.length-1];
   const _dPair=IM.perStock.find(p=>p.dayTo&&p.dayFrom);
   const srcNote=`<div class="note">Δ ${fr.u} = entre los <b>dos últimos cierres reales</b> de cada acción${_dPair?(" (en general "+_dPair.dayFrom+" → "+_dPair.dayTo+")"):""}. <b>P. compra</b> = costo registrado ÷ acciones, comparable 1:1 con el «P. Compra» de la cartola de la corredora. Fuente: base de precios del proyecto (Yahoo/planilla); pequeñas diferencias de centavos con el feed del bróker son normales.</div>`;
@@ -3697,8 +3734,9 @@ function genInvReport(){
     <div class="ssub">Evolución del valor de tu portafolio (CLP) desde la compra</div>
     <div class="chartbox">${valChart}</div>${valNote}</section>
     <section class="sec-a"><h2><span class="sn">4</span>Detalle y contribución por acción</h2>
-    <div class="ssub">Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último ${fr.u}, ganancia y aporte al retorno total</div>
-    <table><thead><tr><th>Acción</th><th class="r">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${detRows}</tbody></table>
+    <div class="ssub">Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último ${fr.u}, β esperada vs realizada, ganancia y aporte al retorno total</div>
+    <table><thead><tr><th>Acción</th><th class="r">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">β esperada</th><th class="r">β realizada</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${detRows}</tbody></table>
+    <div class="note">La <b>β esperada</b> es la del análisis del sistema (historia larga de la acción); la <b>β realizada</b> se estima por regresión de los retornos de esa acción contra el IPSA <b>solo en el período de este seguimiento</b>, usando únicamente fechas con cierre real de la acción y del índice (se informa desde 4 observaciones; «⚠» marca un r² bajo, bajo 10%, donde el índice explica poco su movimiento y la β es poco confiable). Mide al activo, no al timing de compras.</div>
     ${srcNote}${compNote}</section>
     <section class="sec-a"><h2><span class="sn">5</span>Composición actual vs objetivo</h2>
     <div class="ssub">Cómo se desviaron los pesos desde la compra · base para rebalancear</div>
@@ -4575,7 +4613,9 @@ function cpRunTool(name,input){
         retornoTWR_pct:+(L.ret*100).toFixed(2),retornoIPSA_pct:+(L.ipsaRet*100).toFixed(2),vsIPSA_pts:+(L.diff*100).toFixed(2),
         betaRealizado:IM.betaR!=null?+IM.betaR.toFixed(2):null,volatilidadRealizada_pct:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,
         sharpeRealizado:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,maxDrawdown_pct:+(IM.maxDD*100).toFixed(2),
-        porAccion:IM.perStock.map(p=>({t:p.hd.t,retorno_pct:+(p.ret*100).toFixed(1),gananciaCLP:Math.round(p.gain),aporteAlRetorno_pct:+(p.contribCum*100).toFixed(1)}))};}
+        porAccion:IM.perStock.map(p=>({t:p.hd.t,retorno_pct:+(p.ret*100).toFixed(1),gananciaCLP:Math.round(p.gain),aporteAlRetorno_pct:+(p.contribCum*100).toFixed(1),
+          betaEsperada:p.betaExp!=null?+p.betaExp.toFixed(2):null,betaRealizada:p.betaR!=null?+p.betaR.toFixed(2):null,r2_beta:p.r2!=null?+p.r2.toFixed(2):null,obsBeta:p.nBeta})),
+        notaBetaPorAccion:"betaEsperada = del análisis del sistema (historia larga). betaRealizada = regresión de los retornos de ESA acción vs el IPSA solo en el período de seguimiento, con pares de cierre REAL de ambos (null con <4 observaciones). Con r2_beta<0,10 el IPSA explica poco su movimiento: la beta realizada es poco confiable y NO debe usarse para concluir que la acción 'cambió'. En muestras cortas las diferencias vs la esperada suelen ser ruido."};}
       else out.seguimiento="Sin registros aún. La compra/ seguimiento se ingresa en Inversión → Ingresar datos.";
       return JSON.stringify(out);
     }
