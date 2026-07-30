@@ -11,21 +11,38 @@
      node automation/verify-deploy.mjs https://investor-XXXX.onrender.com
      node automation/verify-deploy.mjs https://investor-XXXX.onrender.com TU_SYNC_TOKEN
 
+   Si activaste la PUERTA DEL SITIO (AUTH_USER/AUTH_PASS), pon las credenciales en la
+   propia URL, como en cualquier navegador:
+     node automation/verify-deploy.mjs https://usuario:clave@investor-XXXX.onrender.com TU_SYNC_TOKEN
+
    Sin token verifica lo público (app, datos, que la API esté cerrada).
    Con token verifica además la caja fuerte completa, incluida una escritura
    de prueba que NO toca tu respaldo real (se escribe y se restaura el previo).
    ═══════════════════════════════════════════════════════════════════════════ */
-const URL_BASE = (process.argv[2] || "").replace(/\/+$/, "");
+let ARG = (process.argv[2] || "").replace(/\/+$/, "");
 const TOKEN = (process.argv[3] || process.env.SYNC_TOKEN || "").trim();
 
-if (!URL_BASE || !/^https?:\/\//.test(URL_BASE)) {
+if (!ARG || !/^https?:\/\//.test(ARG)) {
   console.error("Uso: node automation/verify-deploy.mjs https://tu-servicio.onrender.com [SYNC_TOKEN]");
+  console.error("     (con puerta activa: https://usuario:clave@tu-servicio.onrender.com)");
   process.exit(2);
 }
+/* credenciales de la puerta embebidas en la URL (fetch no las envía solo: se extraen y viajan como header) */
+let BASIC = "";
+{
+  const u = new URL(ARG);
+  if (u.username || u.password) {
+    BASIC = "Basic " + Buffer.from(decodeURIComponent(u.username) + ":" + decodeURIComponent(u.password), "utf8").toString("base64");
+    u.username = ""; u.password = "";
+    ARG = u.toString().replace(/\/+$/, "");
+  }
+}
+const URL_BASE = ARG;
 
 const R = [];
 const ok = (id, cond, det) => { R.push({ id, cond }); console.log((cond ? "  ✓ " : "  ✗ ") + id + (det ? "  " + det : "")); };
-const get = (p, tok) => fetch(URL_BASE + p, { headers: tok ? { "x-investor-token": tok } : {}, cache: "no-store" });
+const H = (extra) => Object.assign({}, BASIC ? { Authorization: BASIC } : {}, extra || {});
+const get = (p, tok) => fetch(URL_BASE + p, { headers: H(tok ? { "x-investor-token": tok } : {}), cache: "no-store" });
 
 const T0 = Date.now();
 console.log("\nVerificando " + URL_BASE + "\n");
@@ -35,7 +52,7 @@ try {
   console.log("Aplicación");
   const t0 = Date.now();
   let idx, html;
-  try { idx = await fetch(URL_BASE + "/"); html = await idx.text(); }
+  try { idx = await fetch(URL_BASE + "/", { headers: H() }); html = await idx.text(); }
   catch (e) {
     console.error("\n✗ No se pudo conectar con " + URL_BASE);
     console.error("  (" + e.message + ")\n");
@@ -45,6 +62,15 @@ try {
     process.exit(1);
   }
   const ms = Date.now() - t0;
+  // la PUERTA del sitio está activa y no le pasamos credenciales (o son incorrectas)
+  if (idx.status === 401 && /^Basic/i.test(idx.headers.get("www-authenticate") || "")) {
+    console.error("\n✗ El sitio pide usuario y contraseña" + (BASIC ? ", y las que diste no son correctas." : " (tienes la puerta activada)."));
+    console.error("\n  Vuelve a ejecutarlo con las credenciales en la URL:");
+    console.error("    node automation/verify-deploy.mjs https://USUARIO:CLAVE@" + URL_BASE.replace(/^https?:\/\//, "") + (TOKEN ? " " + "TU_SYNC_TOKEN" : ""));
+    console.error("\n  Las encuentras en Render → tu servicio → Environment (AUTH_USER y AUTH_PASS).");
+    console.error("  Si la clave lleva caracteres raros (@ : / #), codifícalos o cámbiala por una sin ellos.");
+    process.exit(1);
+  }
   if (!html.trim().startsWith("<")) {
     console.error("\n✗ " + URL_BASE + " respondió HTTP " + idx.status + ", pero no devolvió una página web.");
     console.error("  Respuesta: " + html.slice(0, 120).replace(/\s+/g, " "));
@@ -110,14 +136,14 @@ try {
       // escritura de prueba → verifica que el DISCO acepta escrituras
       const prueba = { _app: "portfolio-dashboard", _v: 2, _date: new Date().toISOString(),
         _prueba: "verify-deploy", clients_registry: null, active_client: null, broker: null, ui_scale: null, clients: {} };
-      const put = await fetch(URL_BASE + "/api/backup", { method: "PUT", headers: { "x-investor-token": TOKEN, "Content-Type": "application/json" }, body: JSON.stringify(prueba) });
+      const put = await fetch(URL_BASE + "/api/backup", { method: "PUT", headers: H({ "x-investor-token": TOKEN, "Content-Type": "application/json" }), body: JSON.stringify(prueba) });
       ok("el disco acepta escrituras (HTTP " + put.status + ")", put.status === 200);
       const leído = await (await get("/api/backup", TOKEN)).json();
       ok("lo escrito se lee idéntico", leído && leído._prueba === "verify-deploy");
 
       // se devuelve el respaldo real (la prueba queda solo como versión histórica)
       if (previo) {
-        const back = await fetch(URL_BASE + "/api/backup", { method: "PUT", headers: { "x-investor-token": TOKEN, "Content-Type": "application/json" }, body: JSON.stringify(previo) });
+        const back = await fetch(URL_BASE + "/api/backup", { method: "PUT", headers: H({ "x-investor-token": TOKEN, "Content-Type": "application/json" }), body: JSON.stringify(previo) });
         const fin = await (await get("/api/backup", TOKEN)).json();
         ok("tu respaldo real quedó restaurado", back.status === 200 && JSON.stringify(fin) === JSON.stringify(previo));
       } else {

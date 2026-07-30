@@ -14,10 +14,22 @@
      PORT        → puerto (Render lo inyecta solo)
      DATA_DIR    → carpeta del disco persistente (Render: /var/data)
      SYNC_TOKEN  → token secreto que la app envía en el header x-investor-token
+     AUTH_USER   → (opcional) usuario de la puerta de entrada del SITIO
+     AUTH_PASS   → (opcional) contraseña de esa puerta
 
-   El token se define UNA vez en el panel de Render (Environment → SYNC_TOKEN) y
-   se pega UNA vez en Investor (⚙ Configuración → Respaldo → Nube). Sin token
-   válido, la API de respaldos responde 401 y nadie puede leer ni escribir.
+   DOS CAPAS INDEPENDIENTES:
+   · PUERTA DEL SITIO (HTTP Basic Auth, opcional): si defines AUTH_USER y AUTH_PASS,
+     el navegador pide usuario y contraseña ANTES de mostrar nada — ni la página ni
+     los datos. Es el diálogo nativo del navegador, así que tu gestor de contraseñas
+     lo recuerda. Si NO las defines, el sitio queda público como antes (la app se ve
+     vacía para un desconocido, porque los datos viven en el navegador de cada uno).
+   · CAJA FUERTE (SYNC_TOKEN): protege la API de respaldos aunque alguien pasara la
+     puerta. Se define en el panel de Render y se pega una vez en Investor
+     (⚙ Configuración → Respaldo → Nube). Sin token válido: 401.
+
+   /api/health queda SIEMPRE accesible sin credenciales (Render lo consulta para saber
+   si el servicio está vivo; si lo bloqueáramos, Render lo reiniciaría en bucle). Sin
+   autenticar responde lo mínimo — solo que está en pie, ningún dato del respaldo.
    ═══════════════════════════════════════════════════════════════════════════ */
 "use strict";
 const http = require("http");
@@ -29,6 +41,9 @@ const PORT = +(process.env.PORT || 10000);
 const ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, "cloud-data");
 const TOKEN = (process.env.SYNC_TOKEN || "").trim();
+const AUTH_USER = (process.env.AUTH_USER || "").trim();
+const AUTH_PASS = process.env.AUTH_PASS || "";
+const GATE_ON = !!(AUTH_USER && AUTH_PASS);   // la puerta se activa solo si AMBAS están definidas
 const BK_DIR = path.join(DATA_DIR, "backups");
 const LATEST = path.join(DATA_DIR, "latest.json");
 const MAX_BODY = 30 * 1024 * 1024;   // 30 MB de respaldo como máximo (holgado: los reales pesan cientos de KB)
@@ -50,12 +65,40 @@ function sendFile(res, file, cacheable) {
     fs.createReadStream(file).pipe(res);
   });
 }
-/* comparación de token en tiempo constante (no filtra por timing) */
+/* comparación de secretos en tiempo constante (no filtra por timing).
+   El largo se compara aparte porque timingSafeEqual exige buffers del mismo tamaño. */
+function secretEq(recibido, esperado) {
+  const a = Buffer.from(String(recibido || ""), "utf8"), b = Buffer.from(String(esperado || ""), "utf8");
+  return a.length === b.length && a.length > 0 && crypto.timingSafeEqual(a, b);
+}
+/* token de la caja fuerte (header x-investor-token) */
 function authOK(req) {
   if (!TOKEN) return false;
-  const t = String(req.headers["x-investor-token"] || "");
-  const a = Buffer.from(t), b = Buffer.from(TOKEN);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  return secretEq(req.headers["x-investor-token"], TOKEN);
+}
+/* PUERTA DEL SITIO · HTTP Basic Auth. Devuelve true si puede pasar (o si la puerta está apagada).
+   Se comparan usuario Y contraseña en tiempo constante, y siempre ambos, para no filtrar cuál falló. */
+function gateOK(req) {
+  if (!GATE_ON) return true;
+  const h = String(req.headers["authorization"] || "");
+  const m = /^Basic\s+([A-Za-z0-9+/=]+)$/.exec(h.trim());
+  if (!m) return false;
+  let dec = "";
+  try { dec = Buffer.from(m[1], "base64").toString("utf8"); } catch (e) { return false; }
+  const i = dec.indexOf(":");
+  if (i < 0) return false;
+  const okU = secretEq(dec.slice(0, i), AUTH_USER);
+  const okP = secretEq(dec.slice(i + 1), AUTH_PASS);
+  return okU && okP;
+}
+function pedirCredenciales(res) {
+  const body = JSON.stringify({ error: "acceso restringido: se requieren usuario y contraseña" });
+  res.writeHead(401, {
+    "WWW-Authenticate": 'Basic realm="Investor", charset="UTF-8"',
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body), "Cache-Control": "no-store"
+  });
+  res.end(body);
 }
 function backupMeta() {
   let savedAt = null, bytes = 0;
@@ -74,8 +117,19 @@ const server = http.createServer((req, res) => {
   const u = new URL(req.url, "http://x");
   const p = u.pathname;
 
+  /* ── SALUD: siempre accesible (Render la consulta sin credenciales para saber si el servicio vive).
+     Sin autenticar informa solo que está en pie; el detalle del respaldo exige pasar la puerta. ── */
+  if (p === "/api/health") {
+    const base = { ok: true, app: "investor", gate: GATE_ON ? "on" : "off" };
+    if (GATE_ON && !gateOK(req)) return sendJSON(res, 200, base);
+    const m = backupMeta();
+    return sendJSON(res, 200, Object.assign(base, { tokenConfigured: !!TOKEN, hasBackup: m.hasBackup, savedAt: m.savedAt }));
+  }
+
+  /* ── PUERTA DEL SITIO: todo lo demás (app, datos y API) exige credenciales si está activada ── */
+  if (!gateOK(req)) return pedirCredenciales(res);
+
   /* ── API ── */
-  if (p === "/api/health") return sendJSON(res, 200, Object.assign({ ok: true, app: "investor", tokenConfigured: !!TOKEN }, (() => { const m = backupMeta(); return { hasBackup: m.hasBackup, savedAt: m.savedAt }; })()));
   if (p.startsWith("/api/")) {
     if (!TOKEN) return sendJSON(res, 503, { error: "SYNC_TOKEN no está configurado en el servidor (panel de Render → Environment)" });
     if (!authOK(req)) return sendJSON(res, 401, { error: "token requerido o incorrecto (header x-investor-token)" });
@@ -127,4 +181,6 @@ server.listen(PORT, () => {
   console.log("Investor sirviendo en :" + PORT);
   console.log("  disco de respaldos : " + DATA_DIR + (process.env.DATA_DIR ? " (persistente)" : " (local, solo pruebas)"));
   console.log("  SYNC_TOKEN         : " + (TOKEN ? "configurado" : "⚠ FALTA (la API de respaldos responderá 503)"));
+  console.log("  puerta del sitio   : " + (GATE_ON ? ("ACTIVA · usuario «" + AUTH_USER + "»") : "abierta (define AUTH_USER y AUTH_PASS para exigir contraseña)"));
+  if (!GATE_ON && (AUTH_USER || AUTH_PASS)) console.log("  ⚠ la puerta necesita AMBAS: falta " + (AUTH_USER ? "AUTH_PASS" : "AUTH_USER"));
 });

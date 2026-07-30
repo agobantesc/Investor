@@ -36,10 +36,24 @@ services:
     envVars:
       - key: DATA_DIR
         value: /var/data
+      # ── CAPA 1 · CAJA FUERTE ────────────────────────────────────────────────────────────
       # TOKEN SECRETO de la API de respaldos. Render lo GENERA solo (aleatorio y fuerte) al crear el
       # servicio: no tienes que inventarlo. Lo copias una vez desde Environment y lo pegas en la app
       # (⚙ Configuración → Respaldo → Nube). Puedes reemplazarlo por uno propio cuando quieras.
       # Si tu versión de Render no aceptara `generateValue`, cámbialo por `sync: false` y escribe
       # tú una frase larga en el panel: el resto funciona igual.
       - key: SYNC_TOKEN
+        generateValue: true
+      # ── CAPA 2 · PUERTA DEL SITIO (usuario y contraseña del navegador) ───────────────────
+      # Con AMBAS definidas, el navegador pide credenciales ANTES de mostrar nada: ni la página ni los
+      # datos quedan a la vista de un desconocido que dé con la URL. Es el diálogo nativo del navegador,
+      # así que tu gestor de contraseñas lo recuerda y no lo escribes cada vez.
+      # · AUTH_USER lo eliges tú (cámbialo aquí o en el panel de Render).
+      # · AUTH_PASS lo genera Render; cópialo de Environment la primera vez.
+      # Para dejar el sitio abierto (como antes), borra estas dos variables en el panel: el servidor
+      # detecta que faltan y no exige nada. /api/health queda siempre accesible —Render la consulta sin
+      # credenciales para saber si el servicio vive— y sin autenticar no revela dato alguno del respaldo.
+      - key: AUTH_USER
+        value: investor
+      - key: AUTH_PASS
         generateValue: true
