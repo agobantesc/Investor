@@ -19,21 +19,41 @@ desde el teléfono con los mismos datos.
 
 ## Pasos (una sola vez, ~10 minutos)
 
-1. **Crea el servicio desde el Blueprint**
-   - Entra a <https://dashboard.render.com> (crea la cuenta si no tienes).
-   - `New → Blueprint` → conecta GitHub → elige el repo **agobantesc/Investor**.
-   - Render lee `render.yaml` y propone el servicio `investor` con su disco
-     `investor-datos` (1 GB en `/var/data`). Acepta.
-   - **Plan**: el disco persistente requiere el plan **Starter** (~US$7/mes).
-     Sin disco los respaldos se borrarían en cada deploy — no sirve de caja fuerte.
+Todo lo del repositorio ya está listo y verificado: solo tienes que desplegar el
+Blueprint. No hay que inventar contraseñas ni tocar archivos.
 
-2. **Define el token secreto**
-   - En el servicio → `Environment` → variable `SYNC_TOKEN` → escribe una frase
-     larga y única (ej: `mi-caja-fuerte-ipsa-2026-lechuga-89`). Guarda.
-   - Render redeploya solo. En 1–2 min tu URL queda viva:
-     `https://investor-XXXX.onrender.com`.
+1. **Crea el servicio desde el Blueprint**
+   - Entra a <https://dashboard.render.com>.
+   - `New → Blueprint` → conecta GitHub → elige el repo **agobantesc/Investor**.
+   - Render lee `render.yaml` y propone todo hecho: el servicio `investor`, su disco
+     `investor-datos` (1 GB en `/var/data`), la rama correcta y el `SYNC_TOKEN`
+     **generado automáticamente**. Solo confirma.
+   - **Instance type**: déjalo en **Starter** (~US$7/mes). El disco persistente exige
+     una instancia de pago; sin disco, los respaldos se borrarían en cada deploy.
+     ⚠️ *No confundas* el **instance type** (tamaño de la máquina) con el **plan de tu
+     cuenta** (Hobby/Professional): son cosas distintas y tener cuenta Pro no cambia
+     nada aquí. Subir la instancia a Standard/Pro para esta app es gasto puro.
+   - En 2–3 min el servicio queda **Live** con tu URL: `https://investor-XXXX.onrender.com`.
+
+2. **Comprueba que quedó bien** (30 segundos, opcional pero recomendado)
+
+   ```bash
+   node automation/verify-deploy.mjs https://investor-XXXX.onrender.com
+   ```
+
+   Verifica que la app se sirve, que los cierres del día están ahí, que el disco
+   responde y que **la API de respaldos está cerrada** sin token. Si además le pasas
+   tu token, prueba la caja fuerte completa (escribe y lee un respaldo de prueba,
+   dejando intacto el tuyo):
+
+   ```bash
+   node automation/verify-deploy.mjs https://investor-XXXX.onrender.com TU_SYNC_TOKEN
+   ```
 
 3. **Conecta la app a la nube**
+   - Copia el token: Render → tu servicio → `Environment` → `SYNC_TOKEN` → *Reveal*.
+     (Lo generó Render; puedes reemplazarlo por uno propio cuando quieras.)
+     Guárdalo en tu gestor de contraseñas: **es la llave de tus datos**.
    - Abre tu URL de Render → inicia (o crea) tu acceso local.
    - Si vienes del navegador de siempre: exporta allí un respaldo
      (`⚙ Configuración → Respaldo → 💾 Respaldar`) e impórtalo aquí (`📥 Restaurar`).
@@ -63,6 +83,33 @@ automática (raw.githubusercontent) configurada en Datos — ambas rutas funcion
   últimas 40 versiones históricas en `/var/data/backups/`.
 - **¿Y si pierdo el token?** Defines uno nuevo en Render (Environment) y lo
   vuelves a pegar en la app. Los respaldos del disco no se pierden.
+- **¿Tener cuenta Pro cambia algo?** No. En Render, el `plan` del `render.yaml` es el
+  **instance type** (tamaño de la máquina) y es independiente del plan de tu cuenta.
+  El disco persistente se habilita con cualquier instancia de pago (Starter basta), y
+  una cuenta Professional no lo hace gratis ni más rápido. Lo que sí aprovechas de Pro
+  es la retención de logs más larga (útil para revisar los deploys diarios del bot).
+- **¿Habrá downtime?** Un servicio **con disco** no puede hacer deploys sin downtime
+  (el disco se monta en una sola máquina), así que cada push del bot de cierres
+  (≈1 al día) causa un reinicio breve. Ningún plan levanta ese límite. Los respaldos
+  lo sobreviven intactos — está verificado, es justamente para lo que sirve el disco.
 - **¿Probar en local?** `node server.js` y abre `http://localhost:10000`
   (usa `SYNC_TOKEN=mitoken node server.js` para probar la nube; los respaldos
   van a `./cloud-data/`, que está en `.gitignore`).
+
+## Verificación previa (ya hecha)
+
+Antes de publicar nada se probó el despliegue completo contra el `server.js` real con
+un disco simulado — 10 bloques, todos en verde:
+
+| | |
+|---|---|
+| Arranque | sin dependencias (solo `http`/`fs`/`path`/`crypto`), crea la estructura del disco |
+| Autenticación | sin token, vacío, errado o de largo distinto → 401; correcto → 200 |
+| Respaldo | lo que sube baja **idéntico byte a byte** |
+| Validación | JSON roto o payload ajeno → 400, sin contaminar el disco |
+| Versionado | cada subida agrega versión; `latest` siempre el más nuevo (se guardan 40) |
+| **Persistencia** | se mata el proceso y al volver el respaldo sigue **íntegro** |
+| Rutas | sirve app y `closes.json`; bloquea traversal, `server.js`, `.env`, POST (405) |
+| **Ciclo real** | la app sube su respaldo → se borra el navegador entero → **restaura todo** con valor, aportado y operaciones idénticos |
+| Mala config | sin `SYNC_TOKEN` → 503 explícito y la app sigue sirviéndose |
+| Tamaño | 41 versiones de un respaldo real (~350 KB) = 14 MB de 1 GB (73× de holgura) |

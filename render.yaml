@@ -36,5 +36,10 @@ services:
     envVars:
       - key: DATA_DIR
         value: /var/data
+      # TOKEN SECRETO de la API de respaldos. Render lo GENERA solo (aleatorio y fuerte) al crear el
+      # servicio: no tienes que inventarlo. Lo copias una vez desde Environment y lo pegas en la app
+      # (⚙ Configuración → Respaldo → Nube). Puedes reemplazarlo por uno propio cuando quieras.
+      # Si tu versión de Render no aceptara `generateValue`, cámbialo por `sync: false` y escribe
+      # tú una frase larga en el panel: el resto funciona igual.
       - key: SYNC_TOKEN
-        sync: false           # secreto: se define a mano en el panel de Render
+        generateValue: true
