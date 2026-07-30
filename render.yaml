@@ -11,6 +11,15 @@ services:
   - type: web
     name: investor
     runtime: node
+    # OJO con los nombres de Render: `plan` es el INSTANCE TYPE (el tamaño de la máquina),
+    # NO el plan de tu cuenta/workspace (Hobby/Professional). Son independientes:
+    #   · el disco persistente se habilita con cualquier instancia DE PAGO (starter en adelante);
+    #     tener workspace Professional no lo hace gratis ni más rápido.
+    #   · starter alcanza de sobra: servidor sin dependencias, un archivo de 1 MB, un solo usuario.
+    #     Subir a standard/pro aquí es gasto puro. Cámbialo solo si Render reporta falta de recursos.
+    # Límite que ningún plan levanta: un servicio CON DISCO no hace deploys sin downtime ni escala a
+    # varias instancias (el disco se monta en una sola máquina). El reinicio breve de cada deploy es
+    # esperado y los respaldos lo sobreviven — para eso está el disco.
     plan: starter
     # RAMA que se despliega. Debe ser la MISMA a la que el bot de cierres hace push,
     # para que la app publicada sirva siempre el closes.json más nuevo. Si algún día
