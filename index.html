@@ -1205,6 +1205,7 @@
   .ops-stat:hover{border-color:var(--line2);box-shadow:var(--sh);}
   .ops-stat span{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);}
   .ops-stat b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.015em;}
+  .ops-stat i{font-size:9.5px;font-style:normal;font-weight:600;color:var(--mut);line-height:1.25;margin-top:1px;}
   /* Markowitz: composición actual vs óptima (donas + barras de pesos) */
   .mkw-cmp{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;justify-content:center;}
   .mkw-don{text-align:center;}
@@ -1483,6 +1484,46 @@
   #main::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px;border:2px solid transparent;background-clip:content-box;}
   #main::-webkit-scrollbar-thumb:hover{background:var(--faint);border:2px solid transparent;background-clip:content-box;}
   @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
+  /* ── PULIDO v7 (calidad editorial): jerarquía de tarjetas, tablas de nivel informe, cifras y estados.
+     Aditivo al final de la hoja: refina sin re-maquetar. Criterios: la tinta pesada se reserva para el
+     dato, los números se alinean por su punto decimal y nada cambia de tamaño al pasar el cursor. ── */
+  /* Tarjetas: cabecera con más aire y un separador sutil que ordena la lectura */
+  .card>.hd{padding-bottom:.72rem;}
+  .card .ct{font-weight:800;line-height:1.25;}
+  .card .cs{font-size:11.5px;margin-top:3px;max-width:88ch;}
+  .card+.card{margin-top:14px;}
+  /* Tablas con presentación de informe */
+  .tw table{border-collapse:separate;border-spacing:0;}
+  thead th{white-space:nowrap;padding-top:.62rem;padding-bottom:.62rem;}
+  tbody td{vertical-align:middle;}
+  tbody tr:first-child td{border-top:none;}
+  /* la primera columna es el sujeto de la fila: más peso, sin competir con las cifras */
+  .tw tbody td:first-child{font-weight:700;color:var(--ink);}
+  /* pies de tabla: el total se lee como conclusión, no como una fila más */
+  tfoot td{background:var(--soft2);font-weight:800;color:var(--navy);border-top:1.5px solid var(--line2);}
+  tfoot tr:hover{background:var(--soft2);}
+  /* cifras: alineadas y con el signo sin saltar de ancho */
+  .tw td.r,.tw th.r{font-variant-numeric:tabular-nums lining-nums;}
+  .chip{border-radius:7px;padding:.12rem .42rem;}
+  /* Notas y avisos: barra lateral que identifica el tono de un vistazo */
+  .note{position:relative;padding-left:14px;}
+  .note::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--line2);}
+  /* Controles segmentados: pastilla más definida y foco visible */
+  .home-seg{background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:2px;display:inline-flex;gap:2px;}
+  .home-seg button.on{box-shadow:var(--sh-xs);}
+  .home-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+  /* Leyendas de gráficos: separadas del lienzo, alineadas entre sí */
+  .legend{display:flex;flex-wrap:wrap;gap:6px 15px;align-items:center;}
+  /* Gráficos: el lienzo respira dentro de su tarjeta */
+  .ipsa-chart{padding-top:2px;}
+  .chart{display:block;}
+  /* Tiles: la etiqueta manda menos que el dato */
+  .tile .v,.tiles-consol .tile .v{font-variant-numeric:proportional-nums;}
+  /* Estados vacíos y deshabilitados, coherentes en toda la app */
+  select:disabled,input:disabled{opacity:.55;cursor:not-allowed;}
+  /* Impresión desde la app (los informes tienen su propia hoja): que no salgan controles */
+  @media print{.topbar,.home-seg,.btn,.wbtn,.projbar,.pbtns{display:none !important;}
+    .card{break-inside:avoid;box-shadow:none;border-color:#D8E2F0;}}
 </style>
 </head>
 <body>
@@ -8538,7 +8579,8 @@ let homeOpsMonthSel=null;   // mes seleccionado (clic en el gráfico de operacio
 let homeTotFrom="",homeTotTo="";
 (function(){try{const r=lsGet("inv_home_tot_range")||{};homeTotFrom=r.f||"";homeTotTo=r.t||"";}catch(e){}})();
 function homeTotRangeSave(){try{lsSet("inv_home_tot_range",{f:homeTotFrom,t:homeTotTo});}catch(e){}}
-let homeIpsaWin=(()=>{const v=+lsGet("inv_home_ipsa_win");return [3,6,12,24].indexOf(v)>=0?v:24;})();   // VENTANA (meses) del gráfico del IPSA en Home — el gráfico es SIEMPRE mensual; solo se elige cuántos meses ver
+let homeIpsaWin=(()=>{const v=+lsGet("inv_home_ipsa_win");return [3,6,12,24].indexOf(v)>=0?v:24;})();   // VENTANA (meses) del gráfico del IPSA en Home
+let homeIpsaFreq=(()=>{const v=lsGet("inv_home_ipsa_freq");return ["diario","semanal","mensual"].indexOf(v)>=0?v:"mensual";})();   // CADENCIA de la curva: cierre de cada día, semana o mes
 /* ══ INVESTOR SCORE (v3 · piedra angular, riesgo descontado + candado de confianza) ══
    Puntuación 0–100 por acción, recalculada CADA DÍA desde la data del sistema (12 meses de precios +
    fundamentos reales), INDEPENDIENTE del análisis activo. Rankea por PERCENTIL dentro del universo.
@@ -8783,13 +8825,15 @@ function svgOpsBars(o){
   const labels=ord.map(k=>MESL[+k.slice(5,7)-1]+" "+k.slice(2,4)),rows=ord.map(k=>agg[k]),mks=ord;
   const n=rows.length,step=(W-m.l-m.r)/Math.max(1,n);
   const xs=[];for(let i=0;i<n;i++)xs.push(m.l+step*(i+0.5));
-  // panel principal: el cero se ubica según cuánto pesa cada lado (sin ventas, las compras usan todo el alto)
+  // panel principal: el cero se ubica según cuánto pesa cada lado (sin entradas, las compras usan todo el alto).
+  // ENTRADAS DE CAJA hacia abajo = ventas + dividendos apilados (ambos son dinero que vuelve a tu bolsillo,
+  // pero de naturaleza distinta: la venta liquida posición, el dividendo es renta que la posición generó).
   const top=m.t,bot=H-m.b-FL-GAP,H1=bot-top;
-  const mxB=Math.max(...rows.map(r=>r.buy||0),0),mxS=Math.max(...rows.map(r=>r.sell||0),0);
+  const mxB=Math.max(...rows.map(r=>r.buy||0),0),mxS=Math.max(...rows.map(r=>(r.sell||0)+(r.div||0)),0);
   const MB=Math.max(1,mxB)*1.07,MS=mxS>0?mxS*1.07:0,unit=MB+MS;
   const z=top+H1*(MB/unit);
   const yV=v=>z-v*H1/unit;   // v>0 sube (compras) · v<0 baja (ventas)
-  let _ac=0;const cum=rows.map(r=>_ac+=((r.buy||0)-(r.sell||0)));   // neto invertido acumulado (tooltip)
+  let _ac=0;const cum=rows.map(r=>_ac+=((r.buy||0)-(r.sell||0)-(r.div||0)));   // neto invertido acumulado: lo comprado menos TODO lo rescatado (ventas y dividendos)
   const bw=Math.max(7,Math.min(22,step*0.6-2));
   const fT=H-m.b-FL,fB=H-m.b;   // carril de comisiones
   const mxF=Math.max(1,...rows.map(r=>r.fee||0));
@@ -8799,6 +8843,12 @@ function svgOpsBars(o){
   // cada tick exige ≥14px de aire contra la línea cero y contra su vecino (con un lado pequeño, sin tick: el hover lo cubre)
   const tks=[];const tB=nice(mxB);if(tB&&z-yV(tB)>=14){tks.push(tB);if(yV(tB/2)>yV(tB)+16&&z-yV(tB/2)>=14)tks.push(tB/2);}
   const tS=nice(mxS);if(tS&&yV(-tS)-z>=14){tks.push(-tS);if(yV(-tS/2)<yV(-tS)-16&&yV(-tS/2)-z>=14)tks.push(-tS/2);}
+  // rótulos de lado: explican qué significa arriba y abajo (lo que la leyenda no dice: es CAJA que sale o
+  // entra). Van en los EXTREMOS del panel —no junto al cero, donde viven las barras cortas— y se pintan
+  // ANTES que las barras: si alguna llegara a cruzarlos, el dato tapa al rótulo y nunca al revés.
+  const _rot=(y,txt,c)=>`<text x="${W-m.r-2}" y="${y.toFixed(1)}" text-anchor="end" font-size="8.5" font-weight="800" letter-spacing="1" fill="${c}" opacity=".62">${txt}</text>`;
+  g+=_rot(top+10,"SALE CAJA · COMPRAS","var(--accent)");
+  if(mxS>0)g+=_rot(bot-4,"ENTRA CAJA · VENTAS Y DIVIDENDOS",amber);
   // mes SELECCIONADO (clic): franja de realce detrás de la columna, antes de la rejilla
   if(o.selKey){const si=mks.indexOf(o.selKey);if(si>=0)g+=`<rect x="${(m.l+step*si).toFixed(1)}" y="${m.t}" width="${step.toFixed(1)}" height="${(H-m.b-m.t).toFixed(1)}" rx="7" fill="var(--accent)" opacity="0.09"/>`;}
   tks.forEach(v=>{const yy=yV(v);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">${(v<0?"−":"")+fmtK(Math.abs(v))}</text>`;});
@@ -8810,7 +8860,9 @@ function svgOpsBars(o){
       :`<path d="M${x.toFixed(1)} ${yT.toFixed(1)} L${x.toFixed(1)} ${(yB-r).toFixed(1)} Q${x.toFixed(1)} ${yB.toFixed(1)} ${(x+r).toFixed(1)} ${yB.toFixed(1)} L${(x+wd-r).toFixed(1)} ${yB.toFixed(1)} Q${(x+wd).toFixed(1)} ${yB.toFixed(1)} ${(x+wd).toFixed(1)} ${(yB-r).toFixed(1)} L${(x+wd).toFixed(1)} ${yT.toFixed(1)} Z" fill="${fill}"${op?` opacity="${op}"`:""}/>`;};
   rows.forEach((r,i)=>{const x=xs[i]-bw/2;
     if(r.buy>0)g+=rbar(x,z-0.6,yV(r.buy),"var(--accent)",bw);
+    // ventas desde el cero hacia abajo; dividendos APILADOS bajo ellas, con 2px de aire entre ambos
     if(r.sell>0)g+=rbar(x,z+0.6,yV(-r.sell),amber,bw);
+    if(r.div>0){const desde=r.sell>0?(yV(-r.sell)+2):(z+0.6);g+=rbar(x,desde,yV(-((r.sell||0)+r.div)),green,bw);}
   });
   // carril de comisiones (banda tenue + barras finas con SU escala: se ven aunque sean 100× menores)
   g+=`<rect x="${m.l}" y="${fT}" width="${W-m.l-m.r}" height="${FL}" rx="6" fill="${OPS_FEE_COL}" opacity="0.05"/>`;
@@ -8834,10 +8886,11 @@ function attachOpsHover(id){
     const buyLine=d.buy?`<span style="display:block;color:var(--accent);font-weight:800">Compras: ${fmtCLP(d.buy)}</span>`:"";
     const sellLine=d.sell?`<span style="display:block;color:${amber};font-weight:800">Ventas: ${fmtCLP(d.sell)}</span>`:"";
     const divLine=d.div?`<span style="display:block;color:${green};font-weight:800">Dividendos: +${fmtCLP(d.div)}</span>`:"";
+    const rescLine=((d.sell||0)+(d.div||0))>0?`<span style="display:block;color:var(--ink);font-weight:700">Rescatado: ${fmtCLP((d.sell||0)+(d.div||0))}</span>`:"";
     const feeLine=`<span style="display:block;color:${OPS_FEE_COL};font-weight:800">Comisiones: −${fmtCLP(d.fee)}</span>`;
     const cumLine=(g.cum&&g.cum[bi]!=null)?`<span style="display:block;color:${indigo};font-weight:700">Invertido neto acum.: ${fmtCLP(g.cum[bi])}</span>`:"";
     const nLine=`<span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">${d.n} operaci${d.n===1?"ón":"ones"} este mes · clic para el detalle</span>`;
-    tt.innerHTML=`<b>${g.dates[bi]}</b>`+buyLine+sellLine+divLine+feeLine+cumLine+nLine;
+    tt.innerHTML=`<b>${g.dates[bi]}</b>`+buyLine+sellLine+divLine+rescLine+feeLine+cumLine+nLine;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
   // CLIC en una columna: abre/cierra el detalle de las operaciones de ese mes bajo el gráfico
@@ -8915,18 +8968,22 @@ function viewHome(){
     if(!_ips)return "";
     const _fD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(0,4):"";
     const cell=(lbl,r,desc,base)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";const tt=desc+(base?(" · base: cierre del "+_fD(base)):"");return `<div class="ipsa-cell" title="${tt}"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
-    // curva del índice SIEMPRE MENSUAL (cierre de cada mes) — solo se elige la VENTANA: 3, 6, 12 o 24 meses.
-    // Las etiquetas de rentabilidad de arriba no se tocan (siguen siendo variaciones móviles día/~7d/~30d/12m).
+    // curva del índice con CADENCIA elegible (cierre de cada día, semana o mes) y VENTANA en meses.
+    // Las etiquetas de rentabilidad de arriba NO se tocan: siguen siendo variaciones móviles día/~7d/~30d/12m.
     let ipsaChart="";
     try{const C=consolidatedSeries();
-      const rs=dropTrailingFlat(resampleMap(C.ipsaMap,"mensual")).slice(-homeIpsaWin);
-      const cap="cierres mensuales · últimos "+rs.length+" meses";
-      const seg=`<div class="home-seg" role="group" aria-label="Ventana del gráfico del IPSA">${[3,6,12,24].map(k=>`<button data-ipsawin="${k}" class="${homeIpsaWin===k?"on":""}" title="Cierres de fin de mes de los últimos ${k} meses; las variaciones de arriba no se tocan">${k}m</button>`).join("")}</div>`;
+      const FR={diario:{lbl:"Diario",cap:"cierres diarios",u:"día"},semanal:{lbl:"Semanal",cap:"cierres semanales",u:"semana"},mensual:{lbl:"Mensual",cap:"cierres mensuales",u:"mes"}}[homeIpsaFreq]||{lbl:"Mensual",cap:"cierres mensuales",u:"mes"};
+      // la ventana se mide en MESES para las tres cadencias (mismo modelo mental: "los últimos N meses")
+      const _corte=(()=>{const d=new Date();d.setMonth(d.getMonth()-homeIpsaWin);return localDay(d);})();
+      const rs=dropTrailingFlat(resampleMap(C.ipsaMap,homeIpsaFreq)).filter(x=>x.d>=_corte);
+      const cap=FR.cap+" · últimos "+homeIpsaWin+" meses ("+rs.length+" punto"+(rs.length===1?"":"s")+")";
+      const segF=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","D"],["semanal","S"],["mensual","M"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Un punto por cada ${({diario:"día hábil",semanal:"semana",mensual:"mes"})[k]} con cierre del índice">${l}</button>`).join("")}</div>`;
+      const seg=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="genl" style="margin:0">Cadencia</span>${segF}<span class="genl" style="margin:0 0 0 4px">Ventana</span><div class="home-seg" role="group" aria-label="Ventana del gráfico del IPSA">${[3,6,12,24].map(k=>`<button data-ipsawin="${k}" class="${homeIpsaWin===k?"on":""}" title="Últimos ${k} meses de historia; las variaciones de arriba no se tocan">${k}m</button>`).join("")}</div></div>`;
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
-        // etiqueta MES/AÑO: "DD/MM" se repetiría idéntico entre años
-        const labels=rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4));
-        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div></div>`;}
-      else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes en esta ventana</div></div></div>`;
+        // en mensual la etiqueta es MM/AA (un "DD/MM" se repetiría idéntico entre años); en día y semana, DD/MM
+        const labels=homeIpsaFreq==="mensual"?rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4)):rs.map(x=>x.d);
+        ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:"IPSA",c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 0;flex-wrap:wrap">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div></div>`;}
+      else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 0;flex-wrap:wrap">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes en esta ventana</div></div></div>`;
     }catch(e){}
     const _ipEst=(typeof ipsaIsSynth==="function")&&ipsaIsSynth(_ips.lastDate);
     const _estTag=_ipEst?` <span style="color:var(--amber);font-weight:700" title="El índice oficial no llegó para esta fecha; este valor es una ESTIMACIÓN reconstruida desde las acciones del IPSA (canasta ponderada por capitalización). Se corrige solo cuando la fuente publica el cierre oficial.">· estimado</span>`:"";
@@ -9029,22 +9086,25 @@ function viewHome(){
   const opsCard=(()=>{
     const os=(typeof homeOpsSeries==="function")?homeOpsSeries():null;
     if(!os)return "";
-    // UNA sola vista (sin toggle): compras ↑ / ventas ↓ en la escala CLP y las comisiones en su carril
+    // UNA sola vista: compras ↑ / (ventas + dividendos) ↓ en la escala CLP y las comisiones en su carril
     // inferior con escala propia — la historia completa de las operaciones, alineada por fecha
-    const legend=`<div class="legend" style="margin:0"><span><span class="lgdot" style="background:var(--accent)"></span>Compras ↑</span>${os.tSell?`<span><span class="lgdot" style="background:${amber}"></span>Ventas ↓</span>`:""}<span><span class="lgdot" style="background:${OPS_FEE_COL}"></span>Comisiones (carril inferior, escala propia)</span></div>`;
-    // franja de KPIs del período (lectura ejecutiva antes del gráfico): totales + costo medio de transar
+    const legend=`<div class="legend" style="margin:0"><span><span class="lgdot" style="background:var(--accent)"></span>Compras ↑</span><span><span class="lgdot" style="background:${amber}"></span>Ventas ↓</span><span><span class="lgdot" style="background:${green}"></span>Dividendos ↓</span><span><span class="lgdot" style="background:${OPS_FEE_COL}"></span>Comisiones (carril inferior, escala propia)</span></div>`;
+    // FRANJA DE KPIs — siempre las 7, aunque alguna vaya en cero: una tarjeta que aparece y desaparece
+    // según el mes hace que la franja "baile" y obliga a releerla. El "—" comunica ausencia sin ambigüedad.
+    const nOps={buy:0,sell:0,div:0};(os.rows||[]).forEach(r=>(r.ops||[]).forEach(o=>{nOps[o.side==="sell"?"sell":o.side==="div"?"div":"buy"]++;}));
     const feePct=(os.tBuy+os.tSell)>0?(os.tFee/(os.tBuy+os.tSell)*100):null;
-    const stat=(l,v,c)=>`<div class="ops-stat"><span>${l}</span><b style="color:${c||"var(--ink)"}">${v}</b></div>`;
+    const stat=(l,v,c,sub)=>`<div class="ops-stat"><span>${l}</span><b style="color:${c||"var(--ink)"}">${v}</b>${sub?`<i>${sub}</i>`:""}</div>`;
+    const _pl=(n,s,p)=>n+" "+(n===1?s:p);
     const stats=`<div class="ops-stats">`
-      +stat("Operaciones",os.tN)
-      +stat("Comprado",fmtCLP(os.tBuy),"var(--accent)")
-      +(os.tSell?stat("Vendido",fmtCLP(os.tSell),amber):"")
-      +(os.tDiv?stat("Dividendos","+"+fmtCLP(os.tDiv),green):"")
-      +stat("Neto invertido",fmtCLP(os.tBuy-os.tSell),indigo)
-      +stat("Comisiones","−"+fmtCLP(os.tFee),OPS_FEE_COL)
-      +(feePct!=null?stat("Costo medio",feePct.toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+"%",feePct>1?amber:"var(--ink)"):"")
+      +stat("Operaciones",os.tN,"var(--ink)",_pl(nOps.buy,"compra","compras")+(nOps.sell?" · "+_pl(nOps.sell,"venta","ventas"):"")+(nOps.div?" · "+_pl(nOps.div,"dividendo","dividendos"):""))
+      +stat("Comprado",fmtCLP(os.tBuy),"var(--accent)",_pl(nOps.buy,"operación","operaciones"))
+      +stat("Vendido",os.tSell?fmtCLP(os.tSell):"—",os.tSell?amber:muted,os.tSell?_pl(nOps.sell,"venta","ventas"):"sin ventas aún")
+      +stat("Dividendos",os.tDiv?("+"+fmtCLP(os.tDiv)):"—",os.tDiv?green:muted,os.tDiv?_pl(nOps.div,"pago","pagos"):"sin dividendos aún")
+      +stat("Rescatado",(os.tSell+os.tDiv)?fmtCLP(os.tSell+os.tDiv):"—",(os.tSell+os.tDiv)?ink:muted,"ventas + dividendos")
+      +stat("Neto invertido",fmtCLP(os.tBuy-os.tSell-os.tDiv),indigo,"comprado − rescatado")
+      +stat("Comisiones","−"+fmtCLP(os.tFee),OPS_FEE_COL,feePct!=null?("costo medio "+feePct.toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+"%"+(feePct>1?" ⚠":"")):"IVA incluido")
       +`</div>`;
-    const caption=`neto acumulado <b style="color:${indigo}">${fmtCLP(os.tBuy-os.tSell)}</b> invertido · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(os.tFee)}</b>`;
+    const caption=`neto acumulado <b style="color:${indigo}">${fmtCLP(os.tBuy-os.tSell-os.tDiv)}</b> invertido${os.tDiv?` · dividendos <b style="color:${green}">+${fmtCLP(os.tDiv)}</b>`:""} · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(os.tFee)}</b>`;
     // DETALLE DEL MES seleccionado (clic en una columna): cada operación con fecha, tipo, monto y comisión
     const MESL=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
     let detail="";
@@ -9164,6 +9224,7 @@ function attachHome(){
    const tt2=document.getElementById("homeTotT");if(tt2)tt2.onchange=()=>_keep(()=>{homeTotTo=tt2.value||"";homeTotRangeSave();render();});
    const ta=document.getElementById("homeTotAll");if(ta)ta.onclick=()=>_keep(()=>{homeTotFrom="";homeTotTo="";homeTotRangeSave();render();});}
   document.querySelectorAll("[data-ipsawin]").forEach(b=>b.onclick=()=>{homeIpsaWin=+b.dataset.ipsawin||24;try{lsSet("inv_home_ipsa_win",homeIpsaWin);}catch(e){}render();});
+  document.querySelectorAll("[data-ipsafreq]").forEach(b=>b.onclick=()=>{homeIpsaFreq=b.dataset.ipsafreq;try{lsSet("inv_home_ipsa_freq",homeIpsaFreq);}catch(e){}render();});
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
