@@ -3551,270 +3551,118 @@ function exportInvCSV(){
    impresión: A4 con márgenes, headers de tabla repetidos en cada página (thead como table-header-group), filas
    que no se cortan a mitad, secciones con salto de página controlado (.pb) y bloques que no se parten (.sec-a). */
 function invReportLogo(sz){sz=sz||42;return `<svg viewBox="0 0 40 40" width="${sz}" height="${sz}" style="flex:0 0 auto"><defs><linearGradient id="rlg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="1" y="1" width="38" height="38" rx="10.5" fill="url(#rlg)"/><rect x="9.6" y="24" width="3.6" height="7" rx="1.5" fill="#fff" opacity=".42"/><rect x="16.2" y="20" width="3.6" height="11" rx="1.5" fill="#fff" opacity=".6"/><rect x="22.8" y="16" width="3.6" height="15" rx="1.5" fill="#fff" opacity=".8"/><path d="M8.5 22 L17 15.5 L22.5 18.8 L32.5 10.2" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M26.5 10.2 H32.5 V16.2" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;}
+/* ===== INFORMES ESPEJO DEL MÓDULO ====================================================================
+   El cuerpo de cada informe ES la vista real de Investor: se capturan las MISMAS funciones de vista del
+   módulo (con el tema claro forzado, apto para papel) y se imprimen con la MISMA hoja de estilos de la
+   app. Así el informe no puede diferir de lo que se ve en pantalla — mismos números, mismas tarjetas,
+   mismas tablas y gráficos. Solo se retiran los controles (botones, pestañas, formularios) y se agrega
+   la carátula (título, folio, resumen ejecutivo) con reglas de paginación A4 apaisada. ================ */
+function reportAppCss(){let css="";try{document.querySelectorAll("style").forEach(s=>{css+=(s.textContent||"")+"\n";});}catch(e){}return css;}
+/* ejecuta la vista con el TEMA CLARO forzado — también la paleta JS (los SVG llevan los colores en línea) — y restaura */
+function reportCapture(fn){
+  const de=document.documentElement,dark=de.getAttribute("data-theme")==="dark";
+  if(dark){de.removeAttribute("data-theme");try{refreshPalette();}catch(e){}}
+  let html="";
+  try{html=fn();}
+  catch(e){html=`<div class="card"><div class="bd"><div class="note">No se pudo generar esta sección: <b>${(""+((e&&e.message)||e)).replace(/</g,"&lt;")}</b></div></div></div>`;}
+  finally{if(dark){de.setAttribute("data-theme","dark");try{refreshPalette();}catch(e){}}}
+  return reportStripUI(html);
+}
+/* la vista queda tal cual, sin sus CONTROLES (botones, campos, pestañas: en papel no operan) */
+function reportStripUI(html){
+  const d=document.createElement("div");d.innerHTML=html;
+  d.querySelectorAll("button,input,select,textarea,.ctx-tabs,.projbar,.pbtns,.home-seg,.wbtn,[data-pgoto]").forEach(e=>{try{e.remove();}catch(_){}});
+  d.querySelectorAll(".bd").forEach(x=>{if(!x.textContent.trim()&&!x.querySelector("svg,img,table"))x.remove();});   // cuerpos que solo tenían un botón: fuera la franja vacía
+  d.querySelectorAll(".card").forEach(c=>{if(c.querySelectorAll("tbody tr").length>12)c.classList.add("rp-flow");});   // tablas largas: fluyen entre páginas (el thead se repite solo)
+  return d.innerHTML;
+}
+/* título de sección de la carátula: numera las vistas capturadas dentro del informe */
+function repSec(n,t,ss,brk){return `<div class="rp-sec${brk?" rp-brk":""}"><span class="sn">${n}</span><span>${t}</span>${ss?`<span class="ss">${ss}</span>`:""}</div>`;}
 function invReportShell(o){
-  const css=`
-    @page{size:A4;margin:12mm 11mm 14mm;}
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;color:#1B2A4A;font-size:11.5px;line-height:1.5;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-    .band{background:linear-gradient(115deg,#081831 0%,#0F2E63 58%,#1E5FD1 135%);color:#fff;padding:24px 34px;display:flex;align-items:center;gap:16px;}
-    .beye{font-size:8px;letter-spacing:2px;font-weight:800;color:#8FC1FF;text-transform:uppercase;margin-bottom:5px;}
-    .band h1{font-size:21px;font-weight:800;letter-spacing:-.3px;line-height:1.15;}
-    .bsub{font-size:10.5px;opacity:.85;margin-top:5px;}
-    .bhero{margin-left:auto;text-align:right;padding-left:22px;border-left:1px solid rgba(255,255,255,.22);}
-    .bhl{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;opacity:.78;}
-    .bhv{font-size:25px;font-weight:800;letter-spacing:-.5px;margin-top:2px;font-variant-numeric:tabular-nums;}
-    .bhs{font-size:11px;font-weight:700;margin-top:2px;}
-    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));border:1px solid #E1EAF6;border-radius:11px;margin:14px 34px 0;overflow:hidden;background:#F7FAFE;break-inside:avoid;}
-    .mi{padding:9px 14px;border-right:1px solid #E7EEF8;}
-    .mi:last-child{border-right:none;}
-    .ml{display:block;font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:#8DA1C2;font-weight:800;}
-    .mv{display:block;font-size:11px;font-weight:700;color:#10306A;margin-top:2px;}
-    .page{padding:8px 34px 6px;}
-    section{margin-top:22px;}
-    .sec-a{break-inside:avoid;page-break-inside:avoid;}
-    .pb{break-before:page;page-break-before:always;}
-    h2{font-size:12.5px;color:#10306A;font-weight:800;padding-bottom:7px;border-bottom:1.5px solid #E1EAF6;display:flex;align-items:center;gap:9px;margin-bottom:11px;break-after:avoid;page-break-after:avoid;}
-    .sn{display:inline-flex;width:21px;height:21px;border-radius:7px;background:#1E5FD1;color:#fff;font-size:10.5px;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto;}
-    h3{font-size:11px;color:#33518A;font-weight:800;margin:13px 0 5px;break-after:avoid;page-break-after:avoid;}
-    .ssub{font-size:9px;color:#7A8CA8;margin:-8px 0 9px;line-height:1.55;}
-    table{width:100%;border-collapse:collapse;font-size:10.5px;}
-    thead{display:table-header-group;}
-    th{background:#EEF3FB;text-align:left;padding:6px 8px;font-size:8px;text-transform:uppercase;color:#52668A;letter-spacing:.4px;border-bottom:1.5px solid #CCDBEE;font-weight:800;}
-    td{padding:5.5px 8px;border-bottom:1px solid #F0F4FA;}
-    td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;}
-    tbody tr:nth-child(even){background:#FBFCFE;}
-    tfoot td{background:#EEF3FB;font-weight:800;border-top:1.5px solid #CCDBEE;}
-    tr{page-break-inside:avoid;}
-    .kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
-    .k3{grid-template-columns:repeat(3,1fr);} .k2{grid-template-columns:repeat(2,1fr);}
-    .kpi{border:1px solid #E6ECF6;border-left:3px solid #1E5FD1;border-radius:10px;padding:10px 12px;background:linear-gradient(180deg,#fff,#F8FAFD);break-inside:avoid;}
-    .kpi.hero{border:1.5px solid #1E5FD1;background:#F2F7FF;}
-    .kl{font-size:7.5px;color:#8DA1C2;text-transform:uppercase;font-weight:800;letter-spacing:.6px;}
-    .kv{font-size:16.5px;font-weight:800;margin-top:3px;letter-spacing:-.3px;font-variant-numeric:tabular-nums;}
-    .ks{font-size:9px;color:#52668A;margin-top:2px;}
-    .dot{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:6px;vertical-align:middle;}
-    .two{display:flex;gap:22px;flex-wrap:wrap;} .two .col{flex:1;min-width:280px;}
-    .lg{font-size:10px;color:#52668A;display:inline-block;margin:3px 9px 3px 0;} .lg .d{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:4px;}
-    .note{font-size:10px;color:#405577;line-height:1.6;background:#F8FAFD;border:1px solid #E7EEF8;border-left:3px solid #BFD3EF;border-radius:9px;padding:10px 13px;margin-top:10px;break-inside:avoid;}
-    svg{max-width:100%;height:auto;}
-    .chartbox{border:1px solid #EDF2FA;border-radius:11px;padding:10px 12px 6px;background:#FDFEFF;break-inside:avoid;page-break-inside:avoid;}
-    .exec{margin:14px 34px 0;border:1px solid #DCE7F7;border-left:4px solid #1E5FD1;border-radius:11px;background:linear-gradient(180deg,#F7FAFF,#FDFEFF);padding:13px 17px;break-inside:avoid;}
-    .exec .xt{font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:800;color:#1E5FD1;margin-bottom:6px;}
-    .exec p{font-size:11px;line-height:1.65;color:#22355C;}
-    .exec b{color:#10306A;}
-    .sig{display:flex;gap:44px;margin:38px 34px 0;break-inside:avoid;}
-    .sig .s1{flex:1;max-width:250px;border-top:1.5px solid #9FB2CF;padding-top:6px;font-size:9.5px;color:#52668A;text-align:center;line-height:1.5;}
-    .foot{margin:22px 34px 26px;border-top:1.5px solid #E1EAF6;padding-top:11px;font-size:9px;color:#7A8CA8;line-height:1.7;}
-    .foot b{color:#405577;}
-    .brandline{display:flex;justify-content:space-between;gap:14px;margin-top:9px;font-size:8.5px;color:#9AACC8;letter-spacing:.4px;text-transform:uppercase;font-weight:700;}`;
-  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${o.docTitle}</title><style>${css}</style></head><body>
-  <div class="band">${invReportLogo(44)}<div><div class="beye">Investor · Inteligencia que genera valor</div><h1>${o.title}</h1><div class="bsub">${o.subtitle||""}</div></div>
-    ${o.hero?`<div class="bhero"><div class="bhl">${o.hero.label}</div><div class="bhv">${o.hero.value}</div>${o.hero.sub?`<div class="bhs" style="color:${o.hero.subColor||'#CFE0FF'}">${o.hero.sub}</div>`:""}</div>`:""}</div>
-  ${o.metaHTML?`<div class="meta">${o.metaHTML}</div>`:""}
-  ${o.execHTML?`<div class="exec"><div class="xt">Resumen ejecutivo</div><p>${o.execHTML}</p></div>`:""}
-  <div class="page">${o.bodyHTML}</div>
+  const over=`
+    @page{size:A4 landscape;margin:9mm 8mm 11mm;}
+    html{background:#fff;height:auto;}
+    body{background:#fff;height:auto;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .rp-band{background:linear-gradient(115deg,#081831 0%,#0F2E63 58%,#1E5FD1 135%);color:#fff;padding:20px 30px;display:flex;align-items:center;gap:16px;}
+    .rp-eye{font-size:8px;letter-spacing:2px;font-weight:800;color:#8FC1FF;text-transform:uppercase;margin-bottom:5px;}
+    .rp-band h1{font-size:20px;font-weight:800;letter-spacing:-.3px;line-height:1.15;color:#fff;}
+    .rp-sub{font-size:10.5px;opacity:.85;margin-top:4px;}
+    .rp-hero{margin-left:auto;text-align:right;padding-left:22px;border-left:1px solid rgba(255,255,255,.22);}
+    .rp-hl{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;opacity:.78;}
+    .rp-hv{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-top:2px;font-variant-numeric:tabular-nums;}
+    .rp-hs{font-size:11px;font-weight:700;margin-top:2px;}
+    .rp-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid #E1EAF6;border-radius:11px;margin:12px auto 0;max-width:1054px;overflow:hidden;background:#F7FAFE;break-inside:avoid;}
+    .rp-meta .mi{padding:8px 13px;border-right:1px solid #E7EEF8;}
+    .rp-meta .mi:last-child{border-right:none;}
+    .rp-meta .ml{display:block;font-size:7.5px;letter-spacing:1px;text-transform:uppercase;color:#8DA1C2;font-weight:800;}
+    .rp-meta .mv{display:block;font-size:11px;font-weight:700;color:#10306A;margin-top:2px;}
+    .rp-exec{margin:12px auto 0;max-width:1054px;border:1px solid #DCE7F7;border-left:4px solid #1E5FD1;border-radius:11px;background:linear-gradient(180deg,#F7FAFF,#FDFEFF);padding:12px 16px;break-inside:avoid;}
+    .rp-exec .xt{font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:800;color:#1E5FD1;margin-bottom:5px;}
+    .rp-exec p{font-size:11px;line-height:1.65;color:#22355C;}
+    .rp-exec b{color:#10306A;}
+    .rp-page{max-width:1054px;margin:0 auto;padding:12px 0 0;display:flex;flex-direction:column;gap:12px;}
+    .rp-sec{display:flex;align-items:center;gap:9px;font-size:13px;color:#10306A;font-weight:800;border-bottom:1.5px solid #E1EAF6;padding-bottom:7px;margin-top:10px;break-after:avoid;page-break-after:avoid;}
+    .rp-sec .sn{display:inline-flex;width:21px;height:21px;border-radius:7px;background:#1E5FD1;color:#fff;font-size:10.5px;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto;}
+    .rp-sec .ss{font-size:9.5px;color:#7A8CA8;font-weight:600;margin-left:auto;text-align:right;}
+    .rp-brk{break-before:page;page-break-before:always;}
+    .rp-page .card{break-inside:avoid;page-break-inside:avoid;box-shadow:none;}
+    .rp-page .card.rp-flow{break-inside:auto !important;page-break-inside:auto !important;}
+    .rp-page .tw{overflow:visible;}
+    .rp-page table{font-size:10px;}
+    .rp-page td,.rp-page th{padding:5px 7px;}
+    .rp-page th{font-size:8px;letter-spacing:.3px;}
+    .rp-page thead{display:table-header-group;}
+    .rp-page tr{page-break-inside:avoid;}
+    .rp-page svg{max-width:100%;height:auto;}
+    .rp-sig{display:flex;gap:44px;margin:34px auto 0;max-width:1054px;break-inside:avoid;}
+    .rp-sig .s1{flex:1;max-width:250px;border-top:1.5px solid #9FB2CF;padding-top:6px;font-size:9.5px;color:#52668A;text-align:center;line-height:1.5;}
+    .rp-foot{margin:20px auto 24px;max-width:1054px;border-top:1.5px solid #E1EAF6;padding-top:10px;font-size:9px;color:#7A8CA8;line-height:1.7;}
+    .rp-foot b{color:#405577;}
+    .rp-brand{display:flex;justify-content:space-between;gap:14px;margin-top:9px;font-size:8.5px;color:#9AACC8;letter-spacing:.4px;text-transform:uppercase;font-weight:700;}`;
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${o.docTitle}</title><style>${reportAppCss()}</style><style>${over}</style></head><body>
+  <div class="rp-band">${invReportLogo(44)}<div><div class="rp-eye">Investor · Inteligencia que genera valor</div><h1>${o.title}</h1><div class="rp-sub">${o.subtitle||""}</div></div>
+    ${o.hero?`<div class="rp-hero"><div class="rp-hl">${o.hero.label}</div><div class="rp-hv">${o.hero.value}</div>${o.hero.sub?`<div class="rp-hs" style="color:${o.hero.subColor||'#CFE0FF'}">${o.hero.sub}</div>`:""}</div>`:""}</div>
+  ${o.metaHTML?`<div class="rp-meta">${o.metaHTML}</div>`:""}
+  ${o.execHTML?`<div class="rp-exec"><div class="xt">Resumen ejecutivo</div><p>${o.execHTML}</p></div>`:""}
+  <div class="rp-page">${o.bodyHTML}</div>
   ${o.sigHTML||""}
-  <div class="foot">${o.footHTML||""}<div class="brandline"><span>Investor · Inteligencia que genera valor</span><span>${o.folio||""}</span><span>Emitido el ${o.fch||""}</span></div></div>
+  <div class="rp-foot">${o.footHTML||""}<div class="rp-brand"><span>Investor · Inteligencia que genera valor</span><span>${o.folio||""}</span><span>Emitido el ${o.fch||""}</span></div></div>
   \x3cscript>window.onload=function(){setTimeout(function(){window.print();},400);};\x3c/script></body></html>`;
 }
 function invReportMeta(items){return items.filter(x=>x&&x[1]!=null&&x[1]!=="").map(x=>`<div class="mi"><span class="ml">${x[0]}</span><span class="mv">${x[1]}</span></div>`).join("");}
 function genInvReport(){
   if(!PF||!WEEKS.length){window.alert("No hay datos para el informe.");return;}
-  const IM=invMetrics();if(!IM)return;const L=IM.last,fr=FREQ[PF.freq||"diario"];
-  // ESPEJO DEL MÓDULO SEGUIMIENTO: mismas secciones, mismos títulos, mismas columnas y mismos cálculos
-  const days=IM.elapsedDays!=null?IM.elapsedDays:Math.round(L.yrs*365.25),mos=(days/30.44).toFixed(1);
-  const yrsEl=IM.elapsedYrs!=null?IM.elapsedYrs:L.yrs;
-  const gain=L.val-IM.aport,gp=IM.aport>0?gain/IM.aport*100:0;
-  const reqRet=Math.pow(1+PF.erCapm/100,yrsEl)-1,alphaReal=L.ret-reqRet;
-  const _shortWin=(days<30||IM.nret<5);
-  const cagrOk=IM.cagr!=null&&days>=60;
+  const IM=invMetrics();if(!IM)return;const L=IM.last;
+  // EL INFORME ES EL MÓDULO: Seguimiento e Historial capturados de sus vistas reales (mismo HTML, mismos
+  // números y gráficos que la pantalla), con carátula y paginación para el papel.
   const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
-  const sg=v=>(v>=0?"+":"")+v.toFixed(2)+"%",sg1=v=>(v>=0?"+":"")+v.toFixed(1);
+  const days=IM.elapsedDays!=null?IM.elapsedDays:Math.round(L.yrs*365.25);
+  const gain=L.val-IM.aport;
+  const sg=v=>(v>=0?"+":"")+(+v).toFixed(2)+"%";
   const sgnC=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
-  const pos="#0E8C5E",neg="#D83A3A",mut="#52668A",fnt="#8DA1C2",cc=v=>v>=0?pos:neg;
-  const kpi=(l,v,c,s)=>`<div class="kpi"><div class="kl">${l}</div><div class="kv" style="color:${c||'#10306A'}">${v}</div>${s?`<div class="ks">${s}</div>`:""}</div>`;
-  const dayTxt=IM.dayAbs!=null?(sgnC(IM.dayAbs)+" ("+sg(IM.dayPct*100)+")"):"—";
-  // capital real de la compra inicial (igual que el módulo)
-  const _b0=WEEKS[0];
-  const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;return {per,tot};})():null;
-  const _ri=_real?_real.tot:PF.amount;
-  // colapso visual por fecha: un punto por día, con los aportes del día sumados (igual que el módulo)
-  const _dix=[];IM.series.forEach((s,i)=>{if(i===IM.series.length-1||IM.series[i+1].date!==s.date)_dix.push(i);});
-  const dates=_dix.map(i=>IM.series[i].date);
-  const _dayFlows=_dix.map((i,k)=>{const from=k===0?0:_dix[k-1]+1;let f=0;for(let j=from;j<=i;j++)f+=IM.series[j].inflow||0;return Math.round(f);});
-  // ── 1 · RESUMEN: las mismas tarjetas del hero del Seguimiento ──
-  const verdictTxt=`Tu portafolio rinde <b style="color:${cc(L.ret*100)}">${sg(L.ret*100)}</b> vs el IPSA <b style="color:${cc(L.ipsaRet*100)}">${sg(L.ipsaRet*100)}</b> → ${L.diff>=0?`<b style="color:${pos}">supera al mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`:`<b style="color:${neg}">va bajo el mercado por ${Math.abs(L.diff*100).toFixed(2)} pts</b>`} en estos ${days} días.`;
-  const resumen=`<div class="kgrid k3">
-    ${kpi("Ganancia / pérdida total",sgnC(gain)+`<div style="font-size:12px;font-weight:800;color:${cc(gp)};margin-top:2px">${sg(gp)}</div>`,cc(gain),"rentabilidad sobre "+fmtCLP(IM.aport)+" invertidos · el % del Home")}
-    ${kpi("Retorno acumulado (TWR)",sg(L.ret*100),cc(L.ret*100),"rendimiento de la estrategia · comparable con el IPSA")}
-    ${kpi("Rentabilidad IPSA",sg(L.ipsaRet*100),cc(L.ipsaRet*100),"benchmark · mismo período")}
-    ${kpi("vs IPSA",sg(L.diff*100),cc(L.diff*100),L.diff>=0?"superando al mercado":"bajo el mercado")}
-    ${kpi("Capital aportado",fmtCLP(IM.aport),null,IM.aport>_ri+1?("inicial "+fmtCLP(_ri)+" + aportes"):"capital realmente invertido")}
-    ${kpi("Cambio último "+fr.u,dayTxt,IM.dayAbs!=null?cc(IM.dayAbs):mut,IM.prevDate?("cierre "+fD(IM.prevDate)+" → "+fD(IM.dayTo)):"")}
-  </div>
-  <div class="note" style="margin-top:10px">${verdictTxt}</div>`;
-  // ── 2 · RENTABILIDAD: PORTAFOLIO VS IPSA (base 100, igual que la sección 1 del módulo) ──
-  const evoChart=svgMulti({series:[{label:"Portafolio",c:"#1E5FD1",vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:.95}],labels:dates,h:300,unit:""});
-  const ipsaK=`<div class="kgrid k3" style="margin-top:11px">${kpi("Retorno portafolio",sg(L.ret*100),cc(L.ret*100),days+" días")}${kpi("Retorno IPSA",sg(L.ipsaRet*100),cc(L.ipsaRet*100),"benchmark · mismo período")}${kpi("Diferencia",sg(L.diff*100),cc(L.diff*100),L.diff>=0?"a favor del portafolio":"en contra")}</div>`;
-  // ── 3 · VALOR DE LA INVERSIÓN EN EL TIEMPO (sección 2 del módulo) ──
-  const valChart=svgMulti({series:[{label:"Valor",c:"#1E5FD1",vals:_dix.map(i=>+IM.series[i].val.toFixed(0)),w:2.8,op:1}],labels:dates,h:300,yfmt:fmtK,area:true});
-  const valNote=`<div class="note">En los días de compra/venta el salto del valor corresponde a <b>aporte o retiro de capital</b>, no a rentabilidad: la Δ del día del historial (sección 10) ya netea esos aportes.</div>`;
-  // ── 4 · DETALLE Y CONTRIBUCIÓN POR ACCIÓN (mismas columnas del módulo) ──
-  const psSorted=[...IM.perStock].sort((a,b)=>b.contribCum-a.contribCum);
-  const _hoy=`<span style="color:#7C3AED;font-weight:800;font-size:8px"> · comprada hoy</span>`;
-  const detRows=psSorted.map(p=>`<tr><td><span class="dot" style="background:${p.hd.c}"></span><b>${p.hd.t}</b>${p.openedLast?_hoy:""}</td><td class="r">${(p.sh>0&&p.buy>0)?fmtP(p.buy):"—"}</td><td class="r">${fmtP(p.cur)}</td><td class="r" style="color:${p.dayRet!=null?cc(p.dayRet*100):fnt};font-weight:600">${p.dayRet!=null?sg(p.dayRet*100):"—"}</td><td class="r">${p.betaExp!=null?p.betaExp.toFixed(2):"—"}</td><td class="r" style="font-weight:700">${p.betaR!=null?(p.betaR.toFixed(2)+(p.r2!=null&&p.r2<0.10?" ⚠":"")):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(p.val)}</td><td class="r" style="color:${cc(p.gain)};font-weight:600">${sgnC(p.gain)}</td><td class="r" style="color:${cc(p.ret*100)}">${sg(p.ret*100)}</td><td class="r" style="color:${cc(p.contribCum*100)};font-weight:700">${sg(p.contribCum*100)}</td></tr>`).join("");
-  const bestS=psSorted[0],worstS=psSorted[psSorted.length-1];
-  const _dPair=IM.perStock.find(p=>p.dayTo&&p.dayFrom);
-  const srcNote=`<div class="note">Δ ${fr.u} = entre los <b>dos últimos cierres reales</b> de cada acción${_dPair?(" (en general "+fD(_dPair.dayFrom)+" → "+fD(_dPair.dayTo)+")"):""}. <b>P. compra</b> = costo registrado ÷ acciones, comparable 1:1 con el «P. Compra» de la cartola de la corredora. Fuente: base de precios del proyecto (Yahoo/planilla); pequeñas diferencias de centavos con el feed del bróker son normales.</div>`;
-  const compNote=`<div class="note">Mayor aporte al retorno: <b style="color:${bestS.hd.c}">${bestS.hd.t}</b> (${sg(bestS.contribCum*100)}). Mayor lastre: <b style="color:${worstS.hd.c}">${worstS.hd.t}</b> (${sg(worstS.contribCum*100)}). El <b>Aporte</b> (contribución) = ganancia de la acción ÷ capital invertido; la suma equivale al retorno total de la cartera.</div>`;
-  // ── 5 · COMPOSICIÓN ACTUAL VS OBJETIVO (donut + Objetivo/Actual/Drift/Valor + alerta ±5 pp) ──
-  const donut=svgDonut(IM.perStock.map(p=>({value:p.val,color:p.hd.c})));
-  const dleg=IM.perStock.map(p=>`<span class="lg"><span class="d" style="background:${p.hd.c}"></span>${p.hd.t} ${((p.val/L.val)*100).toFixed(1)}%</span>`).join("");
-  const wRows=IM.perStock.map(p=>{const cw=p.val/L.val,dr=(cw-p.hd.w)*100;return `<tr><td><span class="dot" style="background:${p.hd.c}"></span>${p.hd.t}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r"><b>${(cw*100).toFixed(1)}%</b></td><td class="r" style="color:${Math.abs(dr)<0.05?mut:(dr>=0?pos:neg)};font-weight:700">${sg1(dr)} pp</td><td class="r">${fmtCLP(p.val)}</td></tr>`;}).join("");
-  const _drifts=IM.perStock.map(p=>({p,dr:(p.val/L.val-p.hd.w)*100}));
-  const _breaches=_drifts.filter(d=>Math.abs(d.dr)>5);
-  const driftAlert=_breaches.length
-    ?`<div class="note" style="border-left-color:#E5A50A"><b style="color:#9A6E00">⚠ Alerta de rebalanceo:</b> ${_breaches.map(d=>d.p.hd.t+" "+sg1(d.dr)+" pp").join(", ")} ${_breaches.length>1?"superan":"supera"} el 5% de desviación respecto al objetivo.</div>`
-    :`<div class="note" style="border-left-color:#0E8C5E"><b style="color:#0E6C4A">✓</b> Todas las posiciones están dentro de ±5 pp de su objetivo · sin necesidad de rebalancear.</div>`;
-  const driftNote=`<div class="note">El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo (por subir o bajar de precio). Drifts persistentes sobre ±5 pp suelen gatillar un rebalanceo.</div>`;
-  // ── 6 · CRECIMIENTO POR ACCIÓN (base 100 + tarjeta de retorno por acción, como el módulo) ──
-  const stkSeriesR=IM.stockSeries.map(s=>Object.assign({},s,{vals:_dix.map(i=>s.vals[i])}));
-  const stkChart=svgMulti({series:stkSeriesR,labels:dates,h:280,unit:""});
-  const stkK=`<div class="kgrid">${IM.perStock.map(p=>`<div class="kpi" style="border-left-color:${p.hd.c}"><div class="kl">Retorno ${p.hd.t}</div><div class="kv" style="color:${cc(p.ret*100)}">${sg(p.ret*100)}</div><div class="ks">${sgnC(p.gain)}</div></div>`).join("")}</div>`;
-  const stkNote=`<div class="note">El gráfico mide el crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación a la cartera). <b>Tu retorno</b> por acción (tarjetas y tabla de la sección 4) pondera además <b>cuándo y cuánto</b> compraste, por lo que puede diferir del precio.</div>`;
-  // ── 7 · ANÁLISIS CAPM: REAL VS EXIGIDO — curva exigida money-weighted IGUAL que el módulo:
-  // parte del valor real inicial, crece a la tasa exigida de la composición vigente y ESCALONA por aportes;
-  // la tasa se recalcula desde cada operación (ev.erCapm sellado). Antes de operar usa el exigido inicial.
-  let _initEr=PF.erCapm;
-  try{if(_real&&_real.tot>0){const _sp={};_real.per.forEach(x=>{_sp[x.hd.t]=x.m/_real.tot*100;});const _Mi=pMetricsUniverse(_sp,x=>{const h=PF.holdings.find(z=>z.t===x);return h?h.b:null;});if(_Mi)_initEr=_Mi.erCapm;}}catch(e){}
-  const capmValsAll=[];let _rate=_initEr/100;
-  IM.series.forEach((s,i)=>{
-    if(i===0)capmValsAll.push(Math.round(s.val));
-    else{const dt=Math.max(0,s.yrs-IM.series[i-1].yrs);capmValsAll.push(Math.round(capmValsAll[i-1]*Math.pow(1+_rate,dt)+(s.inflow||0)));
-      if(s.ev&&s.ev.erCapm!=null)_rate=s.ev.erCapm/100;}
-  });
-  const capmChart=svgMulti({series:[{label:"Valor real",c:"#1E5FD1",vals:_dix.map(i=>+IM.series[i].val.toFixed(0)),w:2.6,op:1},{label:"Esperado CAPM",c:"#0E8C5E",vals:_dix.map(i=>capmValsAll[i]),dash:true,w:2.2,op:.9}],labels:dates,h:300,yfmt:fmtK});
-  const capmK=`<div class="kgrid" style="grid-template-columns:repeat(5,1fr)">
-    ${kpi("Retorno real",sg(L.ret*100),cc(L.ret*100),days+" días")}
-    ${kpi("Exigido CAPM",sg(reqRet*100),"#1E5FD1","prorrateado al período")}
-    ${kpi("Alpha realizado",sg(alphaReal*100),cc(alphaReal*100),_shortWin?"muestra corta · referencial":(alphaReal>=0?"batiendo lo exigido":"bajo lo exigido"))}
-    ${kpi("β esperado (CAPM)",PF.bp.toFixed(2),null,"sobre el capital invertido actual")}
-    ${kpi("β realizado",IM.betaR!=null?IM.betaR.toFixed(2):"—",null,IM.betaR!=null?((IM.betaR>PF.bp?"más":"menos")+" sensible que lo esperado"):"≥5 registros para calcular")}
-  </div>`;
-  const capmNote=`<div class="note"><b>Análisis CAPM.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de la cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días. La curva exigida <b>incluye tus aportes</b>: parte del valor real inicial, crece a la tasa exigida de la composición vigente (${_initEr.toFixed(2)}% anual inicial) y escalona con cada compra/venta, recalculando la tasa desde cada operación — así la brecha entre curvas es solo <b>rentabilidad</b>, no capital. El <b>alpha realizado</b> (${sg(alphaReal*100)}) = retorno real − exigido.${_shortWin?` <b style="color:#9A6E00">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha en tan pocos días es ruido, no una lectura estable — gana sentido con semanas/meses de seguimiento.`:""}</div>`;
-  // ── 8 · RIESGO: VAR VS PÉRDIDA REAL (mismos horizontes y ventanas de días calendario del módulo) ──
-  const vaRf=pY=>{const sp=(PF.sig/100)/Math.sqrt(pY),mp=Math.pow(1+PF.erCapm/100,1/pY)-1,v=mp-1.645*sp;return {pct:v,loss:L.val*Math.max(0,-v)};};
-  const vD=vaRf(252),vW=vaRf(52),vM=vaRf(12),vP=PF.freq==="semanal"?vW:PF.freq==="mensual"?vM:vD;
-  const worst=IM.worstRet,breach=worst!=null&&worst<vP.pct;
-  const stepLoss=()=>{const v=IM.series;let mn=Infinity;for(let i=1;i<v.length;i++){const d=(v[i].val-(v[i].inflow||0))-v[i-1].val;if(d<mn)mn=d;}return mn===Infinity?null:Math.min(mn,0);};
-  const realLossDays=dd=>{const v=IM.series;let mn=Infinity;
-    const cum=[];let acc=0;for(let k=0;k<v.length;k++){acc+=(v[k].inflow||0);cum[k]=acc;}
-    for(let i=0;i<v.length;i++){const t0=new Date(v[i].date+"T00:00:00").getTime();
-      for(let j=i+1;j<v.length;j++){if(new Date(v[j].date+"T00:00:00").getTime()-t0>dd*864e5+36e5)break;const d=(v[j].val-(cum[j]-cum[i]))-v[i].val;if(d<mn)mn=d;}}
-    return mn===Infinity?null:Math.min(mn,0);};
-  const hzD=[["Diario",vD,PF.freq==="diario"?stepLoss():null],["Semanal",vW,realLossDays(7)],["Mensual",vM,realLossDays(31)]];
-  const varRows=hzD.map(a=>`<tr><td><b>${a[0]}</b></td><td class="r">${sg(a[1].pct*100)}</td><td class="r" style="color:${neg};font-weight:600">${fmtCLP(-a[1].loss)}</td><td class="r" style="color:${a[2]!=null&&a[2]<0?neg:mut};font-weight:600">${a[2]!=null?fmtCLP(a[2]):"—"}</td></tr>`).join("");
-  const riskK=`<div class="kgrid" style="grid-template-columns:repeat(5,1fr)">
-    ${kpi("VaR 95% ("+fr.u+")",sg(vP.pct*100),neg,"pérdida máx esperada / "+fr.u)}
-    ${kpi("Peor "+fr.u+" real",worst!=null?sg(worst*100):"—",worst!=null?cc(worst*100):mut,worst!=null?((IM.worstRetDate?("el "+fD(IM.worstRetDate)+" · "):"")+(breach?"excedió el VaR":"dentro del VaR")):"sin datos")}
-    ${kpi("Pérdida ese "+fr.u+" (CLP)",IM.worstLossCLP!=null?fmtCLP(IM.worstLossCLP):"—",IM.worstLossCLP!=null?neg:mut,IM.worstBaseVal!=null?("sobre un patrimonio de "+fmtCLP(IM.worstBaseVal)):("VaR "+fr.u+": "+fmtCLP(-vP.loss)))}
-    ${kpi("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):sg(IM.maxDD*100),neg,sg(IM.maxDD*100)+" desde un máximo"+(IM.maxDDFrom&&IM.maxDDDate?(" · "+fD(IM.maxDDFrom)+" → "+fD(IM.maxDDDate)):(IM.maxDDDate?(" · "+fD(IM.maxDDDate)):"")))}
-    ${kpi("Volatilidad realizada",IM.realizedVol!=null?IM.realizedVol.toFixed(1)+"%":"—",null,"esperada σ "+PF.sig.toFixed(1)+"%")}
-  </div>`;
-  const riskNote=`<div class="note">El <b>VaR 95%</b> es la pérdida máxima esperada en un período normal (salvo 1 de cada 20). ${worst!=null?("Tu peor "+fr.u+" real fue "+sg(worst*100)+(IM.worstLossCLP!=null?(" ("+fmtCLP(IM.worstLossCLP)+")"):"")+(IM.worstRetDate?(" el <b>"+fD(IM.worstRetDate)+"</b>"):"")+(IM.worstBaseVal!=null?(", medido sobre el patrimonio total de ese momento ("+fmtCLP(IM.worstBaseVal)+", aportes del día neteados)"):"")+" → "+(breach?`<b style="color:${neg}">excedió el VaR ${fr.u}</b>, un evento de cola`:`<b style="color:${pos}">dentro del VaR</b>`)+". "):""}${IM.worstStep?("Entre el <b>"+fD(IM.worstStep.from)+"</b> y el <b>"+fD(IM.worstStep.to)+"</b> ("+IM.worstStep.days+" días sin registros intermedios) la cartera varió "+sg(IM.worstStep.ret*100)+" ("+fmtCLP(IM.worstStep.clp)+"): es un tramo acumulado, no un día. "):""}El <b>máximo drawdown</b> (${sg(IM.maxDD*100)}${IM.maxDDCLP?(", "+fmtCLP(IM.maxDDCLP)):""}${IM.maxDDFrom&&IM.maxDDDate?(", del "+fD(IM.maxDDFrom)+" al "+fD(IM.maxDDDate)):""}) es la peor caída acumulada desde un máximo de la rentabilidad — los flujos se netean y el CLP suma lo que el mercado le quitó al capital que había en cada momento. El VaR paramétrico asume normalidad y subestima los extremos. El «peor real» semanal/mensual usa ventanas de días calendario y netea TODOS los aportes dentro de la ventana.</div>`;
-  // ── 9 · CALIDAD Y DESEMPEÑO DEL SEGUIMIENTO (mismas 6 tarjetas del módulo) ──
-  const qK=`<div class="kgrid k3">
-    ${kpi("Retorno anualizado (CAGR)",cagrOk?sg(IM.cagr*100):"—",cagrOk?cc(IM.cagr*100):mut,cagrOk?"ritmo anualizado":"≥60 días para un valor realista")}
-    ${kpi("Sharpe realizado",IM.sharpeR!=null?IM.sharpeR.toFixed(2):"—",IM.sharpeR!=null?(IM.sharpeR>=0?pos:neg):mut,"retorno por unidad de riesgo")}
-    ${kpi("Tracking error",IM.trackingError!=null?IM.trackingError.toFixed(1)+"%":"—",null,"desvío anual vs IPSA")}
-    ${kpi("Information ratio",IM.infoRatio!=null?IM.infoRatio.toFixed(2):"—",IM.infoRatio!=null?cc(IM.infoRatio):mut,"retorno activo / tracking error")}
-    ${kpi("Aciertos vs IPSA",IM.winRate!=null?IM.winRate.toFixed(0)+"%":"—",null,"% de "+fr.us+" sobre el mercado")}
-    ${kpi("Mejor / peor "+fr.u,(IM.bestRet!=null?`<span style="color:${cc(IM.bestRet*100)}">${sg(IM.bestRet*100)}</span>`:"—")+" / "+(IM.worstRet!=null?`<span style="color:${cc(IM.worstRet*100)}">${sg(IM.worstRet*100)}</span>`:"—"),null,"rango por período")}
-  </div>`;
-  const qNote=`<div class="note"><b>Calidad del desempeño.</b> El <b>Sharpe realizado</b> mide tu retorno ajustado por la volatilidad efectiva; el <b>information ratio</b> es el retorno extra sobre el IPSA por unidad de riesgo activo (sobre 0,5 es bueno); <b>aciertos vs IPSA</b> es el % de ${fr.us} en que superaste al mercado.${days<60?` Con pocos ${fr.us} registrados estas cifras son ruidosas; el <b>CAGR</b> se muestra solo a partir de los 60 días, porque anualizar un período tan corto produce valores irreales.`:""}</div>`;
-  // ── 10 · HISTORIAL DE SEGUIMIENTO: una fila por día + operaciones del día como sub-filas (igual que el módulo) ──
-  const _grp=[];IM.series.forEach((s,i)=>{if(!_grp.length||IM.series[_grp[_grp.length-1][0]].date!==s.date)_grp.push([i]);else _grp[_grp.length-1].push(i);});
-  const _evDesc=ev=>{if(!ev)return "";if(ev.kind==="inject")return "Aporte de capital · "+fmtCLP(ev.amount||0);
-    if(ev.kind==="trade")return (ev.side==="sell"?"Venta":"Compra")+" "+ev.t+" · "+(+ev.shares).toLocaleString("es-CL",{maximumFractionDigits:2})+" × "+fmtP(+ev.price||0)+" = "+fmtCLP(Math.round((+ev.shares||0)*(+ev.price||0)));
-    if(ev.kind==="div")return "Dividendo "+ev.t+" · +"+fmtCLP(ev.amount||0);
-    return "Rebalanceo";};
-  const _evTag=ev=>ev.kind==="inject"?"Aporte":ev.kind==="trade"?(ev.side==="sell"?"Venta":"Compra"):ev.kind==="div"?"Dividendo":"Rebalanceo";
-  const hist=_grp.map((g,k)=>{const li=g[g.length-1],s=IM.series[li];
-    const pv=k>0?IM.series[_grp[k-1][_grp[k-1].length-1]]:null;
-    let fl=0;g.forEach(i=>{fl+=IM.series[i].inflow||0;});
-    const ops=g.filter(i=>IM.series[i].ev);
-    const dpo=pv&&pv.val>0?((s.val-fl)/pv.val-1):null;const dip=pv?((1+s.ipsaRet)/(1+pv.ipsaRet)-1):null;
-    const opTag=ops.length?` <span style="color:#7C3AED;font-weight:800;font-size:8.5px">· ${ops.length===1?_evTag(IM.series[ops[0]].ev):(ops.length+" operaciones")}</span>`:"";
-    const main=`<tr><td>${k===0?"<b>Compra</b>":(fr.pf+k)}${opTag}</td><td>${fD(s.date)}</td><td class="r" style="font-weight:600">${fmtCLP(s.val)}</td><td class="r" style="color:${dpo!=null?cc(dpo*100):fnt};font-weight:600">${dpo!=null?sg(dpo*100):"—"}</td><td class="r" style="color:${(dip!=null&&!s.ipsaND)?cc(dip*100):fnt}">${dip!=null?(s.ipsaND?"—":sg(dip*100)):"—"}</td><td class="r" style="color:${cc(s.ret*100)}">${sg(s.ret*100)}</td><td class="r" style="color:${cc(s.ipsaRet*100)}">${sg(s.ipsaRet*100)}${s.ipsaND?"*":""}</td><td class="r" style="color:${cc(s.diff*100)}">${sg(s.diff*100)}${s.ipsaND?"*":""}</td><td class="r">${fl?("+"+fmtCLP(fl)):""}</td></tr>`;
-    const subs=ops.map(i=>{const ev=IM.series[i].ev;return `<tr><td style="border-left:2.5px solid #7C3AED66"></td><td colspan="8" style="color:${mut};font-size:9.8px"><b style="color:#7C3AED;font-size:8.5px;letter-spacing:.4px;text-transform:uppercase">${_evTag(ev)}</b> · ${_evDesc(ev)}</td></tr>`;}).join("");
-    return main+subs;}).join("");
-  // ── 11 · RENTABILIDAD DIARIA POR ACCIÓN (sobre las fechas colapsadas) ──
-  const dpStk=stkSeriesR;
-  const dpHead=`<tr><th>Fecha</th>${dpStk.map(s=>`<th class="r"><span class="dot" style="background:${s.c}"></span>${s.label}</th>`).join("")}<th class="r">IPSA</th></tr>`;
-  const dpRows=dates.map((d,i)=>{
-    if(i===0)return `<tr><td>${fD(d)} <span style="color:${fnt}">(compra)</span></td>${dpStk.map(()=>`<td class="r" style="color:${fnt}">—</td>`).join("")}<td class="r" style="color:${fnt}">—</td></tr>`;
-    const cells=dpStk.map(s=>{const a=s.vals[i-1],b=s.vals[i];const r=(a!=null&&a>0&&b!=null)?(b/a-1):null;return `<td class="r" style="color:${r==null?fnt:cc(r*100)}">${r==null?"—":sg(r*100)}</td>`;}).join("");
-    const ir=(1+IM.series[_dix[i]].ipsaRet)/(1+IM.series[_dix[i-1]].ipsaRet)-1;
-    return `<tr><td>${fD(d)}</td>${cells}<td class="r" style="color:${cc(ir*100)}">${sg(ir*100)}</td></tr>`;
-  }).join("");
-  const dpFoot=`<tr style="font-weight:800;background:#EEF3FB"><td>Acumulado</td>${dpStk.map(s=>{const f=s.vals.find(v=>v!=null),l2=[...s.vals].reverse().find(v=>v!=null);const r=(f>0&&l2!=null)?(l2/f-1):null;return `<td class="r" style="color:${r==null?fnt:cc(r*100)}">${r==null?"—":sg(r*100)}</td>`;}).join("")}<td class="r" style="color:${cc(L.ipsaRet*100)}">${sg(L.ipsaRet*100)}</td></tr>`;
-  const folio="INV-SEG-"+localDay().replace(/-/g,"")+"-"+PF.id;
+  const folio="INV-SEG-"+localDay().replace(/-/g,"");
   const metaHTML=invReportMeta([
-    ["Proyecto",(""+PF.name).replace(/</g,"&lt;")],
-    ["Período",fD(WEEKS[0].date)+" → "+fD(WEEKS[WEEKS.length-1].date)],
-    ["Tiempo invertido",days+" días · "+mos+" meses"],
-    ["Seguimiento",fr.cap+" · "+dates.length+" días con registro"],
-    ["Capital aportado",fmtCLP(IM.aport)],
-    ["β cartera",PF.bp.toFixed(2)],
-    ["E(R) CAPM",PF.erCapm.toFixed(2)+"% anual"],
-    ["σ esperada",PF.sig.toFixed(1)+"%"]
+    ["Portafolio",(""+PF.name).replace(/</g,"&lt;")],
+    ["Inicio del seguimiento",fD(WEEKS[0].date)],
+    ["Último registro",fD(L.date)+" · "+days+" días"],
+    ["Aporte neto",fmtCLP(IM.aport)],
+    ["β esperado / realizado",(PF.bp!=null?(+PF.bp).toFixed(2):"—")+(IM.betaR!=null?(" / "+IM.betaR.toFixed(2)):"")],
+    ["Registros",String(WEEKS.length)]
   ]);
-  const bodyHTML=`
-    <section class="sec-a"><h2><span class="sn">1</span>Resumen del seguimiento</h2>
-    <div class="ssub">Las mismas tarjetas del módulo Seguimiento: ganancia total con su %, retorno TWR, benchmark IPSA y el cambio del último ${fr.u}</div>
-    ${resumen}</section>
-    <section class="sec-a"><h2><span class="sn">2</span>Rentabilidad: portafolio vs IPSA</h2>
-    <div class="ssub">Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?</div>
-    <div class="chartbox">${evoChart}<div style="margin-top:5px"><span class="lg"><span class="d" style="background:#1E5FD1"></span>Portafolio</span><span class="lg"><span class="d" style="background:#475569"></span>IPSA</span></div></div>${ipsaK}</section>
-    <section class="sec-a pb"><h2><span class="sn">3</span>Valor de la inversión en el tiempo</h2>
-    <div class="ssub">Evolución del valor de tu portafolio (CLP) desde la compra</div>
-    <div class="chartbox">${valChart}</div>${valNote}</section>
-    <section class="sec-a"><h2><span class="sn">4</span>Detalle y contribución por acción</h2>
-    <div class="ssub">Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último ${fr.u}, β esperada vs realizada, ganancia y aporte al retorno total</div>
-    <table><thead><tr><th>Acción</th><th class="r">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r">β esperada</th><th class="r">β realizada</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${detRows}</tbody></table>
-    <div class="note">La <b>β esperada</b> es la del análisis del sistema (historia larga de la acción); la <b>β realizada</b> se estima por regresión de los retornos de esa acción contra el IPSA <b>solo en el período de este seguimiento</b>, usando únicamente fechas con cierre real de la acción y del índice (se informa desde 4 observaciones; «⚠» marca un r² bajo, bajo 10%, donde el índice explica poco su movimiento y la β es poco confiable). Mide al activo, no al timing de compras.</div>
-    ${srcNote}${compNote}</section>
-    <section class="sec-a"><h2><span class="sn">5</span>Composición actual vs objetivo</h2>
-    <div class="ssub">Cómo se desviaron los pesos desde la compra · base para rebalancear</div>
-    <div class="two"><div style="text-align:center">${donut}<div style="margin-top:8px;max-width:210px">${dleg}</div></div>
-      <div class="col"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor</th></tr></thead><tbody>${wRows}</tbody></table></div></div>
-    ${driftAlert}${driftNote}</section>
-    <section class="sec-a pb"><h2><span class="sn">6</span>Crecimiento por acción (base 100)</h2>
-    <div class="ssub">Crecimiento del precio de mercado de cada acción desde su incorporación · tu retorno personal va en las tarjetas</div>
-    ${stkK}<div class="chartbox" style="margin-top:11px">${stkChart}<div style="margin-top:5px">${IM.stockSeries.map(s=>`<span class="lg"><span class="d" style="background:${s.c}"></span>${s.label}</span>`).join("")}</div></div>${stkNote}</section>
-    <section class="sec-a"><h2><span class="sn">7</span>Análisis CAPM: real vs exigido</h2>
-    <div class="ssub">Valor real vs el crecimiento exigido por CAPM · la curva exigida incluye tus aportes y se recalcula desde cada operación</div>
-    ${capmK}<div class="chartbox" style="margin-top:11px">${capmChart}<div style="margin-top:5px"><span class="lg"><span class="d" style="background:#1E5FD1"></span>Valor real</span><span class="lg"><span class="d" style="background:#0E8C5E"></span>Esperado CAPM (con aportes)</span></div></div>${capmNote}</section>
-    <section class="sec-a pb"><h2><span class="sn">8</span>Riesgo: VaR vs pérdida real</h2>
-    <div class="ssub">VaR diario / semanal / mensual y pérdida real, en % y en pesos</div>
-    ${riskK}<div style="margin-top:11px"><table><thead><tr><th>Horizonte</th><th class="r">VaR 95%</th><th class="r">Pérdida máx (VaR)</th><th class="r">Peor real (CLP)</th></tr></thead><tbody>${varRows}</tbody></table></div>${riskNote}</section>
-    <section class="sec-a"><h2><span class="sn">9</span>Calidad y desempeño del seguimiento</h2>
-    <div class="ssub">Métricas ajustadas por riesgo y desempeño relativo al IPSA</div>
-    ${qK}${qNote}</section>
-    <section class="pb"><h2><span class="sn">10</span>Historial de seguimiento (${_grp.length} días · una fila por día)</h2>
-    <div class="ssub">Las operaciones del día van como sub-filas · la Δ del día ya netea los aportes (igual que el módulo)</div>
-    <table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Aporte del día</th></tr></thead><tbody>${hist}</tbody></table>
-    <div class="note">Δ del día del portafolio = valor de cierre del día (tras todas las operaciones) neteando los aportes del día, contra el cierre del día anterior. ${IM.series.some(x=>x.ipsaND)?"Las filas con <b>*</b> aún no tienen el cierre oficial del IPSA de esa fecha (índice arrastrado): su Δ IPSA se muestra «—» y los acumulados del índice se actualizarán con la próxima sincronización de cierres. ":""}El libro de operaciones completo, con comisiones e IVA, va en el informe contable.</div></section>
-    <section class="pb"><h2><span class="sn">11</span>Rentabilidad diaria por acción (${dates.length} días)</h2>
-    <div class="ssub">Variación del precio de cierre de cada acción respecto al cierre anterior · la fila Acumulado es su crecimiento desde la incorporación</div>
-    <table><thead>${dpHead}</thead><tbody>${dpRows}</tbody><tfoot>${dpFoot}</tfoot></table></section>`;
-  const footHTML=`<b>Metodología y supuestos.</b> Rentabilidad time-weighted (TWR), que aísla el efecto de aportes y rebalanceos. Ganancia = valor actual − capital aportado total (los aportes no cuentan como rentabilidad; los <b>dividendos cobrados</b> sí son ganancia: entran como flujo rescatado). Los gráficos muestran un punto por fecha (varias operaciones el mismo día se netean juntas), igual que el módulo Seguimiento. CAPM con benchmark IPSA: Rf ${RF}%, prima ${PRIMA}%, β del portafolio ${PF.bp.toFixed(2)}; la curva exigida parte del valor real inicial, crece a la tasa exigida de la composición vigente y escalona por aportes/retiros, recalculando la tasa desde cada operación. VaR 95% paramétrico (μ − 1,645·σ), asume normalidad y subestima los eventos extremos; el «peor real» usa ventanas de días calendario neteando todos los aportes de la ventana y se mide sobre el patrimonio total del momento. El máximo drawdown se calcula sobre la rentabilidad (flujos neteados). β realizado, tracking error e information ratio se estiman contra los retornos del IPSA del mismo período. El CAGR se reporta solo con ≥60 días. Documento informativo generado por Investor; no constituye recomendación ni asesoría de inversión.`;
   const _execVs=L.diff!=null?(L.diff>=0?`superando al IPSA por <b>${(L.diff*100).toFixed(2)} pts</b>`:`bajo el IPSA por <b>${Math.abs(L.diff*100).toFixed(2)} pts</b>`):"";
-  const execHTML=`El portafolio <b>${(""+PF.name).replace(/</g,"&lt;")}</b> vale hoy <b>${fmtCLP(L.val)}</b> sobre <b>${fmtCLP(IM.aport)}</b> aportados netos: una ganancia de <b>${sgnC(gain)}</b> (TWR <b>${sg(L.ret*100)}</b> en ${days} días${_execVs?", "+_execVs:""}). ${IM.betaR!=null?`El β realizado es <b>${IM.betaR.toFixed(2)}</b> (esperado ${PF.bp.toFixed(2)})`:`β esperado <b>${PF.bp.toFixed(2)}</b>`}${IM.realizedVol!=null?`, con volatilidad realizada de <b>${IM.realizedVol.toFixed(1)}%</b>`:""}. La peor caída diaria fue <b>${IM.worstRet!=null?sg(IM.worstRet*100):"—"}</b>${IM.worstRetDate?` (${IM.worstRetDate}${IM.worstBaseVal!=null?`, sobre ${fmtCLP(IM.worstBaseVal)}`:""})`:""} y el drawdown máximo <b>${sg(IM.maxDD*100)}</b>. El detalle de cada sección sigue a continuación.`;
+  const execHTML=`El portafolio <b>${(""+PF.name).replace(/</g,"&lt;")}</b> vale hoy <b>${fmtCLP(L.val)}</b> sobre <b>${fmtCLP(IM.aport)}</b> aportados netos: una ganancia de <b>${sgnC(gain)}</b> (TWR <b>${sg(L.ret*100)}</b> en ${days} días${_execVs?", "+_execVs:""}). ${IM.betaR!=null?`El β realizado es <b>${IM.betaR.toFixed(2)}</b> (esperado ${(+PF.bp).toFixed(2)})`:`β esperado <b>${(+PF.bp).toFixed(2)}</b>`}${IM.realizedVol!=null?`, con volatilidad realizada de <b>${IM.realizedVol.toFixed(1)}%</b>`:""}. La peor caída diaria fue <b>${IM.worstRet!=null?sg(IM.worstRet*100):"—"}</b>${IM.worstRetDate?` (${fD(IM.worstRetDate)}${IM.worstBaseVal!=null?`, sobre ${fmtCLP(IM.worstBaseVal)}`:""})`:""} y el drawdown máximo <b>${sg(IM.maxDD*100)}</b>. Las secciones siguientes son la copia fiel de los módulos Seguimiento e Historial.`;
+  // captura de las vistas reales (Seguimiento e Historial), sin controles
+  const _m=modulo,_p=page;modulo="inv";
+  page="seguimiento";const segHTML=reportCapture(viewInv);
+  page="historial";const histHTML=reportCapture(viewInv);
+  modulo=_m;page=_p;
+  const bodyHTML=repSec("1","Seguimiento","copia fiel de Inversión → Seguimiento")+segHTML
+    +repSec("2","Historial de registros","copia fiel de Inversión → Historial",true)+histHTML;
+  const footHTML=`<b>Metodología y supuestos.</b> Rentabilidad time-weighted (TWR), que aísla el efecto de aportes y rebalanceos. Ganancia = valor actual − capital aportado total (los aportes no cuentan como rentabilidad; los <b>dividendos cobrados</b> sí son ganancia: entran como flujo rescatado). Los gráficos muestran un punto por fecha (varias operaciones el mismo día se netean juntas), igual que el módulo Seguimiento. CAPM con benchmark IPSA: Rf ${RF}%, prima ${PRIMA}%, β del portafolio ${(+PF.bp).toFixed(2)}; la curva exigida parte del valor real inicial, crece a la tasa exigida de la composición vigente y escalona por aportes/retiros, recalculando la tasa desde cada operación. VaR 95% paramétrico (μ − 1,645·σ), asume normalidad y subestima los eventos extremos; el «peor real» usa ventanas de días calendario neteando todos los aportes de la ventana y se mide sobre el patrimonio total del momento. El máximo drawdown se calcula sobre la rentabilidad (flujos neteados). β realizado, tracking error e information ratio se estiman contra los retornos del IPSA del mismo período. El CAGR se reporta solo con ≥60 días. Documento informativo generado por Investor — su contenido es la misma vista de los módulos Seguimiento e Historial; no constituye recomendación ni asesoría de inversión.`;
   const html=invReportShell({
     docTitle:"Informe de seguimiento · "+PF.name,
     title:"Informe de seguimiento de inversión",
-    subtitle:(""+PF.name).replace(/</g,"&lt;")+" · emitido el "+fch,
+    subtitle:(""+PF.name).replace(/</g,"&lt;")+" · copia fiel del módulo Seguimiento · emitido el "+fch,
     hero:{label:"Valor actual del portafolio",value:fmtCLP(L.val),sub:sgnC(gain)+" ("+sg(L.ret*100)+" TWR)",subColor:gain>=0?"#9FE8C4":"#FFB3B3"},
     metaHTML,execHTML,bodyHTML,footHTML,folio,fch
   });
@@ -7324,253 +7172,73 @@ function viewContab(){
 function genContabReport(){
   const per=PROJECTS.map(p=>({p,A:contabAggFor(p)})).filter(x=>x.A);
   if(!per.length){window.alert("No hay operaciones para informar.");return;}
-  // ESPEJO DEL MÓDULO CONTABILIDAD: mismas secciones, mismos títulos, mismas columnas y mismos totales
+  // EL INFORME ES EL MÓDULO: el cuerpo se captura de viewContab() — mismo HTML, mismo CSS y mismos números
+  // que la pantalla Contabilidad — con el libro consolidado ("Todos") y sin los controles.
   const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
   const clp=n=>"$"+Math.round(n||0).toLocaleString("es-CL");
   const sgn=n=>(n>=0?"+":"−")+"$"+Math.round(Math.abs(n||0)).toLocaleString("es-CL");
-  const pos="#0E8C5E",neg="#C0392B",mut="#52668A",cc=v=>v>=0?pos:neg;
-  const kpi=(l,v,c,s)=>`<div class="kpi"><div class="kl">${l}</div><div class="kv" style="color:${c||'#10306A'}">${v}</div>${s?`<div class="ks">${s}</div>`:""}</div>`;
-  const T={buy:0,sell:0,div:0,real:0,unreal:0,val:0,fees:0,feesIva:0,costOpen:0};per.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.div+=A.totDiv||0;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;T.costOpen+=(A.rows||[]).reduce((a,o)=>a+o.avg*o.sh,0);});
-  const totGain=T.real+T.unreal+T.div,netInv=T.buy-T.sell-T.div,totPct=netInv>0?totGain/netInv*100:0;
+  const T={buy:0,sell:0,div:0,real:0,unreal:0,val:0,fees:0,feesIva:0};
+  per.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.div+=A.totDiv||0;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;});
+  const totGain=T.real+T.unreal+T.div;
   const netGain=totGain-T.fees,netPct=T.buy>0?netGain/T.buy*100:0;
-  // ── 1 · RESULTADO REAL: la misma franja GANANCIA BRUTA − COMISIONES = GANANCIA REAL del módulo ──
-  const strip=`<div style="display:flex;align-items:stretch;gap:9px;flex-wrap:wrap">
-    <div class="kpi" style="flex:1;min-width:165px"><div class="kl">Ganancia bruta</div><div class="kv" style="color:${cc(totGain)}">${sgn(totGain)}</div><div class="ks">realizada + no realizada${T.div?" + dividendos":""}</div></div>
-    <div style="align-self:center;font-size:19px;font-weight:800;color:#8DA1C2">−</div>
-    <div class="kpi" style="flex:1;min-width:165px"><div class="kl">Comisiones (IVA incl.)</div><div class="kv" style="color:${neg}">${T.fees>0?clp(T.fees):"$0"}</div><div class="ks">${T.feesIva>0?("incluye IVA "+clp(T.feesIva)):"sin IVA"}</div></div>
-    <div style="align-self:center;font-size:19px;font-weight:800;color:#8DA1C2">=</div>
-    <div class="kpi hero" style="flex:1.25;min-width:195px"><div class="kl">Ganancia real</div><div class="kv" style="color:${cc(netGain)}">${sgn(netGain)} <span style="font-size:11px;font-weight:700;opacity:.75">(${(netPct>=0?"+":"")+netPct.toFixed(2)}%)</span></div><div class="ks">neta de comisiones e IVA</div></div></div>`;
-  const tiles=`<div class="kgrid" style="margin-top:11px">
-    ${kpi("Invertido (compras)",clp(T.buy),null,"capital total comprado")}
-    ${kpi("Dinero rescatado",T.sell+T.div?clp(T.sell+T.div):"—",null,T.div?("ventas "+clp(T.sell)+" + dividendos "+clp(T.div)):"efectivo recibido por ventas")}
-    ${kpi("Valor actual total",clp(T.val),cc(totGain),"posiciones abiertas a hoy · "+(totGain>=0?"sobre":"bajo")+" el capital")}
-    ${kpi("Comisiones pagadas",T.fees?("−"+clp(T.fees)):"$0",neg,T.feesIva>0?("incluye IVA "+clp(T.feesIva)):"sin IVA")}
-  </div><div class="kgrid" style="margin-top:10px">
-    ${kpi("Ganancia realizada",sgn(T.real),cc(T.real),"por ventas (costo promedio)")}
-    ${kpi("Dividendos recibidos",T.div?("+"+clp(T.div)):"—",T.div?pos:mut,"ganancia cobrada en efectivo")}
-    ${kpi("Ganancia no realizada",sgn(T.unreal),cc(T.unreal),"posiciones abiertas")}
-    ${kpi("Rentabilidad total",(totPct>=0?"+":"")+totPct.toFixed(2)+"%",cc(totGain),sgn(totGain))}
-  </div>`;
-  const netNote=`<div class="note">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary().replace(/</g,"&lt;")})${T.feesIva>0?`, de las cuales <b>${clp(T.feesIva)}</b> corresponden a <b>IVA</b> (19%)`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy${T.div?`; los <b>dividendos</b> (${clp(T.div)}) son ganancia cobrada en efectivo, sin comisión`:""}.</div>`;
-  // ── 2 · POR PROYECTO (mismas columnas del módulo, incluida Ops.) ──
-  const projRows=per.map(({p,A})=>{const s=projSummary(p);return `<tr><td><b>${(""+p.name).replace(/</g,"&lt;")}</b></td><td>${fD(p.date)||"—"}</td><td class="r">${clp(s.invested)}</td><td class="r">${s.hasData?clp(s.value):"—"}</td><td class="r" style="color:${cc(s.gain)};font-weight:600">${s.hasData?sgn(s.gain):"—"}</td><td class="r" style="color:${cc(s.gainPct)};font-weight:600">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</td><td class="r" style="color:${mut}">${A?A.L.tx.length:0}</td></tr>`;}).join("");
-  // ── 3 · DETALLE DE VENTAS REALIZADAS (mismas columnas del módulo; por año tributario si cruza años) ──
-  const sales=realizedSales(per);
-  const vHead=`<tr><th>Fecha</th><th>Proyecto</th><th>Acción</th><th class="r">Acciones</th><th class="r">Precio venta</th><th class="r">Monto venta</th><th class="r">Costo prom.</th><th class="r">${(BROKER&&BROKER.iva)?"Com + IVA":"Comisión"}</th><th class="r">Resultado neto</th></tr>`;
-  const vRow=s=>`<tr><td>${fD(s.date)}</td><td style="color:${mut}">${(""+s.proj).replace(/</g,"&lt;")}</td><td><b>${s.t}</b></td><td class="r">${s.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${clp(s.price)}</td><td class="r">${clp(s.proceeds)}</td><td class="r">${clp(s.cost)}</td><td class="r">${s.fee?clp(s.fee):"—"}</td><td class="r" style="color:${cc(s.net)};font-weight:700">${sgn(s.net)}</td></tr>`;
-  let ventas="",ventasSub="";
-  if(sales.length){
-    const years=[...new Set(sales.map(s=>(""+s.date).slice(0,4)))].sort();
-    ventasSub=`Cada venta con su fecha, precio, monto, costo promedio y comisión (IVA incl.) · ${sales.length} venta${sales.length!==1?"s":""} · resultado neto referencial para la declaración de renta`;
-    if(years.length>1){
-      let blocks="",grand=0;
-      years.forEach(yr=>{const ss=sales.filter(s=>(""+s.date).slice(0,4)===yr);let sub=0,subFee=0,subProc=0,subCost=0;ss.forEach(s=>{sub+=s.net;subFee+=s.fee;subProc+=s.proceeds;subCost+=s.cost;});grand+=sub;
-        blocks+=`<h3>Año tributario ${yr} <span style="font-weight:600;color:#8DA1C2">· ${ss.length} venta(s)</span></h3><table><thead>${vHead}</thead><tbody>${ss.map(vRow).join("")}</tbody><tfoot><tr><td colspan="5">Subtotal ${yr}</td><td class="r">${clp(subProc)}</td><td class="r">${clp(subCost)}</td><td class="r">${clp(subFee)}</td><td class="r" style="color:${cc(sub)}">${sgn(sub)}</td></tr></tfoot></table>`;});
-      ventas=blocks+`<div class="kgrid k3" style="margin-top:11px"><div class="kpi hero"><div class="kl">Total resultado de ventas (referencial)</div><div class="kv" style="color:${cc(grand)}">${sgn(grand)}</div></div></div>`;
-    }else{
-      const tNet=sales.reduce((a,s)=>a+s.net,0),tFee=sales.reduce((a,s)=>a+s.fee,0),tProc=sales.reduce((a,s)=>a+s.proceeds,0),tCost=sales.reduce((a,s)=>a+s.cost,0);
-      ventas=`<table><thead>${vHead}</thead><tbody>${sales.map(vRow).join("")}</tbody><tfoot><tr><td colspan="5">Total ventas · año tributario ${years[0]}</td><td class="r">${clp(tProc)}</td><td class="r">${clp(tCost)}</td><td class="r">${clp(tFee)}</td><td class="r" style="color:${cc(tNet)}">${sgn(tNet)}</td></tr></tfoot></table>`;
-    }
-    ventas+=`<div class="note">El <b>resultado neto</b> por venta = monto de venta − costo promedio − comisión de venta (IVA incl.), como referencia. El <b>tratamiento tributario lo define tu contador</b>; aquí tienes el detalle ordenado.</div>`;
-  }else{
-    ventasSub="No hay ventas registradas en el período";
-    ventas=`<div class="note">No hay ventas registradas en el período. La ganancia/pérdida es por ahora <b>no realizada</b> (posiciones abiertas a precio de mercado).</div>`;
-  }
-  // ── 4 · LIBRO DE OPERACIONES consolidado en orden cronológico (mismas columnas del módulo) ──
-  const allTx=[];per.forEach(({p,A})=>A.L.tx.forEach(x=>allTx.push(Object.assign({proj:p.name},x))));
-  allTx.sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:0));
-  const multi=per.length>1;
-  const txHead=`<tr>${multi?"<th>Proyecto</th>":""}<th>Fecha</th><th>Acción</th><th>Tipo</th><th class="r">Acciones</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">${(BROKER&&BROKER.iva)?"Com + IVA":"Comisión"}</th><th class="r">IVA</th><th class="r">Efectivo</th><th class="r">Ganancia (venta)</th></tr>`;
-  const txRows=allTx.map(x=>{const isDiv=x.side==="div";const efectivo=isDiv?x.monto:(x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0)));return `<tr>${multi?`<td style="color:${mut}">${(""+x.proj).replace(/</g,"&lt;")}</td>`:""}<td>${fD(x.date)}</td><td><b>${x.t}</b></td><td style="color:${x.side==="sell"?neg:pos};font-weight:700">${x.tipo}</td><td class="r">${isDiv?"—":x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${isDiv?"—":clp(x.price)}</td><td class="r">${clp(x.monto)}</td><td class="r">${x.fee?clp(x.fee):"—"}</td><td class="r" style="color:${mut}">${x.feeIva?clp(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${clp(efectivo)}</td><td class="r" style="color:${x.gain!=null?cc(x.gain):mut};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?sgn(x.gain):"—"}</td></tr>`;}).join("");
-  const tFees=allTx.reduce((a,x)=>a+(x.fee||0),0),tIva=allTx.reduce((a,x)=>a+(x.feeIva||0),0);
-  const txFoot=`<tfoot><tr><td colspan="${multi?7:6}">Total comisiones del libro</td><td class="r" style="color:${neg}">${tFees?clp(tFees):"—"}</td><td class="r" style="color:${mut}">${tIva?clp(tIva):"—"}</td><td></td><td></td></tr></tfoot>`;
-  const libroNote=`<div class="note">${(BROKER&&BROKER.iva)?"La columna <b>Com + IVA</b> es la comisión total del operador con el IVA (19%) ya incluido; la columna <b>IVA</b> desglosa cuánto de esa comisión es IVA.":"Comisiones sin IVA (el operador configurado no lo aplica)."} El <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión). Las <b>ganancias realizadas</b> usan <b>costo promedio</b> por acción dentro de cada proyecto.</div>`;
-  const folio="INV-CONT-"+localDay().replace(/-/g,"");
+  let nAllTx=0,nBuyOps=0,nSellOps=0;per.forEach(({A})=>A.L.tx.forEach(x=>{nAllTx++;if(x.side==="buy")nBuyOps++;else if(x.side==="sell")nSellOps++;}));
   const _firstTx=(function(){let d=null;per.forEach(({A})=>{const t0=A.L.tx[0];if(t0&&(!d||t0.date<d))d=t0.date;});return d;})();
+  const folio="INV-CONT-"+localDay().replace(/-/g,"");
   const metaHTML=invReportMeta([
     ["Titular",(typeof AUTH!=="undefined"&&AUTH&&AUTH.user)?(""+AUTH.user).replace(/</g,"&lt;"):"Titular de la cuenta"],
     ["Período",(_firstTx?fD(_firstTx):"—")+" → "+fD(localDay())],
     ["Proyectos",PROJECTS.length+" ("+per.length+" con operaciones)"],
-    ["Operaciones",String(allTx.length)],
+    ["Operaciones",String(nAllTx)],
     ["Operador y costos",brokerSummary().replace(/</g,"&lt;")],
     ["Método de costeo","Costo promedio por acción"]
   ]);
-  const bodyHTML=`
-    <section class="sec-a"><h2><span class="sn">1</span>Resultado real (neto de comisiones e IVA)</h2>
-    <div class="ssub">Tu ganancia después de descontar las comisiones del operador (IVA incluido) · ${brokerSummary().replace(/</g,"&lt;")}</div>
-    ${strip}${tiles}${netNote}</section>
-    <section class="sec-a"><h2><span class="sn">2</span>Por proyecto</h2>
-    <div class="ssub">Capital invertido, valor actual y rentabilidad de cada proyecto (mismas columnas del módulo Contabilidad)</div>
-    <table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th><th class="r">Ops.</th></tr></thead><tbody>${projRows}</tbody></table></section>
-    <section class="sec-a pb"><h2><span class="sn">3</span>Detalle de ventas realizadas</h2>
-    <div class="ssub">${ventasSub}</div>
-    ${ventas}</section>
-    <section class="sec-a"><h2><span class="sn">4</span>Resumen anual (base para la declaración)</h2>
-    <div class="ssub">Por año calendario: compras, ventas con su costo, mayor valor realizado, dividendos percibidos y comisiones</div>
-    <table><thead><tr><th>Año</th><th class="r">Ops.</th><th class="r">Comprado</th><th class="r">Vendido</th><th class="r">Costo de lo vendido</th><th class="r">Mayor valor realizado</th><th class="r">Dividendos</th><th class="r">Comisiones (IVA incl.)</th><th class="r">Resultado del año</th></tr></thead><tbody>${contabYearlyRows(contabYearly(allTx),clp)}</tbody></table>
-    <div class="note">El <b>resultado del año</b> = mayor valor realizado + dividendos − comisiones (solo lo CONCRETADO ese año; la ganancia no realizada de posiciones abiertas no tributa hasta venderse). Los <b>dividendos</b> tributan como renta en el año en que se perciben.</div></section>
-    <section class="pb"><h2><span class="sn">5</span>Libro de operaciones${multi?" (consolidado)":""}</h2>
-    <div class="ssub">${allTx.length} operaciones${multi?(" en "+per.length+" proyectos"):""} · fecha, precio, monto, comisión e IVA de cada compra, venta y dividendo · en orden cronológico (la más antigua arriba)</div>
-    <table><thead>${txHead}</thead><tbody>${txRows}</tbody>${txFoot}</table>
-    ${libroNote}</section>`;
-  const footHTML=`<b>Notas metodológicas.</b> Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> (IVA incluido) se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación; el <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión; dividendo = monto íntegro, sin comisión). Los <b>dividendos</b> se registran como ganancia percibida en efectivo. El <b>resultado realizado por venta</b> es la base relevante para el mayor valor del ejercicio; su tratamiento tributario en Chile puede diferir (corrección monetaria, régimen, fechas de adquisición y eventual exención por presencia bursátil — art. 107 LIR). Consúltelo con su contador. Documento de respaldo generado por Investor; no constituye asesoría tributaria ni de inversión.`;
-  const sigHTML=`<div class="sig"><div class="s1">Titular de la cuenta<br><span style="color:#9FB2CF">Nombre y firma</span></div><div class="s1">Contador<br><span style="color:#9FB2CF">Nombre, RUT y firma</span></div></div>`;
-  const execHTML=`Durante el período se invirtieron <b>${clp(T.buy)}</b> en ${allTx.filter(x=>x.side==="buy").length} compra(s)${T.sell?`, se rescataron <b>${clp(T.sell)}</b> en ${allTx.filter(x=>x.side==="sell").length} venta(s)`:""}${T.div?` y se percibieron <b>${clp(T.div)}</b> en dividendos`:""}. Las posiciones abiertas valen hoy <b>${clp(T.val)}</b>. La ganancia bruta asciende a <b>${sgn(totGain)}</b> (${sgn(T.real)} realizada por ventas${T.div?`, +${clp(T.div)} en dividendos`:""} y ${sgn(T.unreal)} no realizada) y, descontadas comisiones por <b>${clp(T.fees)}</b> (IVA incluido), la <b>ganancia real neta es ${sgn(netGain)}</b> (${(netPct>=0?"+":"")+netPct.toFixed(2)}% sobre lo comprado). El detalle por año para la declaración de renta va en la sección 4.`;
+  const execHTML=`Durante el período se invirtieron <b>${clp(T.buy)}</b> en ${nBuyOps} compra(s)${T.sell?`, se rescataron <b>${clp(T.sell)}</b> en ${nSellOps} venta(s)`:""}${T.div?` y se percibieron <b>${clp(T.div)}</b> en dividendos`:""}. Las posiciones abiertas valen hoy <b>${clp(T.val)}</b>. La ganancia bruta asciende a <b>${sgn(totGain)}</b> (${sgn(T.real)} realizada por ventas${T.div?`, +${clp(T.div)} en dividendos`:""} y ${sgn(T.unreal)} no realizada) y, descontadas comisiones por <b>${clp(T.fees)}</b> (IVA incluido), la <b>ganancia real neta es ${sgn(netGain)}</b> (${(netPct>=0?"+":"")+netPct.toFixed(2)}% sobre lo comprado). Lo que sigue es la copia fiel del módulo Contabilidad — mismas tarjetas, mismas tablas y mismos totales que la pantalla — con el libro de operaciones consolidado.`;
+  // captura de la vista real, con el libro en la pestaña "Todos" (consolidado) y sin controles
+  const _tab=contabTxTab;contabTxTab="all";
+  const bodyHTML=reportCapture(viewContab);
+  contabTxTab=_tab;
+  const footHTML=`<b>Notas metodológicas.</b> Las ganancias realizadas se calculan con <b>costo promedio</b> por acción dentro de cada proyecto. Las <b>comisiones</b> (IVA incluido) se estiman con el operador configurado (${brokerSummary().replace(/</g,"&lt;")}) sobre cada operación; el <b>Efectivo</b> es el dinero realmente movido (compra = monto + comisión; venta = monto − comisión; dividendo = monto íntegro, sin comisión). Los <b>dividendos</b> se registran como ganancia percibida en efectivo. El <b>resultado realizado por venta</b> es la base relevante para el mayor valor del ejercicio; su tratamiento tributario en Chile puede diferir (corrección monetaria, régimen, fechas de adquisición y eventual exención por presencia bursátil — art. 107 LIR). Consúltelo con su contador. Documento de respaldo generado por Investor — su contenido es la misma vista del módulo Contabilidad; no constituye asesoría tributaria ni de inversión.`;
+  const sigHTML=`<div class="rp-sig"><div class="s1">Titular de la cuenta<br><span style="color:#9FB2CF">Nombre y firma</span></div><div class="s1">Contador<br><span style="color:#9FB2CF">Nombre, RUT y firma</span></div></div>`;
   const html=invReportShell({
     docTitle:"Informe contable consolidado · Investor",
     title:"Informe contable consolidado de inversiones",
-    subtitle:"Respaldo para contabilidad y declaración de renta · emitido el "+fch,
+    subtitle:"Respaldo para contabilidad y declaración de renta · copia fiel del módulo Contabilidad · emitido el "+fch,
     hero:{label:"Ganancia real del período (neta)",value:sgn(netGain),sub:"valor actual "+clp(T.val),subColor:netGain>=0?"#9FE8C4":"#FFB3B3"},
     metaHTML,execHTML,bodyHTML,footHTML,sigHTML,folio,fch
   });
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
 }
-/* ===== INFORME PDF DEL ANÁLISIS COMPLETO (todos los submódulos, según los Ajustes del análisis activos) ===== */
+/* ===== INFORME PDF DEL ANÁLISIS: copia fiel de las vistas del módulo Análisis (según los Ajustes activos) ===== */
 function genAnalysisReport(){
   if(typeof evalIsEmpty==="function"&&evalIsEmpty()){window.alert("El análisis del sistema aún no está disponible. Carga datos en el módulo Datos: con precios suficientes (≥2 acciones + IPSA) el análisis se construye solo.");return;}
   if(!STOCKS||!STOCKS.length){window.alert("No hay acciones en el análisis.");return;}
   let MFok=false;try{MFok=!!(typeof MF!=="undefined"&&MF&&MF.z&&MF.er);}catch(e){}
-  const W=(typeof winMode==="function")?winMode():false;
   const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
-  const pos="#0E8C5E",neg="#C0392B",mut="#52668A",fnt="#8DA1C2",acc="#1E5FD1";
-  const cc=v=>v>=0?pos:neg;
-  const sg=(v,d)=>(v>=0?"+":"")+(+v).toFixed(d==null?2:d)+"%";
-  const p0r=(v,d)=>(+v).toFixed(d==null?1:d)+"%";
-  const f2=v=>(+v).toFixed(2);
-  const clpR=n=>"$"+Math.round(n||0).toLocaleString("es-CL");
   const esc=s=>(""+s).replace(/</g,"&lt;");
-  const kpi=(l,v,c,s)=>`<div class="kpi"><div class="kl">${l}</div><div class="kv" style="color:${c||'#10306A'}">${v}</div>${s?`<div class="ks">${s}</div>`:""}</div>`;
-  // helpers de ventana (mismos que Comparativa / CAPM)
-  const retOf=s=>W?s.a24.tot:s.a24.ret, erOf=s=>W?erWin(s.b):s.a24.er, alfaOf=s=>W?alphaWin(s):s.a24.jensen;
-  const mktRet=W?MKT.tot:MKT.ret, rfY=W?rfWin():RF, primaY=W?primaWin():PRIMA;
+  const sg=(v,d)=>(v>=0?"+":"")+(+v).toFixed(d==null?2:d)+"%";
+  const f2=v=>(+v).toFixed(2);
+  const p0r=(v,d)=>(+v).toFixed(d==null?1:d)+"%";
+  const W=(typeof winMode==="function")?winMode():false;
   const winTxt=(typeof winLong==="function")?winLong():((DATA.n||"")+"");
-  const shortTxt=(typeof winShort==="function")?winShort():"";
   const perLbl=DATA.perYear===252?"diaria":DATA.perYear===52?"semanal":"mensual";
   const benchName=(typeof IMP!=="undefined"&&IMP&&IMP.bench&&IMP.bench.name)?IMP.bench.name:"IPSA";
   const nExcl=(typeof anaState!=="undefined"&&anaState&&anaState.excl)?Object.keys(anaState.excl).length:0;
-  const ivOf=s=>{try{return (typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b}):null;}catch(e){return null;}};
-  // ── gráficos con paleta CLARA (segura para el PDF blanco) ──
-  const _pal={GC,AC,ZC,faint,muted,indigo};
-  let scatterRR="",scatterSML="";
-  try{
-    GC="#E6EDF7";AC="#C3D0E4";ZC="#AEBED4";faint="#8DA1C2";muted="#52668A";indigo="#1E5FD1";
-    // Mapa Riesgo–Retorno
-    const sx=niceBounds([0,...STOCKS.map(s=>s.a24.sig)],0.12);sx.min=0;
-    const sy=niceBounds([rfY,...STOCKS.map(retOf),mktRet],0.14);
-    const ptsRR=STOCKS.map(s=>({x:s.a24.sig,y:retOf(s),c:s.c,label:s.t}));
-    ptsRR.push({x:MKT.sig,y:mktRet,c:"#1E5FD1",label:"IPSA",shape:"diamond",r:8});
-    ptsRR.push({x:0,y:rfY,c:"#52668A",label:"Rf",shape:"tri"});
-    scatterRR=svgScatter({pts:ptsRR,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:W?("Retorno "+shortTxt+" (%)"):"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:360,w:760});
-    // SML
-    const bmax=Math.max(...STOCKS.map(s=>s.b))*1.18;
-    const primaR=isFinite(mktRet)?(mktRet-rfY):primaY;
-    const yb=niceBounds([rfY,...STOCKS.map(retOf)],0.14);
-    const ptsSML=STOCKS.map(s=>({x:s.b,y:retOf(s),c:s.c,label:s.t}));
-    const lineSML=[{x1:0,y1:rfY,x2:bmax,y2:rfY+bmax*primaY,c:"#1E5FD1",dash:true}];
-    scatterSML=svgScatter({pts:ptsSML,lines:lineSML,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:W?("Retorno real "+shortTxt+" (%)"):"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:340,w:760});
-  }catch(e){scatterRR=scatterRR||"";scatterSML=scatterSML||"";}
-  finally{GC=_pal.GC;AC=_pal.AC;ZC=_pal.ZC;faint=_pal.faint;muted=_pal.muted;indigo=_pal.indigo;}
-
-  // ── SECCIÓN 1 · Parámetros del análisis (Ajustes activos) ──
-  const secParams=`<section class="sec-a"><h2><span class="sn">1</span>Parámetros del análisis</h2>
-    <div class="ssub">Configuración vigente en «Ajustes del análisis» — todas las secciones de este informe se calculan con estos parámetros</div>
-    <div class="kgrid">
-      ${kpi("Ventana",winTxt,null,"cadencia "+perLbl)}
-      ${kpi("Acciones analizadas",String(STOCKS.length),null,nExcl?(nExcl+" excluida(s) en Ajustes"):"todas las de la base")}
-      ${kpi("Benchmark",esc(benchName),acc,"índice de referencia")}
-      ${kpi("Modo de retornos",W?"Ventana (<1 año)":"Anualizado",null,W?"retornos de la ventana; el anual es referencial":"σ, retornos y α anualizados")}
-    </div>
-    <div class="kgrid" style="margin-top:10px">
-      ${kpi("Tasa libre de riesgo (Rf)",p0r(RF),null,W?("en la ventana "+p0r(rfY,2)):"anual")}
-      ${kpi("Prima de mercado",p0r(PRIMA),null,W?("en la ventana "+p0r(primaY,2)):"IPSA − Rf, anual")}
-      ${kpi("E(R) mercado",p0r(typeof ERM!=="undefined"?ERM:(RF+PRIMA)),acc,"retorno esperado del IPSA")}
-      ${kpi("Rentabilidad IPSA",sg(mktRet),cc(mktRet),W?("de la ventana · σ "+p0r(MKT.sig)):("anual · σ "+p0r(MKT.sig)))}
-    </div>
-    <div class="note">Estos parámetros se ajustan en <b>Análisis → Ajustes del análisis</b> (ventana en meses, benchmark y qué acciones incluir). El <b>modo ventana</b> se activa solo cuando la ventana es menor a ~1 año: en ese caso los retornos, el α y la SML se expresan en términos de la ventana (no anualizados) para no proyectar de más.</div></section>`;
-
-  // ── SECCIÓN 2 · Resumen ejecutivo · Investor Score ──
-  let secScore="";
-  try{
-    const IS=(typeof investorScore==="function")?investorScore():null;
-    if(IS&&IS.rows&&IS.rows.length){
-      const rows=IS.rows.map((r,i)=>{const tier=(typeof iscTier==="function")?iscTier(r.score):"";const tc=(typeof iscCol==="function")?iscCol(r.score):acc;
-        return `<tr><td class="r">${i+1}</td><td><span class="dot" style="background:${r.c}"></span><b>${esc(r.t)}</b></td><td class="r" style="font-weight:800;color:${tc}">${Math.round(r.score)}</td><td style="color:${tc};font-weight:700">${tier}</td><td class="r">${f2(r.beta)}</td><td class="r" style="color:${r.sharpe>=0?pos:neg}">${f2(r.sharpe)}</td><td class="r" style="color:${cc(r.alpha)}">${sg(r.alpha,1)}</td><td class="r" style="color:${r.mos!=null?(r.mos>=0?pos:neg):fnt}">${r.mos!=null?sg(r.mos<-100?-100:r.mos,0):"—"}</td><td class="r" style="color:${r.upside!=null?(r.upside>=0?pos:neg):fnt}">${r.upside!=null?sg(r.upside,0):"—"}</td></tr>`;}).join("");
-      secScore=`<section class="pb"><h2><span class="sn">2</span>Resumen ejecutivo · Investor Score</h2>
-        <div class="ssub">Ranking compuesto (rentabilidad-riesgo + fundamentos + tendencia) sobre las ${IS.rows.length} acciones · ventana fija de 12 meses para que sea comparable día a día</div>
-        <table><thead><tr><th class="r">#</th><th>Acción</th><th class="r">Score</th><th>Nivel</th><th class="r">β</th><th class="r">Sharpe</th><th class="r">α Jensen</th><th class="r">Mrg. seg.</th><th class="r">Upside</th></tr></thead><tbody>${rows}</tbody></table>
-        <div class="note">El <b>Investor Score</b> (0–100) combina desempeño ajustado por riesgo, fundamentos (P/U, ROE, margen de seguridad) y tendencia. <b>Mrg. seg.</b> = valor intrínseco vs precio (positivo = cotiza bajo su valor). <b>Upside</b> = precio objetivo de analistas vs precio actual. Documento educativo; no es recomendación de inversión.</div></section>`;
-    }
-  }catch(e){}
-
-  // ── SECCIÓN 3 · Comparativa (Riesgo–Retorno) ──
-  const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
-  const mosCellR=s=>{const iv=ivOf(s);if(!iv)return `<td class="r" style="color:${fnt}">—</td>`;
-    const ml=(typeof mosLabel==="function")?mosLabel(iv.mos):{cls:"ink",txt:""};const mc=({green:pos,red:neg,amber:"#B57A12",ink:"#10306A"})[ml.cls]||"#10306A";
-    const shown=iv.mos<-1?"≤−100%":sg(iv.mos*100,0);
-    return `<td class="r" style="font-weight:700;color:${mc}">${shown}</td>`;};
-  const compRows=byS.map(s=>{const a=s.a24;return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td style="color:${mut}">${esc(s.s)}</td><td class="r" style="color:${acc};font-weight:700">${f2(s.b)}</td><td class="r" style="color:${cc(retOf(s))}">${sg(retOf(s))}</td><td class="r">${p0r(a.sig)}</td><td class="r" style="font-weight:700;color:${a.sharpe>=0?pos:neg}">${f2(a.sharpe)}</td><td class="r" style="color:${cc(alfaOf(s))}">${sg(alfaOf(s))}</td>${mosCellR(s)}<td class="r" style="color:${mut}">${f2(a.r2)}</td></tr>`;}).join("");
-  const mktRow=`<tr style="font-weight:700;background:#F2F7FF"><td style="color:${acc}">IPSA</td><td style="color:${mut}">mercado</td><td class="r" style="color:${acc}">1.00</td><td class="r" style="color:${cc(mktRet)}">${sg(mktRet)}</td><td class="r">${p0r(MKT.sig)}</td><td class="r" style="color:${MKT.sharpe>=0?pos:neg}">${f2(MKT.sharpe)}</td><td class="r" style="color:${mut}">—</td><td class="r" style="color:${mut}">—</td><td class="r" style="color:${mut}">1.00</td></tr>`;
-  const secComp=`<section class="sec-a pb"><h2><span class="sn">3</span>Comparativa · Riesgo–Retorno</h2>
-    <div class="ssub">Volatilidad anual (X) vs retorno ${W?("de la ventana"):"anual"} (Y) · ${esc(winTxt)} · ordenadas por Sharpe</div>
-    ${scatterRR?`<div class="chartbox">${scatterRR}<div style="margin-top:5px"><span class="lg"><span class="d" style="background:#1E5FD1"></span>IPSA (mercado)</span><span class="lg"><span class="d" style="background:#52668A"></span>Rf</span></div></div>`:""}
-    <table style="margin-top:11px"><thead><tr><th>Acción</th><th>Sector</th><th class="r">β</th><th class="r">Ret. ${W?esc(shortTxt):"anual"}</th><th class="r">σ anual</th><th class="r">Sharpe</th><th class="r">α ${W?"ventana":"Jensen"}</th><th class="r">Mrg. seg.</th><th class="r">R²</th></tr></thead><tbody>${compRows}${mktRow}</tbody></table>
-    <div class="note">El <b>Sharpe</b> mide el retorno por unidad de riesgo; el <b>α</b> es el retorno sobre lo exigido por el CAPM para la β de la acción; el <b>R²</b> es la fracción del riesgo explicada por el mercado (el resto es propio/diversificable). <b>Mrg. seg.</b> verde = la acción cotiza bajo su valor intrínseco.</div></section>`;
-
-  // ── SECCIÓN 4 · CAPM / SML ──
-  const aThr=W?Math.max(0.3,(typeof winYears==="function"?winYears():1)):1;
-  const byJ=[...STOCKS].sort((a,b)=>alfaOf(b)-alfaOf(a));
-  const capmRows=byJ.map(s=>{const al=alfaOf(s);const sig2=al>aThr?"SUBVALORADA":al<-aThr?"SOBREVALORADA":"EQUILIBRIO",sc=al>aThr?pos:al<-aThr?neg:mut;
-    return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r" style="color:${acc};font-weight:700">${f2(s.b)}</td><td class="r" style="color:${acc}">${p0r(erOf(s),W?2:1)}</td><td class="r" style="color:${cc(retOf(s))}">${sg(retOf(s))}</td><td class="r" style="color:${cc(al)}">${sg(al)}</td><td style="color:${sc};font-weight:700">${sig2}</td></tr>`;}).join("");
-  const secCapm=`<section class="sec-a pb"><h2><span class="sn">4</span>CAPM · Security Market Line</h2>
-    <div class="ssub">Retorno exigido por β (E(R) = Rf + β × prima) · puntos sobre la línea batieron al CAPM (α positivo)${W?(" · prorrateado a la ventana de "+esc(winTxt)):""}</div>
-    ${scatterSML?`<div class="chartbox">${scatterSML}<div style="margin-top:5px"><span class="lg"><span class="d" style="background:#1E5FD1"></span>SML (retorno exigido)</span></div></div>`:""}
-    <table style="margin-top:11px"><thead><tr><th>Acción</th><th class="r">β</th><th class="r">E(R) ${W?"exigido":"CAPM"}</th><th class="r">Retorno real</th><th class="r">α ${W?"ventana":"Jensen"}</th><th>Señal</th></tr></thead><tbody>${capmRows}</tbody></table>
-    <div class="note">La <b>SML</b> es el retorno que el CAPM exige según el riesgo sistemático (β). Una acción <b>sobre</b> la línea rindió más de lo exigido (α positivo, señal SUBVALORADA); <b>bajo</b> la línea, menos (SOBREVALORADA). ${W?"Ventana corta: las señales son indicios, no veredictos.":""}</div></section>`;
-
-  // ── SECCIÓN 5 · Valoración por acción (Detalle: valor intrínseco y margen de seguridad) ──
-  const ivRows=STOCKS.map(s=>{const iv=ivOf(s);
-    if(!iv)return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r" style="color:${fnt}" colspan="6">sin fundamentos suficientes (Yahoo no los cubre)</td></tr>`;
-    const ml=(typeof mosLabel==="function")?mosLabel(iv.mos):{cls:"ink",txt:""};const mc=({green:pos,red:neg,amber:"#B57A12",ink:"#10306A"})[ml.cls]||"#10306A";
-    const fiab=iv.n<2?"baja (1 ancla)":(iv.disp>0.6?"baja (discrepan)":iv.disp>0.35?"media":"alta");
-    const shown=iv.mos<-1?"≤−100%":sg(iv.mos*100,0);
-    return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r">${clpR(iv.value)}</td><td class="r" style="color:${mut}">${clpR(iv.lo)} – ${clpR(iv.hi)}</td><td class="r">${clpR(iv.px)}</td><td class="r" style="font-weight:700;color:${mc}">${shown}</td><td class="r">${p0r(iv.r*100)}</td><td style="color:${mut}">${iv.n} · ${fiab}</td></tr>`;}).join("");
-  const secDet=`<section class="pb"><h2><span class="sn">5</span>Valoración por acción · valor intrínseco y margen de seguridad</h2>
-    <div class="ssub">Lo que cada acción vale (dividendos, múltiplos justos y precio objetivo de analistas) frente a su último cierre · el ángulo de precio del Detalle por acción</div>
-    <table><thead><tr><th>Acción</th><th class="r">Valor intrínseco</th><th class="r">Banda</th><th class="r">Precio</th><th class="r">Mrg. seguridad</th><th class="r">Ret. exigido r</th><th>Métodos · fiab.</th></tr></thead><tbody>${ivRows}</tbody></table>
-    <div class="note">El <b>valor intrínseco</b> es la mediana de las anclas disponibles (DDM de dividendos, múltiplo justo P/U del universo y precio objetivo de analistas). El <b>margen de seguridad</b> = (valor − precio) ÷ valor: positivo = hay colchón comprando bajo su valor; negativo = pagas de más. El <b>retorno exigido r</b> sale del CAPM con la β de la regresión. Es valorización (¿a qué precio entrar?), no una señal de <i>timing</i>.</div></section>`;
-
-  // ── SECCIÓN 6 · Multifactor ──
-  let secMF="";
-  if(MFok){
-    const prof=(typeof mfProfile!=="undefined"&&mfProfile)?mfProfile:"moderado";
-    const zc=v=>{const c=v>=0.5?pos:v<=-0.5?neg:mut;return `<span style="color:${c};font-weight:${Math.abs(v)>=0.5?"700":"400"}">${(v>=0?"+":"")+(+v).toFixed(2)}</span>`;};
-    const ranked=[...STOCKS].sort((a,b)=>(compositeOf(b.t,prof))-(compositeOf(a.t,prof)));
-    const mfRows=ranked.map(x=>{const z=MF.z[x.t]||{},capm=x.a24.er,mf=MF.er[x.t],d=mf-capm;
-      return `<tr><td><span class="dot" style="background:${x.c}"></span><b>${esc(x.t)}</b></td><td class="r">${zc(z.momentum||0)}</td><td class="r">${zc(z.lowvol||0)}</td><td class="r">${zc(z.value||0)}</td><td class="r">${zc(z.quality||0)}</td><td class="r">${zc(z.size||0)}</td><td class="r">${zc(z.yield||0)}</td><td class="r" style="font-weight:700">${zc(compositeOf(x.t,prof))}</td><td class="r" style="color:${acc}">${p0r(capm)}</td><td class="r" style="font-weight:700">${p0r(mf)}</td><td class="r" style="color:${cc(d)}">${sg(d)}</td></tr>`;}).join("");
-    secMF=`<section class="pb"><h2><span class="sn">6</span>Análisis multifactor</h2>
-      <div class="ssub">Más allá del β: 6 factores de estilo (z transversal, +mejor) y retorno esperado multifactor vs CAPM · perfil ${esc(prof)}</div>
-      <table><thead><tr><th>Acción</th><th class="r">Mom.</th><th class="r">LowVol</th><th class="r">Value</th><th class="r">Quality</th><th class="r">Size</th><th class="r">Yield</th><th class="r">Composite</th><th class="r">E(R) CAPM</th><th class="r">E(R) MF</th><th class="r">Δ</th></tr></thead><tbody>${mfRows}</tbody></table>
-      <div class="note">Cada factor se estandariza (z-score transversal sobre las ${STOCKS.length} acciones; <b>+z = mejor</b>). El <b>Composite</b> pondera los factores según el perfil (${esc(prof)}). El <b>E(R) multifactor</b> añade primas de factor sobre el CAPM (modelo tipo APT). Los factores de precio (Momentum, Low-Vol) usan tus cierres reales; los fundamentales usan los datos del pipeline.</div></section>`;
-  }
-
-  // ── SECCIÓN 7 · Fundamentos ──
-  let secFund="";
-  try{
-    const fRows=STOCKS.map(s=>{const f=(typeof fundGet==="function")?fundGet(s.t):null;if(!f)return null;
-      const up=(f.target!=null&&f.px>0)?((f.target/f.px-1)*100):null;
-      const pos52=(f.px!=null&&f.hi52!=null&&f.lo52!=null&&f.hi52>f.lo52)?Math.max(0,Math.min(1,(f.px-f.lo52)/(f.hi52-f.lo52))):null;
-      return `<tr><td><span class="dot" style="background:${s.c}"></span><b>${esc(s.t)}</b></td><td class="r">${f.pe!=null?(+f.pe).toLocaleString("es-CL",{maximumFractionDigits:1}):"—"}</td><td class="r" style="color:${f.pb!=null&&f.pb<1?pos:"#10306A"}">${f.pb!=null?(+f.pb).toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td><td class="r" style="color:${f.dy>=5?pos:"#10306A"}">${f.dy!=null?(+f.dy).toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r">${(typeof fundFmtCap==="function")?fundFmtCap(f.mcap):"—"}</td><td class="r" style="color:${f.roe>=15?pos:"#10306A"}">${f.roe!=null?(+f.roe).toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r">${pos52!=null?(pos52*100).toFixed(0)+"%":"—"}</td><td class="r" style="color:${up!=null?(up>=0?pos:neg):fnt}">${up!=null?sg(up,1):"—"}</td></tr>`;}).filter(Boolean).join("");
-    if(fRows){
-      const upd=(typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)?(" · datos al "+(""+FDATA.updatedAt).slice(0,10)):"";
-      secFund=`<section class="pb"><h2><span class="sn">7</span>Fundamentos</h2>
-        <div class="ssub">Ratios de valoración y calidad del negocio${upd} · complementan las métricas de precio de las secciones anteriores</div>
-        <table><thead><tr><th>Acción</th><th class="r">P/U</th><th class="r">P/B</th><th class="r">Yield</th><th class="r">Capitalización</th><th class="r">ROE</th><th class="r">Rango 52s</th><th class="r">Upside</th></tr></thead><tbody>${fRows}</tbody></table>
-        <div class="note"><b>P/U</b> precio/utilidad · <b>P/B</b> precio/valor libro (bajo 1 = cotiza bajo su patrimonio) · <b>Yield</b> dividendos 12m · <b>ROE</b> rentabilidad del patrimonio · <b>Rango 52s</b> posición del precio entre su mínimo y máximo del año · <b>Upside</b> precio objetivo de analistas vs precio actual. Fundamentos del canal de datos; pueden diferir de otras fuentes.</div></section>`;
-    }else{
-      secFund=`<section class="pb"><h2><span class="sn">7</span>Fundamentos</h2><div class="note">Aún no hay fundamentos cargados para estas acciones. Ve a <b>Análisis → Fundamentos → Traer fundamentos ahora</b> para poblarlos.</div></section>`;
-    }
-  }catch(e){}
-
+  const mktRet=W?MKT.tot:MKT.ret;
+  // EL INFORME ES EL MÓDULO: las pestañas del Análisis capturadas de sus vistas reales, sin controles
+  const _m=modulo,_p=page;modulo="eval";
+  let metaBar="";try{metaBar=reportCapture(evalMeta);}catch(e){}
+  page="comparativa";const sComp=reportCapture(viewComparativa);
+  page="detalle";const sDet=reportCapture(viewDetalle);
+  page="capm";const sCapm=reportCapture(viewCAPM);
+  page="multifactor";const sMF=reportCapture(viewMultifactor);
+  page="fundamentos";const sFund=reportCapture(viewFundamentos);
+  modulo=_m;page=_p;
+  const bodyHTML=metaBar
+    +repSec("1","Comparativa","copia fiel de Análisis → Comparativa")+sComp
+    +repSec("2","Detalle por acción","copia fiel de Análisis → Detalle por acción",true)+sDet
+    +repSec("3","CAPM / SML","copia fiel de Análisis → CAPM / SML",true)+sCapm
+    +repSec("4","Multifactor","copia fiel de Análisis → Multifactor",true)+sMF
+    +repSec("5","Fundamentos","copia fiel de Análisis → Fundamentos",true)+sFund;
   const folio="INV-ANA-"+localDay().replace(/-/g,"");
   const metaHTML=invReportMeta([
     ["Ventana",esc(winTxt)+" · "+perLbl],
@@ -7580,18 +7248,17 @@ function genAnalysisReport(){
     ["Modo",W?"Ventana (<1 año)":"Anualizado"],
     ["Fundamentos",MFok?"con multifactor":"CAPM"]
   ]);
-  const bodyHTML=secParams+secScore+secComp+secCapm+secDet+secMF+secFund;
-  const footHTML=`<b>Metodología.</b> β y α por regresión de los retornos de cada acción contra el ${esc(benchName)} en la ventana del análisis (Rf ${p0r(RF)}, prima ${p0r(PRIMA)}). El CAPM exige E(R) = Rf + β × prima; el α de Jensen es el retorno real menos ese exigido. El Sharpe usa el retorno ajustado por la volatilidad. El valor intrínseco triangula DDM (dividendos), múltiplo justo (P/U del universo) y precio objetivo de analistas. El modelo multifactor extiende el CAPM con primas de factor (momentum, value, size, quality, low-vol, yield) tipo APT. ${W?"Ventana menor a un año: los retornos, el α y la SML se expresan en términos de la ventana, no anualizados.":"Retornos, σ y α anualizados."} Documento informativo generado por Investor con los datos reales de la base; no constituye recomendación ni asesoría de inversión.`;
+  const footHTML=`<b>Metodología.</b> β y α por regresión de los retornos de cada acción contra el ${esc(benchName)} en la ventana del análisis (Rf ${p0r(RF)}, prima ${p0r(PRIMA)}). El CAPM exige E(R) = Rf + β × prima; el α de Jensen es el retorno real menos ese exigido. El Sharpe usa el retorno ajustado por la volatilidad. El valor intrínseco triangula DDM (dividendos), múltiplo justo (P/U del universo) y precio objetivo de analistas. El modelo multifactor extiende el CAPM con primas de factor (momentum, value, size, quality, low-vol, yield) tipo APT. ${W?"Ventana menor a un año: los retornos, el α y la SML se expresan en términos de la ventana, no anualizados.":"Retornos, σ y α anualizados."} Documento informativo generado por Investor con los datos reales de la base — su contenido es la misma vista del módulo Análisis; no constituye recomendación ni asesoría de inversión.`;
   const execHTML=(function(){try{
     const byS=STOCKS.slice().sort((a,b)=>(b.a24.sharpe||0)-(a.a24.sharpe||0));
     const top=byS[0];let sc=null;try{sc=investorScore();}catch(e){}
     const scTop=sc&&sc.rows&&sc.rows.length?sc.rows[0]:null;
-    return `Análisis del sistema construido sobre <b>${STOCKS.length} acciones</b> del IPSA con <b>${esc(winTxt)}</b> de historia real (benchmark ${esc(benchName)}, retorno del mercado <b>${sg(mktRet)}</b>). El mejor retorno ajustado por riesgo es <b>${esc(top.t)}</b> (Sharpe ${f2(top.a24.sharpe)}, β ${f2(top.b)})${scTop?`; la mejor puntuación global de la plataforma es <b>${esc(scTop.t)}</b> (Investor Score ${scTop.score})`:""}. β, α, σ y correlaciones salen de la regresión de cada acción contra el índice — sin datos de ejemplo. El detalle por acción, la comparativa CAPM/multifactor y la valorización intrínseca siguen a continuación.`;
+    return `Análisis del sistema construido sobre <b>${STOCKS.length} acciones</b> del IPSA con <b>${esc(winTxt)}</b> de historia real (benchmark ${esc(benchName)}, retorno del mercado <b>${sg(mktRet)}</b>). El mejor retorno ajustado por riesgo es <b>${esc(top.t)}</b> (Sharpe ${f2(top.a24.sharpe)}, β ${f2(top.b)})${scTop?`; la mejor puntuación global de la plataforma es <b>${esc(scTop.t)}</b> (Investor Score ${scTop.score})`:""}. β, α, σ y correlaciones salen de la regresión de cada acción contra el índice — sin datos de ejemplo. Las secciones siguientes son la copia fiel de las pestañas del módulo Análisis.`;
   }catch(e){return "";}})();
   const html=invReportShell({
     docTitle:"Informe de análisis · Investor",
     title:"Informe de análisis de inversiones",
-    subtitle:esc(winTxt)+" · "+STOCKS.length+" acciones · benchmark "+esc(benchName)+" · emitido el "+fch,
+    subtitle:esc(winTxt)+" · "+STOCKS.length+" acciones · benchmark "+esc(benchName)+" · copia fiel del módulo Análisis · emitido el "+fch,
     hero:{label:"Acciones analizadas",value:String(STOCKS.length),sub:esc(winTxt),subColor:"#CFE0FF"},
     metaHTML,execHTML,bodyHTML,footHTML,folio,fch
   });
