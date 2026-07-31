@@ -7353,7 +7353,16 @@ function projSummary(p,opts){return withProject(p,()=>{const IM=invMetrics();con
   const L=IM.last,inv=IM.aport;
   const val=L.val;
   const gain=val-inv;
-  let fees=0;try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{fees+=brokerFee(x.monto);});}catch(e){}
+  // COMPRADO (bruto) vs CAPITAL NETO. IM.aport es el capital NETO todavía comprometido: descuenta las ventas
+  // y los dividendos cobrados. Sirve para la ganancia (valor − neto), pero NO como denominador de la
+  // rentabilidad: al cobrar un dividendo el neto baja y el % subiría sin que la gestión mejorara — dos
+  // carteras económicamente idénticas (una que sube $100 y otra que sube $50 y reparte $50) darían
+  // rentabilidades distintas. El % se mide sobre lo COMPRADO, igual que el resumen del Home.
+  // Los DIVIDENDOS no pagan corretaje: excluirlos del cálculo de comisiones (mismo criterio que
+  // clientStats y contabAgg, que ya lo hacían — aquí se cobraba de más).
+  let fees=0,comprado=0;
+  try{const LG=ledger();if(LG&&LG.tx)LG.tx.forEach(x=>{if(x.side==="div")return;fees+=brokerFee(x.monto);if(x.side==="buy")comprado+=x.monto;});}catch(e){}
+  const base=comprado>0?comprado:inv;   // sin libro utilizable, se cae al neto (proyectos antiguos)
   const gainNet=gain-fees;
   // α de Jensen REALIZADO (no anualizado, sobre el período transcurrido): retorno real − el exigido por CAPM para la β de la cartera.
   // Va en línea con "Rentab. %" (ambos acumulados a la fecha), así no se infla anualizando un seguimiento corto.
@@ -7365,7 +7374,7 @@ function projSummary(p,opts){return withProject(p,()=>{const IM=invMetrics();con
   const _perDate=IM.series.filter((s,i,a)=>i===a.length-1||a[i+1].date!==s.date);
   const serie=_perDate.map(s=>Math.round(s.val));
   const serieRet=_perDate.map(s=>+(100*(1+s.ret)).toFixed(2));
-  return {invested:inv,value:val,gain:gain,gainPct:inv>0?gain/inv*100:0,gainNet:gainNet,gainNetPct:inv>0?gainNet/inv*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since};});}
+  return {invested:base,capitalNeto:inv,value:val,gain:gain,gainPct:base>0?gain/base*100:0,gainNet:gainNet,gainNetPct:base>0?gainNet/base*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
    mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
@@ -7822,7 +7831,8 @@ function viewProyectos(){
   const cliBanner="";   // gestión de clientes retirada (monousuario)
   if(invNew) return invNewForm();   // crear una nueva inversión directamente en el módulo Proyectos
   const all=PROJECTS.map(p=>({p,s:projSummary(p)}));
-  const totInv=all.reduce((a,x)=>a+x.s.invested,0),totVal=all.reduce((a,x)=>a+x.s.value,0),totGain=totVal-totInv,totPct=totInv>0?totGain/totInv*100:0;
+  // la ganancia se SUMA de cada proyecto (no es valor − comprado: eso ignoraría las ventas y dividendos ya rescatados)
+  const totInv=all.reduce((a,x)=>a+x.s.invested,0),totVal=all.reduce((a,x)=>a+x.s.value,0),totGain=all.reduce((a,x)=>a+(x.s.gain||0),0),totPct=totInv>0?totGain/totInv*100:0;
   const head=card("Proyectos de inversión","Gestiona tus proyectos y lo que cada uno tiene vinculado: análisis y simulaciones · rentabilidad consolidada",
     PROJECTS.length?`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
       ${tile("Proyectos",PROJECTS.length+"","de inversión",indigo,ink)}
@@ -7971,7 +7981,7 @@ function clientDelete(id){
   render();
 }
 function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=localStorage.getItem("pf_projects_v1__"+id);return v?JSON.parse(v):[];}catch(e){return [];}}
-function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.forEach(p=>{try{const s=projSummary(p);inv+=s.invested;val+=s.value;}catch(e){}});return {inv,val,gain:val-inv,pct:inv>0?(val-inv)/inv*100:0,n:ps.length};}
+function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0,gain=0;ps.forEach(p=>{try{const s=projSummary(p);inv+=s.invested;val+=s.value;gain+=(s.gain||0);}catch(e){}});return {inv,val,gain,pct:inv>0?gain/inv*100:0,n:ps.length};}   // la ganancia se suma por proyecto: "inv" es lo COMPRADO y valor − comprado dejaría fuera lo rescatado
 /* Resumen de gestión por cliente: aportado/retirado brutos, valor, ganancia y acciones distintas */
 function clientStats(id,opts){
   
