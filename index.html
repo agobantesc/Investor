@@ -172,8 +172,10 @@
 
   /* stat tiles */
   .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;}
-  /* grid del "Resumen consolidado" (Home): filas balanceadas sin tarjetas huérfanas. La tarjeta principal
-     (.tw2) ocupa 2 columnas → 8 celdas encajan en 2 filas exactas de 4 (o pares limpios en pantallas angostas). */
+  /* grid del "Resumen consolidado" (Home): filas balanceadas sin tarjetas huérfanas. Con la tarjeta de
+     DIVIDENDOS son 8 tarjetas → 2 filas exactas de 4 (y 4 pares limpios en pantallas angostas), así que
+     ninguna necesita doble ancho: el énfasis del patrimonio ya lo lleva el hero de arriba. (.tw2 se
+     conserva por si vuelve a hacer falta un ancho doble para cuadrar la grilla.) */
   .tiles-consol{display:grid;gap:12px;grid-template-columns:repeat(2,1fr);}
   @media(min-width:680px){.tiles-consol{grid-template-columns:repeat(4,1fr);}}
   .tiles-consol .tw2{grid-column:span 2;}
@@ -7974,11 +7976,11 @@ function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0;ps.for
 function clientStats(id,opts){
   
   const ps=clientProjects(id)||[];
-  let aportado=0,retirado=0,value=0,realized=0,fees=0,withData=0,betaNum=0,betaW=0;const tickers={};
+  let aportado=0,retirado=0,divs=0,value=0,realized=0,fees=0,withData=0,betaNum=0,betaW=0;const tickers={};
   ps.forEach(p=>{try{withProject(p,function(){
     const w=p.weeks||[];const L=w.length?ledger():null,IM=w.length?invMetrics():null;let pv=0;
     if(L&&IM&&L.tx&&L.tx.length){
-      L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else retirado+=x.monto;fees+=(x.side==="div"?0:brokerFee(x.monto));});   // dividendo = dinero rescatado (entra a "retirado"), sin comisión
+      L.tx.forEach(x=>{if(x.side==="buy")aportado+=x.monto;else{retirado+=x.monto;if(x.side==="div")divs+=x.monto;}fees+=(x.side==="div"?0:brokerFee(x.monto));});   // dividendo = dinero rescatado (entra a "retirado") y se lleva aparte para mostrarlo, sin comisión
       pv=IM.last.val;
       realized+=(L.realized||[]).reduce((a,r)=>a+r.gain,0);
       Object.keys(L.sh).forEach(t=>{if((L.sh[t]||0)>1e-6)tickers[t]=1;});
@@ -7993,7 +7995,7 @@ function clientStats(id,opts){
     if(pv>0&&bp>0){betaNum+=bp*pv;betaW+=pv;}
   });}catch(e){}});
   const gain=value+retirado-aportado,gainNet=gain-fees,pct=aportado>0?gainNet/aportado*100:0;
-  return {n:ps.length,withData,aportado,retirado,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
+  return {n:ps.length,withData,aportado,retirado,divs,ventas:retirado-divs,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
 }
 /* perfil de riesgo por cliente (namespaced) + chip visual */
 function clientProfile(id){if(id===activeClient)return invProfile;try{const v=localStorage.getItem("inv_profile_v1__"+id);return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -8386,7 +8388,7 @@ function investorScore(){
 function investorScoreOf(t){try{const v=investorScore();if(!v)return null;const r=v.rows.find(x=>x.t===t);return r?r.score:null;}catch(e){return null;}}
 function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
-  const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,value:0,gain:0,gainNet:0,fees:0,nproj:0,live:false});
+  const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.divs+=(x.s.divs||0);a.ventas+=(x.s.ventas||0);a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,divs:0,ventas:0,value:0,gain:0,gainNet:0,fees:0,nproj:0,live:false});
   const projs=[];
   CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,betaR:(s.betaR!=null?s.betaR:null),twr:(s.twr!=null?s.twr:null),sharpeR:(s.sharpeR!=null?s.sharpeR:null),vol:(s.vol!=null?s.vol:null),alphaReal:(s.alphaReal!=null?s.alphaReal:null),nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],since:s.since||null});}catch(e){}});});
   return {clients,T,projs};
@@ -8627,9 +8629,10 @@ function viewHome(){
     ${patSeries.length>1?`<div class="hh-c" title="Rentabilidad neta en el tiempo">${heroSpark(patSeries)}</div>`:""}
     <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(TgainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
   const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles-consol">
-    ${tile("Valor actual",fmtCLP(Tvalue),"a últimos precios · "+(Tgain>=0?"sobre":"bajo")+" el capital aportado",indigo,Tgain>=0?green:red,"tw2")}
+    ${tile("Valor actual",fmtCLP(Tvalue),"a últimos precios · "+(Tgain>=0?"sobre":"bajo")+" el capital aportado",indigo,Tgain>=0?green:red)}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
-    ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—","ventas realizadas",indigo,ink)}
+    ${tile("Dinero rescatado",T.retirado>0?fmtCLP(T.retirado):"—",T.divs>0?("ventas "+fmtCLP(T.ventas)+" + dividendos "+fmtCLP(T.divs)):"ventas realizadas",indigo,ink)}
+    ${tile("Dividendos recibidos",T.divs>0?("+"+fmtCLP(T.divs)):"—",T.divs>0?"ganancia cobrada en efectivo · sin comisión":"aún no cobras dividendos",indigo,T.divs>0?green:muted)}
     ${(()=>{const _gbp=T.aportado>0?Tgain/T.aportado*100:0;return tile("Ganancia bruta",sg(Tgain)+`<div style="font-size:.82em;font-weight:800;letter-spacing:-.2px;color:${col(_gbp)};margin-top:2px">${(_gbp>=0?"+":"")+_gbp.toFixed(2)}%</div>`,"bruta · antes de comisiones",indigo,Tgain>=0?green:red);})()}
     ${tile("Ganancia neta",sg(TgainNet),"después de comisiones",indigo,TgainNet>=0?green:red)}
     ${tile("Rentabilidad",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","neta · sobre el capital",indigo,Tpct>=0?green:red)}
