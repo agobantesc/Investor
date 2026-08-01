@@ -2987,6 +2987,22 @@ function invMetrics(){
   // presentar como "Δ día" un salto entre fechas lejanas. Sin par real vigente → null ("—"), nunca un % falso.
   const _gapD=(a,b)=>Math.abs((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);
   const _tolD=PF.freq==="mensual"?35:PF.freq==="semanal"?9:4;
+  // DÍAS DE MERCADO, no días calendario. La tolerancia en días corridos (4) cubre bien un fin de semana o un
+  // feriado, pero también deja pasar un salto de martes a viernes: 3 días corridos que esconden DOS ruedas.
+  // Ese tramo acumulado se mostraba como "mejor/peor día" e inflaba el rango (medido: +4,10% real vs +6,04%
+  // con huecos de media semana). La base de precios sabe qué fechas tuvieron rueda: se cuenta con ella y un
+  // paso vale como "un día" solo si separa exactamente UNA rueda. Sin base utilizable se cae a la tolerancia.
+  // El calendario de ruedas sale de la BASE DE PRICES (PRICEDB.ipsa), no de consolidatedSeries(): esa mezcla
+  // los registros del propio proyecto, así que con la base vacía el índice quedaría formado solo por las
+  // fechas de la cartera y todo par consecutivo parecería adyacente — la verificación se volvía vacía justo
+  // en el caso que debe atrapar. Las dos condiciones se exigen JUNTAS: el tope en días corridos descarta los
+  // huecos largos aunque no haya base, y el conteo de ruedas afina los cortos (martes→viernes son 2 ruedas).
+  const _mkIx=(function(){try{const m=(typeof PRICEDB!=="undefined"&&PRICEDB&&PRICEDB.ipsa)||null;
+    if(m){const ks=Object.keys(m).filter(d=>m[d]>0);if(ks.length>=20){ks.sort();const o={};ks.forEach((d,i)=>{o[d]=i;});return o;}}}catch(e){}return null;})();
+  const _ruedas=(a,b)=>{if(!_mkIx)return null;const ia=_mkIx[a],ib=_mkIx[b];return (ia!=null&&ib!=null)?(ib-ia):null;};
+  const _esUnPaso=(a,b)=>{if(a==null||b==null)return false;
+    if(_gapD(a,b)>_tolD)return false;              // hueco largo: nunca es "un día", haya base o no
+    const r=_ruedas(a,b);return r==null||r===1;};   // con base: además debe separar exactamente UNA rueda
   // el precio se toma NUMÉRICO: con "||" un valor no numérico ("x" de un respaldo corrupto o de una planilla
   // mal formada) pasaba por ser truthy y contaminaba valor, ganancia y contribución con NaN. Los ceros,
   // negativos y nulos ya caían al precio base; ahora también lo hace cualquier cosa que no sea un número.
@@ -2998,7 +3014,7 @@ function invMetrics(){
        // el par es entre FECHAS distintas: con varias operaciones el mismo día hay varios registros con esa
        // fecha (todos con el cierre estampado) y comparar dos del mismo día daba un Δ 0,00% falso
        let j=i-1;while(j>=0&&(WEEKS[j].date===WEEKS[i].date||!(freshOK(WEEKS[j],hd.t)&&WEEKS[j].prices[hd.t]>0)))j--;
-       if(j>=0&&_gapD(WEEKS[j].date,WEEKS[i].date)<=_tolD){dayRet=WEEKS[i].prices[hd.t]/WEEKS[j].prices[hd.t]-1;dayFrom=WEEKS[j].date;dayTo=WEEKS[i].date;}
+       if(j>=0&&_esUnPaso(WEEKS[j].date,WEEKS[i].date)){dayRet=WEEKS[i].prices[hd.t]/WEEKS[j].prices[hd.t]-1;dayFrom=WEEKS[j].date;dayTo=WEEKS[i].date;}
      }}
     const openedLast=!!(firstBuy[hd.t]&&firstBuy[hd.t].idx===WEEKS.length-1);   // comprada en el último registro
     // β REALIZADO DE LA ACCIÓN en el período del seguimiento: regresión OLS de SUS retornos contra los del
@@ -3052,7 +3068,7 @@ function invMetrics(){
   // y presentarlo como "peor día" infla la pérdida — parecía "% del peor día × más patrimonio". El registro
   // viaja completo: % sobre el patrimonio del cierre anterior (aportes neteados), CLP, fecha y base.
   let worstIdx=-1,bestIdx=-1,worstRet=null,bestRet=null;
-  for(let i=0;i<pr.length;i++){if(prFrom[i]==null||_gapD(prFrom[i],prD[i])>_tolD)continue;
+  for(let i=0;i<pr.length;i++){if(!_esUnPaso(prFrom[i],prD[i]))continue;
     if(worstRet==null||pr[i]<worstRet){worstRet=pr[i];worstIdx=i;}
     if(bestRet==null||pr[i]>bestRet){bestRet=pr[i];bestIdx=i;}}
   const worstLossCLP=worstIdx>=0?prCLP[worstIdx]:null;
@@ -3299,7 +3315,7 @@ function viewInvActive(){
     const c=d==null?ink:(Math.abs(d)<0.15?muted:(d>0?amber:accentT));
     return `<span style="font-weight:800;color:${c}" title="Regresión de los retornos de ${p.hd.t} vs el IPSA sobre ${p.nBeta} período(s) con cierre real de ambos. r² ${p.r2!=null?(p.r2*100).toFixed(0)+"%":"—"}${d!=null?(" · "+(d>=0?"+":"")+d.toFixed(2)+" vs su β esperado"):""}.${weak?" ⚠ r² bajo: el IPSA explica poco su movimiento, la β es poco confiable.":""}">${p.betaR.toFixed(2)}${weak?' <span style="color:var(--amber);font-weight:700">⚠</span>':""}</span>`;
   };
-  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r" title="Precio promedio de compra registrado (costo ÷ acciones). Compáralo con el «P. Compra» de tu corredora: si difiere, corrige el tramo mal ingresado en Historial ✎.">${(p.sh>0&&p.buy>0)?fmtP(p.buy):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?`<span title="entre sus dos últimos cierres reales: ${fD(p.dayFrom)} → ${fD(p.dayTo)}">${chip(p.dayRet*100)}</span>`:'<span style="color:var(--faint)" title="Esta acción aún no tiene DOS cierres reales vigentes (recién comprada, o su cierre aún no llega): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" title="β del análisis del sistema: la sensibilidad al IPSA que se le estima a la acción por su historia larga.">${p.betaExp!=null?p.betaExp.toFixed(2):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${_bCell(p)}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
+  const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r" title="Acciones que tienes de este papel a hoy">${p.sh>0?p.sh.toLocaleString("es-CL",{maximumFractionDigits:2}):'<span style="color:var(--faint)">—</span>'}</td><td class="r" title="Precio promedio de compra registrado (costo ÷ acciones). Compáralo con el «P. Compra» de tu corredora: si difiere, corrige el tramo mal ingresado en Historial ✎.">${(p.sh>0&&p.buy>0)?fmtP(p.buy):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?`<span title="entre sus dos últimos cierres reales: ${fD(p.dayFrom)} → ${fD(p.dayTo)}">${chip(p.dayRet*100)}</span>`:'<span style="color:var(--faint)" title="Esta acción aún no tiene DOS cierres reales vigentes (recién comprada, o su cierre aún no llega): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" title="β del análisis del sistema: la sensibilidad al IPSA que se le estima a la acción por su historia larga.">${p.betaExp!=null?p.betaExp.toFixed(2):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${_bCell(p)}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
   const bestS=psSorted[0],worstS=psSorted[psSorted.length-1];
   // el rango del pie sale del PAR DE CIERRES REALES efectivamente usado (no del último registro, que puede ser
   // una operación de hoy sin cierre aún); si el último registro no tiene cierres, se explica que el Δ llega con el cierre
@@ -3313,7 +3329,7 @@ function viewInvActive(){
   const betaNote=`<div class="note" style="margin-top:11px"><b>Las dos β por acción.</b> La <b>β esperada</b> viene del análisis del sistema (su sensibilidad al IPSA según la historia larga: ${winLong?winLong():"la ventana del análisis"}). La <b>β realizada</b> se estima por regresión de los retornos de esa acción contra el IPSA <b>solo en tu período de seguimiento</b>, usando únicamente fechas con cierre REAL de la acción y del índice (${_bReady.length?("hasta "+Math.max(..._bReady.map(p=>p.nBeta))+" observaciones"):"aún sin observaciones suficientes"}); se muestra desde 4 observaciones. Mide al <b>activo</b>, no a tu timing de compras.
     ${_bDiv.length?`Hoy se despega${_bDiv.length>1?"n":""} de lo esperado: ${_bDiv.slice(0,3).map(p=>`<b style="color:${p.hd.c}">${p.hd.t}</b> (${p.betaR.toFixed(2)} vs ${p.betaExp.toFixed(2)} esperado)`).join(", ")} — en una muestra corta esto suele ser ruido; si persiste, la acción cambió de carácter.`:(_bReady.length?"Ninguna se despega materialmente de su β esperada (todas dentro de ±0,30).":"")}
     ${_bPend.length?`Sin β realizada todavía (muestra insuficiente): <b>${_bPend.map(p=>p.hd.t).join(", ")}</b>.`:""} El símbolo <b style="color:${amber}">⚠</b> marca un <b>r² bajo</b> (&lt;10%): el IPSA explica poco su movimiento y esa β es poco confiable.</div>`;
-  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · P. compra promedio (comparable con tu corredora), Δ del último período, <b>β esperada vs realizada</b>, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r" title="β del análisis del sistema (historia larga): cuánto se espera que la acción se mueva con el IPSA">β esperada</th><th class="r" title="β estimada por regresión con los cierres reales de TU período de seguimiento">β realizada</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${betaNote}${psNote}</div>`,flush:true});
+  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · cuántas acciones tienes de cada papel, P. compra promedio (comparable con tu corredora), Δ del último período, <b>β esperada vs realizada</b>, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Cantidad de acciones en cartera">Acciones</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r" title="β del análisis del sistema (historia larga): cuánto se espera que la acción se mueva con el IPSA">β esperada</th><th class="r" title="β estimada por regresión con los cierres reales de TU período de seguimiento">β realizada</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${betaNote}${psNote}</div>`,flush:true});
   // SECCIÓN 1 · rentabilidad: portafolio vs IPSA (va ARRIBA: lo primero es cómo rinde la estrategia)
   const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
   const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",signBase:100,ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
@@ -7336,8 +7352,8 @@ function genAnalysisReport(){
    reduce el costo en proporción a las acciones vendidas, igual que invMetrics. La caja y las comisiones
    de las operaciones simuladas se calculan con el operador configurado. NADA se guarda en la cartera. ==== */
 let cambState=(function(){try{const v=JSON.parse(localStorage.getItem("inv_camb_v1"));
-  if(v&&typeof v==="object")return {pid:v.pid!=null?v.pid:null,ops:Array.isArray(v.ops)?v.ops:[],side:v.side||"buy",tkr:v.tkr||null,qty:v.qty||"",price:v.price||""};}catch(e){}
-  return {pid:null,ops:[],side:"buy",tkr:null,qty:"",price:""};})();
+  if(v&&typeof v==="object")return {pid:v.pid!=null?v.pid:null,ops:Array.isArray(v.ops)?v.ops:[],side:v.side||"buy",tkr:v.tkr||null,qty:v.qty||"",price:v.price||"",modo:v.modo==="monto"?"monto":"qty",monto:v.monto||""};}catch(e){}
+  return {pid:null,ops:[],side:"buy",tkr:null,qty:"",price:"",modo:"qty",monto:""};})();
 function cambSave(){try{localStorage.setItem("inv_camb_v1",JSON.stringify(cambState));}catch(e){}}
 function cambProjects(){return (typeof mkwProjects==="function")?mkwProjects():[];}
 function cambProj(){const ps=cambProjects();if(!ps.length)return null;
@@ -7431,13 +7447,25 @@ function viewCambios(){
     ${selProj}
     <label class="mc-fld">Operación<div class="home-seg" role="group" style="align-self:stretch">${[["buy","Compra"],["sell","Venta"]].map(([k,l])=>`<button data-cambside="${k}" class="${cambState.side===k?"on":""}" style="flex:1">${l}</button>`).join("")}</div></label>
     <label class="mc-fld">Acción${tkSel}</label>
-    <label class="mc-fld">Cantidad<input id="cambqty" type="number" min="0" step="1" value="${cambState.qty||""}" placeholder="acciones"></label>
+    <label class="mc-fld">Ingresar por<div class="home-seg" role="group" style="align-self:stretch">${[["qty","Cantidad"],["monto","Monto $"]].map(([k,l])=>`<button data-cambmodo="${k}" class="${cambState.modo===k?"on":""}" style="flex:1">${l}</button>`).join("")}</div></label>
+    ${cambState.modo==="monto"
+      ? `<label class="mc-fld">Monto total (CLP)<input id="cambmonto" type="number" min="0" step="1000" value="${cambState.monto||""}" placeholder="p. ej. 250000"></label>`
+      : `<label class="mc-fld">Cantidad<input id="cambqty" type="number" min="0" step="1" value="${cambState.qty||""}" placeholder="acciones"></label>`}
     <label class="mc-fld">Precio<input id="cambpx" type="number" min="0" step="1" value="${cambState.price||(_pxSug!=null?Math.round(_pxSug):"")}" placeholder="${_pxSug!=null?Math.round(_pxSug):"precio"}"></label>
   </div>
   <div class="mc-row" style="margin-top:13px">
     <button class="btn btn-pri" id="cambadd">+ Agregar a la simulación</button>
     ${R.nOps?`<button class="btn" id="cambclear" style="color:var(--red);border-color:var(--red-line)">Vaciar</button>`:""}
-  </div>${_pxSug!=null?`<div class="genl" style="margin:8px 0 0">Precio sugerido para ${_tkr}: <b>${fmtP(_pxSug)}</b> (último cierre conocido). Puedes cambiarlo para simular otro nivel de entrada o salida.</div>`:""}`;
+  </div>${(function(){
+    const _px=+cambState.price||_pxSug;
+    if(cambState.modo==="monto"){
+      const _m=+cambState.monto||0;
+      if(_m>0&&_px>0){const _q=Math.floor(_m/_px);
+        return `<div class="genl" style="margin:8px 0 0">Con <b>${fmtCLP(_m)}</b> a ${fmtP(_px)} alcanzan <b>${_q.toLocaleString("es-CL")} acciones</b> enteras${_q>0?" = <b>"+fmtCLP(_q*_px)+"</b> (quedan "+fmtCLP(_m-_q*_px)+" sin usar)":" — el monto no alcanza para una acci\u00f3n"}. La corredora opera acciones enteras, as\u00ed que la simulaci\u00f3n se arma con esa cantidad.</div>`;}
+      return `<div class="genl" style="margin:8px 0 0">Indica el monto total que quieres ${cambState.side==="sell"?"vender":"invertir"}; se convierte a acciones enteras con el precio de al lado.</div>`;
+    }
+    return _pxSug!=null?`<div class="genl" style="margin:8px 0 0">Precio sugerido para ${_tkr}: <b>${fmtP(_pxSug)}</b> (\u00faltimo cierre conocido). Puedes cambiarlo para simular otro nivel de entrada o salida.</div>`:"";
+  })()}`;
   const opsList=R.nOps||(cambState.ops||[]).length?`<div class="tw" style="margin-top:14px"><table><thead><tr><th>#</th><th>Tipo</th><th>Acción</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Efecto en caja</th><th></th></tr></thead><tbody>${
     (cambState.ops||[]).map((o,i)=>{const ap=R.aplicadas.find(x=>x.i===i);const av=R.avisos.find(x=>x.i===i);
       const monto=ap?ap.monto:((+o.shares||0)*(+o.price||0));const fee=ap?ap.fee:0;
@@ -7508,18 +7536,30 @@ function attachCambios(){
   document.querySelectorAll("[data-cambside]").forEach(b=>b.onclick=()=>{cambState.side=b.dataset.cambside;cambSave();render();});
   const selT=document.getElementById("cambtkr");
   if(selT)selT.onchange=()=>{cambState.tkr=selT.value;const px=cambPx(p,selT.value);cambState.price=px!=null?String(Math.round(px)):"";cambSave();render();};
-  const iq=document.getElementById("cambqty"),ip=document.getElementById("cambpx");
+  document.querySelectorAll("[data-cambmodo]").forEach(b=>b.onclick=()=>{cambState.modo=b.dataset.cambmodo;cambSave();render();});
+  const iq=document.getElementById("cambqty"),ip=document.getElementById("cambpx"),im=document.getElementById("cambmonto");
   if(iq)iq.oninput=()=>{cambState.qty=iq.value;};
   if(ip)ip.oninput=()=>{cambState.price=ip.value;};
+  if(ip)ip.onchange=()=>{cambState.price=ip.value;cambSave();if(cambState.modo==="monto")render();};   // el precio cambia cuántas acciones salen del monto
+  if(im){im.oninput=()=>{cambState.monto=im.value;};im.onchange=()=>{cambState.monto=im.value;cambSave();render();};}
   const add=document.getElementById("cambadd");
   if(add)add.onclick=()=>{
     const t=(selT&&selT.value)||cambState.tkr;
-    const q=parseFloat(iq&&iq.value),pr=parseFloat(ip&&ip.value);
+    const pr=parseFloat(ip&&ip.value);
     if(!t){window.alert("Elige la acción de la operación.");return;}
-    if(!(q>0)){window.alert("Indica cuántas acciones quieres "+(cambState.side==="sell"?"vender":"comprar")+".");return;}
     if(!(pr>0)){window.alert("Indica el precio por acción de la operación.");return;}
+    let q;
+    if(cambState.modo==="monto"){
+      const m=parseFloat(im&&im.value);
+      if(!(m>0)){window.alert("Indica el monto total de la operación.");return;}
+      q=Math.floor(m/pr);   // la corredora opera acciones ENTERAS: el monto se convierte a lo que alcanza
+      if(!(q>0)){window.alert("Con "+fmtCLP(m)+" no alcanza para una acción a "+fmtP(pr)+".");return;}
+    }else{
+      q=parseFloat(iq&&iq.value);
+      if(!(q>0)){window.alert("Indica cuántas acciones quieres "+(cambState.side==="sell"?"vender":"comprar")+".");return;}
+    }
     cambState.ops.push({side:cambState.side,t,shares:q,price:pr});
-    cambState.qty="";cambSave();render();};
+    cambState.qty="";cambState.monto="";cambSave();render();};
   document.querySelectorAll("[data-cambdel]").forEach(b=>b.onclick=()=>{const i=+b.dataset.cambdel;cambState.ops.splice(i,1);cambSave();render();});
   const cl=document.getElementById("cambclear");
   if(cl)cl.onclick=()=>{if(window.confirm("¿Vaciar todas las operaciones simuladas?")){cambState.ops=[];cambSave();render();}};
@@ -7545,8 +7585,11 @@ function attachCambios(){
    Este submódulo responde esas tres preguntas con los precios reales de la base, y agrega el
    diagnóstico de tu operativa efectiva a partir del libro de operaciones. ============================= */
 let actWin=(()=>{const v=+lsGet("inv_act_win");return [20,60,120].indexOf(v)>=0?v:60;})();        // ventana de días hábiles para volatilidad/movimiento
-let actTicket=(()=>{const v=+lsGet("inv_act_ticket");return v>0?v:500000;})();                    // monto típico por operación
-let actSort=lsGet("inv_act_sort")||"score";
+let actProjId=(()=>{const v=lsGet("inv_act_proj");return v!=null?v:null;})();                     // cartera sobre la que se mira la operativa real
+/* La estrategia SIEMPRE opera al menos el monto mínimo rentable, así que el costo de referencia es fijo: el
+   porcentaje proporcional del operador (bajo ese monto manda la comisión mínima y el % se dispara). Ya no hay
+   un selector de monto: el análisis se hace sobre esa base y las propuestas no dependen del tamaño de la orden. */
+function actTicketBase(){const mn=actMontoMinimo();return mn&&mn>0?mn:500000;}
 
 /* serie de retornos diarios de una acción, de la base de precios (los últimos n+1 cierres reales) */
 function actRets(map,n){
@@ -7588,9 +7631,9 @@ function _normCdf(z){
 /* POSICIONES REALES por acción, sumando todas las carteras: cuántas tienes, a qué costo promedio, cuánto
    valen hoy y si la ganancia ya cubre lo que cuesta salir. Es lo que convierte "vender" en una decisión
    concreta: sin esto, una propuesta de venta ignora si la comisión se come el resultado. */
-function activaHoldings(){
+function activaHoldings(soloP){
   const out={};
-  (PROJECTS||[]).forEach(p=>{
+  ((soloP?[soloP]:PROJECTS)||[]).forEach(p=>{
     try{const A=contabAggFor(p);if(!A||!A.rows)return;
       A.rows.forEach(r=>{if(!(r.sh>1e-9))return;
         const o=out[r.t]||(out[r.t]={t:r.t,sh:0,costo:0,valor:0,proyectos:[]});
@@ -7635,7 +7678,7 @@ function activaMetrics(){
     const r5=actRetN(map,5),r20=actRetN(map,20),r60=actRetN(map,60);
     const i20=actRetN(ipMap,20);
     const rel=(r20!=null&&i20!=null)?r20-i20:null;                    // fuerza relativa vs IPSA
-    const rt=actRoundTrip(actTicket);
+    const rt=actRoundTrip(actTicketBase());
     const dias=movD>0?rt.pct/movD:null;                               // días de movimiento típico para pagar la vuelta
     const corrIp=ipR?actCorr(R.r,ipR.r):null;
     // DERIVA diaria de la ventana (retorno medio por día). A diferencia del "movimiento típico" —que mide
@@ -7674,15 +7717,15 @@ function activaMetrics(){
     rows.forEach((b,j)=>{if(i===j)return;const c=actCorr(a.rets,b.rets);if(c!=null){s+=c;k++;}});
     a.corrMedia=k?s/k:null;
   });
-  const rt=actRoundTrip(actTicket);
-  return {rows,rt,minimo:actMontoMinimo(),win:actWin,ticket:actTicket,
+  const rt=actRoundTrip(actTicketBase());
+  return {rows,rt,minimo:actMontoMinimo(),win:actWin,ticket:actTicketBase(),
     desde:rows[0].desde,hasta:rows[0].hasta,
     operables:rows.filter(r=>r.margen!=null&&r.margen>0).length};
 }
 /* DIAGNÓSTICO DE LA OPERATIVA REAL: qué tan activo eres de verdad y cuánto te está costando */
-function activaOperativa(){
+function activaOperativa(soloP){
   const out=[];
-  PROJECTS.forEach(p=>{
+  (soloP?[soloP]:PROJECTS).forEach(p=>{
     try{withProject(p,function(){
       const L=ledger(),IM=invMetrics();
       if(!L||!IM||!L.tx.length)return;
@@ -7714,31 +7757,26 @@ function viewActiva(){
   const banner=`<div class="mc-beta">⚡ <b>Gestión activa · beta</b> — análisis para una estrategia de rotación alta: cuánto cuesta cada vuelta, qué acciones se mueven lo suficiente para pagarla y cuáles suman diversificación. Educativo; no es recomendación de inversión.</div>`;
   const M=activaMetrics();
   if(!M)return banner+notecard("Este análisis necesita el <b>análisis del sistema</b> construido sobre datos reales. Sincroniza los cierres en <b>Datos</b> (con ≥2 acciones y el IPSA se arma solo) y vuelve.");
+  const _ps=(typeof mkwProjects==="function")?mkwProjects():[];
+  if(!_ps.length)return banner+notecard("Elige una cartera para mirar tu operativa real. Necesitas un <b>proyecto con seguimiento</b>: créalo en <b>Simulación → Constructor</b> y registra su <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
+  const PA=_ps.find(x=>String(x.id)===String(actProjId))||_ps[0];
+  if(String(actProjId)!==String(PA.id)){actProjId=PA.id;try{lsSet("inv_act_proj",actProjId);}catch(e){}}
   const rt=M.rt,mn=M.minimo;
   const pctFmt=v=>(v==null?"—":v.toFixed(2)+"%");
-  // ── 1 · EL COSTO DE OPERAR: la barrera que hay que superar en CADA vuelta ──
-  const ticketOpts=[100000,250000,500000,1000000,2000000,5000000];
-  const tkSeg=`<div class="home-seg" role="group" aria-label="Monto por operación">${ticketOpts.map(v=>`<button data-actticket="${v}" class="${actTicket===v?"on":""}" title="Costo de ida y vuelta para una operación de ${fmtCLP(v)}">${v>=1000000?(v/1000000)+"M":(v/1000)+"k"}</button>`).join("")}</div>`;
-  const winSeg=`<div class="home-seg" role="group" aria-label="Ventana de días">${[20,60,120].map(v=>`<button data-actwin="${v}" class="${actWin===v?"on":""}" title="Últimos ${v} días hábiles con cierre real">${v}d</button>`).join("")}</div>`;
-  const costTiles=`<div class="tiles">
-    ${tile("Costo ida y vuelta",pctFmt(rt.pct),"sobre "+fmtCLP(actTicket)+" · "+fmtCLP(rt.clp),indigo,red)}
-    ${tile("Comisión por punta",fmtCLP(rt.ida),brokerSummary(),indigo,ink)}
-    ${tile("Operación mínima rentable",mn?fmtCLP(mn):"—",mn?"bajo este monto pagas el mínimo":"el operador no cobra mínimo",indigo,mn?amber:muted)}
-    ${tile("Acciones operables",M.operables+" de "+M.rows.length,"su movimiento diario supera el costo",indigo,M.operables?green:red)}</div>`;
-  const escala=(()=>{
-    const rows=ticketOpts.map(v=>{const r=actRoundTrip(v),bajo=mn&&v<mn;
-      return `<tr${actTicket===v?' style="background:var(--soft2)"':''}><td><b>${fmtCLP(v)}</b>${actTicket===v?' <span class="badge pos" style="font-size:8px">ACTUAL</span>':""}</td><td class="r">${fmtCLP(r.ida)}</td><td class="r">${fmtCLP(r.clp)}</td><td class="r" style="color:${r.pct>1.5?red:r.pct>0.99?amber:green};font-weight:800">${r.pct.toFixed(2)}%</td><td style="color:${bajo?red:"var(--muted)"};font-size:11px">${bajo?"paga el mínimo · regresivo":"comisión proporcional"}</td></tr>`;}).join("");
-    return card("La barrera de cada vuelta","Lo que cuesta comprar y vender el mismo monto, con IVA y el mínimo del operador ya aplicados · es la rentabilidad que necesitas SOLO para empatar",
-      `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px"><span class="genl" style="margin:0">Monto por operación</span>${tkSeg}<span class="genl" style="margin:0 0 0 6px">Ventana</span>${winSeg}</div>
-       ${costTiles}
-       <div class="tw" style="margin-top:13px"><table><thead><tr><th>Monto de la operación</th><th class="r">Comisión (1 punta)</th><th class="r">Ida y vuelta</th><th class="r">% del monto</th><th>Régimen</th></tr></thead><tbody>${rows}</tbody></table></div>
-       <div class="note" style="margin-top:11px">Con <b>${brokerName()}</b> la comisión es <b>${(+BROKER.pct||0)}%${BROKER.iva?" + IVA":""}</b>${mn?` con un mínimo de <b>${fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1)))}</b>`:""}. ${mn?`Bajo <b>${fmtCLP(mn)}</b> por operación el mínimo manda y el costo porcentual se dispara: una vuelta de ${fmtCLP(100000)} cuesta <b>${actRoundTrip(100000).pct.toFixed(2)}%</b> contra <b>${actRoundTrip(1000000).pct.toFixed(2)}%</b> si operas ${fmtCLP(1000000)}. En una estrategia de rotación alta, <b>partir el capital en operaciones chicas es el error más caro</b>.`:""}</div>`);
-  })();
+  // ── 1 · CARTERA Y COSTO FIJO DE OPERAR ──
+  const winSeg=`<div class="home-seg" role="group" aria-label="Ventana de días" style="align-self:stretch">${[20,60,120].map(v=>`<button data-actwin="${v}" class="${actWin===v?"on":""}" title="Últimos ${v} días hábiles con cierre real" style="flex:1">${v}d</button>`).join("")}</div>`;
+  const escala=card("Cartera y costo de operar","La estrategia opera siempre al menos el monto mínimo rentable, así que el costo de cada vuelta es fijo · las propuestas de abajo no dependen del tamaño de la orden",
+    `<div class="mc-form">
+       <label class="mc-fld">Cartera<select id="actproj">${_ps.map(x=>`<option value="${x.id}"${String(x.id)===String(PA.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}</select></label>
+       <label class="mc-fld">Ventana de análisis${winSeg}</label>
+     </div>
+     <div class="tiles" style="margin-top:14px">
+       ${tile("Operación mínima",mn?fmtCLP(mn):"—",mn?"desde aquí la comisión deja de ser el mínimo":"el operador no cobra mínimo",indigo,mn?amber:muted)}
+       ${tile("Costo ida y vuelta",pctFmt(rt.pct),fmtCLP(rt.clp)+" sobre "+fmtCLP(M.ticket)+" · comprar y vender",indigo,red)}
+     </div>
+     <div class="note" style="margin-top:11px">Con <b>${brokerName()}</b> la comisión es <b>${(+BROKER.pct||0)}%${BROKER.iva?" + IVA":""}</b>${mn?` con un mínimo de <b>${fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1)))}</b>, que manda bajo ${fmtCLP(mn)} por operación`:""}. Operando desde ese mínimo hacia arriba, cada vuelta cuesta <b>${rt.pct.toFixed(2)}%</b> del monto — esa es la rentabilidad que necesitas <b>solo para empatar</b>, y es la vara con la que se miden los horizontes y las propuestas.</div>`);
   // ── 2 · RANKING DE ROTACIÓN ──
-  const ord={score:(a,b)=>b.score-a.score,r5:(a,b)=>(b.r5||-1e9)-(a.r5||-1e9),r20:(a,b)=>(b.r20||-1e9)-(a.r20||-1e9),
-    rel:(a,b)=>(b.rel||-1e9)-(a.rel||-1e9),mov:(a,b)=>b.movD-a.movD,div:(a,b)=>(a.corrMedia==null?9:a.corrMedia)-(b.corrMedia==null?9:b.corrMedia)}[actSort]||((a,b)=>b.score-a.score);
-  const rk=M.rows.slice().sort(ord);
-  const sortSeg=`<div class="home-seg" role="group" aria-label="Ordenar por">${[["score","Score"],["r5","5d"],["r20","20d"],["rel","vs IPSA"],["mov","Movimiento"],["div","Diversifica"]].map(([k,l])=>`<button data-actsort="${k}" class="${actSort===k?"on":""}">${l}</button>`).join("")}</div>`;
+  const rk=M.rows.slice().sort((a,b)=>b.score-a.score);   // siempre por score: los encabezados de la tabla ya permiten leerla por cualquier columna
   const rkRows=rk.map((r,i)=>{
     const sc=r.score>=70?green:r.score>=45?indigo:red;
     const opera=r.margen!=null&&r.margen>0;
@@ -7749,14 +7787,13 @@ function viewActiva(){
       <td class="r">${r.rel!=null?chip(r.rel):"—"}</td>
       <td class="r" title="Movimiento medio de un día (media del valor absoluto de los retornos diarios)">${r.movD.toFixed(2)}%</td>
       <td class="r" title="Volatilidad anualizada de la ventana">${r.volAnn.toFixed(1)}%</td>
-      <td class="r" style="color:${opera?green:red};font-weight:700" title="${opera?"Un día típico se mueve más que el costo de ida y vuelta: la acción da espacio para operarla":"Un día típico NO alcanza a pagar la ida y vuelta: operarla seguido a este monto destruye rentabilidad"}">${r.dias!=null?r.dias.toFixed(1):"—"}</td>
+      <td class="r" style="color:${opera?green:red};font-weight:700" title="${opera?"Un día típico se mueve más que el costo de ida y vuelta: la acción da espacio para operarla":"Un día típico NO alcanza a pagar la ida y vuelta: rotarla seguido destruye rentabilidad"}">${r.dias!=null?r.dias.toFixed(1):"—"}</td>
       <td class="r" title="Correlación media con las demás acciones en la ventana diaria: más baja = aporta más diversificación">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td></tr>`;}).join("");
   const rankCard=card("Ranking de rotación",`${M.rows.length} acciones · ventana de ${M.win} días hábiles (${fD(M.desde)} → ${fD(M.hasta)}) · el score premia tendencia y fuerza relativa, y castiga que la comisión se coma el movimiento`,
-    `<div style="margin-bottom:11px">${sortSeg}</div>
-     <div class="tw"><table><thead><tr><th class="r">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r">σ anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
-     <div class="note" style="margin-top:11px"><b>Días para pagar</b> es la columna que decide si una acción es operable a tu monto: divide el costo de ida y vuelta (<b>${rt.pct.toFixed(2)}%</b> sobre ${fmtCLP(actTicket)}) por lo que se mueve un día típico. Si necesitas <b>más de un día</b> de movimiento solo para empatar, cada vuelta corta te resta. <b>Corr. media</b> baja = esa acción se mueve distinto al resto: es la que de verdad diversifica cuando amplías el número de nombres.</div>`);
+    `<div class="tw"><table><thead><tr><th class="r">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r">σ anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
+     <div class="note" style="margin-top:11px"><b>Días para pagar</b> dice si una acción se mueve lo suficiente para operarla: divide el costo de ida y vuelta (<b>${rt.pct.toFixed(2)}%</b>, fijo al operar desde el mínimo) por lo que se mueve un día típico. Si necesitas <b>más de un día</b> de movimiento solo para empatar, cada vuelta corta te resta. <b>Corr. media</b> baja = esa acción se mueve distinto al resto: es la que de verdad diversifica cuando amplías el número de nombres.</div>`);
   // ── 2b · HORIZONTES: cuántos días para pagar la comisión y para superar el umbral de venta ──
-  const HOLD=activaHoldings();
+  const HOLD=activaHoldings(PA);   // posiciones de la cartera ELEGIDA arriba
   const horCard=(()=>{
     const orden=M.rows.slice().sort((a,b)=>{
       const A=a.umbral==null?1e9:a.umbral,B=b.umbral==null?1e9:b.umbral;return A-B;});
@@ -7776,7 +7813,7 @@ function viewActiva(){
     const rapidas=M.rows.filter(r=>r.umbral!=null&&r.umbral<=10).length;
     return card("Cuántos días para pagar la comisión","Dos horizontes distintos: el <b>movimiento</b> mide magnitud (cuánto se mueve un día contra lo que cuesta la vuelta) y la <b>deriva</b> mide dirección (cuánto tarda la tendencia reciente en dejar la posición sobre el umbral desde el cual vender deja algo)",
       `<div class="tiles">
-        ${tile("Costo a superar",rt.pct.toFixed(2)+"%",fmtCLP(rt.clp)+" sobre "+fmtCLP(actTicket),indigo,red)}
+        ${tile("Costo a superar",rt.pct.toFixed(2)+"%",fmtCLP(rt.clp)+" sobre "+fmtCLP(M.ticket)+" (mínimo)",indigo,red)}
         ${tile("Con deriva a favor",conUmbral+" de "+M.rows.length,"su tendencia reciente apunta a cubrir el costo",indigo,conUmbral?green:red)}
         ${tile("Lo cubrirían en ≤10 días",String(rapidas),"al ritmo de la ventana de "+M.win+" días",indigo,rapidas?green:muted)}
         ${tile("Posiciones que ya cubren la salida",(()=>{const k=Object.keys(HOLD).filter(t=>HOLD[t].cubre).length,n=Object.keys(HOLD).length;return n?(k+" de "+n):"—";})(),"su ganancia paga la comisión de vender",indigo,Object.keys(HOLD).length?green:muted)}</div>
@@ -7787,16 +7824,19 @@ function viewActiva(){
   const propCard=(()=>{
     const iesc=v=>(""+v).replace(/</g,"&lt;");
     // CRITERIOS EXPLÍCITOS (se muestran al usuario: nada de caja negra)
+    // Sin condición de tamaño de orden: siempre se opera desde el mínimo rentable, así que el costo es fijo
+    // y no filtra nombres. Umbrales 55/45 en vez de 60/40: con los datos reales pasan de 1-2 a 4-9 candidatos
+    // por lado, que es una lista con la que se puede trabajar sin caer en ruido (50/50 selecciona media bolsa).
     const compras=M.rows.filter(r=>
-      r.score>=60 && r.rel!=null && r.rel>0 && r.margen!=null && r.margen>0 && r.umbral!=null
-    ).sort((a,b)=>b.score-a.score).slice(0,8);
+      r.score>=55 && r.rel!=null && r.rel>0 && r.driftD>0
+    ).sort((a,b)=>b.score-a.score).slice(0,12);
     const enCartera=Object.keys(HOLD);
     // La lista de VENTA sale del ANÁLISIS, no de la cartera: es el espejo exacto de la de compra sobre todo
     // el universo. Tener o no la acción no decide si aparece — solo se anota al lado cuando la tienes, con
     // lo que costaría salir. Con "o" en vez de "y" la lista llegaba a 19 de 28 nombres: puro ruido.
     const ventas=M.rows.filter(r=>
-      r.score<=40 && r.rel!=null && r.rel<0 && r.driftD<=0
-    ).sort((a,b)=>a.score-b.score).slice(0,8);
+      r.score<=45 && r.rel!=null && r.rel<0 && r.driftD<=0
+    ).sort((a,b)=>a.score-b.score).slice(0,12);
     const motivoC=r=>{const m=[];
       if(r.score>=70)m.push("score alto ("+r.score+")");else m.push("score "+r.score);
       if(r.rel!=null)m.push("supera al IPSA por "+r.rel.toFixed(1)+" pts en 20d");
@@ -7823,7 +7863,7 @@ function viewActiva(){
        ${tblC}
        <div class="genl" style="margin:18px 0 8px">▼ Propuestas de VENTA o SALIDA <span style="font-weight:600;color:var(--faint)">· ${ventas.length} de ${M.rows.length} acciones${enCartera.length?(" · "+ventas.filter(r=>HOLD[r.t]).length+" en tu cartera"):""}</span></div>
        ${tblV}
-       <div class="note" style="margin-top:13px"><b>Criterios exactos.</b> Ambas listas salen del <b>análisis de todo el universo</b>, no de tu cartera: qué tengas no decide si una acción aparece. Entra a <b>comprar</b> la que cumple las tres: score ≥ 60, rendir más que el IPSA en 20 días, y que su movimiento diario supere el costo de ida y vuelta (${rt.pct.toFixed(2)}% a ${fmtCLP(actTicket)}) con una deriva que apunte a cubrirlo. Entra a <b>vender o salir</b> —el espejo— la que cumple las tres opuestas: score ≤ 40, rendir menos que el IPSA en 20 días y tener deriva negativa; si además la tienes, se marca <b>EN CARTERA</b> y la columna <b>Si la tienes</b> muestra lo que quedaría al vender hoy ya descontada la comisión de salida, porque cuando el resultado no la cubre salir <b>concreta una pérdida mayor</b> que la del papel. Cambia la ventana o el monto por operación arriba y las listas se recalculan.</div>`);
+       <div class="note" style="margin-top:13px"><b>Criterios exactos.</b> Ambas listas salen del <b>análisis de todo el universo</b>, no de tu cartera: qué tengas no decide si una acción aparece. Entra a <b>comprar</b> la que cumple las tres: score ≥ 55, rendir más que el IPSA en 20 días y tener deriva positiva. Entra a <b>vender o salir</b> —el espejo— la que cumple las tres opuestas: score ≤ 45, rendir menos que el IPSA en 20 días y tener deriva negativa. <b>El tamaño de la orden no filtra nada</b>: se asume que siempre operas desde el mínimo rentable (${fmtCLP(mn||0)}), donde la vuelta cuesta ${rt.pct.toFixed(2)}%; si además la tienes, se marca <b>EN CARTERA</b> y la columna <b>Si la tienes</b> muestra lo que quedaría al vender hoy ya descontada la comisión de salida, porque cuando el resultado no la cubre salir <b>concreta una pérdida mayor</b> que la del papel. Cambia la ventana o el monto por operación arriba y las listas se recalculan.</div>`);
   })();
   // ── 3 · DIVERSIFICACIÓN AL SUMAR NOMBRES ──
   const divCard=(()=>{
@@ -7848,7 +7888,7 @@ function viewActiva(){
   })();
   // ── 4 · TU OPERATIVA REAL ──
   const opCard=(()=>{
-    const OP=activaOperativa();
+    const OP=activaOperativa(PA);
     if(!OP.length)return card("Tu operativa real","Aún sin operaciones registradas",`<div class="note" style="margin:0">Cuando registres compras y ventas en <b>Inversión → Operar</b>, aquí verás tu rotación efectiva, el ticket medio, cuánto llevas pagado en comisiones y qué parte de tu ganancia se está yendo en costos.</div>`);
     const rows=OP.map(o=>{
       const mordida=o.mordida;
@@ -7876,9 +7916,9 @@ function viewActiva(){
 }
 function attachActiva(){
   if(modulo!=="eval"||page!=="activa")return;
-  document.querySelectorAll("[data-actticket]").forEach(b=>b.onclick=()=>{actTicket=+b.dataset.actticket||500000;try{lsSet("inv_act_ticket",actTicket);}catch(e){}render();});
+  const sp=document.getElementById("actproj");
+  if(sp)sp.onchange=()=>{actProjId=sp.value;try{lsSet("inv_act_proj",actProjId);}catch(e){}render();};
   document.querySelectorAll("[data-actwin]").forEach(b=>b.onclick=()=>{actWin=+b.dataset.actwin||60;try{lsSet("inv_act_win",actWin);}catch(e){}render();});
-  document.querySelectorAll("[data-actsort]").forEach(b=>b.onclick=()=>{const _m=document.getElementById("main"),_s=_m?_m.scrollTop:0;actSort=b.dataset.actsort;try{lsSet("inv_act_sort",actSort);}catch(e){}render();const _m2=document.getElementById("main");if(_m2)_m2.scrollTop=_s;});
 }
 
 /* ===== ACCESO CONTROLADO (login) ===== */
