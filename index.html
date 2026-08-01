@@ -7546,6 +7546,38 @@ function actMontoMinimo(){
   if(!(pct>0))return null;
   return Math.ceil((+BROKER.min)/pct);
 }
+/* normal acumulada (Abramowitz-Stegun 26.2.17): para estimar la probabilidad de cubrir el costo a n días */
+function _normCdf(z){
+  const s=z<0?-1:1;z=Math.abs(z)/Math.SQRT2;
+  const t=1/(1+0.3275911*z);
+  const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-z*z);
+  return 0.5*(1+s*y);
+}
+/* POSICIONES REALES por acción, sumando todas las carteras: cuántas tienes, a qué costo promedio, cuánto
+   valen hoy y si la ganancia ya cubre lo que cuesta salir. Es lo que convierte "vender" en una decisión
+   concreta: sin esto, una propuesta de venta ignora si la comisión se come el resultado. */
+function activaHoldings(){
+  const out={};
+  (PROJECTS||[]).forEach(p=>{
+    try{const A=contabAggFor(p);if(!A||!A.rows)return;
+      A.rows.forEach(r=>{if(!(r.sh>1e-9))return;
+        const o=out[r.t]||(out[r.t]={t:r.t,sh:0,costo:0,valor:0,proyectos:[]});
+        o.sh+=r.sh;o.costo+=r.avg*r.sh;o.valor+=r.val;
+        if(o.proyectos.indexOf(p.name)<0)o.proyectos.push(p.name);});
+    }catch(e){}
+  });
+  Object.keys(out).forEach(t=>{const o=out[t];
+    o.avg=o.sh>0?o.costo/o.sh:0;
+    o.gain=o.valor-o.costo;
+    o.gainPct=o.costo>0?o.gain/o.costo*100:0;
+    // salir de la posición completa cuesta la comisión de venta sobre su valor de mercado
+    o.feeSalida=brokerFee(o.valor);
+    o.neto=o.gain-o.feeSalida;              // lo que quedaría si vendieras hoy todo
+    o.cubre=o.neto>0;                        // ¿la ganancia ya paga la salida?
+    o.faltaPct=o.costo>0?((o.feeSalida-o.gain)/o.costo*100):null;   // cuánto falta subir para empatar
+  });
+  return out;
+}
 /* correlación de los retornos diarios de la ventana (para saber qué nombre suma diversificación) */
 function actCorr(a,b){
   const n=Math.min(a.length,b.length);if(n<10)return null;
@@ -7574,7 +7606,21 @@ function activaMetrics(){
     const rt=actRoundTrip(actTicket);
     const dias=movD>0?rt.pct/movD:null;                               // días de movimiento típico para pagar la vuelta
     const corrIp=ipR?actCorr(R.r,ipR.r):null;
-    rows.push({t:s.t,n:s.n,c:s.c,sec:s.s,rets:R.r,volD,movD,r5,r20,r60,rel,dias,corrIp,
+    // DERIVA diaria de la ventana (retorno medio por día). A diferencia del "movimiento típico" —que mide
+    // magnitud sin signo—, la deriva SÍ tiene dirección: es la que puede llevar la posición sobre el umbral
+    // desde el cual vender deja algo. Con deriva negativa no hay horizonte: el costo nunca se paga solo.
+    const driftD=media*100;
+    const umbral=(driftD>0)?rt.pct/driftD:null;         // días para que la deriva acumule el costo de ida y vuelta
+    // PROBABILIDAD de cubrir el costo en n días hábiles, con la aproximación normal del paseo aleatorio con
+    // deriva: el retorno acumulado a n días ~ N(μ·n, σ²·n). Es una estimación desde la historia reciente,
+    // no un pronóstico: se muestra junto a la ventana con la que se calculó.
+    const probCubrir=n=>{
+      if(!(volD>0)||!(n>0))return null;
+      const z=(rt.pct-driftD*n)/(volD*Math.sqrt(n));
+      return (1-_normCdf(z))*100;
+    };
+    rows.push({t:s.t,n:s.n,c:s.c,sec:s.s,rets:R.r,volD,movD,r5,r20,r60,rel,dias,corrIp,driftD,umbral,
+      prob20:probCubrir(20),prob60:probCubrir(60),probCubrir,
       obs:R.n,desde:R.desde,hasta:R.hasta,
       volAnn:volD*Math.sqrt(252),
       // ¿la acción se mueve lo bastante para operarla a este ticket? margen del movimiento sobre el costo
@@ -7677,6 +7723,73 @@ function viewActiva(){
     `<div style="margin-bottom:11px">${sortSeg}</div>
      <div class="tw"><table><thead><tr><th class="r">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r">σ anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
      <div class="note" style="margin-top:11px"><b>Días para pagar</b> es la columna que decide si una acción es operable a tu monto: divide el costo de ida y vuelta (<b>${rt.pct.toFixed(2)}%</b> sobre ${fmtCLP(actTicket)}) por lo que se mueve un día típico. Si necesitas <b>más de un día</b> de movimiento solo para empatar, cada vuelta corta te resta. <b>Corr. media</b> baja = esa acción se mueve distinto al resto: es la que de verdad diversifica cuando amplías el número de nombres.</div>`);
+  // ── 2b · HORIZONTES: cuántos días para pagar la comisión y para superar el umbral de venta ──
+  const HOLD=activaHoldings();
+  const horCard=(()=>{
+    const orden=M.rows.slice().sort((a,b)=>{
+      const A=a.umbral==null?1e9:a.umbral,B=b.umbral==null?1e9:b.umbral;return A-B;});
+    const filas=orden.map(r=>{
+      const h=HOLD[r.t];
+      const opera=r.margen!=null&&r.margen>0;
+      const uCol=r.umbral==null?muted:(r.umbral<=10?green:r.umbral<=30?amber:red);
+      return `<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${h?' <span class="badge pos" style="font-size:8px" title="Tienes esta acción en cartera">EN CARTERA</span>':""}</td>
+        <td class="r" title="Movimiento típico de un día, sin signo">${r.movD.toFixed(2)}%</td>
+        <td class="r" style="color:${opera?green:red};font-weight:700" title="${opera?"Un día típico se mueve más que el costo de ida y vuelta":"Un día típico no alcanza a pagar la ida y vuelta"}">${r.dias!=null?r.dias.toFixed(1):"—"}</td>
+        <td class="r" title="Retorno medio por día en la ventana: la dirección, no la magnitud">${r.driftD>=0?"+":""}${r.driftD.toFixed(3)}%</td>
+        <td class="r" style="color:${uCol};font-weight:800" title="${r.umbral==null?"La deriva de la ventana es negativa o nula: por sí sola no lleva la posición sobre el costo de salir":"Días hábiles que la deriva reciente necesitaría para acumular el costo de ida y vuelta"}">${r.umbral!=null?Math.round(r.umbral)+" d":"—"}</td>
+        <td class="r" title="Probabilidad de que el retorno acumulado a 20 días hábiles supere el costo de ida y vuelta, con la deriva y la volatilidad de la ventana">${r.prob20!=null?r.prob20.toFixed(0)+"%":"—"}</td>
+        <td class="r" title="Lo mismo a 60 días hábiles">${r.prob60!=null?r.prob60.toFixed(0)+"%":"—"}</td>
+        <td class="r">${h?`<span style="color:${h.cubre?green:amber};font-weight:700" title="${h.cubre?("Vendiendo hoy quedarían "+fmtCLP(Math.round(h.neto))+" después de la comisión de salida ("+fmtCLP(h.feeSalida)+")"):("Falta que suba "+(h.faltaPct||0).toFixed(2)+"% para que la ganancia cubra la comisión de salida de "+fmtCLP(h.feeSalida))}">${h.cubre?"sí":"falta "+(h.faltaPct||0).toFixed(1)+"%"}</span>`:'<span style="color:var(--faint)">—</span>'}</td></tr>`;}).join("");
+    const conUmbral=M.rows.filter(r=>r.umbral!=null).length;
+    const rapidas=M.rows.filter(r=>r.umbral!=null&&r.umbral<=10).length;
+    return card("Cuántos días para pagar la comisión","Dos horizontes distintos: el <b>movimiento</b> mide magnitud (cuánto se mueve un día contra lo que cuesta la vuelta) y la <b>deriva</b> mide dirección (cuánto tarda la tendencia reciente en dejar la posición sobre el umbral desde el cual vender deja algo)",
+      `<div class="tiles">
+        ${tile("Costo a superar",rt.pct.toFixed(2)+"%",fmtCLP(rt.clp)+" sobre "+fmtCLP(actTicket),indigo,red)}
+        ${tile("Con deriva a favor",conUmbral+" de "+M.rows.length,"su tendencia reciente apunta a cubrir el costo",indigo,conUmbral?green:red)}
+        ${tile("Lo cubrirían en ≤10 días",String(rapidas),"al ritmo de la ventana de "+M.win+" días",indigo,rapidas?green:muted)}
+        ${tile("Posiciones que ya cubren la salida",(()=>{const k=Object.keys(HOLD).filter(t=>HOLD[t].cubre).length,n=Object.keys(HOLD).length;return n?(k+" de "+n):"—";})(),"su ganancia paga la comisión de vender",indigo,Object.keys(HOLD).length?green:muted)}</div>
+       <div class="tw tbl-compact" style="margin-top:13px"><table><thead><tr><th>Acción</th><th class="r" title="Movimiento medio de un día">Mov. día</th><th class="r" title="Días de movimiento típico equivalentes al costo de ida y vuelta">Días p/ pagar</th><th class="r" title="Retorno medio diario de la ventana">Deriva diaria</th><th class="r" title="Días que la deriva necesitaría para superar el costo">Días al umbral</th><th class="r">Prob. 20d</th><th class="r">Prob. 60d</th><th class="r" title="Si la tienes: ¿la ganancia actual ya cubre la comisión de salir?">¿Cubre salir?</th></tr></thead><tbody>${filas}</tbody></table></div>
+       <div class="note" style="margin-top:11px"><b>Días p/ pagar</b> es una vara de magnitud, no un pronóstico: dice cuántos días de movimiento normal “vale” la comisión. <b>Días al umbral</b> sí es una proyección: extiende la deriva de los últimos ${M.win} días hábiles y estima cuándo la posición superaría el costo de ida y vuelta; con deriva negativa no hay horizonte y aparece “—”. Las <b>probabilidades</b> salen de la aproximación normal (retorno acumulado a n días con la deriva y la volatilidad de la ventana) y bajan mucho cuando la acción es volátil aunque la deriva sea buena. Todo se estima con historia reciente: cambia al cambiar la ventana y <b>no predice el futuro</b>.</div>`);
+  })();
+  // ── 2c · PROPUESTAS: qué comprar y qué vender según los criterios del módulo ──
+  const propCard=(()=>{
+    const iesc=v=>(""+v).replace(/</g,"&lt;");
+    // CRITERIOS EXPLÍCITOS (se muestran al usuario: nada de caja negra)
+    const compras=M.rows.filter(r=>
+      r.score>=60 && r.rel!=null && r.rel>0 && r.margen!=null && r.margen>0 && r.umbral!=null
+    ).sort((a,b)=>b.score-a.score).slice(0,8);
+    const enCartera=Object.keys(HOLD);
+    const ventas=M.rows.filter(r=>HOLD[r.t]).filter(r=>
+      r.score<=40 || (r.r20!=null&&r.r20<0&&r.rel!=null&&r.rel<0) || r.umbral==null
+    ).sort((a,b)=>a.score-b.score);
+    const motivoC=r=>{const m=[];
+      if(r.score>=70)m.push("score alto ("+r.score+")");else m.push("score "+r.score);
+      if(r.rel!=null)m.push("supera al IPSA por "+r.rel.toFixed(1)+" pts en 20d");
+      if(r.umbral!=null)m.push("cubriría la comisión en ~"+Math.round(r.umbral)+" d");
+      if(r.corrMedia!=null&&r.corrMedia<0.3)m.push("baja correlación ("+r.corrMedia.toFixed(2)+"): diversifica");
+      if(!HOLD[r.t])m.push("no la tienes");
+      return m.join(" · ");};
+    const motivoV=r=>{const m=[];const h=HOLD[r.t];
+      if(r.score<=40)m.push("score bajo ("+r.score+")");
+      if(r.r20!=null&&r.r20<0)m.push("cae "+Math.abs(r.r20).toFixed(1)+"% en 20d");
+      if(r.rel!=null&&r.rel<0)m.push("bajo el IPSA por "+Math.abs(r.rel).toFixed(1)+" pts");
+      if(r.umbral==null)m.push("deriva negativa: el costo no se paga solo");
+      if(h&&!h.cubre)m.push("⚠ la ganancia aún no cubre la comisión de salir");
+      return m.join(" · ");};
+    const tblC=compras.length?`<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">20d</th><th class="r">vs IPSA</th><th class="r">Días al umbral</th><th class="r">Prob. 20d</th><th class="r">Corr.</th><th>Por qué</th></tr></thead><tbody>${
+      compras.map(r=>`<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${HOLD[r.t]?' <span class="badge" style="font-size:8px;color:var(--muted)" title="Ya la tienes: sería aumentar la posición">AMPLIAR</span>':""}</td><td class="r" style="font-weight:800;color:${green}">${r.score}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r">${Math.round(r.umbral)} d</td><td class="r">${r.prob20!=null?r.prob20.toFixed(0)+"%":"—"}</td><td class="r">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:320px" title="${iesc(motivoC(r))}">${iesc(motivoC(r))}</td></tr>`).join("")
+      }</tbody></table></div>`:`<div class="note" style="margin:0">Ninguna acción cumple hoy los tres requisitos de compra. Con el mercado en contra, <b>no operar es una decisión válida</b>: cada vuelta cuesta ${rt.pct.toFixed(2)}%.</div>`;
+    const tblV=ventas.length?`<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">20d</th><th class="r">vs IPSA</th><th class="r">Tu posición</th><th class="r">Resultado</th><th class="r">Si vendes hoy</th><th>Por qué</th></tr></thead><tbody>${
+      ventas.map(r=>{const h=HOLD[r.t];
+        return `<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b></td><td class="r" style="font-weight:800;color:${r.score<=40?red:amber}">${r.score}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r">${fmtCLP(Math.round(h.valor))}</td><td class="r" style="color:${h.gain>=0?green:red};font-weight:700">${(h.gain>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.gain)))}</td><td class="r" style="color:${h.cubre?green:amber};font-weight:700" title="Resultado menos la comisión de salida (${fmtCLP(h.feeSalida)})">${(h.neto>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.neto)))}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:300px" title="${iesc(motivoV(r))}">${iesc(motivoV(r))}</td></tr>`;}).join("")
+      }</tbody></table></div>`:`<div class="note" style="margin:0">${enCartera.length?"Ninguna de tus posiciones cumple los criterios de salida: todas mantienen score y tendencia aceptables.":"Aún no tienes posiciones registradas, así que no hay nada que proponer vender."}</div>`;
+    return card("Acciones propuestas","Listas mecánicas construidas con los criterios de abajo · <b>no son recomendaciones de inversión</b>: son el resultado de aplicar reglas fijas a los datos de la base",
+      `<div class="genl" style="margin:0 0 8px">▲ Propuestas de COMPRA <span style="font-weight:600;color:var(--faint)">· ${compras.length} de ${M.rows.length} acciones</span></div>
+       ${tblC}
+       <div class="genl" style="margin:18px 0 8px">▼ Propuestas de VENTA <span style="font-weight:600;color:var(--faint)">· sobre las ${enCartera.length} acciones que tienes en cartera</span></div>
+       ${tblV}
+       <div class="note" style="margin-top:13px"><b>Criterios exactos.</b> Entra a <b>comprar</b> la acción que cumple las tres: score ≥ 60, rendir más que el IPSA en 20 días, y que su movimiento diario supere el costo de ida y vuelta (${rt.pct.toFixed(2)}% a ${fmtCLP(actTicket)}) con una deriva que apunte a cubrirlo. Entra a <b>vender</b> la que tienes y cumple alguna: score ≤ 40, caer en 20 días y además quedar bajo el IPSA, o tener deriva negativa. La columna <b>Si vendes hoy</b> descuenta la comisión de salida: cuando el resultado no la cubre, salir <b>concreta una pérdida mayor</b> que la que muestra el papel. Cambia la ventana o el monto por operación arriba y las listas se recalculan.</div>`);
+  })();
   // ── 3 · DIVERSIFICACIÓN AL SUMAR NOMBRES ──
   const divCard=(()=>{
     const orden=M.rows.slice().sort((a,b)=>(a.corrMedia==null?9:a.corrMedia)-(b.corrMedia==null?9:b.corrMedia));
@@ -7724,7 +7837,7 @@ function viewActiva(){
        ${tBajo?`<div class="note" style="margin-top:11px;border-left-color:var(--amber)"><b>${tBajo} operación${tBajo!==1?"es":""}</b> quedó bajo ${fmtCLP(mn||0)} y pagó la comisión mínima. En esas, el costo porcentual es mucho mayor: agrupar el monto en menos operaciones habría dejado más rentabilidad con la misma decisión de inversión.</div>`:""}
        <div class="note" style="margin-top:11px">La <b>rotación anual</b> compara el capital que mueves con el patrimonio que administras: 100% significa dar vuelta la cartera completa una vez al año. El <b>arrastre</b> es cuánto te resta esa rotación de rentabilidad anual solo en comisiones — es el número que una estrategia activa tiene que superar con sus aciertos.</div>`);
   })();
-  return banner+escala+rankCard+divCard+opCard;
+  return banner+escala+rankCard+horCard+propCard+divCard+opCard;
 }
 function attachActiva(){
   if(modulo!=="eval"||page!=="activa")return;
