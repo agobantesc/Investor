@@ -2954,7 +2954,11 @@ function invMetrics(){
     // idénticos al centésimo no existen). La UI lo muestra como "—" en vez de un falso "+0,00%"; se sana solo
     // cuando la sincronización trae el cierre oficial de esa fecha (pricedbApplyToProjects lo rellena).
     const ipsaND=(w.ipsaFresh===false)||(w.ipsaFresh!==true&&i>0&&_ipPrevDate>0&&w.ipsa===_ipPrevDate);
-    series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:w.ipsa/base.ipsa-1,diff:(twr-1)-(w.ipsa/base.ipsa-1),yrs,inflow,ipsaND,ev:w.ev||null});});
+    // el retorno del índice se calcula con AMBOS extremos numéricos: un ipsa no numérico (respaldo corrupto)
+    // producía NaN% en el seguimiento y en el historial en vez de un "—" honesto
+    const _ipN=+w.ipsa,_ipB=+base.ipsa;
+    const _ipR=(isFinite(_ipN)&&_ipN>0&&isFinite(_ipB)&&_ipB>0)?(_ipN/_ipB-1):0;
+    series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:_ipR,diff:(twr-1)-_ipR,yrs,inflow,ipsaND,ev:w.ev||null});});
   // fresh AUSENTE = semana antigua/compra inicial (precios reales por construcción) → se confía; fresh PRESENTE
   // pero sin el ticker = ese precio es arrastre o precio de transacción (no cierre) → se desconfía.
   const freshOK=(w,t)=>w?(w.fresh?w.fresh.indexOf(t)>=0:true):false;
@@ -2983,7 +2987,10 @@ function invMetrics(){
   // presentar como "Δ día" un salto entre fechas lejanas. Sin par real vigente → null ("—"), nunca un % falso.
   const _gapD=(a,b)=>Math.abs((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);
   const _tolD=PF.freq==="mensual"?35:PF.freq==="semanal"?9:4;
-  const perStock=PF.holdings.map(hd=>{const cur=lastW.prices[hd.t]||b0[hd.t],shx=sh[hd.t]||0,v=shx*cur,cst=cost[hd.t]||0,gain=v-cst,avg=(shx>0&&cst>0)?cst/shx:b0[hd.t];
+  // el precio se toma NUMÉRICO: con "||" un valor no numérico ("x" de un respaldo corrupto o de una planilla
+  // mal formada) pasaba por ser truthy y contaminaba valor, ganancia y contribución con NaN. Los ceros,
+  // negativos y nulos ya caían al precio base; ahora también lo hace cualquier cosa que no sea un número.
+  const perStock=PF.holdings.map(hd=>{const _lp=+lastW.prices[hd.t],cur=(isFinite(_lp)&&_lp>0)?_lp:b0[hd.t],shx=sh[hd.t]||0,v=shx*cur,cst=cost[hd.t]||0,gain=v-cst,avg=(shx>0&&cst>0)?cst/shx:b0[hd.t];
     let dayRet=null,dayFrom=null,dayTo=null;
     {let i=WEEKS.length-1;
      while(i>=0&&!(freshOK(WEEKS[i],hd.t)&&WEEKS[i].prices[hd.t]>0))i--;
@@ -6449,7 +6456,7 @@ function viewFundamentos(){
     return `<tr><td>${nm}</td><td class="r tnum">${fv(f.px,2)}</td><td class="r tnum" style="font-weight:700;color:${f.pe==null?faint:peMed&&f.pe<peMed?green:ink}">${fv(f.pe,1)}</td><td class="r tnum" style="color:${muted}">${fv(f.fpe,1)}</td><td class="r tnum">${fv(f.pb,2)}</td><td class="r tnum" style="font-weight:700;color:${f.dy>=5?green:f.dy!=null?ink:faint}">${f.dy!=null?f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r tnum" style="color:${muted}">${fv(f.eps,1)}</td><td class="r tnum">${fundFmtCap(f.mcap)}</td><td>${bar}</td><td>${chips}</td></tr>`;
   }).join("");
   const th1=(k,l,cls)=>`<th class="${cls||""}" data-fsort="${k}" title="Ordenar por ${l}">${l}${arrow(fundSort,k)}</th>`;
-  const tbl=card("Valorización y dividendos",`P/U, P/B, dividendos, capitalización y posición en el rango de 52 semanas · al ${(""+(FDATA.updatedAt||"")).slice(0,10)||"—"} · fuente Yahoo Finance · clic en un encabezado para ordenar`,
+  const tbl=card("Valorización y dividendos",`P/U, P/B, dividendos, capitalización y posición en el rango de 52 semanas · al ${fD((""+(FDATA.updatedAt||"")).slice(0,10))||"—"} · fuente Yahoo Finance · clic en un encabezado para ordenar`,
     {html:`<div class="tw"><table><thead><tr>${th1("t","Acción")}${th1("px","Precio","r")}${th1("pe","P/U","r")}${th1("fpe","P/U fwd","r")}${th1("pb","P/B","r")}${th1("dy","Yield div.","r")}${th1("eps","EPS","r")}${th1("mcap","Capitalización","r")}${th1("pos","52 semanas")}<th>Señales</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true},((typeof DATASET!=="undefined"&&DATASET==="import")?'<button class="btn" id="anaReportBtn" title="Genera un PDF con todo el análisis según los Ajustes del análisis activos">📄 Informe del análisis (PDF)</button> ':'')+syncBtn);
   // ── CALIDAD, CRECIMIENTO Y CONSENSO (segunda pasada del pipeline: ROE, márgenes, deuda, analistas) ──
   const hasQ=tks.some(t=>{const f=by[t];return f.roe!=null||f.nm!=null||f.target!=null||f.de!=null||f.peg!=null;});
@@ -7127,7 +7134,9 @@ function contabAgg(){
   const L=ledger(),IM=invMetrics();if(!L||!IM||!L.tx.length)return null;
   const lastW=WEEKS[WEEKS.length-1];
   const perT={};L.tx.forEach(x=>{const o=perT[x.t]||(perT[x.t]={t:x.t,buyMonto:0,buyQty:0,sellMonto:0,sellQty:0,divMonto:0,realized:0});if(x.side==="buy"){o.buyMonto+=x.monto;o.buyQty+=x.shares;}else if(x.side==="div"){o.divMonto+=x.monto;}else{o.sellMonto+=x.monto;o.sellQty+=x.shares;o.realized+=(x.gain||0);}});
-  const rows=Object.values(perT).map(o=>{const sh=L.sh[o.t]||0,avg=L.avg[o.t]||0,cur=(lastW.prices[o.t]!=null?lastW.prices[o.t]:avg),val=sh*cur,unreal=(cur-avg)*sh;return Object.assign(o,{sh,avg,cur,val,unreal});});
+  // precio de cierre NUMÉRICO (mismo criterio que invMetrics): un valor no numérico caía como "presente" y
+  // contaminaba valor y ganancia no realizada con NaN; ahora se usa el costo promedio como respaldo
+  const rows=Object.values(perT).map(o=>{const sh=L.sh[o.t]||0,avg=L.avg[o.t]||0,_lp=+lastW.prices[o.t],cur=(isFinite(_lp)&&_lp>0)?_lp:avg,val=sh*cur,unreal=(cur-avg)*sh;return Object.assign(o,{sh,avg,cur,val,unreal});});
   const totBuy=L.tx.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0);
   const totSell=L.tx.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0);
   const totDiv=L.tx.filter(x=>x.side==="div").reduce((a,x)=>a+x.monto,0);
