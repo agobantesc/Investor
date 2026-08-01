@@ -448,28 +448,42 @@ let days = Object.values(byDate)
   .filter(d => Object.keys(d.prices).length || d.ipsa != null)
   .sort((a, b) => (a.date < b.date ? -1 : 1));
 
-// DÍA CALCO: si un día repite EXACTO el vector de precios del día anterior en TODAS las acciones (≥5),
-// es un arrastre del upstream — un mercado abierto jamás cierra idéntico en 28/28 papeles — no un cierre real.
-// Se vacían sus precios (el día sobrevive solo si trae un IPSA propio distinto). Caso real: los días
-// 14/15/16-10-2024 repetían el vector del 11-10-2024. Nunca se copia un cierre anterior como dato del día.
-let nCalco = 0, nRestore = 0; const restoreLog = [];
+// DÍA CALCO: si un día repite EXACTO el precio del día anterior en CASI TODAS las acciones (≥5 comparables
+// y ≥85% idénticas), es un arrastre del upstream — un mercado abierto jamás cierra idéntico en 26/28 papeles —
+// no un cierre real. Se descartan las celdas copiadas (el día sobrevive con las acciones que SÍ se movieron o
+// con un IPSA propio distinto). Casos reales: los días 14/15/16-10-2024 repetían el vector del 11-10-2024
+// (28/28), y el backfill de 2 años del 01-08-2026 rellenó 07-21…07-31 con el vector del 17-07 dejando solo a
+// SANTANDER moverse (27/28) — el umbral del 100% no lo veía y se perdieron 9 días de cierres buenos.
+const CALCO_MIN = 0.85;
+// proporción de acciones de `cur` que repiten EXACTO su valor en `ref` (solo cuenta las comparables)
+const calcoRatio = (cur, ref) => {
+  const ks = Object.keys(cur || {}).filter(t => (ref || {})[t] != null);
+  if (ks.length < 5) return { n: 0, rep: 0, ratio: 0 };
+  const rep = ks.filter(t => ref[t] === cur[t]).length;
+  return { n: ks.length, rep, ratio: rep / ks.length };
+};
+let nCalco = 0, nRestore = 0, nCelda = 0; const restoreLog = [], calcoLog = [];
 for (let i = days.length - 1; i >= 1; i--) {
-  const cur = days[i].prices || {}, ks = Object.keys(cur);
-  if (ks.length < 5) continue;
+  const cur = days[i].prices || {};
+  if (Object.keys(cur).length < 5) continue;
   let j = i - 1; while (j >= 0 && !Object.keys(days[j].prices || {}).length) j--;
   if (j < 0) continue;
   const prev = days[j].prices || {};
-  if (ks.every(t => prev[t] != null && prev[t] === cur[t])) {
-    // ¿el archivo previo tenía para este día cierres REALES (distintos del día de referencia)? → la corrida
-    // pisó datos buenos con un calco: se restauran los guardados en vez de vaciar el día.
-    const snap = prevSnap[days[i].date], sp = (snap && snap.prices) || {}, spKs = Object.keys(sp);
-    const snapDistinct = spKs.length >= 5 && !spKs.every(t => prev[t] != null && prev[t] === sp[t]);
+  const c = calcoRatio(cur, prev);
+  if (c.n >= 5 && c.ratio >= CALCO_MIN) {
+    // ¿el archivo previo tenía para este día cierres REALES (que no son un calco del día de referencia)? → la
+    // corrida pisó datos buenos con un arrastre: se restauran los guardados en vez de descartarlos.
+    const snap = prevSnap[days[i].date], sp = (snap && snap.prices) || {};
+    const cs = calcoRatio(sp, prev);
+    const snapDistinct = cs.n >= 5 && cs.ratio < CALCO_MIN;
     if (snapDistinct) {
       days[i].prices = { ...sp };
       if (days[i].ipsa == null && snap.ipsa != null) { days[i].ipsa = snap.ipsa; if (snap.ipsaSynth) days[i].ipsaSynth = true; }
       nRestore++; restoreLog.push(days[i].date);
     } else {
-      days[i].prices = {}; nCalco++;
+      // sin respaldo utilizable: se borran SOLO las celdas copiadas y se conservan las que sí se movieron
+      const q = {}; Object.keys(cur).forEach(t => { if (!(prev[t] != null && prev[t] === cur[t])) q[t] = cur[t]; else nCelda++; });
+      days[i].prices = q; nCalco++; calcoLog.push(`${days[i].date} (${c.rep}/${c.n})`);
       if (days[i].ipsa != null && days[i].ipsa === days[j].ipsa) delete days[i].ipsa;
     }
   }
@@ -477,7 +491,7 @@ for (let i = days.length - 1; i >= 1; i--) {
 if (nRestore) console.log(`Día(s) restaurados del archivo (la corrida los pisó con un calco): ${restoreLog.join(", ")}`);
 if (nCalco) {
   days = days.filter(d => Object.keys(d.prices).length || d.ipsa != null);
-  console.log(`Día(s) CALCO descartados (todas las acciones repetían el cierre anterior): ${nCalco}`);
+  console.log(`Día(s) con ARRASTRE (casi todas las acciones repetían el cierre anterior): ${nCalco} — ${nCelda} cierre(s) copiado(s) descartado(s): ${calcoLog.join(", ")}`);
 }
 
 // El IPSA SINTÉTICO heredado se descarta aquí y se RECALCULA más abajo con los precios de ESTA corrida:

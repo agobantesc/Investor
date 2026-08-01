@@ -5460,17 +5460,20 @@ function pricedbSanitize(){
   stripCF(PRICEDB.ipsa);
   Object.keys(PRICEDB.px||{}).forEach(t=>stripCF(PRICEDB.px[t]));
   Object.keys(ix).forEach(k=>stripCF(ix[k]));
-  // 2.2) DÍA CALCO del feed: si en una fecha TODAS las acciones (≥5) repiten EXACTO su cierre del día hábil
-  //   anterior, ese día es un arrastre del generador — un mercado abierto jamás cierra 28/28 idéntico al día
-  //   previo — esté donde esté en la serie (stripCF solo cubre rachas al FINAL). Se elimina el día completo.
-  //   Caso real: closes.json repetía el vector del 11-10-2024 los días 14, 15 y 16-10-2024.
+  // 2.2) DÍA CALCO del feed: si en una fecha CASI TODAS las acciones comparables (≥5 y ≥85%) repiten EXACTO su
+  //   cierre del día hábil anterior, ese día es un arrastre del generador — un mercado abierto jamás cierra
+  //   26/28 idéntico al día previo — esté donde esté en la serie (stripCF solo cubre rachas al FINAL). Se
+  //   borran las celdas COPIADAS y se conservan las acciones que sí se movieron.
+  //   Casos reales: closes.json repetía el vector del 11-10-2024 los días 14, 15 y 16-10-2024 (28/28), y el
+  //   backfill del 01-08-2026 rellenó 21-07…31-07 con el vector del 17-07 dejando solo a SANTANDER moverse
+  //   (27/28): con el umbral del 100% ese arrastre pasaba entero.
   let nDup=0;
   (function(){const px=PRICEDB.px||{},tks=Object.keys(px);if(tks.length<5)return;
     const dates=pricedbAllDates();let prev=dates[0];
     for(let i=1;i<dates.length;i++){const d=dates[i];let n=0,eq=0;
-      tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null){n++;if(m[prev]!=null&&m[d]===m[prev])eq++;}});
-      if(n>=5&&eq===n){
-        tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null){delete m[d];nDup++;}});
+      tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null&&m[prev]!=null){n++;if(m[d]===m[prev])eq++;}});
+      if(n>=5&&eq/n>=0.85){
+        tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null&&m[prev]!=null&&m[d]===m[prev]){delete m[d];nDup++;}});
         if(PRICEDB.ipsa&&PRICEDB.ipsa[d]!=null&&PRICEDB.ipsa[d]===PRICEDB.ipsa[prev]){delete PRICEDB.ipsa[d];nDup++;}
         Object.keys(ix).forEach(k=>{if(ix[k][d]!=null&&ix[k][d]===ix[k][prev]){delete ix[k][d];nDup++;}});
         continue;   // el día calco no pasa a ser "anterior": una racha de calcos se compara siempre contra el último día REAL
@@ -5877,13 +5880,33 @@ function cloudSchedulePush(){
   if(!CLOUD||!CLOUD.token||CLOUD.auto===false||!cloudServerMode())return;
   clearTimeout(_cloudTimer);_cloudTimer=setTimeout(function(){cloudPush(false).catch(function(){});},45e3);
 }
+/* ¿este respaldo tiene DATOS de verdad? (al menos una cartera o una base de precios con contenido).
+   Un navegador recién estrenado —abrir la app publicada por primera vez— produce un payload con la
+   estructura completa pero sin nada dentro; subirlo PISA el respaldo bueno del servidor con la nada. */
+function backupTieneDatos(j){
+  try{const cs=(j&&j.clients)||{};
+    return Object.keys(cs).some(id=>{const o=cs[id]||{};
+      const pr=o.pf_projects_v1,px=o.inv_pricedb_v1;
+      if(Array.isArray(pr)&&pr.length)return true;
+      if(px&&px.px&&Object.keys(px.px).length)return true;
+      if(px&&px.ipsa&&Object.keys(px.ipsa).length)return true;
+      return false;});
+  }catch(e){return false;}
+}
 async function cloudPush(manual){
   if(!cloudServerMode())throw new Error("la nube solo funciona en la versión web (URL del servidor)");
   if(!CLOUD.token)throw new Error("configura primero el token del servidor");
   if(_cloudPushing)return null;
+  const payload=backupPayload();
+  // el AUTOMÁTICO nunca pisa el servidor con un estado vacío: sin este freno, abrir la app publicada en un
+  // navegador limpio borraba el respaldo a los 45 segundos y dejaba la restauración girando en vacío
+  if(!backupTieneDatos(payload)){
+    if(!manual)return null;
+    if(!window.confirm("Este navegador no tiene carteras ni base de precios.\n\nGuardar ahora REEMPLAZARÁ el respaldo del servidor por uno VACÍO. ¿Continuar igual?"))return null;
+  }
   _cloudPushing=true;
   try{
-    const r=await cloudApi("PUT","/api/backup",backupPayload());
+    const r=await cloudApi("PUT","/api/backup",payload);
     CLOUD.lastPush=new Date().toISOString();cloudSave();
     return r;
   }finally{_cloudPushing=false;}
@@ -5895,6 +5918,12 @@ async function cloudRestore(manual){
     const when=meta.savedAt?new Date(meta.savedAt).toLocaleString("es-CL"):"—";
     if(!window.confirm("Restaurar el respaldo de la nube del "+when+"\n\nREEMPLAZA los datos de este navegador por los del servidor. ¿Continuar?"))return false;
     const j=await cloudApi("GET","/api/backup");
+    if(!backupTieneDatos(j)){
+      // restaurar la nada dejaría la app igual y el arranque volvería a ofrecerlo: se dice la verdad y se corta
+      try{sessionStorage.setItem("inv_cloud_boot_ask","1");}catch(e){}
+      window.alert("El respaldo del servidor está VACÍO: no tiene carteras ni base de precios.\n\nNo se restauró nada (habría borrado lo que tengas aquí). Carga tu respaldo desde el archivo .json en ⚙ Configuración → Respaldo, y luego usa «☁ Guardar ahora» para dejarlo en el servidor.");
+      return false;
+    }
     if(!restoreFromPayload(j))throw new Error("el respaldo no se pudo aplicar");
     window.alert("Respaldo restaurado. Investor se recargará.");location.reload();
     return true;
@@ -5906,6 +5935,9 @@ async function cloudBoot(){
   try{
     const localEmpty=(!PROJECTS||!PROJECTS.length)&&(typeof pricedbTickers!=="function"||!pricedbTickers().length);
     if(!localEmpty)return;
+    // se ofrece UNA vez por pestaña: si el usuario cancela o el respaldo no aporta datos, la app sigue
+    // vacía y sin este freno la pregunta reaparecía en cada carga, atrapándolo en un bucle
+    try{if(sessionStorage.getItem("inv_cloud_boot_ask"))return;sessionStorage.setItem("inv_cloud_boot_ask","1");}catch(e){}
     if(!CLOUD.token){
       const h=await fetch("/api/health",{cache:"no-store"}).then(r=>r.json()).catch(()=>null);
       if(!h||!h.hasBackup)return;
@@ -6203,7 +6235,7 @@ function detectInconsistencies(){
   // 1) fin de semana
   (function(){const wk={};tickers.forEach(t=>datesOf(t).forEach(d=>{if(!isTradingDay(d))wk[t]=1;}));Object.keys(IPSA).forEach(d=>{if(!isTradingDay(d))wk.IPSA=1;});const who=Object.keys(wk);if(who.length)issues.push({level:"warn",msg:"Hay fechas de fin de semana en la base (la bolsa no opera sáb/dom). Usa “Reparar base”.",tickers:who});})();
   // 2) acciones rezagadas
-  (function(){let gl=null;tickers.forEach(t=>{const ds=datesOf(t),l=ds[ds.length-1];if(l&&(gl==null||l>gl))gl=l;});if(!gl)return;const stale=[];tickers.forEach(t=>{const ds=datesOf(t),l=ds[ds.length-1];if(l&&l<gl&&!gapOK(l,gl,"diario"))stale.push(t);});if(stale.length)issues.push({level:"info",msg:"Estas acciones no tienen el último cierre del grupo ("+gl+"): su dato más reciente está rezagado.",tickers:stale});})();
+  (function(){let gl=null;tickers.forEach(t=>{const ds=datesOf(t),l=ds[ds.length-1];if(l&&(gl==null||l>gl))gl=l;});if(!gl)return;const stale=[];tickers.forEach(t=>{const ds=datesOf(t),l=ds[ds.length-1];if(l&&l<gl&&!gapOK(l,gl,"diario"))stale.push(t);});if(stale.length)issues.push({level:"info",msg:"Estas acciones no tienen el último cierre del grupo ("+fD(gl)+"): su dato más reciente está rezagado.",tickers:stale});})();
   // 3) rangos mensuales incompatibles
   (function(){const monthly=tickers.map(t=>{const ds=datesOf(t);return {t,from:ds[0].slice(0,7),to:ds[ds.length-1].slice(0,7),mp:resampleMap(PX[t],"mensual").length};}).filter(x=>x.mp>=2);if(monthly.length<2)return;const ls=monthly.reduce((a,b)=>b.from>a.from?b:a),ee=monthly.reduce((a,b)=>b.to<a.to?b:a);const os=ls.from,oe=ee.to;const months=os<=oe?(periodIndex(oe+"-15","mensual")-periodIndex(os+"-15","mensual")+1):0;if(months<3)issues.push({level:"warn",msg:"Las acciones no comparten suficiente historial mensual (solapamiento "+(months>0?(os+" → "+oe+", "+months+" mes(es)"):"vacío")+"): un análisis mensual conjunto no es comparable.",tickers:[ls.t,ee.t]});})();
   // 4) IPSA ausente donde hay acciones
