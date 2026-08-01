@@ -1452,6 +1452,22 @@
   .mc-fld input{padding:.52rem .62rem;border:1px solid var(--line2);border-radius:10px;background:var(--card);
     font:700 14.5px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;transition:.15s var(--ease);}
   .mc-fld input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
+  /* un segmentado DENTRO del formulario es un campo más: misma altura y mismo radio que un select/input,
+     para que la fila no quede con tres alturas distintas */
+  .mc-fld .home-seg{display:flex;align-self:stretch;padding:3px;border-radius:10px;border-color:var(--line2);}
+  .mc-fld .home-seg button{flex:1;padding:.36rem .5rem;font:800 12px var(--font);border-radius:7px;}
+  /* los tres tipos de campo comparten ALTURA: sin esto el input (fuente 14,5px, más alta que la del select)
+     quedaba unos píxeles por encima del select y del segmentado, y la fila se veía desalineada. El piso es la
+     altura natural del input, que es el más alto de los tres. */
+  .mc-fld select,.mc-fld input,.mc-fld .home-seg{min-height:36px;box-sizing:border-box;}
+  /* PISTA del formulario: una frase, no una etiqueta. .genl va en versalitas y dejaba estas explicaciones
+     GRITADAS en mayúsculas; esto las deja legibles y con el mismo tono que las notas del resto de la app */
+  .mc-hint{font:600 12px var(--font);color:var(--muted);line-height:1.5;margin-top:10px;}
+  .mc-hint b{color:var(--ink);font-weight:800;}
+  /* tira de estado de la cartera bajo el formulario: dato duro, separado de las pistas */
+  .mc-strip{display:flex;flex-wrap:wrap;gap:7px 20px;align-items:baseline;margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  .mc-strip .k{font:800 10px var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .mc-strip .v{font:800 13px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;}
   .mc-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:15px;}
   .mc-seglab{font:800 10px var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
   .mc-goal{display:inline-flex;align-items:center;gap:7px;font:700 12px var(--font);color:var(--ink);cursor:pointer;}
@@ -7459,8 +7475,10 @@ function genAnalysisReport(){
    reduce el costo en proporción a las acciones vendidas, igual que invMetrics. La caja y las comisiones
    de las operaciones simuladas se calculan con el operador configurado. NADA se guarda en la cartera. ==== */
 let cambState=(function(){try{const v=JSON.parse(localStorage.getItem("inv_camb_v1"));
-  if(v&&typeof v==="object")return {pid:v.pid!=null?v.pid:null,ops:Array.isArray(v.ops)?v.ops:[],side:v.side||"buy",tkr:v.tkr||null,qty:v.qty||"",price:v.price||"",modo:v.modo==="monto"?"monto":"qty",monto:v.monto||""};}catch(e){}
-  return {pid:null,ops:[],side:"buy",tkr:null,qty:"",price:"",modo:"qty",monto:""};})();
+  // el modo por defecto es MONTO: así se opera de verdad ("invierto $250.000 en X"), y en ese modo el precio
+  // no se pide — se usa el último cierre conocido. El modo CANTIDAD es el que permite fijar un precio a mano.
+  if(v&&typeof v==="object")return {pid:v.pid!=null?v.pid:null,ops:Array.isArray(v.ops)?v.ops:[],side:v.side||"buy",tkr:v.tkr||null,qty:v.qty||"",price:v.price||"",modo:v.modo==="qty"?"qty":"monto",monto:v.monto||""};}catch(e){}
+  return {pid:null,ops:[],side:"buy",tkr:null,qty:"",price:"",modo:"monto",monto:""};})();
 function cambSave(){try{localStorage.setItem("inv_camb_v1",JSON.stringify(cambState));}catch(e){}}
 function cambProjects(){return (typeof mkwProjects==="function")?mkwProjects():[];}
 function cambProj(){const ps=cambProjects();if(!ps.length)return null;
@@ -7557,23 +7575,25 @@ function viewCambios(){
     <label class="mc-fld">Ingresar por<div class="home-seg" role="group" style="align-self:stretch">${[["qty","Cantidad"],["monto","Monto $"]].map(([k,l])=>`<button data-cambmodo="${k}" class="${cambState.modo===k?"on":""}" style="flex:1">${l}</button>`).join("")}</div></label>
     ${cambState.modo==="monto"
       ? `<label class="mc-fld">Monto total (CLP)<input id="cambmonto" type="number" min="0" step="1000" value="${cambState.monto||""}" placeholder="p. ej. 250000"></label>`
-      : `<label class="mc-fld">Cantidad<input id="cambqty" type="number" min="0" step="1" value="${cambState.qty||""}" placeholder="acciones"></label>`}
-    <label class="mc-fld">Precio<input id="cambpx" type="number" min="0" step="1" value="${cambState.price||(_pxSug!=null?Math.round(_pxSug):"")}" placeholder="${_pxSug!=null?Math.round(_pxSug):"precio"}"></label>
+      : `<label class="mc-fld">Cantidad<input id="cambqty" type="number" min="0" step="1" value="${cambState.qty||""}" placeholder="acciones"></label>
+         <label class="mc-fld">Precio por acción<input id="cambpx" type="number" min="0" step="1" value="${cambState.price||(_pxSug!=null?Math.round(_pxSug):"")}" placeholder="${_pxSug!=null?Math.round(_pxSug):"precio"}"></label>`}
   </div>
   <div class="mc-row" style="margin-top:13px">
     <button class="btn btn-pri" id="cambadd">+ Agregar a la simulación</button>
     ${R.nOps?`<button class="btn" id="cambclear" style="color:var(--red);border-color:var(--red-line)">Vaciar</button>`:""}
   </div>${(function(){
-    const _px=+cambState.price||_pxSug;
+    // En MONTO el precio NO se pide: se usa el último cierre conocido, que es como se opera de verdad
+    // ("invierto $250.000 en X"). El modo CANTIDAD es el que existe para fijar otro nivel de entrada o salida.
     if(cambState.modo==="monto"){
+      if(_pxSug==null)return `<div class="mc-hint">No hay un cierre conocido de <b>${_tkr}</b> en la base, así que no se puede convertir un monto a acciones. Cambia a <b>Cantidad</b> para indicar tú el precio.</div>`;
       const _m=+cambState.monto||0;
-      if(_m>0&&_px>0){const _q=Math.floor(_m/_px);
-        return `<div class="genl" style="margin:8px 0 0">Con <b>${fmtCLP(_m)}</b> a ${fmtP(_px)} alcanzan <b>${_q.toLocaleString("es-CL")} acciones</b> enteras${_q>0?" = <b>"+fmtCLP(_q*_px)+"</b> (quedan "+fmtCLP(_m-_q*_px)+" sin usar)":" — el monto no alcanza para una acci\u00f3n"}. La corredora opera acciones enteras, as\u00ed que la simulaci\u00f3n se arma con esa cantidad.</div>`;}
-      return `<div class="genl" style="margin:8px 0 0">Indica el monto total que quieres ${cambState.side==="sell"?"vender":"invertir"}; se convierte a acciones enteras con el precio de al lado.</div>`;
+      if(_m>0){const _q=Math.floor(_m/_pxSug);
+        return `<div class="mc-hint">Con <b>${fmtCLP(_m)}</b> al último cierre de ${_tkr} (<b>${fmtP(_pxSug)}</b>) alcanzan ${_q>0?`<b>${_q.toLocaleString("es-CL")} acciones</b> enteras = <b>${fmtCLP(_q*_pxSug)}</b>, y quedan ${fmtCLP(_m-_q*_pxSug)} sin usar`:`<b>menos de una acción</b>: sube el monto`}. La corredora opera acciones enteras.</div>`;}
+      return `<div class="mc-hint">Indica cuánto quieres ${cambState.side==="sell"?"vender":"invertir"} en <b>${_tkr}</b>. Se convierte a acciones enteras con su último cierre conocido (<b>${fmtP(_pxSug)}</b>). Para probar otro precio de entrada o salida, cambia a <b>Cantidad</b>.</div>`;
     }
-    return _pxSug!=null?`<div class="genl" style="margin:8px 0 0">Precio sugerido para ${_tkr}: <b>${fmtP(_pxSug)}</b> (\u00faltimo cierre conocido). Puedes cambiarlo para simular otro nivel de entrada o salida.</div>`:"";
+    return `<div class="mc-hint">${_pxSug!=null?`El precio parte del último cierre conocido de ${_tkr} (<b>${fmtP(_pxSug)}</b>); cámbialo para simular otro nivel de entrada o salida.`:`No hay un cierre conocido de <b>${_tkr}</b> en la base: indica tú el precio por acción.`}</div>`;
   })()}`;
-  const opsList=R.nOps||(cambState.ops||[]).length?`<div class="tw" style="margin-top:14px"><table><thead><tr><th>#</th><th>Tipo</th><th>Acción</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Efecto en caja</th><th></th></tr></thead><tbody>${
+  const opsList=R.nOps||(cambState.ops||[]).length?`<div class="tw tbl-compact" style="margin-top:14px"><table><thead><tr><th>#</th><th>Tipo</th><th>Acción</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Efecto en caja</th><th></th></tr></thead><tbody>${
     (cambState.ops||[]).map((o,i)=>{const ap=R.aplicadas.find(x=>x.i===i);const av=R.avisos.find(x=>x.i===i);
       const monto=ap?ap.monto:((+o.shares||0)*(+o.price||0));const fee=ap?ap.fee:0;
       const efec=ap?(ap.side==="buy"?-(ap.monto+ap.fee):(ap.monto-ap.fee)):0;
@@ -7582,7 +7602,12 @@ function viewCambios(){
   const avisosHtml=R.avisos.length?`<div class="note" style="margin-top:11px;border-left-color:var(--amber)">${R.avisos.map(a=>`<div>Operación ${a.i+1}: ${a.txt}</div>`).join("")}</div>`:"";
   const setup=card("Cartera y operaciones a simular","Elige la cartera y encola las compras y ventas que quieres probar · no se guarda nada en tu cartera real",
     `${form}
-     <div class="genl" style="margin:9px 0 0">Cartera actual: <b>${R.nombres0} acción${R.nombres0!==1?"es":""}</b> · costo ${fmtCLP(Math.round(R.totC0))}${R.val0?(" · valor de mercado "+fmtCLP(Math.round(R.val0))):""}</div>
+     <div class="mc-strip">
+       <span><span class="k">Cartera actual</span> <span class="v">${R.nombres0} ${R.nombres0===1?"acción":"acciones"}</span></span>
+       <span><span class="k">Costo</span> <span class="v">${fmtCLP(Math.round(R.totC0))}</span></span>
+       ${R.val0?`<span><span class="k">Valor de mercado</span> <span class="v">${fmtCLP(Math.round(R.val0))}</span></span>`:""}
+       ${R.nOps?`<span><span class="k">Operaciones encoladas</span> <span class="v">${R.nOps}</span></span>`:""}
+     </div>
      ${opsList}${avisosHtml}`);
   // ── 2 · EL RESULTADO: parámetros antes vs después ──
   const filaP=(lbl,a,b,dec,unit,bueno,ayuda)=>`<tr><td><b>${lbl}</b>${ayuda?`<div style="font-size:10.5px;color:var(--faint)">${ayuda}</div>`:""}</td><td class="r">${a==null?"—":(+a).toFixed(dec)+(unit||"")}</td><td class="r" style="font-weight:800">${b==null?"—":(+b).toFixed(dec)+(unit||"")}</td><td class="r">${dChip(a,b,dec,unit,bueno)}</td></tr>`;
@@ -7597,7 +7622,7 @@ function viewCambios(){
       ${tile("Sharpe esperado",f2(B.sharpe),"antes "+f2(A.sharpe)+" · retorno por unidad de riesgo",indigo,Math.abs(B.sharpe-A.sharpe)<0.005?ink:(B.sharpe>A.sharpe?green:red))}</div>`;
     return card("Cómo quedarían los parámetros",`Con las ${R.nOps} operación${R.nOps!==1?"es":""} simulada${R.nOps!==1?"s":""} · los pesos se miden sobre el costo, la misma vara con que la app calcula el β esperado de tus carteras`,
       `${tiles}
-       <div class="tw" style="margin-top:14px"><table><thead><tr><th>Parámetro</th><th class="r">Ahora</th><th class="r">Simulado</th><th class="r">Cambio</th></tr></thead><tbody>
+       <div class="tw tbl-compact" style="margin-top:14px"><table><thead><tr><th>Parámetro</th><th class="r">Ahora</th><th class="r">Simulado</th><th class="r">Cambio</th></tr></thead><tbody>
         ${filaP("β esperado",A.bp,B.bp,2,"",null,"Sensibilidad de la cartera al IPSA: sobre 1 amplifica el mercado")}
         ${filaP("Retorno exigido CAPM",A.erCapm,B.erCapm,2,"%",null,"Lo que el modelo pide para este riesgo: Rf + β × prima")}
         ${filaP("Retorno histórico ponderado",A.retH,B.retH,2,"%","up","Retorno de las acciones en la ventana del análisis, con los pesos nuevos")}
@@ -7630,9 +7655,9 @@ function viewCambios(){
         <td class="r" style="font-weight:700">${r.w1>0.005?r.w1.toFixed(1)+"%":"—"}</td>
         <td class="r">${Math.abs(r.w1-r.w0)<0.05?'<span style="color:var(--faint)">—</span>':`<span style="color:${r.w1>r.w0?green:red};font-weight:700">${(r.w1>r.w0?"+":"−")+Math.abs(r.w1-r.w0).toFixed(1)} pts</span>`}</td></tr>`;}).join("");
     return card("Composición antes y después","Acciones y peso de cada posición · el peso es sobre el costo, igual que el β esperado",
-      `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">β</th><th class="r">Acciones ahora</th><th class="r">Acciones simuladas</th><th class="r">Peso ahora</th><th class="r">Peso simulado</th><th class="r">Cambio</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+      `<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">β</th><th class="r">Acciones ahora</th><th class="r">Acciones simuladas</th><th class="r">Peso ahora</th><th class="r">Peso simulado</th><th class="r">Cambio</th></tr></thead><tbody>${rows}</tbody></table></div>`);
   })():"";
-  const guardar=R.nOps&&B?`<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:2px"><button class="btn" id="cambscen">💾 Guardar como escenario</button><span class="genl" style="margin:0;align-self:center">Lo deja en <b>Comparación de escenarios</b> para contrastarlo con otras carteras. Sigue sin tocar tu cartera real.</span></div>`:"";
+  const guardar=R.nOps&&B?`<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:2px"><button class="btn" id="cambscen">💾 Guardar como escenario</button><span class="mc-hint" style="margin:0;align-self:center">Lo deja en <b>Comparación de escenarios</b> para contrastarlo con otras carteras. Sigue sin tocar tu cartera real.</span></div>`:"";
   return banner+setup+paramCard+cajaCard+compCard+(guardar?card("Guardar la simulación","",guardar):"");
 }
 function attachCambios(){
@@ -7647,14 +7672,17 @@ function attachCambios(){
   const iq=document.getElementById("cambqty"),ip=document.getElementById("cambpx"),im=document.getElementById("cambmonto");
   if(iq)iq.oninput=()=>{cambState.qty=iq.value;};
   if(ip)ip.oninput=()=>{cambState.price=ip.value;};
-  if(ip)ip.onchange=()=>{cambState.price=ip.value;cambSave();if(cambState.modo==="monto")render();};   // el precio cambia cuántas acciones salen del monto
+  if(ip)ip.onchange=()=>{cambState.price=ip.value;cambSave();};
   if(im){im.oninput=()=>{cambState.monto=im.value;};im.onchange=()=>{cambState.monto=im.value;cambSave();render();};}
   const add=document.getElementById("cambadd");
   if(add)add.onclick=()=>{
     const t=(selT&&selT.value)||cambState.tkr;
-    const pr=parseFloat(ip&&ip.value);
     if(!t){window.alert("Elige la acción de la operación.");return;}
-    if(!(pr>0)){window.alert("Indica el precio por acción de la operación.");return;}
+    // En MONTO el precio no se pide: es el último cierre conocido de esa acción.
+    const pr=cambState.modo==="monto"?cambPx(p,t):parseFloat(ip&&ip.value);
+    if(!(pr>0)){window.alert(cambState.modo==="monto"
+      ? "No hay un cierre conocido de "+t+" en la base, así que no puedo convertir el monto a acciones.\n\nCambia a «Cantidad» e indica tú el precio por acción."
+      : "Indica el precio por acción de la operación.");return;}
     let q;
     if(cambState.modo==="monto"){
       const m=parseFloat(im&&im.value);
