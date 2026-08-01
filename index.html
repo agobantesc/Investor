@@ -7759,9 +7759,12 @@ function viewActiva(){
       r.score>=60 && r.rel!=null && r.rel>0 && r.margen!=null && r.margen>0 && r.umbral!=null
     ).sort((a,b)=>b.score-a.score).slice(0,8);
     const enCartera=Object.keys(HOLD);
-    const ventas=M.rows.filter(r=>HOLD[r.t]).filter(r=>
-      r.score<=40 || (r.r20!=null&&r.r20<0&&r.rel!=null&&r.rel<0) || r.umbral==null
-    ).sort((a,b)=>a.score-b.score);
+    // La lista de VENTA sale del ANÁLISIS, no de la cartera: es el espejo exacto de la de compra sobre todo
+    // el universo. Tener o no la acción no decide si aparece — solo se anota al lado cuando la tienes, con
+    // lo que costaría salir. Con "o" en vez de "y" la lista llegaba a 19 de 28 nombres: puro ruido.
+    const ventas=M.rows.filter(r=>
+      r.score<=40 && r.rel!=null && r.rel<0 && r.driftD<=0
+    ).sort((a,b)=>a.score-b.score).slice(0,8);
     const motivoC=r=>{const m=[];
       if(r.score>=70)m.push("score alto ("+r.score+")");else m.push("score "+r.score);
       if(r.rel!=null)m.push("supera al IPSA por "+r.rel.toFixed(1)+" pts en 20d");
@@ -7770,25 +7773,25 @@ function viewActiva(){
       if(!HOLD[r.t])m.push("no la tienes");
       return m.join(" · ");};
     const motivoV=r=>{const m=[];const h=HOLD[r.t];
-      if(r.score<=40)m.push("score bajo ("+r.score+")");
-      if(r.r20!=null&&r.r20<0)m.push("cae "+Math.abs(r.r20).toFixed(1)+"% en 20d");
-      if(r.rel!=null&&r.rel<0)m.push("bajo el IPSA por "+Math.abs(r.rel).toFixed(1)+" pts");
-      if(r.umbral==null)m.push("deriva negativa: el costo no se paga solo");
-      if(h&&!h.cubre)m.push("⚠ la ganancia aún no cubre la comisión de salir");
+      m.push("score bajo ("+r.score+")");
+      if(r.rel!=null)m.push("bajo el IPSA por "+Math.abs(r.rel).toFixed(1)+" pts en 20d");
+      m.push("deriva "+r.driftD.toFixed(3)+"%/día: la tendencia va en contra");
+      if(r.r60!=null&&r.r60<0)m.push("cae "+Math.abs(r.r60).toFixed(1)+"% en 60d");
+      if(h&&!h.cubre)m.push("⚠ tu ganancia aún no cubre la comisión de salir");
       return m.join(" · ");};
     const tblC=compras.length?`<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">20d</th><th class="r">vs IPSA</th><th class="r">Días al umbral</th><th class="r">Prob. 20d</th><th class="r">Corr.</th><th>Por qué</th></tr></thead><tbody>${
       compras.map(r=>`<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${HOLD[r.t]?' <span class="badge" style="font-size:8px;color:var(--muted)" title="Ya la tienes: sería aumentar la posición">AMPLIAR</span>':""}</td><td class="r" style="font-weight:800;color:${green}">${r.score}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r">${Math.round(r.umbral)} d</td><td class="r">${r.prob20!=null?r.prob20.toFixed(0)+"%":"—"}</td><td class="r">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:320px" title="${iesc(motivoC(r))}">${iesc(motivoC(r))}</td></tr>`).join("")
       }</tbody></table></div>`:`<div class="note" style="margin:0">Ninguna acción cumple hoy los tres requisitos de compra. Con el mercado en contra, <b>no operar es una decisión válida</b>: cada vuelta cuesta ${rt.pct.toFixed(2)}%.</div>`;
-    const tblV=ventas.length?`<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">20d</th><th class="r">vs IPSA</th><th class="r">Tu posición</th><th class="r">Resultado</th><th class="r">Si vendes hoy</th><th>Por qué</th></tr></thead><tbody>${
+    const tblV=ventas.length?`<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r">vs IPSA</th><th class="r">Deriva diaria</th><th class="r" title="Si la tienes: lo que quedaría al vender hoy, ya descontada la comisión de salida">Si la tienes</th><th>Por qué</th></tr></thead><tbody>${
       ventas.map(r=>{const h=HOLD[r.t];
-        return `<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b></td><td class="r" style="font-weight:800;color:${r.score<=40?red:amber}">${r.score}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r">${fmtCLP(Math.round(h.valor))}</td><td class="r" style="color:${h.gain>=0?green:red};font-weight:700">${(h.gain>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.gain)))}</td><td class="r" style="color:${h.cubre?green:amber};font-weight:700" title="Resultado menos la comisión de salida (${fmtCLP(h.feeSalida)})">${(h.neto>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.neto)))}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:300px" title="${iesc(motivoV(r))}">${iesc(motivoV(r))}</td></tr>`;}).join("")
-      }</tbody></table></div>`:`<div class="note" style="margin:0">${enCartera.length?"Ninguna de tus posiciones cumple los criterios de salida: todas mantienen score y tendencia aceptables.":"Aún no tienes posiciones registradas, así que no hay nada que proponer vender."}</div>`;
+        return `<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${h?' <span class="badge neg" style="font-size:8px" title="La tienes en cartera">EN CARTERA</span>':""}</td><td class="r" style="font-weight:800;color:${red}">${r.score}</td><td class="r">${r.r5!=null?chip(r.r5):"—"}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.r60!=null?chip(r.r60):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r" style="color:${red}">${r.driftD.toFixed(3)}%</td><td class="r" style="color:${h?(h.cubre?green:amber):"var(--faint)"};font-weight:${h?"700":"400"}"${h?` title="Tienes ${fmtCLP(Math.round(h.valor))} · resultado ${(h.gain>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.gain)))} menos la comisión de salida (${fmtCLP(h.feeSalida)})"`:""}>${h?((h.neto>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.neto)))):"—"}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:300px" title="${iesc(motivoV(r))}">${iesc(motivoV(r))}</td></tr>`;}).join("")
+      }</tbody></table></div>`:`<div class="note" style="margin:0">Ninguna acción del universo cumple hoy los tres requisitos de venta: no hay nombres con score bajo, rezago frente al IPSA y deriva en contra al mismo tiempo.</div>`;
     return card("Acciones propuestas","Listas mecánicas construidas con los criterios de abajo · <b>no son recomendaciones de inversión</b>: son el resultado de aplicar reglas fijas a los datos de la base",
       `<div class="genl" style="margin:0 0 8px">▲ Propuestas de COMPRA <span style="font-weight:600;color:var(--faint)">· ${compras.length} de ${M.rows.length} acciones</span></div>
        ${tblC}
-       <div class="genl" style="margin:18px 0 8px">▼ Propuestas de VENTA <span style="font-weight:600;color:var(--faint)">· sobre las ${enCartera.length} acciones que tienes en cartera</span></div>
+       <div class="genl" style="margin:18px 0 8px">▼ Propuestas de VENTA o SALIDA <span style="font-weight:600;color:var(--faint)">· ${ventas.length} de ${M.rows.length} acciones${enCartera.length?(" · "+ventas.filter(r=>HOLD[r.t]).length+" en tu cartera"):""}</span></div>
        ${tblV}
-       <div class="note" style="margin-top:13px"><b>Criterios exactos.</b> Entra a <b>comprar</b> la acción que cumple las tres: score ≥ 60, rendir más que el IPSA en 20 días, y que su movimiento diario supere el costo de ida y vuelta (${rt.pct.toFixed(2)}% a ${fmtCLP(actTicket)}) con una deriva que apunte a cubrirlo. Entra a <b>vender</b> la que tienes y cumple alguna: score ≤ 40, caer en 20 días y además quedar bajo el IPSA, o tener deriva negativa. La columna <b>Si vendes hoy</b> descuenta la comisión de salida: cuando el resultado no la cubre, salir <b>concreta una pérdida mayor</b> que la que muestra el papel. Cambia la ventana o el monto por operación arriba y las listas se recalculan.</div>`);
+       <div class="note" style="margin-top:13px"><b>Criterios exactos.</b> Ambas listas salen del <b>análisis de todo el universo</b>, no de tu cartera: qué tengas no decide si una acción aparece. Entra a <b>comprar</b> la que cumple las tres: score ≥ 60, rendir más que el IPSA en 20 días, y que su movimiento diario supere el costo de ida y vuelta (${rt.pct.toFixed(2)}% a ${fmtCLP(actTicket)}) con una deriva que apunte a cubrirlo. Entra a <b>vender o salir</b> —el espejo— la que cumple las tres opuestas: score ≤ 40, rendir menos que el IPSA en 20 días y tener deriva negativa; si además la tienes, se marca <b>EN CARTERA</b> y la columna <b>Si la tienes</b> muestra lo que quedaría al vender hoy ya descontada la comisión de salida, porque cuando el resultado no la cubre salir <b>concreta una pérdida mayor</b> que la del papel. Cambia la ventana o el monto por operación arriba y las listas se recalculan.</div>`);
   })();
   // ── 3 · DIVERSIFICACIÓN AL SUMAR NOMBRES ──
   const divCard=(()=>{
