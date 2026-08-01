@@ -1831,7 +1831,7 @@ const MODS={
   eval:{label:"Análisis",tabs:[{id:"crear",label:"Ajustes del análisis",n:"1"},{id:"comparativa",label:"Comparativa",n:"2"},{id:"detalle",label:"Detalle por acción",n:"3"},{id:"capm",label:"CAPM / SML",n:"4"},{id:"multifactor",label:"Multifactor",n:"5"},{id:"fundamentos",label:"Fundamentos",n:"6"},{id:"activa",label:"Gestión activa",n:"7"}]},
   mercados:{label:"Mercados",tabs:[{id:"panel",label:"Indicadores en vivo",n:"1"}]},
   proyectos:{label:"Proyectos",tabs:[{id:"hub",label:"Gestión de proyectos",n:"1"}]},
-  sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"}]},
+  sim:{label:"Simulación",tabs:[{id:"constructor",label:"Constructor de portafolio",n:"1"},{id:"asistente",label:"Asistente de simulación",n:"2"},{id:"comparador",label:"Comparación de escenarios",n:"3"},{id:"cambios",label:"Simular cambios",n:"4"}]},
   perfil:{label:"Perfil",tabs:[{id:"perfil",label:"Perfil de inversionista",n:"1"}]},
   montecarlo:{label:"Montecarlo",beta:true,tabs:[{id:"proyeccion",label:"Proyección probabilística",n:"1"}]},
   markowitz:{label:"Markowitz",beta:true,tabs:[{id:"optimizacion",label:"Optimización de cartera",n:"1"}]},
@@ -3951,7 +3951,7 @@ function render(){
     else if(modulo==="proyectos") h=viewProyectos();
     else if(modulo==="clientes"){modulo="proyectos";h=viewProyectos();}   // gestión de clientes retirada → Proyectos
     else if(modulo==="perfil") h=viewPerfil();
-    else if(modulo==="sim") h=(evalIsEmpty()?simEmpty():(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim()));   // sin análisis real activo: NO mostrar el universo demo como si fuera real (no se puede invertir sobre datos ilustrativos)
+    else if(modulo==="sim") h=(page==="cambios"?viewCambios():evalIsEmpty()?simEmpty():(page==="asistente"?viewAsistente():page==="comparador"?viewComparador():viewSim()));   // sin análisis real activo: NO mostrar el universo demo como si fuera real (no se puede invertir sobre datos ilustrativos)
     else if(modulo==="eval"&&page==="fundamentos") h=viewFundamentos();   // los fundamentos vienen del canal remoto: no dependen del análisis activo
     else if(modulo==="eval"&&page!=="crear"&&evalIsEmpty()) h=evalEmpty();   // base limpia + demo oculto: sin datos (no se muestra el demo)
     else if(page==="comparativa") h=viewComparativa();
@@ -3980,7 +3980,7 @@ function render(){
   _lastViewKey=_vk;
   try{
     if(modulo==="eval"&&page==="detalle"){ document.querySelectorAll(".selb").forEach(b=>b.onclick=()=>{sel=b.dataset.sel;render();}); attachLineHover(); attachPriceHover(); }
-    if(modulo==="sim"){ if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
+    if(modulo==="sim"){ if(page==="cambios") attachCambios(); else if(page==="asistente") attachAsistente(); else if(page==="comparador") attachComparador(); else attachSim(); }
     if(modulo==="inv") attachInv();
     if(modulo==="eval"&&page==="multifactor") attachMultifactor();
     if(modulo==="eval"&&page==="fundamentos") attachFundamentos();
@@ -7292,6 +7292,211 @@ function genAnalysisReport(){
   });
   const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para ver el informe.");
 }
+/* ===== SIMULAR CAMBIOS · ¿cómo quedaría la cartera si compro o vendo? ==========================
+   Se elige un PROYECTO real, se encolan operaciones de compra y venta (sin tocar nada) y se ve cómo
+   quedarían sus parámetros: β esperado, retorno exigido CAPM, riesgo σ, Sharpe y correlación media,
+   antes contra después. Los pesos se calculan sobre el COSTO, exactamente como projRealSel/projSyncReal,
+   para que el "antes" coincida con el β esperado que muestra el proyecto en el resto de la app; una venta
+   reduce el costo en proporción a las acciones vendidas, igual que invMetrics. La caja y las comisiones
+   de las operaciones simuladas se calculan con el operador configurado. NADA se guarda en la cartera. ==== */
+let cambState=(function(){try{const v=JSON.parse(localStorage.getItem("inv_camb_v1"));
+  if(v&&typeof v==="object")return {pid:v.pid!=null?v.pid:null,ops:Array.isArray(v.ops)?v.ops:[],side:v.side||"buy",tkr:v.tkr||null,qty:v.qty||"",price:v.price||""};}catch(e){}
+  return {pid:null,ops:[],side:"buy",tkr:null,qty:"",price:""};})();
+function cambSave(){try{localStorage.setItem("inv_camb_v1",JSON.stringify(cambState));}catch(e){}}
+function cambProjects(){return (typeof mkwProjects==="function")?mkwProjects():[];}
+function cambProj(){const ps=cambProjects();if(!ps.length)return null;
+  return ps.find(p=>String(p.id)===String(cambState.pid))||ps[0];}
+/* último precio conocido de un ticker: el cierre de la cartera y, si no lo tiene, la base de precios */
+function cambPx(p,t){
+  const wk=(p&&p.weeks)||[];
+  for(let i=wk.length-1;i>=0;i--){const v=wk[i].prices&&wk[i].prices[t];if(v>0)return v;}
+  try{const C=consolidatedSeries();const m=C&&C.tick&&C.tick[t];
+    if(m){const ds=Object.keys(m).sort();if(ds.length)return m[ds[ds.length-1]];}}catch(e){}
+  return null;
+}
+function cambCompute(p){
+  if(!p)return null;
+  let IM=null;try{IM=withProject(p,()=>invMetrics());}catch(e){}
+  if(!IM||!IM.cost)return null;
+  const betaOf=t=>{const hd=(p.holdings||[]).find(h=>h.t===t);if(hd&&hd.b!=null)return hd.b;const u=uniStk(t);return u&&u.b!=null?u.b:null;};
+  const sh0={},cost0={};
+  (p.holdings||[]).forEach(h=>{sh0[h.t]=(IM.shares&&IM.shares[h.t])||0;cost0[h.t]=(IM.cost&&IM.cost[h.t])||0;});
+  const sh1=Object.assign({},sh0),cost1=Object.assign({},cost0);
+  let caja=0,fees=0,comprado=0,vendido=0;
+  const avisos=[],aplicadas=[];
+  (cambState.ops||[]).forEach((o,i)=>{
+    const q=+o.shares||0,pr=+o.price||0;
+    if(!(q>0)||!(pr>0)){avisos.push({i,txt:"Operación sin cantidad o precio válidos: se ignora."});return;}
+    if(o.side==="buy"){
+      const monto=q*pr,fee=brokerFee(monto);
+      sh1[o.t]=(sh1[o.t]||0)+q;cost1[o.t]=(cost1[o.t]||0)+monto;
+      caja-=monto+fee;fees+=fee;comprado+=monto;
+      aplicadas.push({i,side:"buy",t:o.t,shares:q,price:pr,monto,fee});
+    }else{
+      const old=sh1[o.t]||0,s=Math.min(q,old);
+      if(s<=1e-9){avisos.push({i,txt:"No hay acciones de "+o.t+" para vender en este punto de la simulación: se ignora."});return;}
+      if(s<q-1e-9)avisos.push({i,txt:"Solo hay "+old.toLocaleString("es-CL",{maximumFractionDigits:2})+" acciones de "+o.t+": la venta se ajusta a esa cantidad."});
+      const monto=s*pr,fee=brokerFee(monto);
+      cost1[o.t]=(cost1[o.t]||0)*(old>0?(old-s)/old:0);sh1[o.t]=old-s;
+      caja+=monto-fee;fees+=fee;vendido+=monto;
+      aplicadas.push({i,side:"sell",t:o.t,shares:s,price:pr,monto,fee});
+    }
+  });
+  const selDe=c=>{let tot=0;Object.keys(c).forEach(t=>{if(c[t]>0)tot+=c[t];});if(!(tot>0))return null;
+    const sel={};Object.keys(c).forEach(t=>{if(c[t]>1e-6)sel[t]=+(c[t]/tot*100).toFixed(4);});return Object.keys(sel).length?sel:null;};
+  const selA=selDe(cost0),selB=selDe(cost1);
+  let MA=null,MB=null;
+  try{if(selA)MA=pMetricsUniverse(selA,betaOf);}catch(e){}
+  try{if(selB)MB=pMetricsUniverse(selB,betaOf);}catch(e){}
+  // filas: estado por acción antes y después (acciones, costo, peso y valor de mercado)
+  const tks=[...new Set(Object.keys(cost0).concat(Object.keys(cost1)))].sort();
+  const totC0=Object.keys(cost0).reduce((a,t)=>a+Math.max(0,cost0[t]),0);
+  const totC1=Object.keys(cost1).reduce((a,t)=>a+Math.max(0,cost1[t]),0);
+  const filas=tks.map(t=>{const px=cambPx(p,t);
+    return {t,u:uniStk(t),b:betaOf(t),px,
+      sh0:sh0[t]||0,sh1:sh1[t]||0,c0:cost0[t]||0,c1:cost1[t]||0,
+      w0:totC0>0?(cost0[t]||0)/totC0*100:0,w1:totC1>0?(cost1[t]||0)/totC1*100:0,
+      v0:px?(sh0[t]||0)*px:null,v1:px?(sh1[t]||0)*px:null};
+  }).filter(r=>r.sh0>1e-9||r.sh1>1e-9);
+  const val0=filas.reduce((a,r)=>a+(r.v0||0),0),val1=filas.reduce((a,r)=>a+(r.v1||0),0);
+  return {p,IM,MA,MB,filas,caja,fees,comprado,vendido,avisos,aplicadas,
+    totC0,totC1,val0,val1,nOps:aplicadas.length,
+    nombres0:filas.filter(r=>r.sh0>1e-9).length,nombres1:filas.filter(r=>r.sh1>1e-9).length};
+}
+function viewCambios(){
+  // .mc-beta es un flex: el texto va en UN solo nodo para que no se reparta en columnas
+  const banner=`<div class="mc-beta">🧪 <span><b>Simular cambios · beta</b> — encola compras y ventas sobre una cartera real y mira cómo quedarían sus parámetros. Es una simulación: <b>no se guarda ninguna operación</b> en tu cartera.</span></div>`;
+  const ps=cambProjects();
+  if(!ps.length)return banner+notecard("Necesitas una cartera con seguimiento para simular cambios sobre ella. Crea un proyecto en <b>Simulación → Constructor</b> y registra su <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
+  const p=cambProj();
+  if(cambState.pid==null||String(cambState.pid)!==String(p.id)){cambState.pid=p.id;cambSave();}
+  const R=cambCompute(p);
+  const selProj=`<select id="cambproj" class="winp" style="min-width:230px">${ps.map(x=>`<option value="${x.id}"${String(x.id)===String(p.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")}</option>`).join("")}</select>`;
+  if(!R||!R.MA)return banner+card("Cartera a simular","Elige sobre cuál cartera quieres probar los cambios",`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="genl" style="margin:0">Cartera</span>${selProj}</div>`)
+    +notecard("Esta cartera aún no tiene una compra registrada con la que calcular sus parámetros. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
+  const A=R.MA,B=R.MB;
+  const f2=v=>(v==null?"—":(+v).toFixed(2));
+  const p2=v=>(v==null?"—":(+v).toFixed(2)+"%");
+  const dChip=(a,b,dec,unit,bueno)=>{
+    if(a==null||b==null)return `<span style="color:var(--faint)">—</span>`;
+    const d=b-a;if(Math.abs(d)<Math.pow(10,-(dec+1)))return `<span style="color:var(--faint)">sin cambio</span>`;
+    const col=bueno==null?indigo:((bueno==="up")===(d>0)?green:red);
+    return `<span style="color:${col};font-weight:800">${(d>=0?"▲ +":"▼ −")}${Math.abs(d).toFixed(dec)}${unit||""}</span>`;};
+  // ── 1 · cartera y operaciones simuladas ──
+  const uni=(function(){const m={};(operarUniverse()||[]).forEach(s=>{m[s.t]=s;});
+    R.filas.forEach(r=>{if(!m[r.t])m[r.t]=r.u||{t:r.t,n:r.t,c:"#1E5FD1",b:r.b};});
+    return Object.keys(m).sort().map(k=>m[k]);})();
+  const tkSel=`<select id="cambtkr" class="winp" style="min-width:190px">${uni.map(s=>`<option value="${s.t}"${cambState.tkr===s.t?" selected":""}>${s.t} · ${(""+(s.n||s.t)).replace(/</g,"&lt;")}</option>`).join("")}</select>`;
+  const _tkr=cambState.tkr||(uni[0]&&uni[0].t);
+  const _pxSug=cambPx(p,_tkr);
+  // no se usa .op-form: esa clase apila en columna (flex-direction:column) y aquí los campos van en fila
+  const form=`<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+    <div><div class="genl" style="margin:0 0 5px">Operación</div><div class="home-seg" role="group">${[["buy","Compra"],["sell","Venta"]].map(([k,l])=>`<button data-cambside="${k}" class="${cambState.side===k?"on":""}">${l}</button>`).join("")}</div></div>
+    <div><div class="genl" style="margin:0 0 5px">Acción</div>${tkSel}</div>
+    <div><div class="genl" style="margin:0 0 5px">Cantidad</div><input id="cambqty" class="winp" type="number" min="0" step="1" style="width:120px" value="${cambState.qty||""}" placeholder="acciones"></div>
+    <div><div class="genl" style="margin:0 0 5px">Precio</div><input id="cambpx" class="winp" type="number" min="0" step="1" style="width:130px" value="${cambState.price||(_pxSug!=null?Math.round(_pxSug):"")}" placeholder="${_pxSug!=null?Math.round(_pxSug):"precio"}"></div>
+    <button class="btn btn-pri" id="cambadd">+ Agregar a la simulación</button>
+    ${R.nOps?`<button class="btn" id="cambclear" style="color:var(--red);border-color:var(--red-line)">Vaciar</button>`:""}
+  </div>${_pxSug!=null?`<div class="genl" style="margin:8px 0 0">Precio sugerido para ${_tkr}: <b>${fmtP(_pxSug)}</b> (último cierre conocido). Puedes cambiarlo para simular otro nivel de entrada o salida.</div>`:""}`;
+  const opsList=R.nOps||(cambState.ops||[]).length?`<div class="tw" style="margin-top:14px"><table><thead><tr><th>#</th><th>Tipo</th><th>Acción</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Efecto en caja</th><th></th></tr></thead><tbody>${
+    (cambState.ops||[]).map((o,i)=>{const ap=R.aplicadas.find(x=>x.i===i);const av=R.avisos.find(x=>x.i===i);
+      const monto=ap?ap.monto:((+o.shares||0)*(+o.price||0));const fee=ap?ap.fee:0;
+      const efec=ap?(ap.side==="buy"?-(ap.monto+ap.fee):(ap.monto-ap.fee)):0;
+      return `<tr${ap?"":' style="opacity:.5"'}><td class="r" style="color:var(--faint)">${i+1}</td><td><span class="badge ${o.side==="sell"?"neg":"pos"}">${o.side==="sell"?"Venta":"Compra"}</span></td><td><b>${o.t}</b></td><td class="r">${(+o.shares||0).toLocaleString("es-CL",{maximumFractionDigits:2})}${ap&&ap.shares!==+o.shares?` <span style="color:${amber}" title="Ajustada a las acciones disponibles">→ ${ap.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</span>`:""}</td><td class="r">${fmtP(+o.price||0)}</td><td class="r">${fmtCLP(Math.round(monto))}</td><td class="r" style="color:${red}">${fee?fmtCLP(fee):"—"}</td><td class="r" style="font-weight:700;color:${efec>=0?green:ink}">${ap?((efec>=0?"+":"−")+fmtCLP(Math.abs(Math.round(efec)))):"—"}</td><td class="r"><button class="wbtn del" data-cambdel="${i}" title="Quitar de la simulación">✕</button></td></tr>`;}).join("")
+    }</tbody>${R.nOps?`<tfoot><tr><td colspan="5">Total simulado · ${R.nOps} operación${R.nOps!==1?"es":""}</td><td class="r">${fmtCLP(Math.round(R.comprado+R.vendido))}</td><td class="r" style="color:${red}">${fmtCLP(R.fees)}</td><td class="r" style="color:${R.caja>=0?green:ink}">${(R.caja>=0?"+":"−")+fmtCLP(Math.abs(Math.round(R.caja)))}</td><td></td></tr></tfoot>`:""}</table></div>`:"";
+  const avisosHtml=R.avisos.length?`<div class="note" style="margin-top:11px;border-left-color:var(--amber)">${R.avisos.map(a=>`<div>Operación ${a.i+1}: ${a.txt}</div>`).join("")}</div>`:"";
+  const setup=card("Cartera y operaciones a simular","Elige la cartera y encola las compras y ventas que quieres probar · no se guarda nada en tu cartera real",
+    `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px"><span class="genl" style="margin:0">Cartera</span>${selProj}<span class="genl" style="margin:0 0 0 8px">${R.nombres0} acción${R.nombres0!==1?"es":""} · costo ${fmtCLP(Math.round(R.totC0))}${R.val0?(" · valor de mercado "+fmtCLP(Math.round(R.val0))):""}</span></div>
+     ${form}${opsList}${avisosHtml}`);
+  // ── 2 · EL RESULTADO: parámetros antes vs después ──
+  const filaP=(lbl,a,b,dec,unit,bueno,ayuda)=>`<tr><td><b>${lbl}</b>${ayuda?`<div style="font-size:10.5px;color:var(--faint)">${ayuda}</div>`:""}</td><td class="r">${a==null?"—":(+a).toFixed(dec)+(unit||"")}</td><td class="r" style="font-weight:800">${b==null?"—":(+b).toFixed(dec)+(unit||"")}</td><td class="r">${dChip(a,b,dec,unit,bueno)}</td></tr>`;
+  const paramCard=(()=>{
+    if(!R.nOps)return card("Cómo quedarían los parámetros","Agrega al menos una operación arriba para ver el efecto",
+      `<div class="note" style="margin:0">Todavía no hay operaciones simuladas. La cartera <b>${(""+p.name).replace(/</g,"&lt;")}</b> tiene hoy β esperado <b>${f2(A.bp)}</b>, retorno exigido CAPM <b>${p2(A.erCapm)}</b>, riesgo σ <b>${p2(A.sig)}</b> y correlación media <b>${f2(A.corrAvg)}</b>.</div>`);
+    if(!B)return card("Cómo quedarían los parámetros","",`<div class="note" style="margin:0">Las ventas simuladas dejarían la cartera <b>sin posiciones</b>: no hay parámetros que calcular.</div>`);
+    const tiles=`<div class="tiles">
+      ${tile("β esperado",f2(B.bp),"antes "+f2(A.bp)+" · "+(B.bp>A.bp?"más sensible al IPSA":B.bp<A.bp?"menos sensible al IPSA":"sin cambio"),indigo,Math.abs(B.bp-A.bp)<0.005?ink:(B.bp>A.bp?amber:green))}
+      ${tile("Retorno exigido CAPM",p2(B.erCapm),"antes "+p2(A.erCapm)+" · Rf "+p0(RF)+" + β × prima "+p0(PRIMA),indigo,ink)}
+      ${tile("Riesgo σ",p2(B.sig),"antes "+p2(A.sig)+" · "+(B.sig<A.sig?"cartera más tranquila":B.sig>A.sig?"cartera más volátil":"sin cambio"),indigo,Math.abs(B.sig-A.sig)<0.005?ink:(B.sig<A.sig?green:red))}
+      ${tile("Sharpe esperado",f2(B.sharpe),"antes "+f2(A.sharpe)+" · retorno por unidad de riesgo",indigo,Math.abs(B.sharpe-A.sharpe)<0.005?ink:(B.sharpe>A.sharpe?green:red))}</div>`;
+    return card("Cómo quedarían los parámetros",`Con las ${R.nOps} operación${R.nOps!==1?"es":""} simulada${R.nOps!==1?"s":""} · los pesos se miden sobre el costo, la misma vara con que la app calcula el β esperado de tus carteras`,
+      `${tiles}
+       <div class="tw" style="margin-top:14px"><table><thead><tr><th>Parámetro</th><th class="r">Ahora</th><th class="r">Simulado</th><th class="r">Cambio</th></tr></thead><tbody>
+        ${filaP("β esperado",A.bp,B.bp,2,"",null,"Sensibilidad de la cartera al IPSA: sobre 1 amplifica el mercado")}
+        ${filaP("Retorno exigido CAPM",A.erCapm,B.erCapm,2,"%",null,"Lo que el modelo pide para este riesgo: Rf + β × prima")}
+        ${filaP("Retorno histórico ponderado",A.retH,B.retH,2,"%","up","Retorno de las acciones en la ventana del análisis, con los pesos nuevos")}
+        ${filaP("Riesgo σ (anual)",A.sig,B.sig,2,"%","down","Volatilidad de la cartera con las correlaciones reales")}
+        ${filaP("σ media ponderada",A.wavgSig,B.wavgSig,2,"%","down","Riesgo promedio de las acciones, sin el efecto de diversificar")}
+        ${filaP("Sharpe",A.sharpe,B.sharpe,2,"","up","Retorno sobre riesgo")}
+        ${filaP("Correlación media",A.corrAvg,B.corrAvg,2,"","down","Cuánto se mueven juntas las acciones: más baja diversifica mejor")}
+        ${filaP("Correlación con el IPSA",A.corrI,B.corrI,2,"",null,"Qué tanto sigue la cartera al índice")}
+        ${filaP("Nombres en cartera",R.nombres0,R.nombres1,0,"",null,"Acciones con posición abierta")}
+       </tbody></table></div>
+       <div class="note" style="margin-top:11px">El <b>β esperado</b> y el <b>retorno exigido</b> se calculan igual que en el resto de Investor: pesos por <b>costo</b> y β del análisis activo cuando lo cubre. La diferencia entre <b>σ</b> y <b>σ media ponderada</b> es lo que aporta la diversificación: si al simular tu σ sube menos que la σ media, las acciones que agregaste se mueven distinto entre sí.</div>`);
+  })();
+  // ── 3 · caja y costo de ejecutar el cambio ──
+  const cajaCard=R.nOps?card("Lo que costaría ejecutarlo","Dinero que entra o sale y comisiones del operador · con "+brokerSummary(),
+    `<div class="tiles">
+      ${tile("Efecto en caja",(R.caja>=0?"+":"−")+fmtCLP(Math.abs(Math.round(R.caja))),R.caja>=0?"quedaría efectivo disponible":"necesitarías aportar capital",indigo,R.caja>=0?green:amber)}
+      ${tile("Comprado",R.comprado?fmtCLP(Math.round(R.comprado)):"—","en las compras simuladas",indigo,ink)}
+      ${tile("Vendido",R.vendido?fmtCLP(Math.round(R.vendido)):"—","en las ventas simuladas",indigo,ink)}
+      ${tile("Comisiones",R.fees?("−"+fmtCLP(R.fees)):"$0",R.comprado+R.vendido>0?("costo real "+((R.fees/(R.comprado+R.vendido))*100).toFixed(2)+"% de lo movido"):"con IVA incluido",indigo,red)}</div>
+     <div class="note" style="margin-top:11px">Las comisiones ya incluyen el <b>mínimo del operador</b> cuando la operación es chica. ${(function(){const mn=(typeof actMontoMinimo==="function")?actMontoMinimo():null;const chicas=R.aplicadas.filter(a=>mn&&a.monto<mn).length;
+       return chicas?`<b style="color:var(--amber)">${chicas} de estas operaciones queda bajo ${fmtCLP(mn)}</b> y paga la comisión mínima: en esas el costo porcentual se dispara. Agruparlas en menos operaciones dejaría el mismo cambio de cartera más barato.`:"Ninguna de estas operaciones cae bajo el monto donde manda la comisión mínima.";})()}</div>`):"";
+  // ── 4 · composición antes y después ──
+  const compCard=R.nOps?(function(){
+    const rows=R.filas.map(r=>{const nueva=r.sh0<=1e-9&&r.sh1>1e-9,fuera=r.sh0>1e-9&&r.sh1<=1e-9;
+      return `<tr${fuera?' style="opacity:.6"':""}><td><span class="dot" style="background:${(r.u&&r.u.c)||"#1E5FD1"}"></span><b>${r.t}</b>${nueva?' <span class="badge pos" style="font-size:8px">NUEVA</span>':""}${fuera?' <span class="badge neg" style="font-size:8px">SALE</span>':""}</td>
+        <td class="r">${r.b!=null?r.b.toFixed(2):"—"}</td>
+        <td class="r">${r.sh0>1e-9?r.sh0.toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td>
+        <td class="r" style="font-weight:700">${r.sh1>1e-9?r.sh1.toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td>
+        <td class="r">${r.w0>0.005?r.w0.toFixed(1)+"%":"—"}</td>
+        <td class="r" style="font-weight:700">${r.w1>0.005?r.w1.toFixed(1)+"%":"—"}</td>
+        <td class="r">${Math.abs(r.w1-r.w0)<0.05?'<span style="color:var(--faint)">—</span>':`<span style="color:${r.w1>r.w0?green:red};font-weight:700">${(r.w1>r.w0?"+":"−")+Math.abs(r.w1-r.w0).toFixed(1)} pts</span>`}</td></tr>`;}).join("");
+    return card("Composición antes y después","Acciones y peso de cada posición · el peso es sobre el costo, igual que el β esperado",
+      `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">β</th><th class="r">Acciones ahora</th><th class="r">Acciones simuladas</th><th class="r">Peso ahora</th><th class="r">Peso simulado</th><th class="r">Cambio</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+  })():"";
+  const guardar=R.nOps&&B?`<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:2px"><button class="btn" id="cambscen">💾 Guardar como escenario</button><span class="genl" style="margin:0;align-self:center">Lo deja en <b>Comparación de escenarios</b> para contrastarlo con otras carteras. Sigue sin tocar tu cartera real.</span></div>`:"";
+  return banner+setup+paramCard+cajaCard+compCard+(guardar?card("Guardar la simulación","",guardar):"");
+}
+function attachCambios(){
+  if(modulo!=="sim"||page!=="cambios")return;
+  const p=cambProj();
+  const selP=document.getElementById("cambproj");
+  if(selP)selP.onchange=()=>{cambState.pid=selP.value;cambState.ops=[];cambSave();render();};
+  document.querySelectorAll("[data-cambside]").forEach(b=>b.onclick=()=>{cambState.side=b.dataset.cambside;cambSave();render();});
+  const selT=document.getElementById("cambtkr");
+  if(selT)selT.onchange=()=>{cambState.tkr=selT.value;const px=cambPx(p,selT.value);cambState.price=px!=null?String(Math.round(px)):"";cambSave();render();};
+  const iq=document.getElementById("cambqty"),ip=document.getElementById("cambpx");
+  if(iq)iq.oninput=()=>{cambState.qty=iq.value;};
+  if(ip)ip.oninput=()=>{cambState.price=ip.value;};
+  const add=document.getElementById("cambadd");
+  if(add)add.onclick=()=>{
+    const t=(selT&&selT.value)||cambState.tkr;
+    const q=parseFloat(iq&&iq.value),pr=parseFloat(ip&&ip.value);
+    if(!t){window.alert("Elige la acción de la operación.");return;}
+    if(!(q>0)){window.alert("Indica cuántas acciones quieres "+(cambState.side==="sell"?"vender":"comprar")+".");return;}
+    if(!(pr>0)){window.alert("Indica el precio por acción de la operación.");return;}
+    cambState.ops.push({side:cambState.side,t,shares:q,price:pr});
+    cambState.qty="";cambSave();render();};
+  document.querySelectorAll("[data-cambdel]").forEach(b=>b.onclick=()=>{const i=+b.dataset.cambdel;cambState.ops.splice(i,1);cambSave();render();});
+  const cl=document.getElementById("cambclear");
+  if(cl)cl.onclick=()=>{if(window.confirm("¿Vaciar todas las operaciones simuladas?")){cambState.ops=[];cambSave();render();}};
+  const sc=document.getElementById("cambscen");
+  if(sc)sc.onclick=()=>{
+    const R=cambCompute(p);if(!R||!R.MB){window.alert("No hay una cartera simulada que guardar.");return;}
+    const def=(""+p.name)+" simulada";
+    const name=window.prompt("Nombre del escenario:",def);if(name===null)return;
+    const nm=(name||def).trim()||def;
+    const M=R.MB,sel={};M.ws.forEach(x=>{sel[x.s.t]=+(x.w*100).toFixed(4);});
+    SCEN.push({id:Date.now(),name:nm,amount:Math.round(R.totC1),sel,
+      m:{bp:M.bp,erCapm:M.erCapm,retH:M.retH,sig:M.sig,sharpe:M.sharpe,corrAvg:M.corrAvg},
+      comp:M.ws.map(x=>({t:x.s.t,w:+(x.w*100).toFixed(1),c:x.s.c}))});
+    lsSet("pf_scenarios_v1",SCEN);
+    window.alert("Escenario «"+nm+"» guardado.\n\nLo encuentras en Simulación → Comparación de escenarios. Tu cartera real no se tocó.");
+    modulo="sim";page="comparador";render();};
+}
+
 /* ===== GESTIÓN ACTIVA · análisis para una estrategia de rotación alta ==========================
    Una cartera que compra y vende seguido y maneja muchos nombres se juega la rentabilidad en tres
    frentes que el análisis clásico (CAPM, Markowitz, multifactor) no mide: el COSTO de cada vuelta,
