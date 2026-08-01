@@ -2177,6 +2177,12 @@ function backupPayload(){
     active_client:localStorage.getItem("inv_active_client"),
     broker:JSON.parse(localStorage.getItem("inv_broker_v1")||"null"),
     ui_scale:localStorage.getItem("inv_ui_scale"),
+    // La FUENTE AUTOMÁTICA de cierres viaja con el respaldo: sin ella, restaurar en otro navegador dejaba
+    // los datos pero no la actualización diaria, y la base se quedaba congelada sin avisar.
+    // Los SECRETOS (token de GitHub, token del servidor, clave de acceso) NO viajan: se ponen a mano en cada
+    // navegador, para que el archivo .json se pueda guardar o mover sin llevar credenciales dentro.
+    autopx_url:localStorage.getItem("inv_autopx_url")||null,
+    autobk:JSON.parse(localStorage.getItem("inv_autobk_v1")||"null"),
     clients};
 }
 function downloadBackup(data,fname){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=fname||("respaldo_investor_"+localDay()+".json");document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
@@ -2188,6 +2194,10 @@ function restoreFromPayload(j){try{
   if(j.active_client)localStorage.setItem("inv_active_client",j.active_client);
   if(j.broker)localStorage.setItem("inv_broker_v1",JSON.stringify(j.broker));else localStorage.removeItem("inv_broker_v1");
   if(j.ui_scale!=null)localStorage.setItem("inv_ui_scale",j.ui_scale);
+  // fuente automática de cierres: se aplica en caliente (la variable viva, no solo el almacenamiento) para que
+  // la sincronización diaria arranque en este navegador sin tener que configurarla de nuevo
+  if(j.autopx_url){try{localStorage.setItem("inv_autopx_url",j.autopx_url);if(typeof AUTOPX_URL!=="undefined")AUTOPX_URL=j.autopx_url;}catch(e){}}
+  if(j.autobk){try{localStorage.setItem("inv_autobk_v1",JSON.stringify(j.autobk));if(typeof AUTOBK!=="undefined")AUTOBK=j.autobk;}catch(e){}}
   Object.keys(j.clients).forEach(id=>{const o=j.clients[id]||{};Object.keys(CLIENT_KEYS).forEach(k=>{const v=o[k];if(v==null)localStorage.removeItem(k+"__"+id);else localStorage.setItem(k+"__"+id,JSON.stringify(v));});});
   CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1"))||CLIENTS;}catch(e){return CLIENTS;}})();
   activeClient=localStorage.getItem("inv_active_client")||((CLIENTS[0]||{}).id)||"c_me";
@@ -5911,20 +5921,34 @@ async function cloudPush(manual){
     return r;
   }finally{_cloudPushing=false;}
 }
+/* VERSIONES guardadas en el servidor (de la más nueva a la más vieja). El disco conserva 40 y nunca descarta
+   la última CON datos, así que hay camino de vuelta si el respaldo más reciente quedó en blanco. */
+async function cloudVersiones(){try{const r=await cloudApi("GET","/api/backup/versions");return (r&&r.versions)||[];}catch(e){return [];}}
 async function cloudRestore(manual){
   try{
     const meta=await cloudApi("GET","/api/backup/meta");
     if(!meta.hasBackup){if(manual)window.alert("Aún no hay respaldos en el servidor.");return false;}
     const when=meta.savedAt?new Date(meta.savedAt).toLocaleString("es-CL"):"—";
     if(!window.confirm("Restaurar el respaldo de la nube del "+when+"\n\nREEMPLAZA los datos de este navegador por los del servidor. ¿Continuar?"))return false;
-    const j=await cloudApi("GET","/api/backup");
+    let j=await cloudApi("GET","/api/backup");
     if(!backupTieneDatos(j)){
-      // restaurar la nada dejaría la app igual y el arranque volvería a ofrecerlo: se dice la verdad y se corta
+      // El último respaldo no trae nada. Antes de rendirse se busca hacia atrás en el historial del disco:
+      // el caso típico es que un navegador recién estrenado subiera un estado vacío encima del bueno.
+      const vs=await cloudVersiones(), buena=vs.find(v=>v.tieneDatos);
       try{sessionStorage.setItem("inv_cloud_boot_ask","1");}catch(e){}
-      window.alert("El respaldo del servidor está VACÍO: no tiene carteras ni base de precios.\n\nNo se restauró nada (habría borrado lo que tengas aquí). Carga tu respaldo desde el archivo .json en ⚙ Configuración → Respaldo, y luego usa «☁ Guardar ahora» para dejarlo en el servidor.");
-      return false;
+      if(!buena){
+        window.alert("El respaldo del servidor está VACÍO: no tiene carteras ni base de precios, y ninguna de las "+(vs.length||0)+" versiones guardadas tiene datos.\n\nNo se restauró nada (habría borrado lo que tengas aquí). Carga tu respaldo desde el archivo .json en ⚙ Configuración → Respaldo, y luego usa «☁ Guardar ahora» para dejarlo en el servidor.");
+        return false;
+      }
+      const bw=buena.savedAt?new Date(buena.savedAt).toLocaleString("es-CL"):"—";
+      if(!window.confirm("El último respaldo del servidor está VACÍO (lo pisó un navegador sin datos).\n\nPero en el historial del disco sí hay uno bueno, del "+bw+":\n• "+buena.carteras+" cartera(s)\n• "+buena.precios+" acción(es) en la base de precios\n• "+buena.dias+" día(s) de IPSA\n\n¿Restaurar ESA versión?"))return false;
+      j=await cloudApi("GET","/api/backup?v="+encodeURIComponent(buena.file));
+      if(!backupTieneDatos(j)){window.alert("Esa versión tampoco trae datos. No se restauró nada.");return false;}
     }
     if(!restoreFromPayload(j))throw new Error("el respaldo no se pudo aplicar");
+    // se vuelve a dejar el respaldo bueno como ÚLTIMO en el servidor: si no, la próxima carga se topa otra vez
+    // con el vacío que lo pisó
+    try{await cloudPush(false);}catch(e){}
     window.alert("Respaldo restaurado. Investor se recargará.");location.reload();
     return true;
   }catch(e){if(manual)window.alert("No se pudo restaurar: "+e.message);return false;}
@@ -6607,7 +6631,7 @@ function cfgRender(){
         return sec("Nube · caja fuerte en tu servidor","Sube tus datos al disco persistente de Render: sobreviven si se borra el navegador y sincronizan tu teléfono",
           row(`Estado ${pill}`,sub,`<input id="cfgCloudTok" type="password" autocomplete="off" placeholder="${CLOUD.token?'•••••••• guardado · pega uno nuevo para reemplazar':'token del servidor (SYNC_TOKEN)'}" value="" style="${inStyle}" ${srv?"":"disabled"}>`)+
           row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgCloudAuto" ${CLOUD.auto!==false?"checked":""} ${(srv&&CLOUD.token)?"":"disabled"}> Respaldo automático en la nube</label>`,"Sube una copia ~45 s después de cada cambio (se conservan las últimas 40 versiones en el servidor)",
-            '<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-pri" id="cfgCloudPush" '+(srv?"":"disabled")+'>☁ Guardar ahora</button><button class="btn" id="cfgCloudPull" '+(srv?"":"disabled")+'>⬇ Restaurar de la nube</button><button class="btn" id="cfgCloudTest" '+(srv?"":"disabled")+'>Probar conexión</button></div>',1));
+            '<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-pri" id="cfgCloudPush" '+(srv?"":"disabled")+'>☁ Guardar ahora</button><button class="btn" id="cfgCloudPull" '+(srv?"":"disabled")+'>⬇ Restaurar de la nube</button><button class="btn" id="cfgCloudVer" '+(srv?"":"disabled")+'>🕘 Versiones anteriores</button><button class="btn" id="cfgCloudTest" '+(srv?"":"disabled")+'>Probar conexión</button></div>',1));
       })();
   }else if(cfgTab==="perfil"){
     const prof=(invProfile&&invProfile.levels)?`<b>${invProfile.label}</b> · nivel ${invProfile.level}/5`:(invProfile?"Reevaluar (cuestionario actualizado)":"Sin evaluar");
@@ -6687,6 +6711,25 @@ function cfgRender(){
   const _cau=q("#cfgCloudAuto");if(_cau)_cau.onchange=()=>{CLOUD.auto=_cau.checked;cloudSave();};
   const _cpu=q("#cfgCloudPush");if(_cpu)_cpu.onclick=async()=>{try{const r=await cloudPush(true);window.alert("Respaldo guardado en la nube"+((r&&r.savedAt)?(" · "+new Date(r.savedAt).toLocaleString("es-CL")+" · "+(r.versions||1)+" versiones en el servidor"):"")+".");cfgRender();}catch(e){window.alert("No se pudo guardar en la nube: "+e.message);}};
   const _cpl=q("#cfgCloudPull");if(_cpl)_cpl.onclick=()=>cloudRestore(true);
+  // HISTORIAL: el disco guarda 40 versiones. Poder elegir una es lo que salva el día si el último respaldo
+  // quedó en blanco (p.ej. lo pisó un navegador recién estrenado) o si se quiere volver a un estado anterior.
+  const _cvr=q("#cfgCloudVer");if(_cvr)_cvr.onclick=async()=>{
+    try{
+      const vs=await cloudVersiones();
+      if(!vs.length){window.alert("El servidor aún no tiene versiones guardadas.");return;}
+      const lista=vs.slice(0,20).map((v,i)=>(i+1)+") "+(v.savedAt?new Date(v.savedAt).toLocaleString("es-CL"):"—")+" · "+Math.round((v.bytes||0)/1024)+" KB · "+(v.tieneDatos?(v.carteras+" cartera(s), "+v.precios+" acción(es), "+v.dias+" día(s) de IPSA"):"VACÍO")).join("\n");
+      const n=window.prompt("Versiones guardadas en el servidor (de la más nueva a la más antigua):\n\n"+lista+"\n\nEscribe el número de la que quieres restaurar (o cancela):");
+      if(!n)return;
+      const v=vs[(+n)-1];
+      if(!v){window.alert("Ese número no está en la lista.");return;}
+      if(!v.tieneDatos&&!window.confirm("Esa versión está VACÍA: restaurarla borraría lo que tengas en este navegador. ¿Seguro?"))return;
+      if(v.tieneDatos&&!window.confirm("Restaurar la versión del "+(v.savedAt?new Date(v.savedAt).toLocaleString("es-CL"):"—")+"\n\nREEMPLAZA los datos de este navegador. ¿Continuar?"))return;
+      const j=await cloudApi("GET","/api/backup?v="+encodeURIComponent(v.file));
+      if(!restoreFromPayload(j))throw new Error("el respaldo no se pudo aplicar");
+      try{await cloudPush(false);}catch(e){}   // esa versión pasa a ser la última: la próxima carga no vuelve al vacío
+      window.alert("Versión restaurada. Investor se recargará.");location.reload();
+    }catch(e){window.alert("No se pudo leer el historial: "+e.message);}
+  };
   const _cts=q("#cfgCloudTest");if(_cts)_cts.onclick=async()=>{try{const h=await cloudApi("GET","/api/backup/meta");window.alert("Conexión OK ✓\n\nRespaldo en el servidor: "+(h.hasBackup?(new Date(h.savedAt).toLocaleString("es-CL")+" · "+Math.round((h.bytes||0)/1024)+" KB · "+h.versions+" versiones"):"aún no hay (usa ☁ Guardar ahora)"));}catch(e){window.alert("Falló la conexión: "+e.message);}};
   const _cl=q("#cfgClean");if(_cl)_cl.onclick=()=>{
     if(!confirm('Limpiar el sistema para empezar de cero con planillas.\n\n✓ SE CONSERVAN: la COMPRA INICIAL y las OPERACIONES de compra/venta de cada cartera.\n\n✕ SE ELIMINAN (se reconstruyen al cargar planillas):\n  • Los cierres diarios/seguimiento de las carteras\n  • La base de precios (precios cargados + demo)\n  • Análisis guardados e importados\n  • Simulaciones y comparaciones de escenarios\n\n¿Continuar?'))return;
@@ -9341,6 +9384,26 @@ function viewHome(){
   const _who=(typeof AUTH!=="undefined"&&AUTH&&AUTH.user)?(", "+(""+AUTH.user).replace(/</g,"&lt;")):"";
   const _fecha=_now.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const greetStrip=`<div class="home-greet"><div><div class="hg-hi">${_greet}${_who}</div><div class="hg-date">${_fecha.charAt(0).toUpperCase()+_fecha.slice(1)}</div></div><button class="btn btnu hg-cta" data-go="datos|cierre">↻ Cargar cierre del día</button></div>`;
+  // BASE REZAGADA: valorizar la cartera con precios viejos sin decirlo es el peor silencio posible — se decide
+  // con esos números. Si el último cierre de la base queda a más de 2 ruedas del último día hábil, se avisa
+  // aquí mismo, y se distingue el caso "no hay fuente configurada" (que no se arregla solo) del "no sincronizó".
+  const avisoBase=(function(){try{
+    const ds=pricedbAllDates();if(!ds.length)return "";
+    const ult=ds[ds.length-1],ltd=lastTradingDay();
+    if(ult>=ltd)return "";
+    let ruedas=0;const d=new Date(ult+"T12:00:00");
+    while(localDay(d)<ltd&&ruedas<400){d.setDate(d.getDate()+1);if(isTradingDay(localDay(d)))ruedas++;}
+    if(ruedas<=2)return "";
+    const sinFuente=!(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL);
+    const info=(typeof autopxLastInfo==="function")?autopxLastInfo():null;
+    const detalle=sinFuente
+      ? "No hay una fuente automática de cierres configurada en este navegador: la base no se va a actualizar sola."
+      : ((info&&info.error)?("La última sincronización falló: "+(""+info.error).replace(/</g,"&lt;")+".")
+        :"La fuente automática no ha traído cierres nuevos.");
+    return `<div class="card"><div class="bd"><div class="imp-banner" style="background:var(--amberbg);border-color:var(--amber-line);color:var(--amber)">
+      <span>⚠ La base de precios va ${ruedas} rueda(s) atrasada: su último cierre es del <b>${fD(ult)}</b> y el último día hábil es el <b>${fD(ltd)}</b>. ${detalle} Mientras tanto, la cartera se valoriza con precios viejos.</span>
+      <button class="btn" id="homeFuente">Revisar fuente de datos</button></div></div></div>`;
+  }catch(e){return "";}})();
   // serie gestionada (se calcula UNA vez): el sparkline del hero y la tarjeta de rentabilidad neta la comparten.
   // El hero dibuja la RENTABILIDAD NETA (no el patrimonio: los aportes lo hacían ver como un escalón plano).
   const _mtH=(typeof managedTotalSeries==="function")?managedTotalSeries():null;
@@ -9544,7 +9607,7 @@ function viewHome(){
     const sub="Un mes por columna: compras hacia arriba, ventas hacia abajo y las comisiones en su carril inferior (IVA incluido, escala propia) · <b>haz clic en un mes para ver el detalle de sus operaciones</b> · el libro completo va en Contabilidad";
     return card("Operaciones y comisiones",sub,body);
   })();
-  return greetStrip+hero+tiles+totalCard+fundsCard+patrCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
+  return greetStrip+avisoBase+hero+tiles+totalCard+fundsCard+patrCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
 /* color por tramo del score */
 function iscCol(v){return v>=70?green:v>=55?indigo:v>=40?amber:red;}
@@ -9626,6 +9689,8 @@ function scoreAllModal(){
   try{attachTableSort();}catch(e){}
 }
 function attachHome(){
+  // el aviso de base rezagada lleva directo a donde se arregla: la fuente automática de cierres
+  const _hf=document.getElementById("homeFuente");if(_hf)_hf.onclick=()=>{cfgTab="datos";cfgOpen();};
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
     try{if(cid!==activeClient){activeClient=cid;localStorage.setItem("inv_active_client",cid);if(typeof clientLoad==="function")clientLoad();}}catch(e){}
     const np=+pid;activeId=(isFinite(np)&&String(np)===pid)?np:pid;try{saveProjects();syncProj();}catch(e){}

@@ -106,10 +106,50 @@ function backupMeta() {
   let versions = 0; try { versions = fs.readdirSync(BK_DIR).filter(f => f.endsWith(".json")).length; } catch (e) {}
   return { hasBackup: savedAt != null, savedAt, bytes, versions };
 }
+/* ¿cuánto trae un respaldo? Se usa para distinguir un respaldo REAL de uno vacío sin descargarlo entero:
+   así la app puede ofrecer "restaurar la última versión CON datos" cuando la última quedó en blanco. */
+function backupResumen(file) {
+  try {
+    const j = JSON.parse(fs.readFileSync(file, "utf8"));
+    const cs = (j && j.clients) || {};
+    let carteras = 0, precios = 0, dias = 0;
+    for (const id of Object.keys(cs)) {
+      const o = cs[id] || {};
+      if (Array.isArray(o.pf_projects_v1)) carteras += o.pf_projects_v1.length;
+      const px = o.inv_pricedb_v1;
+      if (px && px.px) precios += Object.keys(px.px).length;
+      if (px && px.ipsa) dias = Math.max(dias, Object.keys(px.ipsa).length);
+    }
+    return { carteras, precios, dias, tieneDatos: carteras > 0 || precios > 0 || dias > 0 };
+  } catch (e) { return { carteras: 0, precios: 0, dias: 0, tieneDatos: false, error: true }; }
+}
+const VER_RE = /^backup-[\w.\-]+\.json$/;   // nombre de versión aceptable (sin travesía de directorios)
+function listVersions() {
+  let files = [];
+  try { files = fs.readdirSync(BK_DIR).filter(f => VER_RE.test(f)).sort().reverse(); } catch (e) {}
+  return files.map(f => {
+    const full = path.join(BK_DIR, f);
+    let bytes = 0, savedAt = null;
+    try { const st = fs.statSync(full); bytes = st.size; savedAt = st.mtime.toISOString(); } catch (e) {}
+    return Object.assign({ file: f, savedAt, bytes }, backupResumen(full));
+  });
+}
 function pruneVersions() {
   try {
-    const files = fs.readdirSync(BK_DIR).filter(f => f.endsWith(".json")).sort();
-    while (files.length > KEEP) { const f = files.shift(); try { fs.unlinkSync(path.join(BK_DIR, f)); } catch (e) {} }
+    const files = fs.readdirSync(BK_DIR).filter(f => VER_RE.test(f)).sort();
+    // la versión CON DATOS más reciente nunca se descarta: es la red de seguridad si el último respaldo
+    // quedó en blanco (navegador recién estrenado). Sin este resguardo, una racha de respaldos vacíos la
+    // empujaría fuera de las 40 y no habría nada a lo que volver.
+    let salvada = null;
+    for (let i = files.length - 1; i >= 0; i--) {
+      if (backupResumen(path.join(BK_DIR, files[i])).tieneDatos) { salvada = files[i]; break; }
+    }
+    let n = files.length, i = 0;
+    while (n > KEEP && i < files.length) {
+      const f = files[i++];
+      if (f === salvada) continue;
+      try { fs.unlinkSync(path.join(BK_DIR, f)); n--; } catch (e) {}
+    }
   } catch (e) {}
 }
 
@@ -134,7 +174,17 @@ const server = http.createServer((req, res) => {
     if (!TOKEN) return sendJSON(res, 503, { error: "SYNC_TOKEN no está configurado en el servidor (panel de Render → Environment)" });
     if (!authOK(req)) return sendJSON(res, 401, { error: "token requerido o incorrecto (header x-investor-token)" });
     if (p === "/api/backup/meta" && req.method === "GET") return sendJSON(res, 200, backupMeta());
+    /* HISTORIAL: las versiones guardadas en el disco, de la más nueva a la más vieja, con lo que trae cada
+       una. Es el camino de vuelta cuando el último respaldo quedó vacío. */
+    if (p === "/api/backup/versions" && req.method === "GET") return sendJSON(res, 200, { versions: listVersions() });
     if (p === "/api/backup" && req.method === "GET") {
+      const v = (u.searchParams.get("v") || "").trim();
+      if (v) {
+        if (!VER_RE.test(v)) return sendJSON(res, 400, { error: "nombre de versión inválido" });
+        const f = path.join(BK_DIR, v);
+        if (!fs.existsSync(f)) return sendJSON(res, 404, { error: "esa versión ya no está en el disco" });
+        return sendFile(res, f, false);
+      }
       if (!fs.existsSync(LATEST)) return sendJSON(res, 404, { error: "aún no hay respaldos en el servidor" });
       return sendFile(res, LATEST, false);
     }
