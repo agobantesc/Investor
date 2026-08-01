@@ -1569,6 +1569,40 @@
   /* Impresión desde la app (los informes tienen su propia hoja): que no salgan controles */
   @media print{.topbar,.home-seg,.btn,.wbtn,.projbar,.pbtns{display:none !important;}
     .card{break-inside:avoid;box-shadow:none;border-color:#D8E2F0;}}
+
+  /* ── PULIDO v8 (orden y claridad transversal en TODAS las tablas) ──────────────────────────────
+     Diagnóstico: una tabla puede tener sus encabezados y celdas perfectamente alineados y aun así
+     leerse desordenada. Las tres causas reales, medidas en el Ranking de rotación:
+       1. En una misma fila de cifras convivían números en PASTILLA (los % con fondo de color) y
+          números planos. La pastilla dibuja un borde a la izquierda de cada dato, y como su ancho
+          depende del texto ("+2,92%" vs "+11,71%"), la columna quedaba con un margen izquierdo
+          dentado mientras las columnas vecinas iban rectas.
+       2. Los subtítulos bajo el sujeto de la fila (el sector bajo el ticker) llevaban estilo en
+          línea, distinto en cada tabla.
+       3. Los números no reservaban un ancho estable para el signo, así que "+9,85" y "11,71"
+          arrancaban en sitios distintos.
+     Solución: dentro de una tabla, un porcentaje es un NÚMERO, no una etiqueta — conserva su color
+     y pierde el fondo. Las etiquetas de verdad (badges de estado) siguen siendo pastillas. ── */
+  .tw td .chip{background:none !important;border-color:transparent !important;padding:0;border-radius:0;font-weight:700;}
+  .tw td.r .chip{display:inline;}
+  /* subtítulo del sujeto de la fila: uno solo para toda la app */
+  .t-sub{font-size:10px;color:var(--faint);font-weight:600;line-height:1.35;margin-top:1px;}
+  .tw tbody td:first-child .t-sub{font-weight:600;}
+  /* columna de índice (#): ordinal, no dato — no compite con el resto */
+  .tw td.t-idx,.tw th.t-idx{color:var(--faint);font-weight:600;width:1%;white-space:nowrap;}
+  /* las cifras no se parten en dos líneas ni cambian de ancho con el signo */
+  .tw td.r,.tw th.r{white-space:nowrap;}
+  /* el punto de color del sujeto siempre a la misma distancia del nombre */
+  .tw tbody td:first-child .dot{margin-right:7px;vertical-align:baseline;}
+  /* cabecera de dos niveles: el encabezado nunca se parte y siempre comparte línea base */
+  .tw thead th{vertical-align:bottom;}
+  /* una tabla dentro de una tarjeta llega hasta sus bordes: sin medio margen suelto */
+  .tw+.note{margin-top:12px;}
+  /* columnas centradas: encabezado y celda con la MISMA clase — antes la celda se centraba con estilo en
+     línea y el encabezado se quedaba a la izquierda (columnas de z por factor en Multifactor) */
+  .tw th.c,.tw td.c{text-align:center;}
+  /* Badges dentro de tablas: mismo alto, sin empujar la fila */
+  .tw td .badge{vertical-align:middle;}
 </style>
 </head>
 <body>
@@ -1865,7 +1899,7 @@ function attachProjHover(){
 }
 
 
-function card(t,s,body,act){return `<div class="card"><div class="hd"><div><div class="ct">${t}</div>${s?`<div class="cs">${s}</div>`:""}</div>${act||""}</div><div class="bd${body.flush?" flush":""}">${body.html!==undefined?body.html:body}</div></div>`;}
+function card(t,s,body,act,cls){return `<div class="card${cls?" "+cls:""}"><div class="hd"><div><div class="ct">${t}</div>${s?`<div class="cs">${s}</div>`:""}</div>${act||""}</div><div class="bd${body.flush?" flush":""}">${body.html!==undefined?body.html:body}</div></div>`;}
 
 // ===== NAV =====
 const MODS={
@@ -3326,7 +3360,7 @@ function viewInvActive(){
   const _mktG=(function(){if(!_selSer)return null;for(let i=_selSer.vals.length-1;i>=0;i--)if(_selSer.vals[i]!=null)return _selSer.vals[i]-100;return null;})();
   const selInfo=selP?`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:13px">${tileC("Tu retorno en "+selP.hd.t,pc(selP.ret*100),"pondera tus compras (cuánto y cuándo)",selP.hd.c,col(selP.ret*100))}${_mktG!=null?tileC("Precio desde incorporación",pc(_mktG),"crecimiento de mercado · es lo que dibuja el gráfico",selP.hd.c,col(_mktG)):""}${tileC("Ganancia / pérdida",(selP.gain>=0?"+":"−")+fmtCLP(Math.abs(selP.gain)),"sobre "+fmtCLP(selP.cost)+" invertidos",selP.hd.c,col(selP.gain))}${tileC("Precio compra → actual",fmtP(selP.buy)+" → "+fmtP(selP.cur),selP.sh?(selP.sh.toLocaleString("es-CL",{maximumFractionDigits:2})+" acciones"):"",selP.hd.c,ink)}${tileC("Aporte al retorno total",pc(selP.contribCum*100),"contribución a la cartera",selP.hd.c,col(selP.contribCum*100))}</div>${(_mktG!=null&&Math.abs(_mktG-selP.ret*100)>0.3)?`<div class="note" style="margin:-4px 0 13px;font-size:11px">¿Por qué difieren? El <b>gráfico</b> mide el crecimiento del <b>precio de mercado</b> desde que ${selP.hd.t} entró a la cartera (${pc(_mktG)}). <b>Tu retorno</b> (${pc(selP.ret*100)}) pondera <b>cuándo y cuánto</b> compraste: si compraste la mayor parte después de una subida, tu retorno es menor que el del precio — y al revés.</div>`:""}`
     :`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:13px">${IM.perStock.map(p=>tileC("Retorno "+p.hd.t,pc(p.ret*100),(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),p.hd.c,col(p.ret*100))).join("")}</div>`;
-  const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Crecimiento del <b>precio de mercado</b> (base 100 desde su incorporación) · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación) — tu retorno personal, que pondera tus compras, va en las tarjetas y la tabla · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeries,labels:dates,h:280,id:"invstk",unit:"",signBase:100,ttfmt:ret100,area:!!invStkSel}),stkBtns):"";
+  const stkChart=nd>=2?card("Crecimiento por acción",invStkSel?`Crecimiento del <b>precio de mercado</b> (base 100 desde su incorporación) · viendo solo <b>${invStkSel}</b> · pulsa "Todas" para volver`:"Crecimiento del <b>precio de mercado</b> de cada acción (base 100 desde su incorporación) — tu retorno personal, que pondera tus compras, va en las tarjetas y la tabla · pulsa una acción para verla sola",selInfo+svgMulti({series:stkSeries,labels:dates,h:280,id:"invstk",unit:"",signBase:100,ttfmt:ret100,area:!!invStkSel}),stkBtns,"rp-omit"):"";
   const psSorted=[...IM.perStock].sort((a,b)=>b.contribCum-a.contribCum);
   const _todayBadge=`<span class="altchip" style="border-color:var(--accent);color:var(--accent);padding:1px 5px;font-size:8.5px;margin-left:5px" title="La compraste en este último registro: su Δ es el movimiento de mercado de la acción, no afecta el P/L del día (la compra se netea como aporte).">comprada hoy</span>`;
   // P. compra prom. = costo registrado ÷ acciones — comparable 1:1 con el "P. Compra" de la cartola de la
@@ -3453,7 +3487,51 @@ function viewInvActive(){
     ];
     const svg=svgScatter({id:"invsml",pts,lines,areas,xmin:0,xmax:bmax,ymin:ymin-pad,ymax:ymax+pad,xlab:"β (riesgo sistemático)",ylab:"Retorno del período (%)",fx:v=>v.toFixed(1),fy:v=>v.toFixed(1)+"%",w:820,h:365});
     const leg=`<div class="legend" style="margin-top:8px"><span><span class="lgdot" style="background:${indigo}"></span>SML exigida (Rf ${RF.toFixed(1)}% + β·prima ${PRIMA.toFixed(1)}%, compuesta al período)</span><span><span class="lgdot" style="background:${indigo}"></span>◆ Portafolio</span><span><span class="lgdot" style="background:#475569"></span>▲ IPSA real</span>${stkPts.length?`<span><span class="lgdot" style="background:#64748B"></span>● Acciones del portafolio</span>`:""}<span><span class="lgdot" style="background:${green};opacity:.5"></span>zona α+</span><span><span class="lgdot" style="background:${red};opacity:.5"></span>zona α−</span></div>`;
-    const body=svg+leg+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar): la <b style="color:${green}">zona verde</b> (sobre la línea) es rendimiento por ENCIMA de lo exigido y la <b style="color:${red}">rojiza</b>, por debajo. Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → la línea punteada vertical es tu <b>alpha realizado</b>: <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b>. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} exigido → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${stkPts.length?` Cada <b>acción del portafolio</b> va con su nombre en su β, con el crecimiento de su <b>precio de mercado</b> desde que entró a la cartera: en zona verde = le pagó su riesgo; en zona roja = el lastre de tu alpha. Pasa el cursor por cualquier punto para los valores exactos.`:""}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
+    // ── TABLA DE DETALLE: el gráfico dice "arriba o abajo de la línea"; la tabla dice CUÁNTO y por qué.
+    //    Cada acción con su β, lo que rindió su precio en el período, lo que el CAPM le exigía por ese β y la
+    //    diferencia — que es exactamente el α de Jensen. Las dos últimas filas (portafolio e IPSA) son la
+    //    misma cuenta, y dejan a la vista qué parte del resultado es mercado y qué parte es gestión.
+    const smlTbl=(function(){
+      const pesoBase=(IM.perStock||[]).reduce((a,x)=>a+Math.max(0,x.val||0),0);
+      const filas=stkPts.map(pt=>{
+        const ps=(IM.perStock||[]).find(x=>x.hd&&x.hd.t===pt.label)||null;
+        const b=pt.x,real=pt.y,exig=req(b),alpha=real-exig;
+        return {t:pt.label,c:pt.c,b,real,exig,alpha,ps,
+          peso:(ps&&pesoBase>0)?(Math.max(0,ps.val||0)/pesoBase*100):null};
+      }).sort((a,b)=>b.alpha-a.alpha);
+      if(!filas.length)return "";
+      const vd=a=>a>=0
+        ?`<span class="badge pos" title="Rindió más de lo que el CAPM exige por su β">pagó el riesgo</span>`
+        :`<span class="badge neg" title="Rindió menos de lo que el CAPM exige por su β">no lo pagó</span>`;
+      const fA=a=>`<span style="color:${a>=0?green:red};font-weight:800">${a>=0?"+":"−"}${Math.abs(a).toFixed(2)} pts</span>`;
+      const cuerpo=filas.map(r=>`<tr>
+        <td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${(r.ps&&r.ps.hd&&r.ps.hd.n&&(""+r.ps.hd.n).toUpperCase()!==(""+r.t).toUpperCase())?`<div class="t-sub">${(""+r.ps.hd.n).replace(/</g,"&lt;")}</div>`:""}</td>
+        <td class="r">${r.peso!=null?r.peso.toFixed(1)+"%":"—"}</td>
+        <td class="r">${r.b.toFixed(2)}</td>
+        <td class="r">${(r.ps&&r.ps.betaR!=null)?r.ps.betaR.toFixed(2):"—"}</td>
+        <td class="r">${pc(r.real)}</td>
+        <td class="r">${pc(r.exig)}</td>
+        <td class="r">${fA(r.alpha)}</td>
+        <td>${vd(r.alpha)}</td></tr>`).join("");
+      const pie=`<tfoot>
+        <tr><td><b>${(""+PF.name).replace(/</g,"&lt;")}</b><div class="t-sub">tu portafolio</div></td>
+          <td class="r">100,0%</td><td class="r">${bp.toFixed(2)}</td><td class="r">${IM.betaR!=null?IM.betaR.toFixed(2):"—"}</td>
+          <td class="r">${pc(pR)}</td><td class="r">${pc(req(bp))}</td><td class="r">${fA(aP)}</td><td>${vd(aP)}</td></tr>
+        <tr><td><b>IPSA</b><div class="t-sub">el mercado</div></td>
+          <td class="r">—</td><td class="r">1,00</td><td class="r">1,00</td>
+          <td class="r">${pc(iR)}</td><td class="r">${pc(req(1))}</td><td class="r">${fA(aM)}</td><td>${vd(aM)}</td></tr></tfoot>`;
+      return `<div class="tw tbl-compact" style="margin-top:15px"><table>
+        <thead><tr><th>Acción</th>
+          <th class="r" title="Cuánto pesa hoy en el valor de la cartera">Peso</th>
+          <th class="r" title="β esperada: la del análisis, la que se usa para exigir retorno">β esp.</th>
+          <th class="r" title="β realizada: regresión de sus retornos contra el IPSA en este período">β real.</th>
+          <th class="r" title="Crecimiento de su precio de mercado desde que entró a la cartera">Retorno del período</th>
+          <th class="r" title="Rf + β × prima, compuesto a los días transcurridos">Exigido CAPM</th>
+          <th class="r" title="Retorno real menos el exigido por su β">α de Jensen</th>
+          <th>Veredicto</th></tr></thead>
+        <tbody>${cuerpo}</tbody>${pie}</table></div>`;
+    })();
+    const body=svg+leg+smlTbl+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar): la <b style="color:${green}">zona verde</b> (sobre la línea) es rendimiento por ENCIMA de lo exigido y la <b style="color:${red}">rojiza</b>, por debajo. Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → la línea punteada vertical es tu <b>alpha realizado</b>: <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b>. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} exigido → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${stkPts.length?` Cada <b>acción del portafolio</b> va con su nombre en su β, con el crecimiento de su <b>precio de mercado</b> desde que entró a la cartera: en zona verde = le pagó su riesgo; en zona roja = el lastre de tu alpha. Pasa el cursor por cualquier punto para los valores exactos.`:""} La tabla de arriba es el mismo cálculo acción por acción: <b>α de Jensen = retorno del período − exigido CAPM</b>, ordenada de la que más pagó su riesgo a la que menos.${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
     return card("Security Market Line: ¿te pagó el riesgo que tomaste?","Retorno del período vs β · la línea punteada vertical de tu portafolio (◆) a la SML ES el alpha realizado · el IPSA (▲) separa cuánto es mercado y cuánto gestión · pasa el cursor por los puntos",body);
   }catch(e){return "";}})();
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA sobre las <b>"+(IM.nretIdx!=null?IM.nretIdx:IM.nret)+" fechas con cierre REAL del índice</b>"+((IM.nretIdx!=null&&IM.nret>IM.nretIdx)?(" (de "+IM.nret+" registros; las fechas sin índice quedan fuera para no inventar días de mercado)"):"")+"; compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ fechas con cierre real del IPSA</b> calcularé el β realizado por regresión de tus retornos vs el índice.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
@@ -3660,6 +3738,9 @@ function reportCapture(fn){
 function reportStripUI(html){
   const d=document.createElement("div");d.innerHTML=html;
   d.querySelectorAll("button,input,select,textarea,.ctx-tabs,.projbar,.pbtns,.home-seg,.wbtn,[data-pgoto]").forEach(e=>{try{e.remove();}catch(_){}});
+  // secciones que en pantalla dependen de ELEGIR una acción: en papel no hay dónde elegir, así que muestran
+  // una sola y confunden. Se marcan con rp-omit en su tarjeta y no llegan al informe.
+  d.querySelectorAll(".rp-omit").forEach(e=>{try{e.remove();}catch(_){}});
   d.querySelectorAll(".bd").forEach(x=>{if(!x.textContent.trim()&&!x.querySelector("svg,img,table"))x.remove();});   // cuerpos que solo tenían un botón: fuera la franja vacía
   d.querySelectorAll(".card").forEach(c=>{if(c.querySelectorAll("tbody tr").length>12)c.classList.add("rp-flow");});   // tablas largas: fluyen entre páginas (el thead se repite solo)
   return d.innerHTML;
@@ -3688,20 +3769,37 @@ function invReportShell(o){
     .rp-exec .xt{font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;font-weight:800;color:#1E5FD1;margin-bottom:5px;}
     .rp-exec p{font-size:11px;line-height:1.65;color:#22355C;}
     .rp-exec b{color:#10306A;}
-    .rp-page{max-width:1054px;margin:0 auto;padding:12px 0 0;display:flex;flex-direction:column;gap:12px;}
+    /* La página del informe es un BLOQUE, no un flex. Un contenedor flex fragmenta mal entre páginas
+       (el motor de impresión no reparte sus hijos: los empuja enteros y deja huecos, y una tarjeta más
+       alta que la hoja se corta sin control). En bloque, cada tarjeta se pagina por sí sola y el
+       break-inside de abajo manda de verdad. Era la causa de que el informe quedara "cortado". */
+    .rp-page{max-width:1054px;margin:0 auto;padding:12px 0 0;display:block;}
+    .rp-page>*+*{margin-top:12px;}
     .rp-sec{display:flex;align-items:center;gap:9px;font-size:13px;color:#10306A;font-weight:800;border-bottom:1.5px solid #E1EAF6;padding-bottom:7px;margin-top:10px;break-after:avoid;page-break-after:avoid;}
     .rp-sec .sn{display:inline-flex;width:21px;height:21px;border-radius:7px;background:#1E5FD1;color:#fff;font-size:10.5px;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto;}
     .rp-sec .ss{font-size:9.5px;color:#7A8CA8;font-weight:600;margin-left:auto;text-align:right;}
     .rp-brk{break-before:page;page-break-before:always;}
     .rp-page .card{break-inside:avoid;page-break-inside:avoid;box-shadow:none;}
     .rp-page .card.rp-flow{break-inside:auto !important;page-break-inside:auto !important;}
+    /* una tarjeta que FLUYE no debe dejar su encabezado solo al pie de una página */
+    .rp-page .card.rp-flow>.hd{break-after:avoid;page-break-after:avoid;}
+    .rp-page .card.rp-flow>.bd{break-before:avoid;page-break-before:avoid;}
     .rp-page .tw{overflow:visible;}
-    .rp-page table{font-size:10px;}
+    .rp-page table{font-size:10px;width:100%;}
     .rp-page td,.rp-page th{padding:5px 7px;}
     .rp-page th{font-size:8px;letter-spacing:.3px;}
     .rp-page thead{display:table-header-group;}
+    .rp-page tfoot{display:table-row-group;}   /* el pie va tras la última fila, no repetido en cada página */
     .rp-page tr{page-break-inside:avoid;}
     .rp-page svg{max-width:100%;height:auto;}
+    /* nada de párrafos partidos por una línea suelta */
+    .rp-page p,.rp-page .note,.rp-page .cs{orphans:3;widows:3;}
+    /* bloques que se leen como una unidad: si no caben, pasan enteros a la página siguiente */
+    .rp-page .tiles,.rp-page .legend,.rp-page .tile,.rp-page .note,.rp-page .mc-strip{break-inside:avoid;page-break-inside:avoid;}
+    /* un gráfico jamás se parte por la mitad */
+    .rp-page svg,.rp-page .chart,.rp-page .ipsa-chart{break-inside:avoid;page-break-inside:avoid;}
+    /* al empezar una sección nueva no se hereda el margen de la anterior */
+    .rp-page .rp-sec.rp-brk{margin-top:0;}
     .rp-sig{display:flex;gap:44px;margin:34px auto 0;max-width:1054px;break-inside:avoid;}
     .rp-sig .s1{flex:1;max-width:250px;border-top:1.5px solid #9FB2CF;padding-top:6px;font-size:9.5px;color:#52668A;text-align:center;line-height:1.5;}
     .rp-foot{margin:20px auto 24px;max-width:1054px;border-top:1.5px solid #E1EAF6;padding-top:10px;font-size:9px;color:#7A8CA8;line-height:1.7;}
@@ -4303,13 +4401,13 @@ function viewMultifactor(){
   const ranked=[...STOCKS].sort((a,b)=>compositeOf(b.t,prof)-compositeOf(a.t,prof));
   const rows=ranked.map((x,i)=>{const zz=MF.z[x.t],capm=x.a24.er,mf=MF.er[x.t],d=mf-capm;
     return `<tr><td><div style="display:flex;align-items:center;gap:7px">${tk(x)}</div></td>
-      <td style="text-align:center">${zcell(zz.momentum)}</td><td style="text-align:center">${zcell(zz.lowvol)}</td>
-      <td style="text-align:center">${zcell(zz.value)}</td><td style="text-align:center">${zcell(zz.quality)}</td>
-      <td style="text-align:center">${zcell(zz.size)}</td><td style="text-align:center">${zcell(zz.yield)}</td>
-      <td style="text-align:center">${zcell(compositeOf(x.t,prof))}</td>
+      <td class="c">${zcell(zz.momentum)}</td><td class="c">${zcell(zz.lowvol)}</td>
+      <td class="c">${zcell(zz.value)}</td><td class="c">${zcell(zz.quality)}</td>
+      <td class="c">${zcell(zz.size)}</td><td class="c">${zcell(zz.yield)}</td>
+      <td class="c">${zcell(compositeOf(x.t,prof))}</td>
       <td class="num" style="color:var(--accent);font-weight:700">${p0(capm)}</td>
       <td class="num" style="font-weight:800">${p0(mf)}</td><td class="num">${chip(d)}</td></tr>`;}).join("");
-  const tbl=card("Tabla de factores y retorno esperado",`Ordenada por Composite (perfil <b>${prof}</b>) · z por factor (+verde = mejor) · E(R) CAPM vs multifactor`,{html:`<div class="tw"><table><thead><tr>${["Acción","Mom.","Low-Vol","Value","Quality","Size","Yield","Composite","E(R) CAPM","E(R) MF","Δ"].map((h,i)=>`<th${i>=8?' class="num"':''}>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
+  const tbl=card("Tabla de factores y retorno esperado",`Ordenada por Composite (perfil <b>${prof}</b>) · z por factor (+verde = mejor) · E(R) CAPM vs multifactor`,{html:`<div class="tw"><table><thead><tr>${["Acción","Mom.","Low-Vol","Value","Quality","Size","Yield","Composite","E(R) CAPM","E(R) MF","Δ"].map((h,i)=>`<th${i>=8?' class="num"':(i>=1?' class="c"':"")}>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
 
   // slopegraph CAPM vs multifactor
   const capmRank=[...STOCKS].sort((a,b)=>b.a24.jensen-a.a24.jensen);
@@ -6342,7 +6440,7 @@ function datosBase(){
   const meta=t=>(PRICEDB.tickers&&PRICEDB.tickers[t])||{};
   const covRows=covList.map(c=>{const isIp=c.t==="__IPSA__";const sct=isIp?"Índice":(meta(c.t).s||"—");return `<tr><td><b style="color:${c.col}">${isIp?"IPSA":c.t}</b>${c.primary===datosCovTab?' <span class="badge pos" style="font-size:8px">principal</span>':""}</td><td>${sct}</td><td class="r">${c[fk].n}</td><td>${fD(c[fk].from)} → ${fD(c[fk].to)}</td>${isIp?'<td class="r"><button class="wbtn del" data-ddelipsa title="Quitar el IPSA de la base (para recargarlo de una sola fuente)">✕</button></td>':`<td class="r"><button class="wbtn del" data-ddel="${c.t}" title="Quitar de la base">✕</button></td>`}</tr>`;}).join("");
   const covTable=empty?`<div class="note" style="margin:0">Tu base está vacía. Usa <b>Cargar planilla</b> o el <b>Cierre diario</b> para empezar.</div>`
-    :(covList.length?`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Períodos seguidos</th><th>Rango (${datosCovTab})</th><th></th></tr></thead><tbody>${covRows}</tbody></table></div>`
+    :(covList.length?`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r">Períodos seguidos</th><th>Rango (${datosCovTab})</th><th class="r"></th></tr></thead><tbody>${covRows}</tbody></table></div>`
       :`<div class="note" style="margin:0">Ninguna acción tiene una racha <b>${datosCovTab}</b> reciente (períodos consecutivos). Prueba otra pestaña o carga más cierres a esa cadencia.</div>`);
   const issHtml=ISS.length?`<div class="datos-iss">${ISS.map(i=>`<div class="iss iss-${i.level}">${i.level==="warn"?"⚠️":"ℹ️"} ${i.msg}${i.tickers&&i.tickers.length?` <span style="opacity:.7">(${i.tickers.map(t=>t==="__IPSA__"?"IPSA":t).join(", ")})</span>`:""}</div>`).join("")}</div>`
     :(empty?"":`<div class="iss iss-ok">✓ Sin inconsistencias detectadas en la base.</div>`);
@@ -6370,7 +6468,7 @@ function datosCargar(){
   let preview="";
   if(impFiles.length){
     const rows=impFiles.map((s,i)=>`<tr><td><b>${(""+s.name).replace(/</g,"&lt;")}</b></td><td class="r">${s.dates.length}</td><td>${fD(s.dates[0])} → ${fD(s.dates[s.dates.length-1])}</td><td class="r">${fmtP(s.closes[s.closes.length-1])}</td><td class="r"><button class="wbtn del" data-drm="${i}">✕</button></td></tr>`).join("");
-    preview=card("Listo para cargar",`${impFiles.length} serie(s) detectada(s) · revisa y confirma`,{html:`<div class="tw"><table><thead><tr><th>Serie</th><th class="r">Fechas</th><th>Rango</th><th class="r">Último</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    preview=card("Listo para cargar",`${impFiles.length} serie(s) detectada(s) · revisa y confirma`,{html:`<div class="tw"><table><thead><tr><th>Serie</th><th class="r">Fechas</th><th>Rango</th><th class="r">Último</th><th class="r"></th></tr></thead><tbody>${rows}</tbody></table></div>
       <div style="display:flex;gap:9px;flex-wrap:wrap;margin:13px 1.1rem 0"><button class="btn btn-pri" data-dmerge>Cargar ${impFiles.length} serie(s) a la base</button><button class="btn" data-dclear>Descartar</button></div>
       <div class="note" style="margin:11px 1.1rem 0">La serie llamada <b>IPSA</b> (o índice/benchmark) se usa como mercado. Tras cargar, se actualizan automáticamente los seguimientos de tus carteras con las fechas nuevas.</div>`,flush:true});
   }
@@ -7431,17 +7529,17 @@ function genAnalysisReport(){
   const _m=modulo,_p=page;modulo="eval";
   let metaBar="";try{metaBar=reportCapture(evalMeta);}catch(e){}
   page="comparativa";const sComp=reportCapture(viewComparativa);
-  page="detalle";const sDet=reportCapture(viewDetalle);
+  // "Detalle por acción" queda FUERA del informe: en pantalla se elige la acción y en papel no hay dónde
+  // elegir, así que saldría una sola y se leería como si el análisis fuera de esa acción.
   page="capm";const sCapm=reportCapture(viewCAPM);
   page="multifactor";const sMF=reportCapture(viewMultifactor);
   page="fundamentos";const sFund=reportCapture(viewFundamentos);
   modulo=_m;page=_p;
   const bodyHTML=metaBar
     +repSec("1","Comparativa","copia fiel de Análisis → Comparativa")+sComp
-    +repSec("2","Detalle por acción","copia fiel de Análisis → Detalle por acción",true)+sDet
-    +repSec("3","CAPM / SML","copia fiel de Análisis → CAPM / SML",true)+sCapm
-    +repSec("4","Multifactor","copia fiel de Análisis → Multifactor",true)+sMF
-    +repSec("5","Fundamentos","copia fiel de Análisis → Fundamentos",true)+sFund;
+    +repSec("2","CAPM / SML","copia fiel de Análisis → CAPM / SML",true)+sCapm
+    +repSec("3","Multifactor","copia fiel de Análisis → Multifactor",true)+sMF
+    +repSec("4","Fundamentos","copia fiel de Análisis → Fundamentos",true)+sFund;
   const folio="INV-ANA-"+localDay().replace(/-/g,"");
   const metaHTML=invReportMeta([
     ["Ventana",esc(winTxt)+" · "+perLbl],
@@ -7593,11 +7691,11 @@ function viewCambios(){
     }
     return `<div class="mc-hint">${_pxSug!=null?`El precio parte del último cierre conocido de ${_tkr} (<b>${fmtP(_pxSug)}</b>); cámbialo para simular otro nivel de entrada o salida.`:`No hay un cierre conocido de <b>${_tkr}</b> en la base: indica tú el precio por acción.`}</div>`;
   })()}`;
-  const opsList=R.nOps||(cambState.ops||[]).length?`<div class="tw tbl-compact" style="margin-top:14px"><table><thead><tr><th>#</th><th>Tipo</th><th>Acción</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Efecto en caja</th><th></th></tr></thead><tbody>${
+  const opsList=R.nOps||(cambState.ops||[]).length?`<div class="tw tbl-compact" style="margin-top:14px"><table><thead><tr><th>#</th><th>Tipo</th><th>Acción</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th><th class="r">Efecto en caja</th><th class="r"></th></tr></thead><tbody>${
     (cambState.ops||[]).map((o,i)=>{const ap=R.aplicadas.find(x=>x.i===i);const av=R.avisos.find(x=>x.i===i);
       const monto=ap?ap.monto:((+o.shares||0)*(+o.price||0));const fee=ap?ap.fee:0;
       const efec=ap?(ap.side==="buy"?-(ap.monto+ap.fee):(ap.monto-ap.fee)):0;
-      return `<tr${ap?"":' style="opacity:.5"'}><td class="r" style="color:var(--faint)">${i+1}</td><td><span class="badge ${o.side==="sell"?"neg":"pos"}">${o.side==="sell"?"Venta":"Compra"}</span></td><td><b>${o.t}</b></td><td class="r">${(+o.shares||0).toLocaleString("es-CL",{maximumFractionDigits:2})}${ap&&ap.shares!==+o.shares?` <span style="color:${amber}" title="Ajustada a las acciones disponibles">→ ${ap.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</span>`:""}</td><td class="r">${fmtP(+o.price||0)}</td><td class="r">${fmtCLP(Math.round(monto))}</td><td class="r" style="color:${red}">${fee?fmtCLP(fee):"—"}</td><td class="r" style="font-weight:700;color:${efec>=0?green:ink}">${ap?((efec>=0?"+":"−")+fmtCLP(Math.abs(Math.round(efec)))):"—"}</td><td class="r"><button class="wbtn del" data-cambdel="${i}" title="Quitar de la simulación">✕</button></td></tr>`;}).join("")
+      return `<tr${ap?"":' style="opacity:.5"'}><td class="r t-idx">${i+1}</td><td><span class="badge ${o.side==="sell"?"neg":"pos"}">${o.side==="sell"?"Venta":"Compra"}</span></td><td><b>${o.t}</b></td><td class="r">${(+o.shares||0).toLocaleString("es-CL",{maximumFractionDigits:2})}${ap&&ap.shares!==+o.shares?` <span style="color:${amber}" title="Ajustada a las acciones disponibles">→ ${ap.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</span>`:""}</td><td class="r">${fmtP(+o.price||0)}</td><td class="r">${fmtCLP(Math.round(monto))}</td><td class="r" style="color:${red}">${fee?fmtCLP(fee):"—"}</td><td class="r" style="font-weight:700;color:${efec>=0?green:ink}">${ap?((efec>=0?"+":"−")+fmtCLP(Math.abs(Math.round(efec)))):"—"}</td><td class="r"><button class="wbtn del" data-cambdel="${i}" title="Quitar de la simulación">✕</button></td></tr>`;}).join("")
     }</tbody>${R.nOps?`<tfoot><tr><td colspan="5">Total simulado · ${R.nOps} operación${R.nOps!==1?"es":""}</td><td class="r">${fmtCLP(Math.round(R.comprado+R.vendido))}</td><td class="r" style="color:${red}">${fmtCLP(R.fees)}</td><td class="r" style="color:${R.caja>=0?green:ink}">${(R.caja>=0?"+":"−")+fmtCLP(Math.abs(Math.round(R.caja)))}</td><td></td></tr></tfoot>`:""}</table></div>`:"";
   const avisosHtml=R.avisos.length?`<div class="note" style="margin-top:11px;border-left-color:var(--amber)">${R.avisos.map(a=>`<div>Operación ${a.i+1}: ${a.txt}</div>`).join("")}</div>`:"";
   const setup=card("Cartera y operaciones a simular","Elige la cartera y encola las compras y ventas que quieres probar · no se guarda nada en tu cartera real",
@@ -7610,7 +7708,7 @@ function viewCambios(){
      </div>
      ${opsList}${avisosHtml}`);
   // ── 2 · EL RESULTADO: parámetros antes vs después ──
-  const filaP=(lbl,a,b,dec,unit,bueno,ayuda)=>`<tr><td><b>${lbl}</b>${ayuda?`<div style="font-size:10.5px;color:var(--faint)">${ayuda}</div>`:""}</td><td class="r">${a==null?"—":(+a).toFixed(dec)+(unit||"")}</td><td class="r" style="font-weight:800">${b==null?"—":(+b).toFixed(dec)+(unit||"")}</td><td class="r">${dChip(a,b,dec,unit,bueno)}</td></tr>`;
+  const filaP=(lbl,a,b,dec,unit,bueno,ayuda)=>`<tr><td><b>${lbl}</b>${ayuda?`<div class="t-sub">${ayuda}</div>`:""}</td><td class="r">${a==null?"—":(+a).toFixed(dec)+(unit||"")}</td><td class="r" style="font-weight:800">${b==null?"—":(+b).toFixed(dec)+(unit||"")}</td><td class="r">${dChip(a,b,dec,unit,bueno)}</td></tr>`;
   const paramCard=(()=>{
     if(!R.nOps)return card("Cómo quedarían los parámetros","Agrega al menos una operación arriba para ver el efecto",
       `<div class="note" style="margin:0">Todavía no hay operaciones simuladas. La cartera <b>${(""+p.name).replace(/</g,"&lt;")}</b> tiene hoy β esperado <b>${f2(A.bp)}</b>, retorno exigido CAPM <b>${p2(A.erCapm)}</b>, riesgo σ <b>${p2(A.sig)}</b> y correlación media <b>${f2(A.corrAvg)}</b>.</div>`);
@@ -7916,7 +8014,7 @@ function viewActiva(){
     const sc=r.score>=70?green:r.score>=45?indigo:red;
     const opera=r.margen!=null&&r.margen>0;
     const _sub=((""+r.n).toUpperCase()===(""+r.t).toUpperCase())?(r.sec||""):r.n;   // no repetir el ticker como "nombre"
-    return `<tr><td class="r" style="color:var(--faint)">${i+1}</td><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${_sub?`<div style="font-size:10px;color:var(--faint)">${(""+_sub).replace(/</g,"&lt;")}</div>`:""}</td>
+    return `<tr><td class="r t-idx">${i+1}</td><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${_sub?`<div class="t-sub">${(""+_sub).replace(/</g,"&lt;")}</div>`:""}</td>
       <td class="r" style="font-weight:800;color:${sc}">${r.score}</td>
       <td class="r">${r.r5!=null?chip(r.r5):"—"}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.r60!=null?chip(r.r60):"—"}</td>
       <td class="r">${r.rel!=null?chip(r.rel):"—"}</td>
@@ -7925,7 +8023,7 @@ function viewActiva(){
       <td class="r" style="color:${opera?green:red};font-weight:700" title="${opera?"Un día típico se mueve más que el costo de ida y vuelta: la acción da espacio para operarla":"Un día típico NO alcanza a pagar la ida y vuelta: rotarla seguido destruye rentabilidad"}">${r.dias!=null?r.dias.toFixed(1):"—"}</td>
       <td class="r" title="Correlación media con las demás acciones en la ventana diaria: más baja = aporta más diversificación">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td></tr>`;}).join("");
   const rankCard=card("Ranking de rotación",`${M.rows.length} acciones · ventana de ${M.win} días hábiles (${fD(M.desde)} → ${fD(M.hasta)}) · el score premia tendencia y fuerza relativa, y castiga que la comisión se coma el movimiento`,
-    `<div class="tw"><table><thead><tr><th class="r">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r">σ anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
+    `<div class="tw"><table><thead><tr><th class="r t-idx">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r">σ anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
      <div class="note" style="margin-top:11px"><b>Días para pagar</b> dice si una acción se mueve lo suficiente para operarla: divide el costo de ida y vuelta (<b>${rt.pct.toFixed(2)}%</b>, fijo al operar desde el mínimo) por lo que se mueve un día típico. Si necesitas <b>más de un día</b> de movimiento solo para empatar, cada vuelta corta te resta. <b>Corr. media</b> baja = esa acción se mueve distinto al resto: es la que de verdad diversifica cuando amplías el número de nombres.</div>`);
   // ── 2b · HORIZONTES: cuántos días para pagar la comisión y para superar el umbral de venta ──
   const HOLD=activaHoldings(PA);   // posiciones de la cartera ELEGIDA arriba
@@ -8004,7 +8102,7 @@ function viewActiva(){
   const divCard=(()=>{
     const orden=M.rows.slice().sort((a,b)=>(a.corrMedia==null?9:a.corrMedia)-(b.corrMedia==null?9:b.corrMedia));
     const mejores=orden.slice(0,6),peores=orden.slice(-4).reverse();
-    const li=(arr,col)=>arr.map(r=>`<div class="home-mv" style="padding:9px 11px"><div class="mv-top"><span class="mv-name"><span class="dot" style="background:${r.c}"></span>${r.t}</span><span class="mv-chg" style="color:${col}">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</span></div><div style="font-size:10.5px;color:var(--faint)">${(""+r.n).replace(/</g,"&lt;")} · ${r.sec||""}</div></div>`).join("");
+    const li=(arr,col)=>arr.map(r=>`<div class="home-mv" style="padding:9px 11px"><div class="mv-top"><span class="mv-name"><span class="dot" style="background:${r.c}"></span>${r.t}</span><span class="mv-chg" style="color:${col}">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</span></div><div class="t-sub">${(""+r.n).replace(/</g,"&lt;")} · ${r.sec||""}</div></div>`).join("");
     // beneficio decreciente: σ de una cartera equiponderada de las N acciones menos correlacionadas
     const sigN=n=>{const sel=orden.slice(0,n);if(sel.length<2)return null;
       const w=1/sel.length;let v=0;
