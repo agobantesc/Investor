@@ -5586,7 +5586,26 @@ function pricedbMergeFiles(files,benchName,opts){
    Lee un JSON público (p.ej. generado a diario por GitHub Actions y servido vía raw.githubusercontent, que permite CORS)
    con la forma {"days":[{"date":"YYYY-MM-DD","ipsa":6543.2,"prices":{"BCI":60800,...}}]} y lo fusiona en la base con las
    MISMAS reglas que una planilla: por celda (acción×fecha, el último dato manda), solo días hábiles no futuros, saneo al final. */
-let AUTOPX_URL=(function(){try{return localStorage.getItem("inv_autopx_url")||"";}catch(e){return "";}})();
+let AUTOPX_URL=(function(){try{const v=(localStorage.getItem("inv_autopx_url")||"").trim();
+  // Un valor que NO es una URL (p.ej. el nombre de usuario de GitHub pegado en el campo equivocado) dejaba la
+  // sincronización fallando en cada carga y las noticias girando contra proxies. Se descarta al arrancar:
+  // mejor "sin fuente configurada" —que el Home avisa— que una fuente rota que nadie ve.
+  if(v&&!/^https?:\/\//i.test(v)){try{localStorage.removeItem("inv_autopx_url");localStorage.removeItem("inv_autopx_last");}catch(e){}return "";}
+  return v;}catch(e){return "";}})();
+/* Normaliza y VALIDA lo que se pega como fuente de cierres. Devuelve {ok,url,aviso} o {ok:false,msg}. */
+function autopxNormalizaUrl(raw){
+  const s=(""+(raw==null?"":raw)).trim().replace(/^[<"'\s]+|[>"'\s]+$/g,"");
+  if(!s)return {ok:false,msg:"Pega la URL del archivo closes.json."};
+  // github.com/usuario/repo/blob|raw/rama/ruta → su equivalente raw (es la URL que se copia del navegador)
+  const m=s.match(/^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+)$/i);
+  if(m)return {ok:true,url:"https://raw.githubusercontent.com/"+m[1]+"/"+m[2]+"/"+m[3].split(/[?#]/)[0]};
+  if(!/^https?:\/\//i.test(s)){
+    if(/^[\w.-]+\/[\w.-]+$/.test(s))return {ok:false,msg:"«"+s+"» es un repositorio, no la URL de un archivo.\n\nNecesito la dirección completa del closes.json:\n\nhttps://raw.githubusercontent.com/"+s+"/RAMA/data/closes.json\n\n(reemplaza RAMA por la rama donde el bot publica los cierres)"};
+    return {ok:false,msg:"«"+s+"» no es una dirección web.\n\nEste campo espera la URL del JSON de cierres, que empieza con https:// y termina en .json:\n\nhttps://raw.githubusercontent.com/usuario/repo/rama/data/closes.json\n\nSi lo que querías era guardar tu token de GitHub, ese va en el campo de abajo."};
+  }
+  let u;try{u=new URL(s);}catch(e){return {ok:false,msg:"Esa dirección no es válida:\n"+s};}
+  return {ok:true,url:u.href,aviso:/\.json(\?|#|$)/i.test(u.pathname)?"":"Ojo: la dirección no termina en .json. Si la sincronización falla, revisa que apunte al archivo de cierres y no a la página del repositorio."};
+}
 function autopxLastInfo(){try{return JSON.parse(localStorage.getItem("inv_autopx_last")||"null");}catch(e){return null;}}
 /* día LOCAL (Chile), no UTC: si fuera UTC, abrir la app en la tarde chilena saltaría el cierre del día */
 function autopxLocalDay(){const x=new Date();return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");}
@@ -5664,6 +5683,9 @@ async function autopxSync(manual,bust){
 function autopxAutoRun(){try{
   if(!AUTOPX_URL)return;
   const last=autopxLastInfo(),today=autopxLocalDay();
+  // FRENO AL REINTENTO: un error se reintenta cada hora, no en cada carga. Con una fuente mal configurada,
+  // reintentar siempre dejaba la app pidiendo un archivo que no existe cada vez que se abría.
+  if(last&&last.error){const t=Date.parse(last.at||"");if(isFinite(t)&&Date.now()-t<36e5)return;}
   if(last&&(last.day||(""+last.at).slice(0,10))===today&&!last.error){
     // ya sincronizó hoy — pero si esa corrida fue ANTES de que la fuente publicara el último cierre
     // (p.ej. abriste la app en la mañana), se reintenta: el gate diario no debe congelar datos viejos
@@ -6597,9 +6619,10 @@ function cfgRender(){
   }else if(cfgTab==="datos"){
     const S=(typeof pricedbSummary==="function")?pricedbSummary():null;
     const nT=S?S.rows.length:0;
-    const estado=nT?(`<b>${nT}</b> acciones · IPSA ${S.ipsaN?("hasta <b>"+S.ipsaTo+"</b>"):"<b>sin datos</b>"} · ${S.ipsaN||0} fechas del índice`):"Base vacía · carga planillas o configura la fuente automática";
+    const estado=nT?(`<b>${nT}</b> acciones · IPSA ${S.ipsaN?("hasta <b>"+fD(S.ipsaTo)+"</b>"):"<b>sin datos</b>"} · ${S.ipsaN||0} fechas del índice`):"Base vacía · carga planillas o configura la fuente automática";
     const _apxI=(typeof autopxLastInfo==="function")?autopxLastInfo():null;
-    const _apxTxt=AUTOPX_URL?(_apxI?(_apxI.error?("última sync: error ("+(""+_apxI.at).slice(0,10)+")"):("última sync: "+(""+_apxI.at).slice(0,16).replace("T"," ")+" · datos hasta "+(_apxI.lastDate||"—"))):"aún sin sincronizar"):"configura la URL de abajo para activarla";
+    // el MOTIVO del fallo a la vista: "error (fecha)" no dejaba ver que la URL apuntaba a un archivo inexistente
+    const _apxTxt=AUTOPX_URL?(_apxI?(_apxI.error?('<span style="color:var(--red)">última sync: <b>falló</b> — '+(""+_apxI.error).slice(0,90).replace(/</g,"&lt;")+"</span>"):("última sync: "+(""+_apxI.at).slice(0,16).replace("T"," ")+" · datos hasta "+(fD(_apxI.lastDate)||"—"))):"aún sin sincronizar"):'<span style="color:var(--amber)">sin fuente configurada: la base <b>no</b> se actualiza sola</span>';
     const ds=DATASET==="import"&&IMP?("Análisis del sistema ("+IMP.assets.length+" acciones)"):"Análisis del sistema no disponible (faltan datos en la base)";
     body=sec("Actualización automática","La base se actualiza sola al abrir la app (una vez al día) desde tu fuente de cierres",
       row("Estado de la base",estado,'<button class="btn" id="cfgGoBase">Ver base →</button>')+
@@ -6688,7 +6711,16 @@ function cfgRender(){
   const _bp=q("#cfgBkp");if(_bp)_bp.onclick=()=>{try{exportBackup();}catch(e){}};
   const rfl=q("#cfgRstFile"),_rs=q("#cfgRst");if(_rs&&rfl){_rs.onclick=()=>rfl.click();rfl.onchange=ev=>{if(ev.target.files[0]){importBackup(ev.target.files[0]);cfgClose();}};}
   const _ou=q("#cfgOilUrl");if(_ou)_ou.onchange=()=>{OIL_URL=(_ou.value||"").trim();try{localStorage.setItem("inv_oil_url",OIL_URL);}catch(e){}if(OIL_URL&&typeof mindFetch==="function")mindFetch();};
-  const _apx=q("#cfgAutoPx");if(_apx)_apx.onchange=()=>{AUTOPX_URL=(_apx.value||"").trim();try{localStorage.setItem("inv_autopx_url",AUTOPX_URL);}catch(e){}if(AUTOPX_URL&&confirm("Fuente guardada. ¿Sincronizar los cierres ahora?"))autopxSync(true).finally(()=>cfgRender());};
+  const _apx=q("#cfgAutoPx");if(_apx)_apx.onchange=()=>{
+    const raw=(_apx.value||"").trim();
+    if(!raw){AUTOPX_URL="";try{localStorage.removeItem("inv_autopx_url");localStorage.removeItem("inv_autopx_last");}catch(e){}cfgRender();return;}
+    const v=autopxNormalizaUrl(raw);
+    if(!v.ok){window.alert(v.msg);_apx.value=AUTOPX_URL||"";return;}   // no se guarda basura: el campo vuelve a lo que había
+    AUTOPX_URL=v.url;try{localStorage.setItem("inv_autopx_url",AUTOPX_URL);localStorage.removeItem("inv_autopx_last");}catch(e){}
+    _apx.value=AUTOPX_URL;
+    if(v.aviso)window.alert(v.aviso);
+    if(confirm("Fuente guardada:\n\n"+AUTOPX_URL+"\n\n¿Sincronizar los cierres ahora?"))autopxSync(true).finally(()=>cfgRender());else cfgRender();
+  };
   const _gh=q("#cfgGhTok");if(_gh)_gh.onchange=()=>{const v=(_gh.value||"").trim();if(!v)return;AUTOPX_GH=v;try{localStorage.setItem("inv_autopx_gh",AUTOPX_GH);}catch(e){}_gh.value="";cfgRender();window.alert("Token de GitHub guardado en este navegador.\n\nAhora «⚡ Forzar actualización» (en Datos) dispara la corrida y sincroniza de un clic.");};
   const _ghc=q("#cfgGhClr");if(_ghc)_ghc.onclick=()=>{AUTOPX_GH="";try{localStorage.removeItem("inv_autopx_gh");}catch(e){}cfgRender();};
   const _sn=q("#cfgSyncNow");if(_sn)_sn.onclick=()=>{if(!AUTOPX_URL){window.alert("Primero configura la URL de la fuente automática (campo de abajo).");return;}_sn.disabled=true;_sn.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{try{render();}catch(e){}cfgRender();});};
