@@ -1318,8 +1318,17 @@
   .isc-modal-foot{display:flex;justify-content:flex-end;margin-top:6px;}
   .isc-arow:hover{background:var(--soft);}
   #iscAllBack .ui-modal{width:900px;}
-  /* modales genéricos (precios plataforma / cliente) */
-  .ui-modal{width:560px;max-width:96vw;}
+  /* modales genéricos (score, precios plataforma, cliente). Llevan su contenido SUELTO —sin un cuerpo con
+     relleno propio como el de Configuración—, así que el relleno va aquí: sin él, tarjetas y textos quedaban
+     pegados al borde y se veían cortados. El overflow pasa a auto para que un modal alto haga scroll en vez
+     de esconder lo que no cabe (.cfg-modal lo tiene en hidden). */
+  /* display:block a propósito. .cfg-modal es un flex en columna —lo necesita el layout con nav de
+     Configuración—, pero aquí el contenido son bloques sueltos: en flex, un bloque más alto que el modal se
+     COMPRIME (flex-shrink) y su texto se derrama en vez de generar scroll. Con flujo normal, overflow-y:auto
+     hace lo esperado y el modal se desplaza. */
+  .ui-modal{display:block;width:560px;max-width:96vw;padding:20px 22px 18px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;}
+  .ui-modal>*:last-child{margin-bottom:0;}
+  @media(max-width:560px){.ui-modal{padding:16px 15px 14px;}}
   .cfg-x{border:none;background:var(--surface);color:var(--mut);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px;flex:0 0 auto;transition:.12s var(--ease);}
   .cfg-x:hover{background:var(--redbg);color:var(--red);}
   .ppx-head,.clf-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
@@ -1431,6 +1440,15 @@
   .mc-beta b{color:#7C3AED;}
   .mc-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:13px;}
   .mc-fld{display:flex;flex-direction:column;gap:6px;font:800 10px var(--font);color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  /* los SELECT del formulario comparten la caja de los input: sin esto quedaban con el estilo por defecto
+     del navegador y cada módulo lo parcheaba con estilos en línea (Markowitz) o no lo parcheaba (Monte Carlo) */
+  .mc-fld select{padding:.52rem 1.9rem .52rem .62rem;border:1px solid var(--line2);border-radius:10px;background:var(--card);
+    color:var(--ink);font:800 12.5px var(--font);width:100%;cursor:pointer;transition:.14s var(--ease-out);
+    appearance:none;-webkit-appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+    background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;}
+  .mc-fld select:hover{border-color:var(--line3,var(--accent));}
+  .mc-fld select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
   .mc-fld input{padding:.52rem .62rem;border:1px solid var(--line2);border-radius:10px;background:var(--card);
     font:700 14.5px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;transition:.15s var(--ease);}
   .mc-fld input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,95,209,.14);}
@@ -6523,7 +6541,7 @@ function cfgRender(){
     body=sec("Respaldo manual","Todo tu Investor (proyectos, base, análisis) en un archivo JSON",
       row("Respaldar / restaurar","Exporta o vuelve a un respaldo anterior",'<div style="display:flex;gap:7px"><button class="btn btn-pri" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div>'))+
       sec("Respaldo automático","Una red de seguridad periódica",
-        row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkOn" ${(AUTOBK&&AUTOBK.on)?"checked":""}> Respaldo automático activado</label>`,`Te propone descargar una copia cada cierto tiempo · última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b>`,`<select id="cfgBkDays" style="${selStyle}">${daysOpts}</select>`)+
+        row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkOn" ${(AUTOBK&&AUTOBK.on)?"checked":""}> Respaldo automático activado</label>`,`Te propone descargar una copia cada cierto tiempo · última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b>`,`<select id="cfgBkDays">${daysOpts}</select>`)+
         row("Copia ahora","Descarga un respaldo o restaura la última copia interna",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgBkNow">⬇ Descargar respaldo</button><button class="btn" id="cfgBkRestore">↩ Restaurar copia interna</button></div>',1))+
       (function(){
         const srv=cloudServerMode();
@@ -6544,10 +6562,10 @@ function cfgRender(){
     const keyOk=cpKey?'<span class="cfg-pill ok">Configurada</span>':'<span class="cfg-pill no">No configurada</span>';
     body=sec("Agente de inversiones (IA)","Analista cuantitativo con acceso a tus datos · requiere una clave de Anthropic (BYOK)",
       row(`Clave de Anthropic ${keyOk}`,"Se guarda solo en este navegador",`<button class="btn ${cpKey?"":"btn-pri"}" id="cfgKey">${cpKey?"Gestionar":"Configurar"}</button>`)+
-      row("Modelo","Calidad vs velocidad de las respuestas",`<select id="cfgModel" style="${selStyle}">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select>`,1));
+      row("Modelo","Calidad vs velocidad de las respuestas",`<select id="cfgModel">${CP_MODELS.map(x=>`<option value="${x[0]}" ${x[0]===cpModel?"selected":""}>${x[1]}</option>`).join("")}</select>`,1));
   }else if(cfgTab==="costos"){
     body=sec("Operador y costos","Comisiones que la Contabilidad descuenta en tus operaciones",
-      row("Operador (corredora)","",`<select id="cfgBkOp" style="${selStyle}">${Object.keys(BROKER_PRESETS).map(k=>`<option value="${k}" ${BROKER.op===k?"selected":""}>${BROKER_PRESETS[k].name}</option>`).join("")}</select>`)+
+      row("Operador (corredora)","",`<select id="cfgBkOp">${Object.keys(BROKER_PRESETS).map(k=>`<option value="${k}" ${BROKER.op===k?"selected":""}>${BROKER_PRESETS[k].name}</option>`).join("")}</select>`)+
       `<div class="cfg-fldrow" style="margin-top:12px">
         <label class="cfg-fld">Comisión por operación (%)<input type="number" step="0.01" min="0" id="cfgBkPct" value="${BROKER.pct}"></label>
         <label class="cfg-fld">Comisión mínima (CLP)<input type="number" min="0" id="cfgBkMin" value="${BROKER.min}"></label>
@@ -7380,8 +7398,9 @@ function viewCambios(){
   const p=cambProj();
   if(cambState.pid==null||String(cambState.pid)!==String(p.id)){cambState.pid=p.id;cambSave();}
   const R=cambCompute(p);
-  const selProj=`<select id="cambproj" class="winp" style="min-width:230px">${ps.map(x=>`<option value="${x.id}"${String(x.id)===String(p.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")}</option>`).join("")}</select>`;
-  if(!R||!R.MA)return banner+card("Cartera a simular","Elige sobre cuál cartera quieres probar los cambios",`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="genl" style="margin:0">Cartera</span>${selProj}</div>`)
+  // mismo patrón de formulario que Markowitz: etiqueta arriba y campo debajo, en una grilla .mc-form
+  const selProj=`<label class="mc-fld">Cartera a simular<select id="cambproj">${ps.map(x=>`<option value="${x.id}"${String(x.id)===String(p.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}</select></label>`;
+  if(!R||!R.MA)return banner+card("Cartera a simular","Elige sobre cuál cartera quieres probar los cambios",`<div class="mc-form">${selProj}</div>`)
     +notecard("Esta cartera aún no tiene una compra registrada con la que calcular sus parámetros. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
   const A=R.MA,B=R.MB;
   const f2=v=>(v==null?"—":(+v).toFixed(2));
@@ -7395,15 +7414,18 @@ function viewCambios(){
   const uni=(function(){const m={};(operarUniverse()||[]).forEach(s=>{m[s.t]=s;});
     R.filas.forEach(r=>{if(!m[r.t])m[r.t]=r.u||{t:r.t,n:r.t,c:"#1E5FD1",b:r.b};});
     return Object.keys(m).sort().map(k=>m[k]);})();
-  const tkSel=`<select id="cambtkr" class="winp" style="min-width:190px">${uni.map(s=>`<option value="${s.t}"${cambState.tkr===s.t?" selected":""}>${s.t} · ${(""+(s.n||s.t)).replace(/</g,"&lt;")}</option>`).join("")}</select>`;
+  const tkSel=`<select id="cambtkr">${uni.map(s=>`<option value="${s.t}"${cambState.tkr===s.t?" selected":""}>${s.t} · ${(""+(s.n||s.t)).replace(/</g,"&lt;")}</option>`).join("")}</select>`;
   const _tkr=cambState.tkr||(uni[0]&&uni[0].t);
   const _pxSug=cambPx(p,_tkr);
-  // no se usa .op-form: esa clase apila en columna (flex-direction:column) y aquí los campos van en fila
-  const form=`<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-    <div><div class="genl" style="margin:0 0 5px">Operación</div><div class="home-seg" role="group">${[["buy","Compra"],["sell","Venta"]].map(([k,l])=>`<button data-cambside="${k}" class="${cambState.side===k?"on":""}">${l}</button>`).join("")}</div></div>
-    <div><div class="genl" style="margin:0 0 5px">Acción</div>${tkSel}</div>
-    <div><div class="genl" style="margin:0 0 5px">Cantidad</div><input id="cambqty" class="winp" type="number" min="0" step="1" style="width:120px" value="${cambState.qty||""}" placeholder="acciones"></div>
-    <div><div class="genl" style="margin:0 0 5px">Precio</div><input id="cambpx" class="winp" type="number" min="0" step="1" style="width:130px" value="${cambState.price||(_pxSug!=null?Math.round(_pxSug):"")}" placeholder="${_pxSug!=null?Math.round(_pxSug):"precio"}"></div>
+  // misma grilla de formulario que Markowitz y Monte Carlo (.mc-form + .mc-fld): etiqueta arriba, campo abajo
+  const form=`<div class="mc-form">
+    ${selProj}
+    <label class="mc-fld">Operación<div class="home-seg" role="group" style="align-self:stretch">${[["buy","Compra"],["sell","Venta"]].map(([k,l])=>`<button data-cambside="${k}" class="${cambState.side===k?"on":""}" style="flex:1">${l}</button>`).join("")}</div></label>
+    <label class="mc-fld">Acción${tkSel}</label>
+    <label class="mc-fld">Cantidad<input id="cambqty" type="number" min="0" step="1" value="${cambState.qty||""}" placeholder="acciones"></label>
+    <label class="mc-fld">Precio<input id="cambpx" type="number" min="0" step="1" value="${cambState.price||(_pxSug!=null?Math.round(_pxSug):"")}" placeholder="${_pxSug!=null?Math.round(_pxSug):"precio"}"></label>
+  </div>
+  <div class="mc-row" style="margin-top:13px">
     <button class="btn btn-pri" id="cambadd">+ Agregar a la simulación</button>
     ${R.nOps?`<button class="btn" id="cambclear" style="color:var(--red);border-color:var(--red-line)">Vaciar</button>`:""}
   </div>${_pxSug!=null?`<div class="genl" style="margin:8px 0 0">Precio sugerido para ${_tkr}: <b>${fmtP(_pxSug)}</b> (último cierre conocido). Puedes cambiarlo para simular otro nivel de entrada o salida.</div>`:""}`;
@@ -7415,8 +7437,9 @@ function viewCambios(){
     }</tbody>${R.nOps?`<tfoot><tr><td colspan="5">Total simulado · ${R.nOps} operación${R.nOps!==1?"es":""}</td><td class="r">${fmtCLP(Math.round(R.comprado+R.vendido))}</td><td class="r" style="color:${red}">${fmtCLP(R.fees)}</td><td class="r" style="color:${R.caja>=0?green:ink}">${(R.caja>=0?"+":"−")+fmtCLP(Math.abs(Math.round(R.caja)))}</td><td></td></tr></tfoot>`:""}</table></div>`:"";
   const avisosHtml=R.avisos.length?`<div class="note" style="margin-top:11px;border-left-color:var(--amber)">${R.avisos.map(a=>`<div>Operación ${a.i+1}: ${a.txt}</div>`).join("")}</div>`:"";
   const setup=card("Cartera y operaciones a simular","Elige la cartera y encola las compras y ventas que quieres probar · no se guarda nada en tu cartera real",
-    `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px"><span class="genl" style="margin:0">Cartera</span>${selProj}<span class="genl" style="margin:0 0 0 8px">${R.nombres0} acción${R.nombres0!==1?"es":""} · costo ${fmtCLP(Math.round(R.totC0))}${R.val0?(" · valor de mercado "+fmtCLP(Math.round(R.val0))):""}</span></div>
-     ${form}${opsList}${avisosHtml}`);
+    `${form}
+     <div class="genl" style="margin:9px 0 0">Cartera actual: <b>${R.nombres0} acción${R.nombres0!==1?"es":""}</b> · costo ${fmtCLP(Math.round(R.totC0))}${R.val0?(" · valor de mercado "+fmtCLP(Math.round(R.val0))):""}</div>
+     ${opsList}${avisosHtml}`);
   // ── 2 · EL RESULTADO: parámetros antes vs después ──
   const filaP=(lbl,a,b,dec,unit,bueno,ayuda)=>`<tr><td><b>${lbl}</b>${ayuda?`<div style="font-size:10.5px;color:var(--faint)">${ayuda}</div>`:""}</td><td class="r">${a==null?"—":(+a).toFixed(dec)+(unit||"")}</td><td class="r" style="font-weight:800">${b==null?"—":(+b).toFixed(dec)+(unit||"")}</td><td class="r">${dChip(a,b,dec,unit,bueno)}</td></tr>`;
   const paramCard=(()=>{
@@ -8261,11 +8284,10 @@ function viewMarkowitz(){
   const ps=mkwProjects();
   if(!ps.length)return banner+notecard("Aún no tienes <b>proyectos con seguimiento</b>. Crea una inversión y registra su compra inicial; después este módulo podrá sugerirte los pesos óptimos de cada acción.");
   if(mkwProjId==null||!ps.find(x=>x.id===mkwProjId))mkwProjId=ps[0].id;
-  const selStyle="width:100%;padding:.5rem .6rem;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-family:var(--font);font-size:12.5px;font-weight:700";
   const ctrl=card("1 · Cartera y parámetros","Elige el proyecto y el objetivo. El <b>aporte adicional</b> se suma al valor actual: el objetivo en pesos se calcula sobre (valor + aporte) — ideal para decidir <b>dónde poner plata nueva</b>.",
     `<div class="mc-form">
-      <label class="mc-fld">Proyecto<select data-mkw="proj" style="${selStyle}">${ps.map(p=>`<option value="${p.id}" ${p.id===mkwProjId?"selected":""}>${(""+p.name).replace(/</g,"&lt;")}</option>`).join("")}</select></label>
-      <label class="mc-fld">Objetivo<select data-mkw="mode" style="${selStyle}"><option value="sharpe" ${mkwMode!=="minvol"?"selected":""}>Máximo Sharpe (retorno/riesgo)</option><option value="minvol" ${mkwMode==="minvol"?"selected":""}>Mínima volatilidad</option></select></label>
+      <label class="mc-fld">Proyecto<select data-mkw="proj">${ps.map(p=>`<option value="${p.id}" ${p.id===mkwProjId?"selected":""}>${(""+p.name).replace(/</g,"&lt;")}</option>`).join("")}</select></label>
+      <label class="mc-fld">Objetivo<select data-mkw="mode"><option value="sharpe" ${mkwMode!=="minvol"?"selected":""}>Máximo Sharpe (retorno/riesgo)</option><option value="minvol" ${mkwMode==="minvol"?"selected":""}>Mínima volatilidad</option></select></label>
       <label class="mc-fld">Tope por acción (%)<input type="number" min="10" max="100" step="5" data-mkw="wmax" value="${mkwWmax}"></label>
       <label class="mc-fld">Aporte adicional (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mkw="aporte" value="${mkwAporte||0}"></label>
     </div>
