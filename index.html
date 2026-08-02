@@ -753,6 +753,9 @@
   .cfg-modal{width:740px;max-width:96vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line2);
     border-radius:var(--r-lg);box-shadow:var(--sh-lg);animation:cfgRise .26s var(--ease-out);}
   @keyframes cfgRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  /* Accesos trabaja con TABLAS (usuarios y sesiones): en 740px se cortaban por la derecha y había que
+     desplazarlas dentro del modal. Esta pestaña usa un ancho mayor; el resto queda como estaba. */
+  .cfg-modal.cfg-ancho{width:1020px;}
   /* layout con pestañas: nav de categorías a la izquierda, contenido a la derecha */
   .cfg-layout{display:flex;flex:1;min-height:0;}
   .cfg-nav{flex:0 0 168px;border-right:1px solid var(--line);padding:.7rem .55rem;display:flex;flex-direction:column;gap:3px;background:var(--soft);overflow-y:auto;}
@@ -978,7 +981,7 @@
   .op-amt b{color:var(--navy);font-size:17px;font-weight:850;margin-left:5px;}
 
   /* ════════════════ ACCESO CONTROLADO (login) ════════════════ */
-  .auth-gate{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;padding:24px;
+  .auth-gate{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;padding:18px;
     background:radial-gradient(1100px 620px at 72% -12%,#143a78 0%,#0A1E3D 56%,#06142C 100%);}
   .auth-gate.open{display:flex;animation:agFade .3s ease;}
   @keyframes agFade{from{opacity:0}to{opacity:1}}
@@ -1005,6 +1008,51 @@
   .auth-skip a{font-size:11.5px;color:var(--indigo);font-weight:700;cursor:pointer;}
   .auth-skip a:hover{text-decoration:underline;}
   .auth-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:9.5px;color:var(--faint);text-align:center;line-height:1.55;}
+  /* ── Pantalla de entrada: dos paneles. A la izquierda la bienvenida y lo que Investor hace (sobre el
+     degradado de marca); a la derecha el formulario, que sigue siendo el mismo .auth-card. ── */
+  .auth-wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);width:min(1080px,96vw);
+    max-height:94vh;background:var(--card);border-radius:26px;overflow:hidden;
+    box-shadow:0 40px 110px rgba(3,10,26,.66);animation:agRise .45s var(--ease-out);}
+  /* OJO: la app define una regla global «aside{width:252px;flex-shrink:0;…}» para su barra lateral. Este
+     panel también es un <aside>, así que heredaba ese ancho fijo y se quedaba en una columna estrechísima
+     dentro de una celda de 621px. Aquí se le devuelve el ancho de su celda y se anulan borde y sombra. */
+  .auth-side{position:relative;display:flex;flex-direction:column;gap:20px;padding:38px 40px 30px;color:#fff;
+    width:auto;flex-shrink:1;border:none;box-shadow:none;overflow-y:auto;
+    background:linear-gradient(150deg,#0A1E3D 0%,#123566 52%,#1E5FD1 165%);}
+  .auth-side::after{content:"";position:absolute;inset:auto -30% -45% -30%;height:70%;
+    background:radial-gradient(closest-side,rgba(59,130,246,.34),transparent);pointer-events:none;}
+  .auth-side-top{display:flex;align-items:center;gap:13px;position:relative;z-index:1;}
+  .auth-side .auth-mark{width:40px;height:40px;filter:none;}
+  .auth-side .auth-eye{color:#8FC1FF;margin-bottom:3px;}
+  .auth-side .auth-wm{color:#fff;font-size:21px;}
+  .auth-side-mid{position:relative;z-index:1;margin-top:6px;}
+  .auth-side-mid h2{font:850 27px var(--font);letter-spacing:-.7px;line-height:1.18;color:#fff;}
+  .auth-side-mid p{font-size:12.5px;line-height:1.62;color:#C4D8F5;margin-top:11px;max-width:46ch;}
+  .auth-caps{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-direction:column;gap:13px;}
+  .auth-caps li{display:flex;gap:11px;align-items:flex-start;}
+  .auth-caps .ck{flex:0 0 auto;width:19px;height:19px;border-radius:50%;background:rgba(143,193,255,.18);
+    border:1px solid rgba(143,193,255,.45);color:#8FC1FF;font-size:10px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .auth-caps b{display:block;font-size:12.5px;font-weight:800;color:#fff;letter-spacing:-.1px;}
+  .auth-caps span:not(.ck){display:block;font-size:11.5px;line-height:1.55;color:#A8C4E8;margin-top:2px;}
+  .auth-stats{display:flex;flex-wrap:wrap;gap:9px 26px;margin-top:24px;padding-top:17px;border-top:1px solid rgba(255,255,255,.16);}
+  .auth-stats .k{display:block;font-size:8px;letter-spacing:1.1px;text-transform:uppercase;color:#8FA9CE;font-weight:800;}
+  .auth-stats .v{display:block;font:800 15px var(--font);color:#fff;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .auth-side-foot{position:relative;z-index:1;margin-top:auto;padding-top:20px;font-size:9.5px;letter-spacing:.5px;
+    text-transform:uppercase;font-weight:700;color:#7C97BF;}
+  .auth-main{display:flex;align-items:center;justify-content:center;padding:34px 30px;overflow-y:auto;background:var(--card);}
+  .auth-wrap .auth-card{width:100%;max-width:352px;border:none;border-radius:0;box-shadow:none;padding:0;
+    animation:none;background:transparent;}
+  .auth-brand-sm{display:none;align-items:center;gap:11px;margin-bottom:20px;}
+  .auth-wm2{font:850 21px var(--font);letter-spacing:-.5px;color:var(--navy);}
+  .auth-wrap .auth-h{font-size:23px;}
+  .auth-wrap .auth-sub{margin-bottom:22px;}
+  @media (max-width:900px){
+    .auth-wrap{grid-template-columns:1fr;width:min(460px,94vw);}
+    .auth-side{display:none;}
+    .auth-brand-sm{display:flex;}
+    .auth-main{padding:30px 26px;}
+  }
 
   /* ════════════ Constructor: tabla rica ════════════ */
   .cons-tw{border:1px solid var(--line);border-radius:var(--r-lg);overflow:auto;}
@@ -1614,7 +1662,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><button class="burger" id="navburger" title="Menú" aria-label="Abrir menú de módulos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Inicio"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav topnav-beta" id="navMontecarlo" data-mod="montecarlo" title="Montecarlo · proyecciones probabilísticas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg>Montecarlo<span class="beta-tag">beta</span></button><button class="topnav topnav-beta" id="navMarkowitz" data-mod="markowitz" title="Markowitz · optimización de cartera (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c1-6 4-10 13-11"/><circle cx="10" cy="12.2" r="1.6" fill="currentColor" stroke="none"/></svg>Markowitz<span class="beta-tag">beta</span></button></div><button class="mkpill" id="projPill" title="Proyecto activo · ir a Proyectos"><span class="live-dot"></span><span id="projPillTxt">Proyecto</span></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><button class="burger" id="navburger" title="Menú" aria-label="Abrir menú de módulos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Inicio"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav topnav-beta" id="navMontecarlo" data-mod="montecarlo" title="Montecarlo · proyecciones probabilísticas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg>Montecarlo<span class="beta-tag">beta</span></button><button class="topnav topnav-beta" id="navMarkowitz" data-mod="markowitz" title="Markowitz · optimización de cartera (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c1-6 4-10 13-11"/><circle cx="10" cy="12.2" r="1.6" fill="currentColor" stroke="none"/></svg>Markowitz<span class="beta-tag">beta</span></button></div><button class="mkpill" id="projPill" title="Proyecto activo · ir a Proyectos"><span class="live-dot"></span><span id="projPillTxt">Proyecto</span></button><button class="iconbtn" id="userbtn" title="Mi cuenta" aria-label="Mi cuenta"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="nav-bk" id="navBk"></div>
     <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
@@ -2198,22 +2246,50 @@ let simState={amount:0,sel:{},profile:"moderado",nstocks:3,proj:"semanal",horizo
 const HZN={semanal:[12,26,52],mensual:[12,24,36],anual:[1,2,3,4]};
 const HZNUNIT={semanal:"sem",mensual:"meses",anual:"años"};
 const HZNDEF={semanal:52,mensual:36,anual:3};
+/* ═══════════ USUARIOS Y ACCESOS ═══════════
+   Dos papeles:
+   · ADMINISTRADOR — acceso total, incluida la Configuración y este mismo panel de accesos.
+   · INVERSIONISTA — usa Investor completo y gestiona SUS proyectos, pero no ve Configuración ni Accesos.
+   Cada usuario trabaja en su propio ESPACIO DE DATOS: las claves de sus carteras llevan su sufijo, así que
+   un inversionista no ve ni toca los proyectos de otro. El administrador conserva el espacio sin sufijo, de
+   modo que todo lo que ya existía en este navegador sigue siendo suyo sin migrar nada.
+   La BASE DE PRECIOS queda FUERA del espacio por usuario: es dato de mercado, común a todos — duplicarla por
+   usuario costaría cientos de KB y dejaría a cada uno con un IPSA distinto.
+   Esto es control de acceso de una aplicación LOCAL: separa espacios de trabajo y deja registro de sesiones
+   en ESTE navegador. No es seguridad de servidor — quien tenga acceso al equipo puede leer el almacenamiento. */
+const USERS_KEY="inv_users_v1",SESS_KEY="inv_session_v1",SESSLOG_KEY="inv_sesslog_v1";
+function usersAll(){try{const v=JSON.parse(localStorage.getItem(USERS_KEY)||"null");return Array.isArray(v)?v:[];}catch(e){return [];}}
+function usersSave(us){try{localStorage.setItem(USERS_KEY,JSON.stringify(us));return true;}catch(e){return false;}}
+function userById(id){return usersAll().find(u=>u.id===id)||null;}
+function sessionRead(){try{return JSON.parse(sessionStorage.getItem(SESS_KEY)||"null");}catch(e){return null;}}
+/* el usuario de ESTA pestaña, resuelto una vez al cargar: el espacio de datos no puede cambiar a media sesión
+   (media app ya leyó sus claves), así que entrar con otro usuario recarga la página */
+let SESSION=(function(){try{const s=sessionRead();if(!s||!s.uid)return null;return usersAll().find(u=>u.id===s.uid)||null;}catch(e){return null;}})();
+function isAdmin(){return !SESSION||SESSION.role==="admin";}
+function userNs(u){return (u&&u.role!=="admin"&&u.ns)?u.ns:"";}
+let USER_NS=userNs(SESSION);
+function nsk(k){return USER_NS?(k+"@"+USER_NS):k;}
 const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1,inv_profile_goal_v1:1,inv_pricedb_v1:1,inv_pricedb_freq:1};
-let activeClient=localStorage.getItem("inv_active_client")||"c_me";
-function ck(k){return CLIENT_KEYS[k]?(k+"__"+activeClient):k;}
+const SHARED_KEYS={inv_pricedb_v1:1,inv_pricedb_freq:1};   // mercado: una sola base de precios para todos
+const USER_KEYS={inv_clients_v1:1,inv_active_client:1};    // registro de carteras: uno por usuario
+let activeClient=localStorage.getItem(nsk("inv_active_client"))||"c_me";
+function ck(k){
+  if(CLIENT_KEYS[k])return SHARED_KEYS[k]?(k+"__"+activeClient):nsk(k+"__"+activeClient);
+  return USER_KEYS[k]?nsk(k):k;
+}
 function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
 let _saveWarned=false;
 function saveWarn(){if(_saveWarned)return;_saveWarned=true;try{window.alert("⚠ No se pudo guardar en este navegador. El almacenamiento está lleno o el navegador está en modo privado / con cookies bloqueadas. Tus cambios podrían perderse al recargar.\n\nExporta un respaldo desde Configuración → Datos → Respaldar.");}catch(e){}}
 function lsSet(k,v){try{localStorage.setItem(ck(k),JSON.stringify(v));if(k!=="inv_cloud_v1"){try{cloudSchedulePush();}catch(e){}}return true;}catch(e){saveWarn();return false;}}
-(function(){try{if(localStorage.getItem("inv_clients_v1"))return;localStorage.setItem("inv_clients_v1",JSON.stringify([{id:"c_me",name:"Administración",color:"#1E5FD1"}]));localStorage.setItem("inv_active_client","c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
-let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1")||"null")||[{id:"c_me",name:"Administración",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Administración",color:"#1E5FD1"}];}})();
-(function(){try{if(localStorage.getItem("inv_mig_admin_v1"))return;localStorage.setItem("inv_mig_admin_v1","1");const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));}}catch(e){}})();
+(function(){try{if(localStorage.getItem(nsk("inv_clients_v1")))return;localStorage.setItem(nsk("inv_clients_v1"),JSON.stringify([{id:"c_me",name:"Administración",color:"#1E5FD1"}]));localStorage.setItem(nsk("inv_active_client"),"c_me");activeClient="c_me";Object.keys(CLIENT_KEYS).forEach(k=>{const v=localStorage.getItem(k);if(v!=null&&localStorage.getItem(k+"__c_me")==null)localStorage.setItem(k+"__c_me",v);});}catch(e){}})();
+let CLIENTS=(function(){try{return JSON.parse(localStorage.getItem(nsk("inv_clients_v1"))||"null")||[{id:"c_me",name:"Administración",color:"#1E5FD1"}];}catch(e){return [{id:"c_me",name:"Administración",color:"#1E5FD1"}];}})();
+(function(){try{if(localStorage.getItem("inv_mig_admin_v1"))return;localStorage.setItem("inv_mig_admin_v1","1");const c=CLIENTS.find(x=>x.id==="c_me");if(c&&c.name==="Mi cartera"){c.name="Administración";localStorage.setItem(nsk("inv_clients_v1"),JSON.stringify(CLIENTS));}}catch(e){}})();
 // El set de análisis "IPSA · demo" y los "Proyectos de prueba" se RETIRARON: Investor trabaja solo con datos
 // reales (base de precios + IPSA que carga el usuario). El objeto DATA queda solo como andamiaje interno del
 // universo IPSA (lista de tickers y β sectorial de respaldo), nunca se muestra ni se siembra en la base.
 (function(){try{lsSet("inv_demo_hidden",1);}catch(e){}})();   // siempre oculto → evalIsEmpty muestra estado vacío hasta que cargues datos reales
 const CLIENT_PAL=["#1E5FD1","#0E8C5E","#DB2777","#7C3AED","#D9730D","#0891B2","#CA8A04","#CE2F3B"];
-function saveClients(){try{localStorage.setItem("inv_clients_v1",JSON.stringify(CLIENTS));return true;}catch(e){saveWarn();return false;}}
+function saveClients(){try{localStorage.setItem(nsk("inv_clients_v1"),JSON.stringify(CLIENTS));return true;}catch(e){saveWarn();return false;}}
 function activeClientObj(){return CLIENTS.find(x=>x.id===activeClient)||CLIENTS[0];}
 let PROJECTS=lsGet("pf_projects_v1")||[],activeId=lsGet("pf_active_v1")||null,editIdx=null;
 (function(){const oldPF=lsGet("pf_portfolio_v1");if(!PROJECTS.length&&oldPF){const ow=lsGet("pf_weeks_v1")||[];PROJECTS.push(Object.assign({id:Date.now(),name:"Proyecto 1"},oldPF,{weeks:ow}));activeId=PROJECTS[0].id;lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);}})();
@@ -2223,8 +2299,8 @@ let PROJECTS=lsGet("pf_projects_v1")||[],activeId=lsGet("pf_active_v1")||null,ed
 function backupPayload(){
   const clients={};(CLIENTS||[]).forEach(c=>{const o={};Object.keys(CLIENT_KEYS).forEach(k=>{const raw=localStorage.getItem(k+"__"+c.id);o[k]=raw!=null?JSON.parse(raw):null;});clients[c.id]=o;});
   return {_app:"portfolio-dashboard",_v:2,_date:new Date().toISOString(),
-    clients_registry:JSON.parse(localStorage.getItem("inv_clients_v1")||"null"),
-    active_client:localStorage.getItem("inv_active_client"),
+    clients_registry:JSON.parse(localStorage.getItem(nsk("inv_clients_v1"))||"null"),
+    active_client:localStorage.getItem(nsk("inv_active_client")),
     broker:JSON.parse(localStorage.getItem("inv_broker_v1")||"null"),
     ui_scale:localStorage.getItem("inv_ui_scale"),
     // La FUENTE AUTOMÁTICA de cierres viaja con el respaldo: sin ella, restaurar en otro navegador dejaba
@@ -2240,8 +2316,8 @@ function exportBackup(){try{downloadBackup(backupPayload());}catch(e){window.ale
 /* restaura desde un payload _v>=2 (archivo o copia interna). Devuelve true si quedó aplicado. */
 function restoreFromPayload(j){try{
   if(!j||!j.clients)return false;
-  if(j.clients_registry)localStorage.setItem("inv_clients_v1",JSON.stringify(j.clients_registry));
-  if(j.active_client)localStorage.setItem("inv_active_client",j.active_client);
+  if(j.clients_registry)localStorage.setItem(nsk("inv_clients_v1"),JSON.stringify(j.clients_registry));
+  if(j.active_client)localStorage.setItem(nsk("inv_active_client"),j.active_client);
   if(j.broker)localStorage.setItem("inv_broker_v1",JSON.stringify(j.broker));else localStorage.removeItem("inv_broker_v1");
   if(j.ui_scale!=null)localStorage.setItem("inv_ui_scale",j.ui_scale);
   // fuente automática de cierres: se aplica en caliente (la variable viva, no solo el almacenamiento) para que
@@ -2249,8 +2325,8 @@ function restoreFromPayload(j){try{
   if(j.autopx_url){try{localStorage.setItem("inv_autopx_url",j.autopx_url);if(typeof AUTOPX_URL!=="undefined")AUTOPX_URL=j.autopx_url;}catch(e){}}
   if(j.autobk){try{localStorage.setItem("inv_autobk_v1",JSON.stringify(j.autobk));if(typeof AUTOBK!=="undefined")AUTOBK=j.autobk;}catch(e){}}
   Object.keys(j.clients).forEach(id=>{const o=j.clients[id]||{};Object.keys(CLIENT_KEYS).forEach(k=>{const v=o[k];if(v==null)localStorage.removeItem(k+"__"+id);else localStorage.setItem(k+"__"+id,JSON.stringify(v));});});
-  CLIENTS=(function(){try{return JSON.parse(localStorage.getItem("inv_clients_v1"))||CLIENTS;}catch(e){return CLIENTS;}})();
-  activeClient=localStorage.getItem("inv_active_client")||((CLIENTS[0]||{}).id)||"c_me";
+  CLIENTS=(function(){try{return JSON.parse(localStorage.getItem(nsk("inv_clients_v1")))||CLIENTS;}catch(e){return CLIENTS;}})();
+  activeClient=localStorage.getItem(nsk("inv_active_client"))||((CLIENTS[0]||{}).id)||"c_me";
   try{BROKER=JSON.parse(localStorage.getItem("inv_broker_v1"))||BROKER;}catch(e){}
   if(typeof clientLoad==="function")clientLoad();else syncProj();
   return true;
@@ -6701,7 +6777,10 @@ function attachFundamentos(){
 /* viewImport/attachImport retirados: los análisis independientes ya no existen (v2: único análisis del sistema) */
 /* ---------------- CONFIGURACIÓN (modal) ---------------- */
 function cfgEnsureDOM(){if(document.getElementById("cfgBack"))return;const back=document.createElement("div");back.className="cfg-back";back.id="cfgBack";back.innerHTML='<div class="cfg-modal" id="cfgModal" role="dialog" aria-modal="true" aria-label="Configuración"></div>';document.body.appendChild(back);back.onclick=e=>{if(e.target===back)cfgClose();};const g=document.getElementById("cfgbtn");if(g)g.onclick=cfgOpen;}
-function cfgOpen(){cfgEnsureDOM();cfgRender();document.getElementById("cfgBack").classList.add("open");setTimeout(()=>{const x=document.getElementById("cfgX");if(x)try{x.focus();}catch(e){}},60);}
+function cfgOpen(){
+  // la Configuración es del ADMINISTRADOR: aquí se cambian los datos de mercado, los respaldos y los accesos
+  if(!isAdmin()){window.alert("Tu cuenta es de inversionista: la Configuración es del administrador.\n\nPuedes cambiar tu nombre y tu contraseña en «Mi cuenta» (el icono de persona, arriba a la derecha).");return;}
+  cfgEnsureDOM();cfgRender();document.getElementById("cfgBack").classList.add("open");setTimeout(()=>{const x=document.getElementById("cfgX");if(x)try{x.focus();}catch(e){}},60);}
 function cfgClose(){const b=document.getElementById("cfgBack");if(b)b.classList.remove("open");}
 function cfgGo(m,p){modulo=m;if(p)page=p;cfgClose();render();}
 let cfgTab="general";   // pestaña activa de Configuración (persiste durante la sesión)
@@ -6721,6 +6800,8 @@ function cfgRender(){
     ["costos","Costos",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>'],
     ["seguridad","Seguridad",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>']
   ];
+  // ACCESOS solo existe para el administrador: un inversionista no debe ver siquiera la pestaña
+  if(isAdmin())TABS.push(["accesos","Accesos",'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>']);
   if(!TABS.some(t=>t[0]===cfgTab))cfgTab="general";
   let body="";
   if(cfgTab==="general"){
@@ -6791,11 +6872,19 @@ function cfgRender(){
       `<div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). Se descuentan en la Contabilidad.</div>`);
   }else if(cfgTab==="seguridad"){
     body=sec("Acceso","Pantalla de inicio de sesión local en este navegador",
-      row((AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña","",`<div style="display:flex;gap:7px;flex-wrap:wrap">${(AUTH&&AUTH.enabled)?('<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'):'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>'}</div>`))+
+      row(SESSION?("Sesión iniciada como <b>"+(""+(SESSION.name||SESSION.user)).replace(/</g,"&lt;")+"</b> · "+(SESSION.role==="admin"?"administrador":"inversionista")):((AUTH&&AUTH.enabled)?("Protegido · usuario <b>"+(""+AUTH.user).replace(/</g,"&lt;")+"</b>"):"Sin contraseña"),
+        SESSION?"Las cuentas y sus papeles se gestionan en la pestaña <b>Accesos</b>":"",
+        `<div style="display:flex;gap:7px;flex-wrap:wrap">${SESSION
+          ?'<button class="btn" id="cfgLock">🔒 Cerrar sesión</button><button class="btn" id="cfgMiCta">Mi cuenta</button>'
+          :((AUTH&&AUTH.enabled)?'<button class="btn" id="cfgLock">🔒 Bloquear</button><button class="btn" id="cfgAuthChg">Cambiar</button><button class="btn" id="cfgAuthOff" style="color:var(--red);border-color:var(--red-line)">Quitar</button>'
+            :'<button class="btn btn-pri" id="cfgAuthOn">Activar acceso</button>')}</div>`))+
       sec("Zona de riesgo","Acciones destructivas · siempre con doble confirmación",
         row("Limpiar sistema","Conserva la <b>compra inicial</b> y las operaciones de cada cartera; vacía base de precios, análisis y simulaciones (se reconstruye sincronizando o cargando planillas)",'<button class="btn" id="cfgClean" style="color:var(--red);border-color:var(--red-line)">🧹 Limpiar sistema</button>')+
         row("Reiniciar todo","Borra perfil, escenarios, proyectos e importaciones de este navegador",'<button class="btn" id="cfgReset" style="color:var(--red);border-color:var(--red-line)">Reiniciar</button>',1));
+  }else if(cfgTab==="accesos"){
+    body=isAdmin()?cfgAccesosBody():'<div class="note" style="margin:0">Solo el administrador puede gestionar los accesos.</div>';
   }
+  m.classList.toggle("cfg-ancho",cfgTab==="accesos");
   m.innerHTML=`<div class="cfg-head"><div class="cp-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div><div><div class="cfg-htitle">Configuración</div><div class="cfg-sub">Ajustes de Investor · ordenados por categoría</div></div><button class="cp-x" id="cfgX" style="margin-left:auto">✕</button></div>
     <div class="cfg-layout">
       <nav class="cfg-nav" role="tablist" aria-label="Categorías de configuración">${TABS.map(t=>`<button role="tab" aria-selected="${cfgTab===t[0]}" class="${cfgTab===t[0]?"on":""}" data-cfgtab="${t[0]}">${t[2]}${t[1]}</button>`).join("")}</nav>
@@ -6805,6 +6894,8 @@ function cfgRender(){
   // ── wiring (cada control puede no existir según la pestaña: todo con guardas) ──
   const q=s=>m.querySelector(s);
   q("#cfgX").onclick=cfgClose;
+  if(cfgTab==="accesos"&&isAdmin())try{cfgAccesosWire(m);}catch(e){}
+  const _mct=q("#cfgMiCta");if(_mct)_mct.onclick=()=>{cfgClose();miCuentaOpen();};
   m.querySelectorAll("[data-cfgtab]").forEach(b=>b.onclick=()=>{cfgTab=b.dataset.cfgtab;cfgRender();});
   const _pf=q("#cfgProf");if(_pf)_pf.onclick=()=>{profEdit=false;cfgGo("perfil","perfil");};
   m.querySelectorAll("[data-theme-set]").forEach(b=>b.onclick=()=>{const d=document.documentElement;if(b.dataset.themeSet==="dark")d.setAttribute("data-theme","dark");else d.removeAttribute("data-theme");try{localStorage.setItem("inv_theme",b.dataset.themeSet);}catch(e){}refreshPalette();updateThemeBtn();render();cfgRender();});
@@ -6938,6 +7029,25 @@ function cpSystemPrompt(){return cpSystemStatic()+"\n\n"+cpSystemDynamic();}   /
 if(invProfile)simState.profile=invProfile.profile;
 if(IMP&&lsGet("inv_dataset_active")==="import"){try{setActive(impToActive());DATASET="import";impActiveId="datos";}catch(e){}}   // restauración rápida; analysisSystemOnly() lo reconstruye enseguida desde la base
 cfgEnsureDOM();
+/* ── barra superior: identidad de la sesión ──────────────────────────────────────────────────────
+   El botón de persona abre «Mi cuenta» (nombre, usuario y contraseña) — lo tiene cualquier usuario.
+   El engranaje solo existe para el administrador: la Configuración es donde viven la fuente de datos,
+   los respaldos y los accesos. */
+function userChipSync(){
+  try{
+    const g=document.getElementById("cfgbtn");
+    if(g)g.style.display=isAdmin()?"":"none";
+    const b=document.getElementById("userbtn");
+    if(b){
+      b.onclick=miCuentaOpen;
+      const u=SESSION;
+      b.title=u?((u.name||u.user)+" · "+(u.role==="admin"?"administrador":"inversionista")+" — Mi cuenta"):"Mi cuenta";
+      b.style.display=u?"":"none";   // sin cuenta (trabajando sin contraseña) no hay nada que gestionar
+      b.classList.toggle("is-admin",!!u&&u.role==="admin");
+    }
+  }catch(e){}
+}
+userChipSync();
 
 /* ===== MERCADOS · INDICADORES EN VIVO (mindicador.cl + Stooq, sin backend ni API key) ===== */
 const MIND_URL="https://mindicador.cl/api";
@@ -8154,6 +8264,277 @@ function attachActiva(){
   document.querySelectorAll("[data-actwin]").forEach(b=>b.onclick=()=>{actWin=+b.dataset.actwin||60;try{lsSet("inv_act_win",actWin);}catch(e){}render();});
 }
 
+/* ═══════════ PANEL DE ACCESOS (solo administrador) ═══════════ */
+let accSel=null;         // usuario abierto en el panel
+let accNuevo=false;      // formulario de alta desplegado
+function cfgAccesosBody(){
+  const us=usersAll();
+  const yo=SESSION?SESSION.id:null;
+  const rol=r=>r==="admin"
+    ?'<span class="badge info">Administrador</span>'
+    :'<span class="badge">Inversionista</span>';
+  const filas=us.map(u=>{
+    const R=userResumen(u);
+    return `<tr${u.id===accSel?' style="background:var(--soft2)"':""}>
+      <td><b>${(""+(u.name||u.user)).replace(/</g,"&lt;")}</b>${u.id===yo?' <span class="badge pos" style="font-size:8px">tú</span>':""}<div class="t-sub">${(""+u.user).replace(/</g,"&lt;")}</div></td>
+      <td>${rol(u.role)}</td>
+      <td class="r">${R.proyectos}</td>
+      <td class="r">${R.kb} KB</td>
+      <td class="r">${R.sesiones}${R.ultima?`<div class="t-sub">${fD((""+R.ultima).slice(0,10))}</div>`:""}</td>
+      <td>${u.activo===false?'<span class="badge neg">Suspendida</span>':'<span class="badge pos">Activa</span>'}</td>
+      <td class="r"><button class="btn" data-accsel="${u.id}" style="padding:.28rem .6rem;font-size:11px">Gestionar</button></td></tr>`;}).join("");
+  const tabla=us.length?`<div class="tw tbl-compact"><table>
+      <thead><tr><th>Usuario</th><th>Papel</th><th class="r">Proy.</th><th class="r" title="Cuánto ocupa su espacio de datos en este navegador">Espacio</th><th class="r" title="Entradas registradas y la más reciente">Sesiones</th><th>Estado</th><th class="r"></th></tr></thead>
+      <tbody>${filas}</tbody></table></div>`
+    :'<div class="note" style="margin:0">Aún no hay cuentas creadas.</div>';
+  // alta
+  const alta=accNuevo?`<div class="cfg-alta">
+    <div class="mc-form">
+      <label class="mc-fld">Nombre<input id="accNName" type="text" placeholder="Nombre y apellido"></label>
+      <label class="mc-fld">Usuario<input id="accNUser" type="text" autocomplete="off" placeholder="usuario para entrar"></label>
+      <label class="mc-fld">Papel<select id="accNRole"><option value="inv">Inversionista</option><option value="admin">Administrador</option></select></label>
+      <label class="mc-fld">Contraseña<input id="accNPass" type="password" autocomplete="new-password" placeholder="mínimo 4 caracteres"></label>
+    </div>
+    <div class="mc-row"><button class="btn btn-pri" id="accCrear">Crear cuenta</button><button class="btn" id="accCancel">Cancelar</button></div>
+    <div class="mc-hint">Un <b>inversionista</b> entra a Investor completo y gestiona sus propios proyectos, pero no ve Configuración ni este panel. Su espacio de datos es aparte: no verá ni tocará tus carteras. La <b>base de precios es común</b> — es dato de mercado.</div>
+  </div>`:"";
+  // gestión de la cuenta elegida
+  const u=accSel?userById(accSel):null;
+  const gestion=u?(function(){
+    const R=userResumen(u),soloAdmin=usersAll().filter(x=>x.role==="admin"&&x.activo!==false).length<=1&&u.role==="admin";
+    return card("Gestionar · "+(""+(u.name||u.user)).replace(/</g,"&lt;"),
+      (u.role==="admin"?"Administrador · acceso total":"Inversionista · sin acceso a Configuración ni Accesos")+" · "+R.proyectos+" proyecto"+(R.proyectos===1?"":"s")+" · "+R.kb+" KB",
+      `<div class="mc-form">
+        <label class="mc-fld">Nombre<input id="accEName" type="text" value="${(""+(u.name||"")).replace(/"/g,"&quot;")}"></label>
+        <label class="mc-fld">Usuario<input id="accEUser" type="text" autocomplete="off" value="${(""+u.user).replace(/"/g,"&quot;")}"></label>
+        <label class="mc-fld">Papel<select id="accERole"${soloAdmin?" disabled":""}><option value="inv"${u.role!=="admin"?" selected":""}>Inversionista</option><option value="admin"${u.role==="admin"?" selected":""}>Administrador</option></select></label>
+        <label class="mc-fld">Nueva contraseña<input id="accEPass" type="password" autocomplete="new-password" placeholder="dejar vacío para no cambiarla"></label>
+      </div>
+      <div class="mc-row">
+        <button class="btn btn-pri" id="accGuardar">Guardar cambios</button>
+        ${u.id!==(SESSION&&SESSION.id)?`<button class="btn" id="accSusp">${u.activo===false?"Reactivar cuenta":"Suspender cuenta"}</button>`:""}
+        ${(u.id!==(SESSION&&SESSION.id)&&!soloAdmin)?`<button class="btn" id="accBorrar" style="color:var(--red);border-color:var(--red-line)">Eliminar cuenta y sus datos</button>`:""}
+        <button class="btn" id="accCerrarG">Cerrar</button>
+      </div>
+      ${soloAdmin?'<div class="mc-hint">Es la única cuenta de administrador: no se puede cambiar de papel ni eliminar, o quedarías sin acceso a la Configuración.</div>':""}
+      ${u.role!=="admin"?`<div class="mc-hint">Cambiar el papel a <b>administrador</b> le da acceso total, incluida esta pantalla. Su espacio de datos actual deja de usarse: un administrador trabaja sobre el espacio principal.</div>`:""}`);
+  })():"";
+  // sesiones
+  const log=sessLogAll().slice().reverse();
+  const logFilt=accSel?log.filter(x=>x.uid===accSel):log;
+  const abierta=id=>{try{return sessionStorage.getItem("inv_sessid_v1")===id;}catch(e){return false;}};
+  const sfilas=logFilt.slice(0,60).map(x=>{
+    const d=x.ini?new Date(x.ini):null;
+    return `<tr><td><b>${(""+(x.name||x.user)).replace(/</g,"&lt;")}</b><div class="t-sub">${(""+(x.disp||"—")).replace(/</g,"&lt;")}</div></td>
+      <td>${x.role==="admin"?'<span class="badge info">Administrador</span>':'<span class="badge">Inversionista</span>'}</td>
+      <td>${d?fD(x.ini.slice(0,10)):"—"}</td>
+      <td class="r">${d?d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}):"—"}</td>
+      <td class="r">${x.fin?new Date(x.fin).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}):(abierta(x.id)?'<span style="color:var(--green);font-weight:700">abierta</span>':"—")}</td>
+      <td class="r">${sessDur(x)}</td></tr>`;}).join("");
+  const sesiones=card("Sesiones"+(accSel&&u?(" de "+(""+(u.name||u.user)).replace(/</g,"&lt;")):""),
+    logFilt.length?`${logFilt.length} sesión${logFilt.length===1?"":"es"} registrada${logFilt.length===1?"":"s"} en este navegador${accSel?" · filtrado por la cuenta abierta arriba":""}`:"Aún sin entradas registradas",
+    logFilt.length?`<div class="tw tbl-compact"><table>
+      <thead><tr><th>Usuario</th><th>Papel</th><th>Fecha</th><th class="r">Entrada</th><th class="r">Salida</th><th class="r">Duración</th></tr></thead>
+      <tbody>${sfilas}</tbody></table></div>
+      <div class="mc-hint">Se guardan las últimas 300 entradas de <b>este</b> navegador. Una sesión termina al bloquear o cerrar la pestaña; si el navegador se cierra de golpe puede quedar sin hora de salida. Es un registro local: no viaja en el respaldo.</div>`
+    :'<div class="note" style="margin:0">Cuando alguien entre con su cuenta, su sesión quedará registrada aquí.</div>',
+    logFilt.length?'<button class="btn" id="accLogClr" style="color:var(--red);border-color:var(--red-line)">Vaciar registro</button>':"");
+  return card("Usuarios con acceso",us.length+" cuenta"+(us.length===1?"":"s")+" en este navegador · el administrador tiene acceso total; el inversionista usa Investor completo sobre su propio espacio de datos",
+      tabla+alta,accNuevo?"":'<button class="btn btn-pri" id="accAdd">+ Nueva cuenta</button>')
+    +gestion+sesiones;
+}
+function cfgAccesosWire(m){
+  const q=x=>m.querySelector(x);
+  m.querySelectorAll("[data-accsel]").forEach(b=>b.onclick=()=>{accSel=(accSel===b.dataset.accsel)?null:b.dataset.accsel;cfgRender();});
+  const add=q("#accAdd");if(add)add.onclick=()=>{accNuevo=true;cfgRender();};
+  const can=q("#accCancel");if(can)can.onclick=()=>{accNuevo=false;cfgRender();};
+  const cg=q("#accCerrarG");if(cg)cg.onclick=()=>{accSel=null;cfgRender();};
+  const cr=q("#accCrear");
+  if(cr)cr.onclick=async()=>{
+    const nm=(q("#accNName")||{}).value||"",usr=((q("#accNUser")||{}).value||"").trim(),
+      pw=(q("#accNPass")||{}).value||"",rl=(q("#accNRole")||{}).value||"inv";
+    if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
+    if(userExists(usr)){window.alert("Ya existe una cuenta con el usuario «"+usr+"».");return;}
+    if(pw.length<4){window.alert("La contraseña debe tener al menos 4 caracteres.");return;}
+    await userCreate({user:usr,name:nm.trim()||usr,pass:pw,role:rl});
+    accNuevo=false;cfgRender();
+    window.alert("Cuenta creada.\n\n"+(rl==="admin"
+      ?"Es administrador: acceso total, incluida la gestión de accesos."
+      :"Es inversionista: usa Investor completo sobre su propio espacio de datos, sin acceso a Configuración ni Accesos.")+"\n\nPara entrar con ella, bloquea la sesión (Configuración → Seguridad → Bloquear) e ingresa con su usuario.");
+  };
+  const gu=q("#accGuardar");
+  if(gu)gu.onclick=async()=>{
+    const u=userById(accSel);if(!u)return;
+    const nm=((q("#accEName")||{}).value||"").trim(),usr=((q("#accEUser")||{}).value||"").trim(),
+      pw=(q("#accEPass")||{}).value||"",rl=(q("#accERole")||{}).value||u.role;
+    if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
+    if(userExists(usr,u.id)){window.alert("Ya existe otra cuenta con el usuario «"+usr+"».");return;}
+    if(pw&&pw.length<4){window.alert("La contraseña debe tener al menos 4 caracteres.");return;}
+    const cambios={name:nm||usr,user:usr};
+    if(rl!==u.role){cambios.role=rl==="admin"?"admin":"inv";cambios.ns=rl==="admin"?"":u.id;}
+    userUpdate(u.id,cambios);
+    if(pw)await userSetPass(u.id,pw);
+    // si me cambié a mí mismo, el acceso guardado tiene que seguirle el paso
+    if(SESSION&&SESSION.id===u.id){const n=userById(u.id);AUTH={enabled:true,user:n.user,salt:n.salt,hash:n.hash};lsSet("inv_auth_v1",AUTH);SESSION=n;}
+    cfgRender();try{render();}catch(e){}
+    window.alert("Cambios guardados.");
+  };
+  const su=q("#accSusp");
+  if(su)su.onclick=()=>{const u=userById(accSel);if(!u)return;
+    const nuevo=u.activo===false;
+    if(!nuevo&&!window.confirm("¿Suspender la cuenta de «"+(u.name||u.user)+"»?\n\nNo podrá entrar hasta que la reactives. Sus datos se conservan."))return;
+    userUpdate(u.id,{activo:nuevo});cfgRender();};
+  const bo=q("#accBorrar");
+  if(bo)bo.onclick=()=>{const u=userById(accSel);if(!u)return;
+    const R=userResumen(u);
+    if(!window.confirm("¿Eliminar la cuenta de «"+(u.name||u.user)+"»?\n\nSe borran también SUS datos en este navegador: "+R.proyectos+" proyecto(s) y "+R.kb+" KB. Esto no se puede deshacer."))return;
+    const t=window.prompt('Para confirmar, escribe en mayúsculas: ELIMINAR');
+    if((""+(t||"")).trim().toUpperCase()!=="ELIMINAR"){window.alert("Cancelado.");return;}
+    if(!userDelete(u.id)){window.alert("No se puede eliminar la única cuenta de administrador.");return;}
+    accSel=null;cfgRender();window.alert("Cuenta eliminada.");};
+  const lc=q("#accLogClr");
+  if(lc)lc.onclick=()=>{if(window.confirm("¿Vaciar el registro de sesiones?\n\nSe pierde el historial de entradas; las cuentas y sus datos no se tocan.")){sessLogSave([]);cfgRender();}};
+}
+
+/* ═══════════ MI CUENTA (cualquier usuario cambia sus propios datos) ═══════════ */
+function miCuentaOpen(){
+  if(!SESSION){window.alert("No hay una cuenta con sesión iniciada. Crea tu acceso desde Configuración → Seguridad.");return;}
+  const u=SESSION,R=userResumen(u);
+  const inner=`
+    <div class="isc-modal-head"><div><div class="ct">Mi cuenta</div><div class="cs">${u.role==="admin"?"Administrador · acceso total":"Inversionista · Investor completo sobre tu propio espacio de datos"} · ${R.proyectos} proyecto${R.proyectos===1?"":"s"}</div></div><button class="wbtn" id="miCtaX" aria-label="Cerrar">✕</button></div>
+    <div class="mc-form" style="margin-top:16px">
+      <label class="mc-fld">Nombre<input id="miName" type="text" value="${(""+(u.name||"")).replace(/"/g,"&quot;")}"></label>
+      <label class="mc-fld">Usuario<input id="miUser" type="text" autocomplete="username" value="${(""+u.user).replace(/"/g,"&quot;")}"></label>
+    </div>
+    <div class="mc-form" style="margin-top:13px">
+      <label class="mc-fld">Contraseña actual<input id="miPw0" type="password" autocomplete="current-password" placeholder="solo si vas a cambiarla"></label>
+      <label class="mc-fld">Nueva contraseña<input id="miPw1" type="password" autocomplete="new-password" placeholder="mínimo 4 caracteres"></label>
+      <label class="mc-fld">Repite la nueva<input id="miPw2" type="password" autocomplete="new-password" placeholder="••••••••"></label>
+    </div>
+    <div class="mc-hint">Tu cuenta vive solo en este navegador. Si la olvidas no hay forma de recuperarla: el administrador puede restablecer los accesos desde la pantalla de entrada, y los proyectos y la base de precios se conservan.</div>
+    <div class="mc-row"><button class="btn btn-pri" id="miGuardar">Guardar</button><button class="btn" id="miCerrar">Cancelar</button><button class="btn" id="miSalir" style="margin-left:auto">🔒 Cerrar sesión</button></div>`;
+  const el=modalShell("miCtaBack",inner,"Mi cuenta");
+  const q=x=>el.querySelector(x);
+  const cerrar=()=>modalCloseId("miCtaBack");
+  q("#miCtaX").onclick=cerrar;q("#miCerrar").onclick=cerrar;
+  q("#miSalir").onclick=()=>{cerrar();authLock();};
+  q("#miGuardar").onclick=async()=>{
+    const nm=(q("#miName").value||"").trim(),usr=(q("#miUser").value||"").trim();
+    const p0=q("#miPw0").value||"",p1=q("#miPw1").value||"",p2=q("#miPw2").value||"";
+    if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
+    if(userExists(usr,u.id)){window.alert("Ya existe otra cuenta con el usuario «"+usr+"».");return;}
+    if(p1||p2||p0){
+      const h=await authHash(p0,u.salt);
+      if(h!==u.hash){window.alert("La contraseña actual no es correcta.");return;}
+      if(p1.length<4){window.alert("La nueva contraseña debe tener al menos 4 caracteres.");return;}
+      if(p1!==p2){window.alert("La nueva contraseña y su repetición no coinciden.");return;}
+    }
+    userUpdate(u.id,{name:nm||usr,user:usr});
+    if(p1)await userSetPass(u.id,p1);
+    const n=userById(u.id);SESSION=n;
+    AUTH={enabled:true,user:n.user,salt:n.salt,hash:n.hash};lsSet("inv_auth_v1",AUTH);
+    cerrar();try{render();}catch(e){}
+    window.alert("Cuenta actualizada.");
+  };
+}
+
+/* ═══════════ REGISTRO DE SESIONES ═══════════
+   Cada entrada y salida queda anotada en ESTE navegador para que el administrador pueda revisar quién
+   entró y cuánto duró la sesión. Se guardan las últimas 300. Es un registro local, no una auditoría de
+   servidor: no viaja en el respaldo ni sale del equipo. */
+function sessLogAll(){try{const v=JSON.parse(localStorage.getItem(SESSLOG_KEY)||"null");return Array.isArray(v)?v:[];}catch(e){return [];}}
+function sessLogSave(l){try{localStorage.setItem(SESSLOG_KEY,JSON.stringify(l.slice(-300)));}catch(e){}}
+function sessDispositivo(){try{const ua=navigator.userAgent||"";
+  const so=/Windows/i.test(ua)?"Windows":/Android/i.test(ua)?"Android":/iPhone|iPad|iPod/i.test(ua)?"iOS":/Mac OS X/i.test(ua)?"macOS":/Linux/i.test(ua)?"Linux":"—";
+  const nav=/Edg\//i.test(ua)?"Edge":/OPR\//i.test(ua)?"Opera":/Chrome\//i.test(ua)?"Chrome":/Firefox\//i.test(ua)?"Firefox":/Safari\//i.test(ua)?"Safari":"navegador";
+  return nav+" · "+so;}catch(e){return "—";}}
+function sessLogStart(u){
+  if(!u)return null;
+  const id="s"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+  const l=sessLogAll();
+  l.push({id,uid:u.id,user:u.user,name:u.name||u.user,role:u.role,ini:new Date().toISOString(),fin:null,disp:sessDispositivo()});
+  sessLogSave(l);
+  try{sessionStorage.setItem("inv_sessid_v1",id);}catch(e){}
+  return id;
+}
+function sessLogEnd(){
+  try{const id=sessionStorage.getItem("inv_sessid_v1");if(!id)return;
+    const l=sessLogAll(),i=l.map(x=>x.id).lastIndexOf(id);
+    if(i>=0&&!l[i].fin){l[i].fin=new Date().toISOString();sessLogSave(l);}
+    sessionStorage.removeItem("inv_sessid_v1");
+  }catch(e){}
+}
+try{window.addEventListener("pagehide",()=>{try{sessLogEnd();}catch(e){}});}catch(e){}
+/* duración legible de una sesión (o "en curso" si sigue abierta) */
+function sessDur(x){try{
+  if(!x||!x.ini)return "—";
+  const t0=Date.parse(x.ini),t1=x.fin?Date.parse(x.fin):null;
+  if(!isFinite(t0))return "—";
+  if(t1==null)return "en curso";
+  const m=Math.max(0,Math.round((t1-t0)/60000));
+  if(m<1)return "menos de 1 min";
+  if(m<60)return m+" min";
+  const h=Math.floor(m/60);return h+" h "+(m%60)+" min";
+}catch(e){return "—";}}
+
+/* ═══════════ CUENTAS ═══════════ */
+function userSlug(u){return (""+(u||"")).trim().toLowerCase();}
+function userExists(user,exceptId){const s=userSlug(user);return usersAll().some(u=>userSlug(u.user)===s&&u.id!==exceptId);}
+async function userCreate({user,name,pass,role}){
+  const us=usersAll();
+  const salt=authSalt(),hash=await authHash(pass,salt);
+  const id="u"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
+  const u={id,user:(""+user).trim(),name:(""+(name||user)).trim(),role:role==="admin"?"admin":"inv",
+    salt,hash,ns:role==="admin"?"":id,creado:new Date().toISOString(),activo:true};
+  us.push(u);usersSave(us);return u;
+}
+async function userSetPass(id,pass){
+  const us=usersAll(),u=us.find(x=>x.id===id);if(!u)return false;
+  u.salt=authSalt();u.hash=await authHash(pass,u.salt);usersSave(us);
+  if(SESSION&&SESSION.id===id){SESSION.salt=u.salt;SESSION.hash=u.hash;}
+  return true;
+}
+function userUpdate(id,campos){
+  const us=usersAll(),u=us.find(x=>x.id===id);if(!u)return false;
+  Object.assign(u,campos);usersSave(us);
+  if(SESSION&&SESSION.id===id)Object.assign(SESSION,campos);
+  return true;
+}
+/* borrar una cuenta se lleva TAMBIÉN su espacio de datos: dejarlo huérfano ocuparía sitio para siempre */
+function userDelete(id){
+  const us=usersAll(),u=us.find(x=>x.id===id);if(!u)return false;
+  if(u.role==="admin"&&us.filter(x=>x.role==="admin"&&x.activo!==false).length<=1)return false;   // nunca sin administrador
+  const ns=userNs(u);
+  if(ns){try{Object.keys(localStorage).forEach(k=>{if(k.indexOf("@"+ns)>=0)localStorage.removeItem(k);});}catch(e){}}
+  usersSave(us.filter(x=>x.id!==id));
+  try{sessLogSave(sessLogAll().filter(x=>x.uid!==id));}catch(e){}
+  return true;
+}
+/* cuánto ocupa y cuánto tiene el espacio de un usuario (para el panel de accesos) */
+function userResumen(u){
+  try{
+    const ns=userNs(u),suf=ns?("@"+ns):"";
+    const pr=JSON.parse(localStorage.getItem("pf_projects_v1__"+(localStorage.getItem(ns?("inv_active_client@"+ns):"inv_active_client")||"c_me")+suf)||"[]");
+    let bytes=0;Object.keys(localStorage).forEach(k=>{
+      const mio=ns?(k.indexOf(suf)>=0):(Object.keys(CLIENT_KEYS).some(c=>k.indexOf(c)===0)&&k.indexOf("@")<0);
+      if(mio)bytes+=(localStorage.getItem(k)||"").length;});
+    const ses=sessLogAll().filter(x=>x.uid===u.id);
+    return {proyectos:Array.isArray(pr)?pr.length:0,kb:Math.round(bytes/1024),
+      sesiones:ses.length,ultima:ses.length?ses[ses.length-1].ini:null};
+  }catch(e){return {proyectos:0,kb:0,sesiones:0,ultima:null};}
+}
+/* MIGRACIÓN: el acceso de siempre (usuario + contraseña únicos) pasa a ser la cuenta de ADMINISTRADOR, con
+   su misma contraseña — nadie tiene que volver a crearla ni pierde nada. */
+function usersMigrar(){
+  try{
+    if(usersAll().length)return;
+    const a=(function(){try{return JSON.parse(localStorage.getItem("inv_auth_v1")||"null");}catch(e){return null;}})();
+    if(!a||!a.enabled||!a.user||!a.hash)return;
+    usersSave([{id:"u_admin",user:a.user,name:a.user,role:"admin",salt:a.salt,hash:a.hash,ns:"",
+      creado:new Date().toISOString(),activo:true,migrado:true}]);
+  }catch(e){}
+}
+
 /* ===== ACCESO CONTROLADO (login) ===== */
 let AUTH=lsGet("inv_auth_v1");
 let authMode="login", authMsg="";
@@ -8167,53 +8548,119 @@ function authSessionOk(){try{return !!(AUTH&&AUTH.enabled&&sessionStorage.getIte
 function authGateEl(){return document.getElementById("authGate");}
 function authShow(show){const g=authGateEl();if(!g)return;g.classList.toggle("open",!!show);try{document.body.style.overflow=show?"hidden":"";}catch(e){}}
 function authInit(){
+  usersMigrar();
   AUTH=lsGet("inv_auth_v1");
   try{localStorage.removeItem("inv_remember_v1");}catch(e){}   // ya no se recuerda la contraseña: siempre se pide al entrar
-  if(!AUTH){authMode="create";authRender();authShow(true);return;}
-  if(!AUTH.enabled){authShow(false);return;}
-  if(authSessionOk()){authShow(false);return;}
+  const us=usersAll().filter(u=>u.activo!==false);
+  if(!us.length){
+    if(AUTH&&AUTH.enabled===false){authShow(false);return;}   // el usuario eligió trabajar sin contraseña
+    authMode="create";authRender();authShow(true);return;
+  }
+  if(SESSION&&SESSION.activo!==false){
+    // tras recargar para cambiar de espacio de datos, la sesión ya está abierta: se anota si aún no lo estaba
+    try{if(!sessionStorage.getItem("inv_sessid_v1"))sessLogStart(SESSION);}catch(e){}
+    authShow(false);return;
+  }
   authMode="login";authRender();authShow(true);
 }
+function authSaludo(){const h=new Date().getHours();return h<12?"Buenos días":h<20?"Buenas tardes":"Buenas noches";}
 function authRender(){
   const g=authGateEl();if(!g)return;
   const create=authMode==="create";
-  const logo='<svg viewBox="0 0 40 40" width="52" height="52" aria-hidden="true"><defs><linearGradient id="agG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="2" y="2" width="36" height="36" rx="10.5" fill="url(#agG)"/><rect x="10.6" y="23.5" width="3.4" height="6.5" rx="1.4" fill="#fff" opacity=".42"/><rect x="16.8" y="20" width="3.4" height="10" rx="1.4" fill="#fff" opacity=".6"/><rect x="23" y="16" width="3.4" height="14" rx="1.4" fill="#fff" opacity=".8"/><path d="M10 22.5 L17.5 16.5 L22.5 19.8 L31.5 11.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.8 11.5 H31.5 V17.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  g.innerHTML=`<div class="auth-card">
-    <div class="auth-brand"><div class="auth-mark">${logo}</div><div><div class="auth-eye">INTELIGENCIA QUE GENERA VALOR</div><div class="auth-wm">Investor<span class="auth-dot"></span></div></div></div>
-    <div class="auth-h">${create?"Crea tu acceso":"Bienvenido de vuelta"}</div>
-    <div class="auth-sub">${create?"Protege tu plataforma con usuario y contraseña. Se guardan cifrados en este navegador.":"Ingresa para continuar con tu análisis y seguimiento."}</div>
-    <div class="auth-f"><label>Usuario</label><input id="authUser" type="text" autocomplete="username" value="${(!create&&AUTH&&AUTH.user)?(""+AUTH.user).replace(/"/g,"&quot;"):""}" placeholder="tu usuario"></div>
-    <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
-    ${create?`<div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
-    ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
-    <button class="auth-btn" id="authGo">${create?"Crear acceso y entrar":"Entrar"}</button>
-    ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
-    <div class="auth-foot">Acceso local · tus datos viven solo en este navegador · simulación educativa, no es asesoría financiera</div>
+  const logo='<svg viewBox="0 0 40 40" width="46" height="46" aria-hidden="true"><defs><linearGradient id="agG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="2" y="2" width="36" height="36" rx="10.5" fill="url(#agG)"/><rect x="10.6" y="23.5" width="3.4" height="6.5" rx="1.4" fill="#fff" opacity=".42"/><rect x="16.8" y="20" width="3.4" height="10" rx="1.4" fill="#fff" opacity=".6"/><rect x="23" y="16" width="3.4" height="14" rx="1.4" fill="#fff" opacity=".8"/><path d="M10 22.5 L17.5 16.5 L22.5 19.8 L31.5 11.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.8 11.5 H31.5 V17.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const logoW='<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="10.5" fill="rgba(255,255,255,.13)" stroke="rgba(255,255,255,.3)"/><rect x="10.6" y="23.5" width="3.4" height="6.5" rx="1.4" fill="#fff" opacity=".42"/><rect x="16.8" y="20" width="3.4" height="10" rx="1.4" fill="#fff" opacity=".62"/><rect x="23" y="16" width="3.4" height="14" rx="1.4" fill="#fff" opacity=".85"/><path d="M10 22.5 L17.5 16.5 L22.5 19.8 L31.5 11.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.8 11.5 H31.5 V17.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // lo que se muestra en el panel de bienvenida sale de la BASE REAL: nada inventado
+  const est=(function(){try{
+    const tk=(typeof pricedbTickers==="function")?pricedbTickers().length:0;
+    const ip=(typeof PRICEDB!=="undefined"&&PRICEDB&&PRICEDB.ipsa)?Object.keys(PRICEDB.ipsa).length:0;
+    const ds=(typeof PRICEDB!=="undefined"&&PRICEDB&&PRICEDB.ipsa)?Object.keys(PRICEDB.ipsa).sort():[];
+    return {tk,ip,al:ds.length?fD(ds[ds.length-1]):null};
+  }catch(e){return {tk:0,ip:0,al:null};}})();
+  const capa=[
+    ["Seguimiento fiel","Rentabilidad time-weighted, β realizado y alpha contra el IPSA — con tus operaciones y comisiones reales."],
+    ["Análisis del sistema","CAPM, multifactor y fundamentos construidos sobre la base de precios, sin datos de ejemplo."],
+    ["Simulación","Markowitz, Monte Carlo y «qué pasa si compro o vendo» sobre tus carteras de verdad."]
+  ].map(([t,d])=>`<li><span class="ck">✓</span><div><b>${t}</b><span>${d}</span></div></li>`).join("");
+  const marca=est.tk?`<div class="auth-stats"><div><span class="k">Acciones en la base</span><span class="v">${est.tk}</span></div><div><span class="k">Fechas de IPSA</span><span class="v">${est.ip.toLocaleString("es-CL")}</span></div>${est.al?`<div><span class="k">Al día</span><span class="v">${est.al}</span></div>`:""}</div>`:"";
+  const usuarios=usersAll().filter(u=>u.activo!==false);
+  const ultimo=(function(){try{const l=sessLogAll();for(let i=l.length-1;i>=0;i--){const u=usuarios.find(x=>x.id===l[i].uid);if(u)return u.user;}}catch(e){}return "";})();
+  g.innerHTML=`<div class="auth-wrap">
+    <aside class="auth-side">
+      <div class="auth-side-top"><div class="auth-mark">${logoW}</div><div><div class="auth-eye">Inteligencia que genera valor</div><div class="auth-wm">Investor</div></div></div>
+      <div class="auth-side-mid">
+        <h2>${create?"Pon en marcha tu plataforma":"Tu cartera, medida como corresponde"}</h2>
+        <p>${create?"Investor deja de ser una planilla: mide tu inversión con las mismas varas que usa la industria, sobre cierres reales de la Bolsa de Santiago.":"Todo lo que ves aquí sale de tus operaciones y de los cierres reales del mercado chileno. Nada de datos de ejemplo."}</p>
+        <ul class="auth-caps">${capa}</ul>
+        ${marca}
+      </div>
+      <div class="auth-side-foot">Simulación educativa · no constituye asesoría financiera</div>
+    </aside>
+    <section class="auth-main">
+      <div class="auth-card">
+        <div class="auth-brand-sm"><div class="auth-mark">${logo}</div><div class="auth-wm2">Investor</div></div>
+        <div class="auth-h">${create?"Crea tu cuenta de administrador":authSaludo()}</div>
+        <div class="auth-sub">${create
+          ?"Serás el administrador: acceso total, incluida la gestión de usuarios. Después puedes crear cuentas de inversionista."
+          :"Bienvenido de vuelta. Ingresa para continuar con tu análisis y seguimiento."}</div>
+        ${create?`<div class="auth-f"><label>Tu nombre</label><input id="authName" type="text" autocomplete="name" placeholder="cómo quieres que te llamemos"></div>`:""}
+        <div class="auth-f"><label>Usuario</label><input id="authUser" type="text" autocomplete="username" value="${(!create&&ultimo)?(""+ultimo).replace(/"/g,"&quot;"):""}" placeholder="tu usuario"></div>
+        <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
+        ${create?`<div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
+        ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
+        <button class="auth-btn" id="authGo">${create?"Crear cuenta y entrar":"Entrar"}</button>
+        ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
+        <div class="auth-foot">Acceso local · tus datos viven solo en este navegador</div>
+      </div>
+    </section>
   </div>`;
   const go=document.getElementById("authGo");if(go)go.onclick=authSubmit;
-  ["authUser","authPass","authPass2"].forEach(id=>{const e=document.getElementById(id);if(e)e.onkeydown=ev=>{if(ev.key==="Enter")authSubmit();};});
+  ["authName","authUser","authPass","authPass2"].forEach(id=>{const e=document.getElementById(id);if(e)e.onkeydown=ev=>{if(ev.key==="Enter")authSubmit();};});
+  try{const f=document.getElementById(create?"authName":"authUser");if(f&&!f.value)f.focus();else{const q=document.getElementById("authPass");if(q)q.focus();}}catch(e){}
   const sk=document.getElementById("authSkip");if(sk)sk.onclick=()=>{AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authShow(false);};
-  const fg=document.getElementById("authForgot");if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Puedes restablecerlo (se mantienen tus datos) y crear uno nuevo.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer acceso";f.onclick=()=>{if(confirm('¿Restablecer el acceso? Se quitará la contraseña actual (tus proyectos y datos se conservan).')){AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authRender();}};}};
+  const fg=document.getElementById("authForgot");if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Si eres el administrador puedes restablecer todas las cuentas: tus proyectos y tu base de precios se conservan.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer las cuentas";f.onclick=()=>{if(confirm('¿Restablecer TODAS las cuentas de acceso?\n\nSe borran los usuarios y sus contraseñas para que crees uno nuevo. Los proyectos, la base de precios y los respaldos NO se tocan.')){try{localStorage.removeItem(USERS_KEY);}catch(e){}AUTH=null;lsSet("inv_auth_v1",null);try{sessionStorage.removeItem(SESS_KEY);}catch(e){}SESSION=null;authMode="create";authMsg="";authRender();}};}};
 }
 async function authSubmit(){
   const u=(document.getElementById("authUser")||{}).value||"",p=(document.getElementById("authPass")||{}).value||"";
   if(authMode==="create"){
     const p2=(document.getElementById("authPass2")||{}).value||"";
+    const nm=(document.getElementById("authName")||{}).value||"";
     if(u.trim().length<2){authMsg="Elige un usuario de al menos 2 caracteres.";authRender();return;}
     if(p.length<4){authMsg="La contraseña debe tener al menos 4 caracteres.";authRender();return;}
     if(p!==p2){authMsg="Las contraseñas no coinciden.";authRender();return;}
-    const salt=authSalt(),hash=await authHash(p,salt);
-    AUTH={enabled:true,user:u.trim(),salt,hash};lsSet("inv_auth_v1",AUTH);
-    try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}
-    authMsg="";authShow(false);
+    const nuevo=await userCreate({user:u.trim(),name:(nm.trim()||u.trim()),pass:p,role:"admin"});
+    // se mantiene inv_auth_v1 al día: el resto de la app lo usa para saber si hay acceso protegido
+    AUTH={enabled:true,user:nuevo.user,salt:nuevo.salt,hash:nuevo.hash};lsSet("inv_auth_v1",AUTH);
+    authSesionAbrir(nuevo);
   }else{
-    if(!AUTH||!AUTH.enabled){authShow(false);return;}
-    const hash=await authHash(p,AUTH.salt);
-    if(u.trim()===AUTH.user&&hash===AUTH.hash){try{sessionStorage.setItem("inv_sess_v1",AUTH.user);}catch(e){}authMsg="";authShow(false);}
-    else{authMsg="Usuario o contraseña incorrectos.";authRender();}
+    const cand=usersAll().filter(x=>x.activo!==false&&userSlug(x.user)===userSlug(u));
+    let ok=null;
+    for(const c of cand){const h=await authHash(p,c.salt);if(h===c.hash){ok=c;break;}}
+    if(!ok){authMsg="Usuario o contraseña incorrectos.";authRender();return;}
+    AUTH={enabled:true,user:ok.user,salt:ok.salt,hash:ok.hash};lsSet("inv_auth_v1",AUTH);
+    authSesionAbrir(ok);
   }
 }
-function authLock(){try{sessionStorage.removeItem("inv_sess_v1");localStorage.removeItem("inv_remember_v1");}catch(e){}authInit();}
+/* abre la sesión de un usuario. Si su ESPACIO DE DATOS no es el que esta pestaña ya cargó, hay que recargar:
+   media aplicación leyó sus claves al arrancar y no se puede cambiar el espacio a mitad de camino. */
+function authSesionAbrir(u){
+  try{sessionStorage.setItem(SESS_KEY,JSON.stringify({uid:u.id,user:u.user,at:new Date().toISOString()}));}catch(e){}
+  try{sessionStorage.setItem("inv_sess_v1",u.user);}catch(e){}
+  userUpdate(u.id,{ultimo:new Date().toISOString()});
+  sessLogStart(u);
+  if(userNs(u)!==USER_NS){try{location.reload();return;}catch(e){}}
+  SESSION=u;USER_NS=userNs(u);
+  authMsg="";authShow(false);
+  try{userChipSync();}catch(e){}
+  try{render();}catch(e){}
+}
+function authLock(){
+  sessLogEnd();
+  try{sessionStorage.removeItem("inv_sess_v1");sessionStorage.removeItem(SESS_KEY);localStorage.removeItem("inv_remember_v1");}catch(e){}
+  // si la sesión que se cierra tenía un espacio de datos propio, hay que recargar: la pestaña ya cargó
+  // sus claves y la siguiente cuenta puede ser otra
+  if(USER_NS){try{location.reload();return;}catch(e){}}
+  SESSION=null;authInit();try{userChipSync();}catch(e){}
+}
 
 /* ===== PROYECTOS: simulaciones + inversiones vinculadas (el análisis es ÚNICO y del sistema) ===== */
 function currentAnalysisId(){return (typeof DATASET!=="undefined"&&DATASET==="import")?"datos":"none";}
@@ -8850,7 +9297,7 @@ function clientLoad(){
   editIdx=null;scenEditId=null;impFiles=[];impMsg="";mindAuto=mindAuto;
   opState={pid:null,side:"buy",tkr:null,qty:"",price:"",monto:"",date:""};
 }
-function clientSwitch(id){if(!id||id===activeClient)return;activeClient=id;try{localStorage.setItem("inv_active_client",id);}catch(e){}clientLoad();modulo="proyectos";page="hub";render();}
+function clientSwitch(id){if(!id||id===activeClient)return;activeClient=id;try{localStorage.setItem(nsk("inv_active_client"),id);}catch(e){}clientLoad();modulo="proyectos";page="hub";render();}
 function clientCreate(name,color){const id="c_"+Date.now();CLIENTS.push({id,name:(name||("Cliente "+(CLIENTS.length+1))).trim(),color:color||CLIENT_PAL[CLIENTS.length%CLIENT_PAL.length]});saveClients();clientSwitch(id);}
 function clientAdd(name){clientCreate(name);}
 function clientRename(id,name){const c=CLIENTS.find(x=>x.id===id);if(c){c.name=(name||"").trim()||c.name;saveClients();render();}}
@@ -8864,7 +9311,7 @@ function clientDelete(id){
   try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de eliminar cliente");}catch(e){}
   Object.keys(CLIENT_KEYS).forEach(k=>{try{localStorage.removeItem(k+"__"+id);}catch(e){}});
   CLIENTS=CLIENTS.filter(x=>x.id!==id);saveClients();
-  if(activeClient===id){activeClient=CLIENTS[0].id;try{localStorage.setItem("inv_active_client",activeClient);}catch(e){}clientLoad();}
+  if(activeClient===id){activeClient=CLIENTS[0].id;try{localStorage.setItem(nsk("inv_active_client"),activeClient);}catch(e){}clientLoad();}
   render();
 }
 function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=localStorage.getItem("pf_projects_v1__"+id);return v?JSON.parse(v):[];}catch(e){return [];}}
@@ -9850,7 +10297,7 @@ function attachHome(){
   // el aviso de base rezagada lleva directo a donde se arregla: la fuente automática de cierres
   const _hf=document.getElementById("homeFuente");if(_hf)_hf.onclick=()=>{cfgTab="datos";cfgOpen();};
   document.querySelectorAll("[data-gohome]").forEach(b=>b.onclick=()=>{const a=b.dataset.gohome.split("|"),cid=a[0],pid=a[1];
-    try{if(cid!==activeClient){activeClient=cid;localStorage.setItem("inv_active_client",cid);if(typeof clientLoad==="function")clientLoad();}}catch(e){}
+    try{if(cid!==activeClient){activeClient=cid;localStorage.setItem(nsk("inv_active_client"),cid);if(typeof clientLoad==="function")clientLoad();}}catch(e){}
     const np=+pid;activeId=(isFinite(np)&&String(np)===pid)?np:pid;try{saveProjects();syncProj();}catch(e){}
     modulo="inv";page="seguimiento";render();});
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{const[m,pg]=b.dataset.go.split("|");modulo=m;page=pg;render();});
@@ -9900,7 +10347,7 @@ function removeExampleClients(){try{
   CLIENTS=CLIENTS.filter(c=>c.id==="c_me");
   if(!CLIENTS.length)CLIENTS=[{id:"c_me",name:"Administración",color:"#1E5FD1"}];
   if(CLIENTS.length!==before)saveClients();
-  if(activeClient!=="c_me"){activeClient="c_me";try{localStorage.setItem("inv_active_client","c_me");clientLoad();}catch(e){}}
+  if(activeClient!=="c_me"){activeClient="c_me";try{localStorage.setItem(nsk("inv_active_client"),"c_me");clientLoad();}catch(e){}}
 }catch(e){}}
 try{removeExampleClients();}catch(e){}
 try{pricedbAutoSeed();}catch(e){}
@@ -9914,6 +10361,7 @@ render();
 try{autobkTick();}catch(e){}
 try{autopxAutoRun();}catch(e){}   // sincroniza los cierres del día desde la fuente automática (si está configurada)
 authInit();
+try{userChipSync();}catch(e){}
 setTimeout(function(){try{cloudBoot();}catch(e){}},900);   // nube: si este navegador está vacío y el servidor tiene respaldo, ofrece restaurarlo
 </script>
 </body>
