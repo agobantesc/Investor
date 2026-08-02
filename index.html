@@ -877,7 +877,22 @@
   .topnav-beta:not(.on){border-color:rgba(124,58,237,.42);}
   .topnav-beta:not(.on) svg{color:#7C3AED;opacity:.95;}
   .topnav.on .beta-tag{background:rgba(255,255,255,.28);color:#fff;box-shadow:none;}
-  @media(max-width:1080px){.topnav{padding:0 .62rem;font-size:12px;}.topnav .beta-tag{display:none;}}
+  /* ESPACIO EN LA BARRA: con seis módulos, el bloque de navegación empujaba fuera de la pantalla a la
+     cuenta, la configuración y el tema — quedaban cortados a la derecha. Ahora la navegación es lo único
+     que cede: primero se aprieta, luego pierde la etiqueta «beta» y por último se queda en iconos (los
+     nombres siguen en el menú ☰). Los controles de la derecha tienen su sitio asegurado. */
+  .topbar{min-width:0;}
+  .tnav{min-width:0;flex-shrink:1;overflow:hidden;}
+  .topbar .iconbtn,.topbar .mkpill,.topbar .burger{flex-shrink:0;}
+  @media(max-width:1500px){.tnav{gap:6px;}.topnav{padding:0 .72rem;font-size:12.5px;gap:7px;}}
+  @media(max-width:1360px){.topnav{padding:0 .62rem;font-size:12px;}.sesspill #sessPillTxt{max-width:150px;}}
+  @media(max-width:1240px){.topnav{padding:0 .58rem;}.sesspill #sessPillTxt{max-width:120px;}}
+  /* grados que aplica navFit() midiendo el sitio real: un corte por anchos fijos siempre se equivoca con
+     otra tipografía, otra escala o un módulo más — y el síntoma es feo: la última etiqueta partida a medias */
+  .tnav.sin-beta .beta-tag{display:none;}
+  .tnav.solo-iconos .tnav-lbl{display:none;}
+  .tnav.solo-iconos .topnav{padding:0 .58rem;gap:0;}
+  @media(max-width:1080px){.tnav{display:none;}}
 
   /* ════════════════ META DE ANÁLISIS (ventana de datos) ════════════════ */
   .eval-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 16px;padding:.5rem .85rem;
@@ -1013,6 +1028,7 @@
   .sesspill #sessPillTxt{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .sesspill.otro{border-color:var(--amber-line);background:var(--amberbg);color:var(--amber);}
   .sesspill.otro .live-dot{background:var(--amber);box-shadow:0 0 0 3px var(--amberbg);}
+  .sesspill.compacta .rl{display:none;}
   .verc-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
   .verc-item{display:flex;align-items:center;gap:11px;padding:.6rem .75rem;border:1px solid var(--line2);
     border-radius:11px;background:var(--card2);cursor:pointer;text-align:left;transition:.13s var(--ease);width:100%;}
@@ -1683,7 +1699,7 @@
     <div class="sfoot" id="sfoot"></div>
   </aside>
   <div class="mainwrap">
-    <div class="topbar"><span class="tbar"></span><button class="burger" id="navburger" title="Menú" aria-label="Abrir menú de módulos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Inicio"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg>Inicio</button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Proyectos</button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Mercados</button><button class="topnav topnav-beta" id="navMontecarlo" data-mod="montecarlo" title="Montecarlo · proyecciones probabilísticas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg>Montecarlo<span class="beta-tag">beta</span></button><button class="topnav topnav-beta" id="navMarkowitz" data-mod="markowitz" title="Markowitz · optimización de cartera (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c1-6 4-10 13-11"/><circle cx="10" cy="12.2" r="1.6" fill="currentColor" stroke="none"/></svg>Markowitz<span class="beta-tag">beta</span></button><button class="topnav topnav-beta" id="navActiva" data-mod="activa" title="Gestión activa · rotación, costos de operar y propuestas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/></svg>Gestión activa<span class="beta-tag">beta</span></button></div><button class="mkpill sesspill" id="sessPill" title="Sesión activa"><span class="live-dot"></span><span id="sessPillTxt">Sesión</span></button><button class="iconbtn" id="userbtn" title="Mi cuenta" aria-label="Mi cuenta"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
+    <div class="topbar"><span class="tbar"></span><button class="burger" id="navburger" title="Menú" aria-label="Abrir menú de módulos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button><div><div class="crumb" id="crumb"></div><div class="ptitle" id="ptitle"></div></div><div class="spacer"></div><div class="tnav"><button class="topnav topnav-home" id="navInicio" data-mod="inicio" title="Inicio"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/><path d="M9.5 21v-6h5v6"/></svg><span class="tnav-lbl">Inicio</span></button><button class="topnav" id="navProyectos" data-mod="proyectos" title="Proyectos"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span class="tnav-lbl">Proyectos</span></button><button class="topnav" id="navMercados" data-mod="mercados" title="Mercados"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="tnav-lbl">Mercados</span></button><button class="topnav topnav-beta" id="navMontecarlo" data-mod="montecarlo" title="Montecarlo · proyecciones probabilísticas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8.4" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.35" fill="currentColor" stroke="none"/></svg><span class="tnav-lbl">Montecarlo</span><span class="beta-tag">beta</span></button><button class="topnav topnav-beta" id="navMarkowitz" data-mod="markowitz" title="Markowitz · optimización de cartera (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16"/><path d="M6 17c1-6 4-10 13-11"/><circle cx="10" cy="12.2" r="1.6" fill="currentColor" stroke="none"/></svg><span class="tnav-lbl">Markowitz</span><span class="beta-tag">beta</span></button><button class="topnav topnav-beta" id="navActiva" data-mod="activa" title="Gestión activa · rotación, costos de operar y propuestas (beta)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2z"/></svg><span class="tnav-lbl">Gestión activa</span><span class="beta-tag">beta</span></button></div><button class="mkpill sesspill" id="sessPill" title="Sesión activa"><span class="live-dot"></span><span id="sessPillTxt">Sesión</span></button><button class="iconbtn" id="userbtn" title="Mi cuenta" aria-label="Mi cuenta"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></button><button class="iconbtn gear" id="cfgbtn" title="Configuración" aria-label="Configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button><button class="iconbtn" id="themebtn" title="Cambiar tema" aria-label="Cambiar tema"></button></div>
     <div id="main"></div>
     <div class="nav-bk" id="navBk"></div>
     <div class="footer"><span>INVESTOR · INTELIGENCIA QUE GENERA VALOR · SIMULACIÓN EDUCATIVA · NO ES ASESORÍA FINANCIERA</span><span id="footr"></span></div>
@@ -2017,6 +2033,7 @@ function renderChrome(){
   document.getElementById("ptitle").textContent=(M.tabs.find(t=>t.id===page)||M.tabs[0]).label;
   // pill del proyecto activo: los análisis y simulaciones que se ven son los de ESTE proyecto
   try{if(typeof sessPillSync==="function")sessPillSync();}catch(e){}
+  try{if(typeof navFit==="function")navFit();}catch(e){}
   const _sf=document.getElementById("sfoot");if(_sf)_sf.innerHTML="";
   document.getElementById("footr").textContent=`β por regresión OLS vs IPSA · ${DATA.window}`;
 }
@@ -7089,6 +7106,25 @@ cfgEnsureDOM();
    El botón de persona abre «Mi cuenta» (nombre, usuario y contraseña) — lo tiene cualquier usuario.
    El engranaje solo existe para el administrador: la Configuración es donde viven la fuente de datos,
    los respaldos y los accesos. */
+/* AJUSTE DE LA BARRA: se mide el sitio que hay y se va soltando lastre — primero las etiquetas «beta»,
+   después los nombres de los módulos (que siguen en el menú ☰). Medir en vez de cortar por anchos fijos:
+   con seis módulos, otra tipografía o la escala de interfaz al 110% cualquier umbral fijo se equivoca, y
+   el síntoma es la última etiqueta partida por la mitad. */
+function navFit(){
+  try{
+    const nav=document.querySelector(".tnav");if(!nav)return;
+    const pill=document.getElementById("sessPill");
+    nav.classList.remove("sin-beta","solo-iconos");
+    if(pill)pill.classList.remove("compacta");
+    const cabe=()=>nav.scrollWidth<=nav.clientWidth+1;
+    if(cabe())return;
+    nav.classList.add("sin-beta");
+    if(cabe())return;
+    if(pill){pill.classList.add("compacta");if(cabe())return;}   // la pastilla suelta el papel antes que la navegación los nombres
+    nav.classList.add("solo-iconos");
+  }catch(e){}
+}
+try{window.addEventListener("resize",()=>{try{navFit();}catch(e){}});}catch(e){}
 /* la pastilla de la barra dice SIEMPRE en el espacio de quién se trabaja, y abre el selector */
 function sessPillSync(){
   try{
@@ -7098,12 +7134,13 @@ function sessPillSync(){
     if(!yo){b.style.display="none";return;}
     b.style.display="";
     const rol=r=>r==="admin"?"administrador":"inversionista";
+    const esc=x=>(""+x).replace(/</g,"&lt;");
     if(verComoActivo()){
-      t.textContent="Viendo a "+(v.name||v.user);
+      t.innerHTML="Viendo a "+esc(v.name||v.user);
       b.title="Estás trabajando en el espacio de "+(v.name||v.user)+" ("+rol(v.role)+"). Pulsa para volver a tu sesión o cambiar de usuario.";
       b.classList.add("otro");
     }else{
-      t.textContent=(yo.name||yo.user)+" · "+rol(yo.role);
+      t.innerHTML=esc(yo.name||yo.user)+'<span class="rl"> · '+rol(yo.role)+"</span>";
       b.title="Sesión de "+(yo.name||yo.user)+" ("+rol(yo.role)+")"+(isAdmin()?" · pulsa para ver la interfaz de otro usuario":"");
       b.classList.remove("otro");
     }
