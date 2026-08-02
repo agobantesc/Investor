@@ -1008,6 +1008,11 @@
   .auth-skip a{font-size:11.5px;color:var(--indigo);font-weight:700;cursor:pointer;}
   .auth-skip a:hover{text-decoration:underline;}
   .auth-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:9.5px;color:var(--faint);text-align:center;line-height:1.55;}
+  /* medidor de fuerza: se ve mientras se escribe, para no descubrir la regla recién al pulsar Guardar */
+  .pw-meter{display:flex;align-items:center;gap:9px;margin:-6px 0 11px;font:800 10px var(--font);letter-spacing:.4px;text-transform:uppercase;}
+  .pw-bar{flex:1;height:5px;border-radius:3px;background:var(--line2);overflow:hidden;}
+  .pw-bar i{display:block;height:100%;border-radius:3px;transition:width .18s var(--ease),background .18s var(--ease);}
+  .pw-reqs{font:600 11px var(--font);color:var(--muted);line-height:1.5;margin:-6px 0 12px;}
   /* ── Pantalla de entrada: dos paneles. A la izquierda la bienvenida y lo que Investor hace (sobre el
      degradado de marca); a la derecha el formulario, que sigue siendo el mismo .auth-card. ── */
   .auth-wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);width:min(1080px,96vw);
@@ -2266,6 +2271,15 @@ function sessionRead(){try{return JSON.parse(sessionStorage.getItem(SESS_KEY)||"
    (media app ya leyó sus claves), así que entrar con otro usuario recarga la página */
 let SESSION=(function(){try{const s=sessionRead();if(!s||!s.uid)return null;return usersAll().find(u=>u.id===s.uid)||null;}catch(e){return null;}})();
 function isAdmin(){return !SESSION||SESSION.role==="admin";}
+/* Cómo llamar al usuario en pantalla: el NOMBRE que puso en su cuenta manda sobre el usuario con que entra
+   («Ricardo Gobantes», no «agobantesc»). Sin cuenta se cae al acceso simple de siempre. */
+function userNombre(){
+  try{
+    if(SESSION)return (""+(SESSION.name||SESSION.user)).trim();
+    if(typeof AUTH!=="undefined"&&AUTH&&AUTH.enabled&&AUTH.user)return (""+AUTH.user).trim();
+  }catch(e){}
+  return "";
+}
 function userNs(u){return (u&&u.role!=="admin"&&u.ns)?u.ns:"";}
 let USER_NS=userNs(SESSION);
 function nsk(k){return USER_NS?(k+"@"+USER_NS):k;}
@@ -5108,7 +5122,7 @@ function cpRenderHead(){
     <select class="cp-sel" id="cpModelSel">${opts}</select>
     <button class="cp-x" id="cpClose" title="Cerrar">✕</button>`;
 }
-function cpWelcome(){const n=(typeof AUTH!=="undefined"&&AUTH&&AUTH.enabled&&AUTH.user)?(" "+AUTH.user):"";return "Hola"+n+", ¿qué quieres que revisemos hoy? El **desempeño de tus proyectos**, un **rebalanceo o los costos de operar**, **estudiar una acción**, o **simular alternativas** antes de mover la cartera. Tú me dices y partimos.";}
+function cpWelcome(){const n=userNombre()?(" "+userNombre()):"";return "Hola"+n+", ¿qué quieres que revisemos hoy? El **desempeño de tus proyectos**, un **rebalanceo o los costos de operar**, **estudiar una acción**, o **simular alternativas** antes de mover la cartera. Tú me dices y partimos.";}
 /* chips de arranque del chat vacío: una por capacidad de GESTIÓN (cada una activa una cadena de tools distinta) */
 const CP_SUGS=["Revisa mi cartera y proponme cambios según los resultados","¿Qué rebalanceo me conviene hoy y cuánto costaría?","¿Cuánto llevo pagado en comisiones? ¿Estoy operando bien?","¿Qué acciones están baratas por fundamentos?","Simula una alternativa para mejorar el Sharpe de mi cartera"];
 let _cpFollow=true;   // el chat sigue al agente mientras escribe (se suelta solo si el usuario sube a leer)
@@ -7596,7 +7610,7 @@ function genContabReport(){
   const _firstTx=(function(){let d=null;per.forEach(({A})=>{const t0=A.L.tx[0];if(t0&&(!d||t0.date<d))d=t0.date;});return d;})();
   const folio="INV-CONT-"+localDay().replace(/-/g,"");
   const metaHTML=invReportMeta([
-    ["Titular",(typeof AUTH!=="undefined"&&AUTH&&AUTH.user)?(""+AUTH.user).replace(/</g,"&lt;"):"Titular de la cuenta"],
+    ["Titular",userNombre()?userNombre().replace(/</g,"&lt;"):"Titular de la cuenta"],
     ["Período",(_firstTx?fD(_firstTx):"—")+" → "+fD(localDay())],
     ["Proyectos",PROJECTS.length+" ("+per.length+" con operaciones)"],
     ["Operaciones",String(nAllTx)],
@@ -8267,7 +8281,31 @@ function attachActiva(){
 /* ═══════════ PANEL DE ACCESOS (solo administrador) ═══════════ */
 let accSel=null;         // usuario abierto en el panel
 let accNuevo=false;      // formulario de alta desplegado
+let accSrvSes=null;      // sesiones traídas del servidor (null = aún sin pedir)
+/* con cuentas en el servidor, la lista y las sesiones vienen de allá */
+async function accCargarServidor(){
+  if(!srvActivo())return;
+  try{await srvUsuarios();const j=await srvApi("GET","/api/sessions");accSrvSes=j.sessions||[];}
+  catch(e){accSrvSes=[];}
+  try{if(cfgTab==="accesos")cfgRender();}catch(e){}
+}
+/* tarjeta para PUBLICAR las cuentas en el servidor: lo que convierte a Investor en multi-equipo */
+function accActivarHTML(){
+  return card("Entrar desde cualquier equipo","Hoy las cuentas viven solo en este navegador. Si las publicas en tu servidor, podrás entrar con tu usuario y contraseña desde cualquier equipo — y el bloqueo por intentos fallidos pasa a valer para todos, no solo para este navegador",
+    `<div class="mc-form">
+      <label class="mc-fld">Tu nombre<input id="accSrvName" type="text" value="${(""+((SESSION&&(SESSION.name||SESSION.user))||"")).replace(/"/g,"&quot;")}"></label>
+      <label class="mc-fld">Usuario<input id="accSrvUser" type="text" autocomplete="off" value="${(""+((SESSION&&SESSION.user)||"")).replace(/"/g,"&quot;")}"></label>
+      <label class="mc-fld">Contraseña para el servidor<input id="accSrvPass" type="password" autocomplete="new-password" placeholder="mínimo ${PW_MIN} caracteres"></label>
+     </div>
+     <div id="accSrvMeter"></div>
+     <div class="mc-row"><button class="btn btn-pri" id="accSrvGo">Publicar mi cuenta en el servidor</button></div>
+     <div class="mc-hint">Hay que elegir la contraseña de nuevo: este navegador nunca la guardó en claro —solo su huella— así que no se puede trasladar sola. Desde ese momento el servidor es quien verifica: guarda las contraseñas con <b>PBKDF2 · 210.000 iteraciones</b> y bloquea la cuenta <b>${PW_BLOQUEO_MIN} minutos tras ${PW_INTENTOS} intentos fallidos</b>. Tus proyectos siguen donde están; para verlos en otro equipo, restaura el respaldo de la nube desde ahí.</div>`);
+}
 function cfgAccesosBody(){
+  if(SRV.modo&&!SRV.hayCuentas)return accActivarHTML()+cfgAccesosLocal();
+  return cfgAccesosLocal();
+}
+function cfgAccesosLocal(){
   const us=usersAll();
   const yo=SESSION?SESSION.id:null;
   const rol=r=>r==="admin"
@@ -8293,8 +8331,9 @@ function cfgAccesosBody(){
       <label class="mc-fld">Nombre<input id="accNName" type="text" placeholder="Nombre y apellido"></label>
       <label class="mc-fld">Usuario<input id="accNUser" type="text" autocomplete="off" placeholder="usuario para entrar"></label>
       <label class="mc-fld">Papel<select id="accNRole"><option value="inv">Inversionista</option><option value="admin">Administrador</option></select></label>
-      <label class="mc-fld">Contraseña<input id="accNPass" type="password" autocomplete="new-password" placeholder="mínimo 4 caracteres"></label>
+      <label class="mc-fld">Contraseña<input id="accNPass" type="password" autocomplete="new-password" placeholder="mínimo ${PW_MIN} caracteres"></label>
     </div>
+    <div id="accNMeter"></div>
     <div class="mc-row"><button class="btn btn-pri" id="accCrear">Crear cuenta</button><button class="btn" id="accCancel">Cancelar</button></div>
     <div class="mc-hint">Un <b>inversionista</b> entra a Investor completo y gestiona sus propios proyectos, pero no ve Configuración ni este panel. Su espacio de datos es aparte: no verá ni tocará tus carteras. La <b>base de precios es común</b> — es dato de mercado.</div>
   </div>`:"";
@@ -8310,6 +8349,7 @@ function cfgAccesosBody(){
         <label class="mc-fld">Papel<select id="accERole"${soloAdmin?" disabled":""}><option value="inv"${u.role!=="admin"?" selected":""}>Inversionista</option><option value="admin"${u.role==="admin"?" selected":""}>Administrador</option></select></label>
         <label class="mc-fld">Nueva contraseña<input id="accEPass" type="password" autocomplete="new-password" placeholder="dejar vacío para no cambiarla"></label>
       </div>
+      <div id="accEMeter"></div>
       <div class="mc-row">
         <button class="btn btn-pri" id="accGuardar">Guardar cambios</button>
         ${u.id!==(SESSION&&SESSION.id)?`<button class="btn" id="accSusp">${u.activo===false?"Reactivar cuenta":"Suspender cuenta"}</button>`:""}
@@ -8320,9 +8360,9 @@ function cfgAccesosBody(){
       ${u.role!=="admin"?`<div class="mc-hint">Cambiar el papel a <b>administrador</b> le da acceso total, incluida esta pantalla. Su espacio de datos actual deja de usarse: un administrador trabaja sobre el espacio principal.</div>`:""}`);
   })():"";
   // sesiones
-  const log=sessLogAll().slice().reverse();
+  const log=srvActivo()?((accSrvSes||[]).slice()):sessLogAll().slice().reverse();
   const logFilt=accSel?log.filter(x=>x.uid===accSel):log;
-  const abierta=id=>{try{return sessionStorage.getItem("inv_sessid_v1")===id;}catch(e){return false;}};
+  const abierta=id=>{try{return sessionStorage.getItem("inv_sessid_v1")===id||(srvActivo()&&srvToken().slice(0,12)===id);}catch(e){return false;}};
   const sfilas=logFilt.slice(0,60).map(x=>{
     const d=x.ini?new Date(x.ini):null;
     return `<tr><td><b>${(""+(x.name||x.user)).replace(/</g,"&lt;")}</b><div class="t-sub">${(""+(x.disp||"—")).replace(/</g,"&lt;")}</div></td>
@@ -8332,19 +8372,44 @@ function cfgAccesosBody(){
       <td class="r">${x.fin?new Date(x.fin).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}):(abierta(x.id)?'<span style="color:var(--green);font-weight:700">abierta</span>':"—")}</td>
       <td class="r">${sessDur(x)}</td></tr>`;}).join("");
   const sesiones=card("Sesiones"+(accSel&&u?(" de "+(""+(u.name||u.user)).replace(/</g,"&lt;")):""),
-    logFilt.length?`${logFilt.length} sesión${logFilt.length===1?"":"es"} registrada${logFilt.length===1?"":"s"} en este navegador${accSel?" · filtrado por la cuenta abierta arriba":""}`:"Aún sin entradas registradas",
+    logFilt.length?`${logFilt.length} sesión${logFilt.length===1?"":"es"} registrada${logFilt.length===1?"":"s"} ${srvActivo()?"en el servidor · de cualquier equipo":"en este navegador"}${accSel?" · filtrado por la cuenta abierta arriba":""}`:"Aún sin entradas registradas",
     logFilt.length?`<div class="tw tbl-compact"><table>
       <thead><tr><th>Usuario</th><th>Papel</th><th>Fecha</th><th class="r">Entrada</th><th class="r">Salida</th><th class="r">Duración</th></tr></thead>
       <tbody>${sfilas}</tbody></table></div>
-      <div class="mc-hint">Se guardan las últimas 300 entradas de <b>este</b> navegador. Una sesión termina al bloquear o cerrar la pestaña; si el navegador se cierra de golpe puede quedar sin hora de salida. Es un registro local: no viaja en el respaldo.</div>`
+      <div class="mc-hint">${srvActivo()
+        ?"Las guarda el <b>servidor</b>: se ven las entradas desde cualquier equipo, con su dispositivo. Una sesión caduca a las 12 horas o al cerrarla."
+        :"Se guardan las últimas 300 entradas de <b>este</b> navegador. Una sesión termina al bloquear o cerrar la pestaña; si el navegador se cierra de golpe puede quedar sin hora de salida. Es un registro local: no viaja en el respaldo."}</div>`
     :'<div class="note" style="margin:0">Cuando alguien entre con su cuenta, su sesión quedará registrada aquí.</div>',
     logFilt.length?'<button class="btn" id="accLogClr" style="color:var(--red);border-color:var(--red-line)">Vaciar registro</button>':"");
-  return card("Usuarios con acceso",us.length+" cuenta"+(us.length===1?"":"s")+" en este navegador · el administrador tiene acceso total; el inversionista usa Investor completo sobre su propio espacio de datos",
+  return card("Usuarios con acceso",us.length+" cuenta"+(us.length===1?"":"s")+(srvActivo()?" en el servidor · se entra desde cualquier equipo":" en este navegador")+" · el administrador tiene acceso total; el inversionista usa Investor completo sobre su propio espacio de datos",
       tabla+alta,accNuevo?"":'<button class="btn btn-pri" id="accAdd">+ Nueva cuenta</button>')
     +gestion+sesiones;
 }
 function cfgAccesosWire(m){
   const q=x=>m.querySelector(x);
+  if(srvActivo()&&accSrvSes===null)accCargarServidor();
+  // medidores de fuerza en los tres campos de contraseña del panel
+  try{pwEnlazar("accNPass","accNMeter",()=>(q("#accNUser")||{}).value,()=>(q("#accNName")||{}).value);}catch(e){}
+  try{pwEnlazar("accEPass","accEMeter",()=>(q("#accEUser")||{}).value,()=>(q("#accEName")||{}).value);}catch(e){}
+  try{pwEnlazar("accSrvPass","accSrvMeter",()=>(q("#accSrvUser")||{}).value,()=>(q("#accSrvName")||{}).value);}catch(e){}
+  // PUBLICAR la cuenta en el servidor: a partir de aquí se entra desde cualquier equipo
+  const sg=q("#accSrvGo");
+  if(sg)sg.onclick=async()=>{
+    const nm=((q("#accSrvName")||{}).value||"").trim(),usr=((q("#accSrvUser")||{}).value||"").trim(),pw=(q("#accSrvPass")||{}).value||"";
+    if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
+    const ev=pwEvaluar(pw,usr,nm);
+    if(!ev.ok){window.alert(pwMensaje(ev));return;}
+    if(!window.confirm("Se creará tu cuenta de ADMINISTRADOR en el servidor.\n\nDesde ese momento Investor pedirá esta contraseña —no la de este navegador— y podrás entrar desde cualquier equipo. Tus proyectos no se tocan.\n\n¿Continuar?"))return;
+    try{
+      const j=await srvApi("POST","/api/auth/bootstrap",{user:usr,name:nm||usr,pass:pw});
+      srvTokenSet(j.token);SRV.hayCuentas=true;srvEspejar([j.user]);
+      const local=userById(j.user.id)||j.user;
+      try{sessionStorage.setItem(SESS_KEY,JSON.stringify({uid:local.id,user:local.user,at:new Date().toISOString()}));}catch(e){}
+      SESSION=local;USER_NS=userNs(local);
+      accSrvSes=null;cfgRender();try{userChipSync();render();}catch(e){}
+      window.alert("Listo: tu cuenta ya vive en el servidor.\n\nAhora puedes entrar con «"+usr+"» y esa contraseña desde cualquier equipo. Para ver tus proyectos allá, restaura el respaldo de la nube desde ese equipo.");
+    }catch(e){window.alert("No se pudo publicar la cuenta: "+srvErrorTexto(e));}
+  };
   m.querySelectorAll("[data-accsel]").forEach(b=>b.onclick=()=>{accSel=(accSel===b.dataset.accsel)?null:b.dataset.accsel;cfgRender();});
   const add=q("#accAdd");if(add)add.onclick=()=>{accNuevo=true;cfgRender();};
   const can=q("#accCancel");if(can)can.onclick=()=>{accNuevo=false;cfgRender();};
@@ -8355,8 +8420,12 @@ function cfgAccesosWire(m){
       pw=(q("#accNPass")||{}).value||"",rl=(q("#accNRole")||{}).value||"inv";
     if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
     if(userExists(usr)){window.alert("Ya existe una cuenta con el usuario «"+usr+"».");return;}
-    if(pw.length<4){window.alert("La contraseña debe tener al menos 4 caracteres.");return;}
-    await userCreate({user:usr,name:nm.trim()||usr,pass:pw,role:rl});
+    const ev=pwEvaluar(pw,usr,nm);
+    if(!ev.ok){window.alert(pwMensaje(ev));return;}
+    if(srvActivo()){
+      try{await srvApi("POST","/api/users",{user:usr,name:nm.trim()||usr,pass:pw,role:rl});await srvUsuarios();}
+      catch(e){window.alert("No se pudo crear la cuenta: "+srvErrorTexto(e));return;}
+    }else await userCreate({user:usr,name:nm.trim()||usr,pass:pw,role:rl});
     accNuevo=false;cfgRender();
     window.alert("Cuenta creada.\n\n"+(rl==="admin"
       ?"Es administrador: acceso total, incluida la gestión de accesos."
@@ -8369,7 +8438,13 @@ function cfgAccesosWire(m){
       pw=(q("#accEPass")||{}).value||"",rl=(q("#accERole")||{}).value||u.role;
     if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
     if(userExists(usr,u.id)){window.alert("Ya existe otra cuenta con el usuario «"+usr+"».");return;}
-    if(pw&&pw.length<4){window.alert("La contraseña debe tener al menos 4 caracteres.");return;}
+    if(pw){const ev=pwEvaluar(pw,usr,nm);if(!ev.ok){window.alert(pwMensaje(ev));return;}}
+    if(srvActivo()){
+      try{await srvApi("PATCH","/api/users/"+encodeURIComponent(u.id),
+        Object.assign({name:nm||usr,user:usr,role:rl},pw?{pass:pw}:{}));await srvUsuarios();}
+      catch(e){window.alert("No se pudo guardar: "+srvErrorTexto(e));return;}
+      cfgRender();try{render();}catch(e){}window.alert("Cambios guardados.");return;
+    }
     const cambios={name:nm||usr,user:usr};
     if(rl!==u.role){cambios.role=rl==="admin"?"admin":"inv";cambios.ns=rl==="admin"?"":u.id;}
     userUpdate(u.id,cambios);
@@ -8383,6 +8458,9 @@ function cfgAccesosWire(m){
   if(su)su.onclick=()=>{const u=userById(accSel);if(!u)return;
     const nuevo=u.activo===false;
     if(!nuevo&&!window.confirm("¿Suspender la cuenta de «"+(u.name||u.user)+"»?\n\nNo podrá entrar hasta que la reactives. Sus datos se conservan."))return;
+    if(srvActivo()){srvApi("PATCH","/api/users/"+encodeURIComponent(u.id),{activo:nuevo,desbloquear:nuevo})
+      .then(()=>srvUsuarios()).then(()=>cfgRender())
+      .catch(e=>window.alert("No se pudo cambiar el estado: "+srvErrorTexto(e)));return;}
     userUpdate(u.id,{activo:nuevo});cfgRender();};
   const bo=q("#accBorrar");
   if(bo)bo.onclick=()=>{const u=userById(accSel);if(!u)return;
@@ -8390,10 +8468,19 @@ function cfgAccesosWire(m){
     if(!window.confirm("¿Eliminar la cuenta de «"+(u.name||u.user)+"»?\n\nSe borran también SUS datos en este navegador: "+R.proyectos+" proyecto(s) y "+R.kb+" KB. Esto no se puede deshacer."))return;
     const t=window.prompt('Para confirmar, escribe en mayúsculas: ELIMINAR');
     if((""+(t||"")).trim().toUpperCase()!=="ELIMINAR"){window.alert("Cancelado.");return;}
+    if(srvActivo()){
+      srvApi("DELETE","/api/users/"+encodeURIComponent(u.id))
+        .then(()=>{userDelete(u.id);return srvUsuarios();})
+        .then(()=>{accSel=null;accSrvSes=null;cfgRender();accCargarServidor();window.alert("Cuenta eliminada.");})
+        .catch(e=>window.alert("No se pudo eliminar: "+srvErrorTexto(e)));
+      return;}
     if(!userDelete(u.id)){window.alert("No se puede eliminar la única cuenta de administrador.");return;}
     accSel=null;cfgRender();window.alert("Cuenta eliminada.");};
   const lc=q("#accLogClr");
-  if(lc)lc.onclick=()=>{if(window.confirm("¿Vaciar el registro de sesiones?\n\nSe pierde el historial de entradas; las cuentas y sus datos no se tocan.")){sessLogSave([]);cfgRender();}};
+  if(lc)lc.onclick=()=>{if(!window.confirm("¿Vaciar el registro de sesiones?\n\nSe pierde el historial de entradas; las cuentas y sus datos no se tocan."))return;
+    if(srvActivo()){srvApi("DELETE","/api/sessions").then(()=>{accSrvSes=null;cfgRender();accCargarServidor();})
+      .catch(e=>window.alert("No se pudo vaciar: "+srvErrorTexto(e)));return;}
+    sessLogSave([]);cfgRender();};
 }
 
 /* ═══════════ MI CUENTA (cualquier usuario cambia sus propios datos) ═══════════ */
@@ -8411,10 +8498,16 @@ function miCuentaOpen(){
       <label class="mc-fld">Nueva contraseña<input id="miPw1" type="password" autocomplete="new-password" placeholder="mínimo 4 caracteres"></label>
       <label class="mc-fld">Repite la nueva<input id="miPw2" type="password" autocomplete="new-password" placeholder="••••••••"></label>
     </div>
-    <div class="mc-hint">Tu cuenta vive solo en este navegador. Si la olvidas no hay forma de recuperarla: el administrador puede restablecer los accesos desde la pantalla de entrada, y los proyectos y la base de precios se conservan.</div>
+    <div id="miPwMeter"></div>
+    <div class="mc-hint" id="miDonde"></div>
     <div class="mc-row"><button class="btn btn-pri" id="miGuardar">Guardar</button><button class="btn" id="miCerrar">Cancelar</button><button class="btn" id="miSalir" style="margin-left:auto">🔒 Cerrar sesión</button></div>`;
   const el=modalShell("miCtaBack",inner,"Mi cuenta");
   const q=x=>el.querySelector(x);
+  // dónde vive esta cuenta cambia lo que se puede prometer: decirlo con precisión
+  q("#miDonde").innerHTML=srvActivo()
+    ? "Tu cuenta vive en <b>tu servidor</b>: puedes entrar con ella desde cualquier equipo. Las contraseñas se guardan con PBKDF2 (210.000 iteraciones) y la cuenta se bloquea <b>"+PW_BLOQUEO_MIN+" minutos tras "+PW_INTENTOS+" intentos fallidos</b>. Nadie —ni el administrador— puede leer tu contraseña; sí puede asignarte una nueva."
+    : "Tu cuenta vive <b>solo en este navegador</b>, así que no sirve para entrar desde otro equipo. Para eso, el administrador puede publicar las cuentas en el servidor desde ⚙ Configuración → Accesos. Si olvidas la contraseña no hay forma de recuperarla, pero los proyectos y la base de precios se conservan.";
+  try{pwEnlazar("miPw1","miPwMeter",()=>q("#miUser").value,()=>q("#miName").value);}catch(e){}
   const cerrar=()=>modalCloseId("miCtaBack");
   q("#miCtaX").onclick=cerrar;q("#miCerrar").onclick=cerrar;
   q("#miSalir").onclick=()=>{cerrar();authLock();};
@@ -8423,11 +8516,23 @@ function miCuentaOpen(){
     const p0=q("#miPw0").value||"",p1=q("#miPw1").value||"",p2=q("#miPw2").value||"";
     if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
     if(userExists(usr,u.id)){window.alert("Ya existe otra cuenta con el usuario «"+usr+"».");return;}
+    if(p1||p2){
+      const ev=pwEvaluar(p1,usr,nm);
+      if(!ev.ok){window.alert(pwMensaje(ev));return;}
+      if(p1!==p2){window.alert("La nueva contraseña y su repetición no coinciden.");return;}
+    }
+    if(srvActivo()){
+      // el servidor comprueba la contraseña actual: el navegador no la tiene
+      try{
+        const j=await srvApi("PATCH","/api/auth/me",Object.assign({name:nm||usr,user:usr},p1?{pass:p1,passActual:p0}:{}));
+        srvEspejar([j.user]);SESSION=userById(j.user.id)||j.user;
+      }catch(e){window.alert(srvErrorTexto(e));return;}
+      cerrar();try{userChipSync();render();}catch(e){}
+      window.alert("Cuenta actualizada.");return;
+    }
     if(p1||p2||p0){
       const h=await authHash(p0,u.salt);
       if(h!==u.hash){window.alert("La contraseña actual no es correcta.");return;}
-      if(p1.length<4){window.alert("La nueva contraseña debe tener al menos 4 caracteres.");return;}
-      if(p1!==p2){window.alert("La nueva contraseña y su repetición no coinciden.");return;}
     }
     userUpdate(u.id,{name:nm||usr,user:usr});
     if(p1)await userSetPass(u.id,p1);
@@ -8476,6 +8581,136 @@ function sessDur(x){try{
   if(m<60)return m+" min";
   const h=Math.floor(m/60);return h+" h "+(m%60)+" min";
 }catch(e){return "—";}}
+
+/* ═══════════ CUENTAS EN EL SERVIDOR ═══════════
+   Una cuenta guardada en el navegador solo sirve en ESE navegador. Para entrar a Investor desde cualquier
+   equipo las cuentas tienen que vivir en el servidor, y es el servidor —no el navegador— quien verifica la
+   contraseña y cuenta los intentos fallidos (si los contara el navegador bastaría abrir una ventana nueva).
+   Se ACTIVA cuando el administrador quiere: hasta entonces todo sigue igual, en local. Al activarlas, esta
+   misma pantalla pide crear la contraseña del administrador en el servidor — el navegador nunca tuvo la
+   contraseña en claro, así que no se puede migrar sola. */
+const SRVTOK_KEY="inv_srvtok_v1";
+let SRV={modo:false,hayCuentas:false,listo:false};
+function srvActivo(){return !!(SRV.modo&&SRV.hayCuentas);}
+function srvToken(){try{return sessionStorage.getItem(SRVTOK_KEY)||"";}catch(e){return "";}}
+function srvTokenSet(t){try{if(t)sessionStorage.setItem(SRVTOK_KEY,t);else sessionStorage.removeItem(SRVTOK_KEY);}catch(e){}}
+async function srvApi(method,ruta,body){
+  const res=await fetch(ruta,{method,cache:"no-store",
+    headers:Object.assign({"x-investor-session":srvToken()},body?{"Content-Type":"application/json"}:{}),
+    body:body?JSON.stringify(body):undefined});
+  let j=null;try{j=await res.json();}catch(e){}
+  if(!res.ok){const e=new Error((j&&j.error)||("HTTP "+res.status));e.code=res.status;e.data=j||{};throw e;}
+  return j||{};
+}
+/* pregunta al servidor si ya administra cuentas (una vez por carga) */
+async function srvInit(){
+  SRV.modo=(typeof cloudServerMode==="function")&&cloudServerMode();
+  if(!SRV.modo){SRV.listo=true;return SRV;}
+  try{const j=await srvApi("GET","/api/auth/estado");SRV.hayCuentas=!!j.hayCuentas;}catch(e){SRV.hayCuentas=false;}
+  SRV.listo=true;
+  if(SRV.hayCuentas&&srvToken()){
+    // ¿la sesión de esta pestaña sigue siendo válida en el servidor?
+    try{const j=await srvApi("GET","/api/auth/me");srvEspejar([j.user]);}
+    catch(e){srvTokenSet("");SESSION=null;}
+  }
+  return SRV;
+}
+/* ESPEJO LOCAL: la interfaz (papeles, espacio de datos, panel de accesos) sigue leyendo la lista local.
+   Del servidor llegan los usuarios SIN sus hashes: aquí solo se guarda quién es quién. */
+function srvEspejar(lista){
+  try{
+    const previos=usersAll();
+    const nuevos=(lista||[]).map(u=>{
+      const p=previos.find(x=>x.id===u.id)||{};
+      return Object.assign({},p,{id:u.id,user:u.user,name:u.name,role:u.role,ns:u.ns,
+        creado:u.creado,activo:u.activo!==false,ultimo:u.ultimo||null,servidor:true});
+    });
+    if(nuevos.length)usersSave(nuevos);
+    if(SESSION){const n=nuevos.find(x=>x.id===SESSION.id);if(n)SESSION=n;}
+  }catch(e){}
+}
+async function srvUsuarios(){const j=await srvApi("GET","/api/users");srvEspejar(j.users);return j.users||[];}
+/* traduce los errores del servidor a algo que se pueda leer sin saber de HTTP */
+function srvErrorTexto(e){
+  const d=(e&&e.data)||{};
+  if(e&&e.code===429)return "Demasiados intentos fallidos: la cuenta queda bloqueada "+(d.minutos||PW_BLOQUEO_MIN)+" minuto(s).";
+  if(d.fallos&&d.fallos.length)return "La contraseña debe:\n\n• "+d.fallos.join("\n• ");
+  if(e&&e.code===401)return "Usuario o contraseña incorrectos."+(d.restantes!=null?(" Te quedan "+d.restantes+" intento(s) antes del bloqueo."):"");
+  return (e&&e.message)||"No se pudo completar la operación.";
+}
+
+/* ═══════════ POLÍTICA DE CONTRASEÑAS ═══════════
+   Una contraseña corta se rompe por fuerza bruta en segundos. La regla no es "que sea rara": es que tenga
+   LARGO y variedad, y que no sea derivable de quien la usa. Se evalúa igual en el navegador y en el
+   servidor — la del servidor es la que manda, la del navegador solo ahorra el viaje. */
+const PW_MIN=10;
+const PW_OBVIAS=["contrasena","contraseña","password","investor","12345678","qwerty","admin","bolsa","chile","inversion","inversión","1234567890","abcdefghij"];
+function pwEvaluar(pw,usuario,nombre){
+  const p=""+(pw||"");
+  const fallos=[];
+  if(p.length<PW_MIN)fallos.push("al menos "+PW_MIN+" caracteres (llevas "+p.length+")");
+  const tieneMin=/[a-záéíóúñ]/.test(p),tieneMay=/[A-ZÁÉÍÓÚÑ]/.test(p),tieneNum=/\d/.test(p),tieneSim=/[^\w\sáéíóúñÁÉÍÓÚÑ]/.test(p);
+  const clases=[tieneMin,tieneMay,tieneNum,tieneSim].filter(Boolean).length;
+  if(clases<3)fallos.push("mezclar al menos 3 de: minúsculas, MAYÚSCULAS, números y símbolos");
+  if(/^(.)\1+$/.test(p))fallos.push("no repetir el mismo carácter");
+  const bajo=p.toLowerCase();
+  if(PW_OBVIAS.some(x=>bajo.indexOf(x)>=0))fallos.push("no contener palabras evidentes (contraseña, investor, 12345678…)");
+  const u=(""+(usuario||"")).trim().toLowerCase();
+  if(u.length>=3&&bajo.indexOf(u)>=0)fallos.push("no contener tu usuario");
+  (""+(nombre||"")).trim().toLowerCase().split(/\s+/).forEach(t=>{if(t.length>=4&&bajo.indexOf(t)>=0&&fallos.indexOf("no contener tu nombre")<0)fallos.push("no contener tu nombre");});
+  // fuerza orientativa (0-4): largo y variedad, que es lo que de verdad cuesta romper
+  let f=0;
+  if(p.length>=PW_MIN)f++;
+  if(p.length>=14)f++;
+  if(clases>=3)f++;
+  if(clases>=4&&p.length>=12)f++;
+  if(fallos.length)f=Math.min(f,1);
+  return {ok:fallos.length===0,fallos,fuerza:f,
+    etiqueta:["Muy débil","Débil","Aceptable","Fuerte","Muy fuerte"][f]};
+}
+function pwMensaje(ev){return "La contraseña debe:\n\n• "+ev.fallos.join("\n• ");}
+/* medidor que se ve mientras se escribe */
+function pwBarraHTML(ev){
+  const col=["var(--red)","var(--red)","var(--amber)","var(--green)","var(--green)"][ev.fuerza];
+  return `<div class="pw-meter"><div class="pw-bar"><i style="width:${(ev.fuerza/4*100).toFixed(0)}%;background:${col}"></i></div>
+    <span style="color:${col}">${ev.etiqueta}</span></div>
+    ${ev.fallos.length?`<div class="pw-reqs">Falta: ${ev.fallos.join(" · ")}</div>`:""}`;
+}
+/* conecta un campo de contraseña con su medidor */
+function pwEnlazar(inpId,boxId,usuarioFn,nombreFn){
+  const i=document.getElementById(inpId),b=document.getElementById(boxId);
+  if(!i||!b)return;
+  const pintar=()=>{const v=i.value||"";
+    if(!v){b.innerHTML="";return;}
+    b.innerHTML=pwBarraHTML(pwEvaluar(v,usuarioFn?usuarioFn():"",nombreFn?nombreFn():""));};
+  i.addEventListener("input",pintar);pintar();
+}
+
+/* ═══════════ FRENO A LA FUERZA BRUTA ═══════════
+   Cinco intentos fallidos y la cuenta queda bloqueada 15 minutos. Se cuenta por USUARIO (no por campo),
+   así que probar el mismo usuario con mil contraseñas no lleva a ninguna parte. El bloqueo del navegador
+   es una primera barrera; cuando Investor corre sobre el servidor, el que manda es el del servidor. */
+const PW_INTENTOS=5,PW_BLOQUEO_MIN=15;
+const LOCK_KEY="inv_intentos_v1";
+function lockAll(){try{const v=JSON.parse(localStorage.getItem(LOCK_KEY)||"null");return (v&&typeof v==="object")?v:{};}catch(e){return {};}}
+function lockSave(v){try{localStorage.setItem(LOCK_KEY,JSON.stringify(v));}catch(e){}}
+function lockEstado(user){
+  const k=userSlug(user);if(!k)return {bloqueado:false,restantes:PW_INTENTOS};
+  const L=lockAll(),e=L[k];
+  if(!e)return {bloqueado:false,restantes:PW_INTENTOS};
+  if(e.hasta&&Date.now()<e.hasta)return {bloqueado:true,min:Math.max(1,Math.ceil((e.hasta-Date.now())/60000)),restantes:0};
+  if(e.hasta&&Date.now()>=e.hasta){delete L[k];lockSave(L);return {bloqueado:false,restantes:PW_INTENTOS};}
+  return {bloqueado:false,restantes:Math.max(0,PW_INTENTOS-(e.n||0))};
+}
+function lockFallo(user){
+  const k=userSlug(user);if(!k)return {bloqueado:false,restantes:PW_INTENTOS};
+  const L=lockAll(),e=L[k]||{n:0};
+  e.n=(e.n||0)+1;e.ult=Date.now();
+  if(e.n>=PW_INTENTOS){e.hasta=Date.now()+PW_BLOQUEO_MIN*60000;e.n=0;}
+  L[k]=e;lockSave(L);
+  return e.hasta&&Date.now()<e.hasta?{bloqueado:true,min:PW_BLOQUEO_MIN,restantes:0}:{bloqueado:false,restantes:Math.max(0,PW_INTENTOS-e.n)};
+}
+function lockLimpiar(user){const k=userSlug(user);if(!k)return;const L=lockAll();if(L[k]){delete L[k];lockSave(L);}}
 
 /* ═══════════ CUENTAS ═══════════ */
 function userSlug(u){return (""+(u||"")).trim().toLowerCase();}
@@ -8551,6 +8786,11 @@ function authInit(){
   usersMigrar();
   AUTH=lsGet("inv_auth_v1");
   try{localStorage.removeItem("inv_remember_v1");}catch(e){}   // ya no se recuerda la contraseña: siempre se pide al entrar
+  if(srvActivo()){
+    // las cuentas viven en el servidor: se entra desde cualquier equipo
+    if(SESSION&&srvToken()){authShow(false);return;}
+    authMode="login";authRender();authShow(true);return;
+  }
   const us=usersAll().filter(u=>u.activo!==false);
   if(!us.length){
     if(AUTH&&AUTH.enabled===false){authShow(false);return;}   // el usuario eligió trabajar sin contraseña
@@ -8605,7 +8845,7 @@ function authRender(){
         ${create?`<div class="auth-f"><label>Tu nombre</label><input id="authName" type="text" autocomplete="name" placeholder="cómo quieres que te llamemos"></div>`:""}
         <div class="auth-f"><label>Usuario</label><input id="authUser" type="text" autocomplete="username" value="${(!create&&ultimo)?(""+ultimo).replace(/"/g,"&quot;"):""}" placeholder="tu usuario"></div>
         <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
-        ${create?`<div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
+        ${create?`<div id="authPwMeter"></div><div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
         ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
         <button class="auth-btn" id="authGo">${create?"Crear cuenta y entrar":"Entrar"}</button>
         ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
@@ -8616,6 +8856,7 @@ function authRender(){
   const go=document.getElementById("authGo");if(go)go.onclick=authSubmit;
   ["authName","authUser","authPass","authPass2"].forEach(id=>{const e=document.getElementById(id);if(e)e.onkeydown=ev=>{if(ev.key==="Enter")authSubmit();};});
   try{const f=document.getElementById(create?"authName":"authUser");if(f&&!f.value)f.focus();else{const q=document.getElementById("authPass");if(q)q.focus();}}catch(e){}
+  if(create)try{pwEnlazar("authPass","authPwMeter",()=>(document.getElementById("authUser")||{}).value,()=>(document.getElementById("authName")||{}).value);}catch(e){}
   const sk=document.getElementById("authSkip");if(sk)sk.onclick=()=>{AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authShow(false);};
   const fg=document.getElementById("authForgot");if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Si eres el administrador puedes restablecer todas las cuentas: tus proyectos y tu base de precios se conservan.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer las cuentas";f.onclick=()=>{if(confirm('¿Restablecer TODAS las cuentas de acceso?\n\nSe borran los usuarios y sus contraseñas para que crees uno nuevo. Los proyectos, la base de precios y los respaldos NO se tocan.')){try{localStorage.removeItem(USERS_KEY);}catch(e){}AUTH=null;lsSet("inv_auth_v1",null);try{sessionStorage.removeItem(SESS_KEY);}catch(e){}SESSION=null;authMode="create";authMsg="";authRender();}};}};
 }
@@ -8625,20 +8866,41 @@ async function authSubmit(){
     const p2=(document.getElementById("authPass2")||{}).value||"";
     const nm=(document.getElementById("authName")||{}).value||"";
     if(u.trim().length<2){authMsg="Elige un usuario de al menos 2 caracteres.";authRender();return;}
-    if(p.length<4){authMsg="La contraseña debe tener al menos 4 caracteres.";authRender();return;}
+    const ev=pwEvaluar(p,u,nm);
+    if(!ev.ok){authMsg="La contraseña debe: "+ev.fallos.join(" · ")+".";authRender();return;}
     if(p!==p2){authMsg="Las contraseñas no coinciden.";authRender();return;}
     const nuevo=await userCreate({user:u.trim(),name:(nm.trim()||u.trim()),pass:p,role:"admin"});
     // se mantiene inv_auth_v1 al día: el resto de la app lo usa para saber si hay acceso protegido
     AUTH={enabled:true,user:nuevo.user,salt:nuevo.salt,hash:nuevo.hash};lsSet("inv_auth_v1",AUTH);
     authSesionAbrir(nuevo);
-  }else{
-    const cand=usersAll().filter(x=>x.activo!==false&&userSlug(x.user)===userSlug(u));
-    let ok=null;
-    for(const c of cand){const h=await authHash(p,c.salt);if(h===c.hash){ok=c;break;}}
-    if(!ok){authMsg="Usuario o contraseña incorrectos.";authRender();return;}
-    AUTH={enabled:true,user:ok.user,salt:ok.salt,hash:ok.hash};lsSet("inv_auth_v1",AUTH);
-    authSesionAbrir(ok);
+    return;
   }
+  // ── ENTRAR ──
+  if(srvActivo()){
+    // el SERVIDOR verifica y cuenta los intentos: el bloqueo vale para todos los equipos, no solo para este
+    try{
+      const j=await srvApi("POST","/api/auth/login",{user:u.trim(),pass:p});
+      srvTokenSet(j.token);srvEspejar([j.user]);
+      const local=userById(j.user.id)||j.user;
+      authSesionAbrir(local);
+    }catch(e){authMsg=srvErrorTexto(e);authRender();}
+    return;
+  }
+  const est=lockEstado(u);
+  if(est.bloqueado){authMsg="Demasiados intentos fallidos. Esta cuenta queda bloqueada "+est.min+" minuto(s) más.";authRender();return;}
+  const cand=usersAll().filter(x=>x.activo!==false&&userSlug(x.user)===userSlug(u));
+  let ok=null;
+  for(const c of cand){const h=await authHash(p,c.salt);if(h===c.hash){ok=c;break;}}
+  if(!ok){
+    const r=lockFallo(u);
+    authMsg=r.bloqueado
+      ?("Demasiados intentos fallidos: la cuenta queda bloqueada "+r.min+" minutos.")
+      :("Usuario o contraseña incorrectos."+(r.restantes<=3?(" Te quedan "+r.restantes+" intento(s) antes del bloqueo."):""));
+    authRender();return;
+  }
+  lockLimpiar(u);
+  AUTH={enabled:true,user:ok.user,salt:ok.salt,hash:ok.hash};lsSet("inv_auth_v1",AUTH);
+  authSesionAbrir(ok);
 }
 /* abre la sesión de un usuario. Si su ESPACIO DE DATOS no es el que esta pestaña ya cargó, hay que recargar:
    media aplicación leyó sus claves al arrancar y no se puede cambiar el espacio a mitad de camino. */
@@ -8655,6 +8917,7 @@ function authSesionAbrir(u){
 }
 function authLock(){
   sessLogEnd();
+  if(srvActivo()&&srvToken()){try{srvApi("POST","/api/auth/logout");}catch(e){}srvTokenSet("");}
   try{sessionStorage.removeItem("inv_sess_v1");sessionStorage.removeItem(SESS_KEY);localStorage.removeItem("inv_remember_v1");}catch(e){}
   // si la sesión que se cierra tenía un espacio de datos propio, hay que recargar: la pestaña ya cargó
   // sus claves y la siguiente cuenta puede ser otra
@@ -9986,7 +10249,7 @@ function viewHome(){
   const sg=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
   const _now=new Date(),_hr=_now.getHours();
   const _greet=_hr<12?"Buenos días":_hr<20?"Buenas tardes":"Buenas noches";
-  const _who=(typeof AUTH!=="undefined"&&AUTH&&AUTH.user)?(", "+(""+AUTH.user).replace(/</g,"&lt;")):"";
+  const _who=userNombre()?(", "+userNombre().replace(/</g,"&lt;")):"";
   const _fecha=_now.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   const greetStrip=`<div class="home-greet"><div><div class="hg-hi">${_greet}${_who}</div><div class="hg-date">${_fecha.charAt(0).toUpperCase()+_fecha.slice(1)}</div></div><button class="btn btnu hg-cta" data-go="datos|cierre">↻ Cargar cierre del día</button></div>`;
   // BASE REZAGADA: valorizar la cartera con precios viejos sin decirlo es el peor silencio posible — se decide
@@ -10362,6 +10625,9 @@ try{autobkTick();}catch(e){}
 try{autopxAutoRun();}catch(e){}   // sincroniza los cierres del día desde la fuente automática (si está configurada)
 authInit();
 try{userChipSync();}catch(e){}
+/* si Investor corre sobre su servidor, se le pregunta si ya administra cuentas: en ese caso la pantalla de
+   entrada valida contra él y la sesión sirve desde cualquier equipo */
+(async function(){try{await srvInit();if(SRV.modo){authInit();userChipSync();}}catch(e){}})();
 setTimeout(function(){try{cloudBoot();}catch(e){}},900);   // nube: si este navegador está vacío y el servidor tiene respaldo, ofrece restaurarlo
 </script>
 </body>
