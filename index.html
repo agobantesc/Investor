@@ -8544,9 +8544,10 @@ function cfgAccesosWire(m){
     if(usr.length<2){window.alert("Elige un usuario de al menos 2 caracteres.");return;}
     const ev=pwEvaluar(pw,usr,nm);
     if(!ev.ok){window.alert(pwMensaje(ev));return;}
+    if(!(typeof CLOUD!=="undefined"&&CLOUD&&CLOUD.token)){window.alert("Para crear la primera cuenta en el servidor hace falta su token.\n\nPégalo en ⚙ Configuración → Respaldo → Nube (lo encuentras en el panel de Render, variable SYNC_TOKEN) y vuelve aquí.");return;}
     if(!window.confirm("Se creará tu cuenta de ADMINISTRADOR en el servidor.\n\nDesde ese momento Investor pedirá esta contraseña —no la de este navegador— y podrás entrar desde cualquier equipo. Tus proyectos no se tocan.\n\n¿Continuar?"))return;
     try{
-      const j=await srvApi("POST","/api/auth/bootstrap",{user:usr,name:nm||usr,pass:pw});
+      const j=await srvApi("POST","/api/auth/bootstrap",{user:usr,name:nm||usr,pass:pw},true);
       srvTokenSet(j.token);SRV.hayCuentas=true;srvEspejar([j.user]);
       const local=userById(j.user.id)||j.user;
       try{sessionStorage.setItem(SESS_KEY,JSON.stringify({uid:local.id,user:local.user,at:new Date().toISOString()}));}catch(e){}
@@ -8739,9 +8740,11 @@ let SRV={modo:false,hayCuentas:false,listo:false};
 function srvActivo(){return !!(SRV.modo&&SRV.hayCuentas);}
 function srvToken(){try{return sessionStorage.getItem(SRVTOK_KEY)||"";}catch(e){return "";}}
 function srvTokenSet(t){try{if(t)sessionStorage.setItem(SRVTOK_KEY,t);else sessionStorage.removeItem(SRVTOK_KEY);}catch(e){}}
-async function srvApi(method,ruta,body){
+async function srvApi(method,ruta,body,conToken){
   const res=await fetch(ruta,{method,cache:"no-store",
-    headers:Object.assign({"x-investor-session":srvToken()},body?{"Content-Type":"application/json"}:{}),
+    headers:Object.assign({"x-investor-session":srvToken()},
+      conToken?{"x-investor-token":((typeof CLOUD!=="undefined"&&CLOUD&&CLOUD.token)||"")}:{},
+      body?{"Content-Type":"application/json"}:{}),
     body:body?JSON.stringify(body):undefined});
   let j=null;try{j=await res.json();}catch(e){}
   if(!res.ok){const e=new Error((j&&j.error)||("HTTP "+res.status));e.code=res.status;e.data=j||{};throw e;}

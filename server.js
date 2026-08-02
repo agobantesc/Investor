@@ -267,9 +267,14 @@ const server = http.createServer((req, res) => {
     if (p === "/api/auth/estado" && req.method === "GET")
       return sendJSON(res, 200, { hayCuentas: users.length > 0, servidor: true, minPass: PW_MIN });
 
-    /* PRIMER ADMINISTRADOR: solo se permite cuando todavía no hay ninguna cuenta */
+    /* PRIMER ADMINISTRADOR: solo cuando todavía no hay ninguna cuenta Y con el TOKEN del servidor.
+       Sin el token, en una URL pública el primero que llegara se quedaría con la cuenta de administrador —
+       "aún no hay cuentas" no es una credencial. El token lo tiene quien administra el servicio (panel de
+       Render → SYNC_TOKEN), y ya está pegado en Investor para los respaldos. */
     if (p === "/api/auth/bootstrap" && req.method === "POST") {
       if (users.length) return sendJSON(res, 409, { error: "ya existe al menos una cuenta" });
+      if (!TOKEN) return sendJSON(res, 503, { error: "SYNC_TOKEN no está configurado en el servidor (panel de Render → Environment)" });
+      if (!authOK(req)) return sendJSON(res, 401, { error: "para crear la primera cuenta hace falta el token del servidor (⚙ Configuración → Respaldo → Nube)" });
       return leerCuerpo(j => {
         const user = String(j.user || "").trim(), name = String(j.name || "").trim() || user;
         if (user.length < 2) return sendJSON(res, 400, { error: "el usuario debe tener al menos 2 caracteres" });
