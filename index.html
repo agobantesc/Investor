@@ -7916,8 +7916,8 @@ function viewCambios(){
   if(cambState.pid==null||String(cambState.pid)!==String(p.id)){cambState.pid=p.id;cambSave();}
   const R=cambCompute(p);
   // mismo patrón de formulario que Markowitz: etiqueta arriba y campo debajo, en una grilla .mc-form
-  const selProj=`<label class="mc-fld">Cartera a simular<select id="cambproj">${ps.map(x=>`<option value="${x.id}"${String(x.id)===String(p.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}</select></label>`;
-  if(!R||!R.MA)return banner+card("Cartera a simular","Elige sobre cuál cartera quieres probar los cambios",`<div class="mc-form">${selProj}</div>`)
+  const selProj=`<label class="mc-fld">Proyecto<select id="cambproj">${ps.map(x=>`<option value="${x.id}"${String(x.id)===String(p.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}</select></label>`;
+  if(!R||!R.MA)return banner+card("Proyecto a simular","Elige sobre qué proyecto quieres probar los cambios",`<div class="mc-form">${selProj}</div>`)
     +notecard("Esta cartera aún no tiene una compra registrada con la que calcular sus parámetros. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
   const A=R.MA,B=R.MB;
   const f2=v=>(v==null?"—":(+v).toFixed(2));
@@ -7967,7 +7967,7 @@ function viewCambios(){
       return `<tr${ap?"":' style="opacity:.5"'}><td class="r t-idx">${i+1}</td><td><span class="badge ${o.side==="sell"?"neg":"pos"}">${o.side==="sell"?"Venta":"Compra"}</span></td><td><b>${o.t}</b></td><td class="r">${(+o.shares||0).toLocaleString("es-CL",{maximumFractionDigits:2})}${ap&&ap.shares!==+o.shares?` <span style="color:${amber}" title="Ajustada a las acciones disponibles">→ ${ap.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</span>`:""}</td><td class="r">${fmtP(+o.price||0)}</td><td class="r">${fmtCLP(Math.round(monto))}</td><td class="r" style="color:${red}">${fee?fmtCLP(fee):"—"}</td><td class="r" style="font-weight:700;color:${efec>=0?green:ink}">${ap?((efec>=0?"+":"−")+fmtCLP(Math.abs(Math.round(efec)))):"—"}</td><td class="r"><button class="wbtn del" data-cambdel="${i}" title="Quitar de la simulación">✕</button></td></tr>`;}).join("")
     }</tbody>${R.nOps?`<tfoot><tr><td colspan="5">Total simulado · ${R.nOps} operación${R.nOps!==1?"es":""}</td><td class="r">${fmtCLP(Math.round(R.comprado+R.vendido))}</td><td class="r" style="color:${red}">${fmtCLP(R.fees)}</td><td class="r" style="color:${R.caja>=0?green:ink}">${(R.caja>=0?"+":"−")+fmtCLP(Math.abs(Math.round(R.caja)))}</td><td></td></tr></tfoot>`:""}</table></div>`:"";
   const avisosHtml=R.avisos.length?`<div class="note" style="margin-top:11px;border-left-color:var(--amber)">${R.avisos.map(a=>`<div>Operación ${a.i+1}: ${a.txt}</div>`).join("")}</div>`:"";
-  const setup=card("Cartera y operaciones a simular","Elige la cartera y encola las compras y ventas que quieres probar · no se guarda nada en tu cartera real",
+  const setup=card("Proyecto y operaciones a simular","Elige el proyecto y encola las compras y ventas que quieres probar · no se guarda nada en tu proyecto real",
     `${form}
      <div class="mc-strip">
        <span><span class="k">Cartera actual</span> <span class="v">${R.nombres0} ${R.nombres0===1?"acción":"acciones"}</span></span>
@@ -8260,7 +8260,7 @@ function viewActiva(){
   const M=activaMetrics();
   if(!M)return banner+notecard("Este análisis necesita el <b>análisis del sistema</b> construido sobre datos reales. Sincroniza los cierres en <b>Datos</b> (con ≥2 acciones y el IPSA se arma solo) y vuelve.");
   const _ps=(typeof mkwProjects==="function")?mkwProjects():[];
-  if(!_ps.length)return banner+notecard("Elige una cartera para mirar tu operativa real. Necesitas un <b>proyecto con seguimiento</b>: créalo en <b>Simulación → Constructor</b> y registra su <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
+  if(!_ps.length)return banner+notecard("Elige un proyecto para mirar tu operativa real. Necesitas un <b>proyecto con seguimiento</b>: créalo en <b>Simulación → Constructor</b> y registra su <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
   const PA=_ps.find(x=>String(x.id)===String(actProjId))||_ps[0];
   if(String(actProjId)!==String(PA.id)){actProjId=PA.id;try{lsSet("inv_act_proj",actProjId);}catch(e){}}
   const rt=M.rt,mn=M.minimo;
@@ -8269,7 +8269,7 @@ function viewActiva(){
   const winSeg=`<div class="home-seg" role="group" aria-label="Ventana de días" style="align-self:stretch">${[20,60,120].map(v=>`<button data-actwin="${v}" class="${actWin===v?"on":""}" title="Últimos ${v} días hábiles con cierre real" style="flex:1">${v}d</button>`).join("")}</div>`;
   const escala=card("Cartera y costo de operar","La estrategia opera siempre al menos el monto mínimo rentable, así que el costo de cada vuelta es fijo · las propuestas de abajo no dependen del tamaño de la orden",
     `<div class="mc-form">
-       <label class="mc-fld">Cartera<select id="actproj">${_ps.map(x=>`<option value="${x.id}"${String(x.id)===String(PA.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}</select></label>
+       <label class="mc-fld">Proyecto<select id="actproj">${_ps.map(x=>`<option value="${x.id}"${String(x.id)===String(PA.id)?" selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}</select></label>
        <label class="mc-fld">Ventana de análisis${winSeg}</label>
      </div>
      <div class="tiles" style="margin-top:14px">
@@ -9247,7 +9247,7 @@ function projActivate(pid){const p=PROJECTS.find(x=>String(x.id)===String(pid));
 /* ===================================================================== */
 let mcState=null;
 function mcRandn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
-/* CARTERA A SIMULAR: se elige de una LISTA (igual que Markowitz) y los parámetros salen solos de ella —
+/* PROYECTO A SIMULAR: se elige de una LISTA (igual que Markowitz) y los parámetros salen solos de él —
    capital = valor actual de la cartera, μ = su E(R) CAPM, σ = su volatilidad (refrescados con el análisis
    real vigente vía projSyncReal). Sin cartera elegida, quedan los del mercado (IPSA) y se ajustan a mano. */
 function mcProjList(){return (typeof mkwProjects==="function")?mkwProjects():[];}
@@ -9493,7 +9493,7 @@ function viewMontecarlo(){
   const hzns=[1,3,5,10],pathsOpts=[200,500,1000];
   const betaBanner=`<div class="mc-beta">🧪 <b>Montecarlo · beta</b> — módulo experimental de proyección probabilística. Resultados estadísticos con fines educativos; no es asesoría ni garantía de rentabilidad.</div>`;
   const _ps=mcProjList();
-  const projSel=`<label class="mc-fld">Cartera a simular<select data-mc-proj aria-label="Cartera a simular">${_ps.map(x=>`<option value="${x.id}" ${st.projId===x.id?"selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}<option value="" ${st.projId==null?"selected":""}>— Manual / mercado —</option></select></label>`;
+  const projSel=`<label class="mc-fld">Proyecto<select data-mc-proj aria-label="Proyecto a simular">${_ps.map(x=>`<option value="${x.id}" ${st.projId===x.id?"selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}<option value="" ${st.projId==null?"selected":""}>— Manual / mercado —</option></select></label>`;
   const ctrl=`<div class="mc-form">
       ${projSel}
       <label class="mc-fld">Capital inicial (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mc="v0" value="${v0}"></label>
