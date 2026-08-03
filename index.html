@@ -1155,6 +1155,13 @@
   .prj-act{padding:.4rem .75rem;font-size:12px;}
   .prj-del{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--muted);cursor:pointer;font-size:13px;flex-shrink:0;}
   .prj-del:hover{color:var(--red);border-color:var(--red);}
+  /* archivar: mismo botón cuadrado que eliminar, pero es una acción reversible — no se pinta de rojo */
+  .prj-arc{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--muted);cursor:pointer;font-size:13px;flex-shrink:0;}
+  .prj-arc:hover{color:var(--accent);border-color:var(--accent);}
+  /* proyecto archivado: apagado a la vista (borde discontinuo, menos tinta) sin esconder sus cifras */
+  .prj-card.arch{border-style:dashed;background:var(--soft);}
+  .prj-card.arch .prj-metrics,.prj-card.arch .prj-links{opacity:.78;}
+  .prj-archnote{font-size:11px;color:var(--muted);font-weight:600;line-height:1.45;}
   .prj-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;margin:14px 0;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
   .prj-m{display:flex;flex-direction:column;gap:3px;} .prj-m .l{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:800;} .prj-m b{font-size:15px;color:var(--navy);font-weight:800;letter-spacing:-.3px;}
   .prj-links{display:flex;flex-direction:column;gap:9px;}
@@ -1694,6 +1701,16 @@
   .tw th.c,.tw td.c{text-align:center;}
   /* Badges dentro de tablas: mismo alto, sin empujar la fila */
   .tw td .badge{vertical-align:middle;}
+  /* ── PIES DE TABLA ALINEADOS CON SU PROPIA TABLA ──────────────────────────────────────────────
+     Causa medida de que la SML (y toda tabla con tfoot) se viera desalineada: el padding horizontal
+     de las celdas solo estaba declarado en `tbody td`. Las filas de tfoot — el portafolio, el IPSA,
+     los totales — se quedaban con padding 0 y su texto caía 14,4 px a la DERECHA del de las filas
+     de arriba y del encabezado. Mismo padding para thead, tbody y tfoot: una sola rejilla. ── */
+  tfoot td,tfoot th{padding:.72rem .9rem;}
+  .tbl-compact tfoot td,.tbl-compact tfoot th{padding-top:7px;padding-bottom:7px;}
+  /* letras griegas en encabezados: `text-transform:uppercase` las convierte en Β y Α (que se leen
+     como B y A latinas). Cualquier β/α/σ/μ de una cabecera va dentro de .gl */
+  .tw thead th .gl,thead th .gl{text-transform:none!important;}
 </style>
 </head>
 <body>
@@ -2027,7 +2044,7 @@ function renderChrome(){
   nav+=`<div class="sgroup">Módulos</div>`;
   // "Datos" ya no vive en el menú: el sistema se actualiza solo y todo lo de datos se maneja desde ⚙ Configuración → Datos
   ["eval","sim","inv"].forEach(mid=>{const Mm=MODS[mid],on=mid===modulo;
-    nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!PROJECTS.length?'<span class="lk">🔒</span>':''}</button>`;
+    nav+=`<button class="modbtn ${on?'on':''}" data-mod="${mid}"><span class="mi">${ICO[mid]}</span>${Mm.label}${mid==='inv'&&!projVivos().length?'<span class="lk">🔒</span>':''}</button>`;
     nav+=`<div class="subtabs">`+Mm.tabs.map(t=>`<button class="tab ${(mid===modulo&&page===t.id)?'on':''}" data-page="${t.id}" data-tmod="${mid}"><span class="num">${t.n}</span>${t.label}</button>`).join("")+`</div>`;});
   document.getElementById("snav").innerHTML=nav;
   document.querySelectorAll(".modbtn").forEach(b=>b.onclick=()=>{modulo=b.dataset.mod;page=MODS[modulo].tabs[0].id;render();});
@@ -2444,12 +2461,12 @@ function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{
   const d=j.data||j;if(!d.pf_projects_v1||!Array.isArray(d.pf_projects_v1)){alert("El archivo no parece un respaldo válido.");return;}
   if(!window.confirm("Restaurar reemplazará los proyectos del cliente actual por los del respaldo. ¿Continuar?"))return;
   PROJECTS=d.pf_projects_v1;
-  activeId=(PROJECTS.find(p=>p&&p.id===d.pf_active_v1)?d.pf_active_v1:((PROJECTS[0]||{}).id||null));
+  activeId=(PROJECTS.find(p=>p&&p.id===d.pf_active_v1&&!projArchivado(p))?d.pf_active_v1:((projFallbackActivo()||{}).id||null));
   lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);if(d.pf_scenarios_v1)lsSet("pf_scenarios_v1",d.pf_scenarios_v1);
   editIdx=null;syncProj();alert("Respaldo restaurado: "+PROJECTS.length+" proyecto(s).");render();
 }catch(err){alert("No se pudo leer el respaldo: "+err.message);}};rd.readAsText(file);}
 let PF=null,WEEKS=[];
-function curProj(){return PROJECTS.find(p=>p.id===activeId)||null;}
+function curProj(){const p=PROJECTS.find(x=>x.id===activeId);return (p&&!projArchivado(p))?p:null;}   // un proyecto archivado está apagado: no puede ser el activo
 function syncProj(){PF=curProj();WEEKS=PF?PF.weeks:[];if(PF){["bp","erCapm","sig","sharpe","corrAvg"].forEach(k=>{if(typeof PF[k]!=="number"||!isFinite(PF[k]))PF[k]=0;});}}
 function saveProjects(){lsSet("pf_projects_v1",PROJECTS);lsSet("pf_active_v1",activeId);try{if(typeof pricedbIngestProjects==="function")pricedbIngestProjects();}catch(e){}}
 syncProj();
@@ -2794,7 +2811,7 @@ function simResults(){
   const projCard=card("Retorno exigido (CAPM) en el tiempo","Cómo crecería el monto si rindiera exactamente el retorno que el CAPM exige por su riesgo",projBody);
   const varData=[["Semanal",M.erW,52],["Mensual",M.erM,12],["Anual",M.erCapm,1]].map(a=>{const s=M.sig/Math.sqrt(a[2]);const v=a[1]-1.645*s;return {l:a[0],mu:a[1],s,v,loss:simState.amount*Math.max(0,-v)/100};});
   const varRows=varData.map(d=>`<tr><td style="font-weight:700">${d.l}</td><td class="tnum" style="color:${col(d.mu)}">${pc(d.mu,2)}</td><td class="tnum">${p0(d.s,2)}</td><td class="tnum" style="font-weight:800;color:${d.v<0?red:green}">${pc(d.v,2)}</td><td class="tnum" style="font-weight:700;color:${d.loss>0?red:muted}">${d.loss>0?"−"+fmtCLP(d.loss):"—"}</td></tr>`).join("");
-  const varCard=card("Value at Risk (95%)","Pérdida máxima esperada con 95% de confianza · VaR = μ − 1,645·σ · σ escalada por √tiempo",{html:`<div class="tw"><table><thead><tr><th>Período</th><th>Retorno esp. (μ)</th><th>Riesgo (σ)</th><th>VaR 95%</th><th>Pérdida máx. (CLP)</th></tr></thead><tbody>${varRows}</tbody></table></div>`,flush:true});
+  const varCard=card("Value at Risk (95%)","Pérdida máxima esperada con 95% de confianza · VaR = μ − 1,645·σ · σ escalada por √tiempo",{html:`<div class="tw"><table><thead><tr><th>Período</th><th class="r"><span class="gl">Retorno esp. (μ)</span></th><th class="r"><span class="gl">Riesgo (σ)</span></th><th>VaR 95%</th><th>Pérdida máx. (CLP)</th></tr></thead><tbody>${varRows}</tbody></table></div>`,flush:true});
   const corrM=corrCardSim(M);
   return tiles+tbl+multi+scat+sml+corrM+varCard+projCard+note;
 }
@@ -2980,6 +2997,7 @@ function genPDF(){
     .lgrow{margin:4px 0 8px;} .lgi{font-size:11px;color:#52668A;margin-right:14px;} .lgi .d{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle;}
     table{width:100%;border-collapse:collapse;font-size:11px;margin:4px 0 8px;}
     th{text-align:left;background:#EEF3FB;padding:8px 9px;border-bottom:1.5px solid #CCDBEE;font-size:9px;text-transform:uppercase;color:#52668A;letter-spacing:.4px;}
+    .gl{text-transform:none!important;}   /* β y σ en mayúsculas se convierten en Β y Σ: se leen como B y una sigma capital */
     td{padding:7px 9px;border-bottom:1px solid #F0F4FA;} td.r,th.r{text-align:right;}
     tbody tr:nth-child(even){background:#FBFCFE;} tr.tot td{font-weight:bold;background:#EFF4FB;}
     .chart{width:100%;height:auto;max-width:760px;display:block;margin:6px auto;}
@@ -2998,7 +3016,7 @@ function genPDF(){
       ${kpi("Correlación interna",M.corrAvg.toFixed(2))}${kpi("Nº de acciones",M.ws.length)}
     </div><div class="donutbox"><div class="cap">Composición</div>${donut}<div style="margin-top:10px">${dleg}</div></div></div>
     ${sh(2,"Composición detallada")}
-    <table><thead><tr><th>Acción</th><th>Empresa</th><th>Sector</th><th class="r">Peso</th><th class="r">Monto</th><th class="r">β</th><th class="r">σ</th><th class="r">Sharpe</th><th class="r">Ret. 24m</th></tr></thead><tbody>${comp}
+    <table><thead><tr><th>Acción</th><th>Empresa</th><th>Sector</th><th class="r">Peso</th><th class="r">Monto</th><th class="r"><span class="gl">β</span></th><th class="r"><span class="gl">σ</span></th><th class="r">Sharpe</th><th class="r">Ret. 24m</th></tr></thead><tbody>${comp}
       <tr class="tot"><td>TOTAL</td><td></td><td></td><td class="r">100%</td><td class="r">${fmtCLP(simState.amount)}</td><td class="r">${M.bp.toFixed(2)}</td><td class="r">${M.sig.toFixed(1)}%</td><td class="r">${M.sharpe.toFixed(2)}</td><td class="r">${(M.retH>=0?"+":"")+M.retH.toFixed(1)}%</td></tr></tbody></table>
     ${sh(3,"Comportamiento histórico · "+winLong())}
     <div class="lgrow">${bleg}</div>${behav}
@@ -3011,7 +3029,7 @@ function genPDF(){
     ${heatHtml}
     <div class="note">Correlación de los retornos mensuales entre las acciones del portafolio (verde = baja, mejor diversificación; rojo = alta). Correlación media interna <b>${M.corrAvg.toFixed(2)}</b>. Par más diversificador: <b>${cbest[1]} + ${cbest[2]} = ${cbest[0].toFixed(2)}</b>; par más correlacionado: <b>${cworst[1]} + ${cworst[2]} = ${cworst[0].toFixed(2)}</b>. Cuanto menor la correlación, mayor la reducción de riesgo al combinar las posiciones.</div>
     ${sh(6,"Retornos esperados (CAPM) y Value at Risk (95%)","pb")}
-    <table><thead><tr><th>Escala</th><th class="r">Retorno esperado μ</th><th class="r">Riesgo σ</th><th class="r">VaR 95%</th><th class="r">Pérdida máx. (CLP)</th></tr></thead><tbody>${varRows}</tbody></table>
+    <table><thead><tr><th>Escala</th><th class="r">Retorno esperado <span class="gl">μ</span></th><th class="r">Riesgo <span class="gl">σ</span></th><th class="r">VaR 95%</th><th class="r">Pérdida máx. (CLP)</th></tr></thead><tbody>${varRows}</tbody></table>
     <div class="note">El VaR 95% indica que, con 95% de confianza, la pérdida del portafolio no debería superar ese porcentaje (ni ese monto) en el período correspondiente, bajo el supuesto de distribución normal de retornos.</div>
     ${sh(7,"Retorno exigido (CAPM) en el tiempo","pb")}
     <div class="note" style="margin-bottom:10px">Crecimiento del capital AL RETORNO EXIGIDO por CAPM (${M.erCapm.toFixed(2)}% anual) — una vara de comparación, no una proyección de rentabilidad — en escala <b>${proj}</b> y horizonte de <b>${hzn} ${uni}</b>. Valor al final si rinde exactamente lo exigido: <b>${fmtCLP(fvv)}</b> (${((fvv/simState.amount-1)*100).toFixed(1)}%).</div>
@@ -3390,12 +3408,17 @@ function attachInvNew(){
 }
 function viewInv(){
   syncProj();
-  if(!PROJECTS.length) return `<div class="locked"><div class="lbadge"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+  // sin proyectos operativos: son dos situaciones distintas y decir la equivocada confunde — "no tienes
+  // ninguno" cuando en realidad están todos archivados suena a que se perdieron
+  if(!projVivos().length) return `<div class="locked"><div class="lbadge"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
     <div style="font-size:19px;font-weight:800;color:var(--navy)">Módulo de Inversión</div>
-    <div class="note" style="max-width:560px;margin:13px auto 0;border:none;background:none">Aún no hay proyectos de inversión. Ve a <b>Proyectos</b> y pulsa <b>➕ Nueva inversión</b> para crear tu primera cartera (eliges acciones y monto), o ármala en <b>Simulación → Constructor</b>.</div><div style="margin-top:18px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap"><button class="btn btn-pri" data-gomod="proyectos">📁 Ir a Proyectos</button></div></div>`;
-  if(!PF){activeId=PROJECTS[0].id;syncProj();}
+    <div class="note" style="max-width:560px;margin:13px auto 0;border:none;background:none">${PROJECTS.length
+      ?`Todos tus proyectos están <b>archivados</b>. Sus datos siguen intactos —contabilidad, comisiones y su parte del patrimonio del Inicio—; para volver a operar uno, <b>reactívalo</b> en Proyectos.`
+      :`Aún no hay proyectos de inversión. Ve a <b>Proyectos</b> y pulsa <b>➕ Nueva inversión</b> para crear tu primera cartera (eliges acciones y monto), o ármala en <b>Simulación → Constructor</b>.`}</div><div style="margin-top:18px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap"><button class="btn btn-pri" data-gomod="proyectos">📁 Ir a Proyectos</button></div></div>`;
+  if(!PF){activeId=(projFallbackActivo()||{}).id||null;syncProj();}
+  if(!PF)return notecard("No hay ningún proyecto operativo. Reactiva uno en <b>Proyectos</b>.");
   if(projIsEmpty(PF)){   // proyecto sin inversión definida: guía o formulario
-    const bar=card("Proyectos de inversión","Gestiona cada proyecto por separado · crea o activa proyectos en el módulo Proyectos.",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${(""+p.name).replace(/</g,"&lt;")} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" data-gomod="proyectos">📁 Proyectos</button>`);
+    const bar=card("Proyectos de inversión","Gestiona cada proyecto por separado · crea o activa proyectos en el módulo Proyectos.",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+projVivos().map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${(""+p.name).replace(/</g,"&lt;")} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" data-gomod="proyectos">📁 Proyectos</button>`);
     if(invNew) return bar+invNewForm();
     return bar+projGuidedSteps(PF);
   }
@@ -3416,14 +3439,14 @@ function viewInvActive(){
   }}catch(e){}
   const fr=FREQ[PF.freq||"diario"];
   const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",
-    `<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
+    `<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+projVivos().map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const _b0=WEEKS[0];
   // _real.tot = capital de la COMPRA INICIAL (weeks[0].qty) — se mantiene como referencia "capital real vs objetivo"
   // (PF.amount = plan). β/E(R)/σ, en cambio, se leen de PF.* (tenencias ACTUALES), coherente con opDo y el agente.
   const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;return {per,tot};})():null;
   const chips=(_real?_real.per.filter(x=>x.m>1e-9).map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
   const _sub=_real?`Aplicada el ${fD(PF.date)} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`:`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`;
-  const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
+  const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="archpf" title="Archivar: lo apaga sin perder ni un dato">🗄 Archivar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   if(editIdx!=null&&!WEEKS[editIdx])editIdx=null;   // el índice en edición puede quedar de otro proyecto: nunca editar un registro inexistente
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
   const compraMode=isFirst||editIdx===0;
@@ -3544,7 +3567,7 @@ function viewInvActive(){
   const betaNote=`<div class="note" style="margin-top:11px"><b>Las dos β por acción.</b> La <b>β esperada</b> viene del análisis del sistema (su sensibilidad al IPSA según la historia larga: ${winLong?winLong():"la ventana del análisis"}). La <b>β realizada</b> se estima por regresión de los retornos de esa acción contra el IPSA <b>solo en tu período de seguimiento</b>, usando únicamente fechas con cierre REAL de la acción y del índice (${_bReady.length?("hasta "+Math.max(..._bReady.map(p=>p.nBeta))+" observaciones"):"aún sin observaciones suficientes"}); se muestra desde 4 observaciones. Mide al <b>activo</b>, no a tu timing de compras.
     ${_bDiv.length?`Hoy se despega${_bDiv.length>1?"n":""} de lo esperado: ${_bDiv.slice(0,3).map(p=>`<b style="color:${p.hd.c}">${p.hd.t}</b> (${p.betaR.toFixed(2)} vs ${p.betaExp.toFixed(2)} esperado)`).join(", ")} — en una muestra corta esto suele ser ruido; si persiste, la acción cambió de carácter.`:(_bReady.length?"Ninguna se despega materialmente de su β esperada (todas dentro de ±0,30).":"")}
     ${_bPend.length?`Sin β realizada todavía (muestra insuficiente): <b>${_bPend.map(p=>p.hd.t).join(", ")}</b>.`:""} El símbolo <b style="color:${amber}">⚠</b> marca un <b>r² bajo</b> (&lt;10%): el IPSA explica poco su movimiento y esa β es poco confiable.</div>`;
-  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · cuántas acciones tienes de cada papel, P. compra promedio (comparable con tu corredora), Δ del último período, <b>β esperada vs realizada</b>, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Cantidad de acciones en cartera">Acciones</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r" title="β del análisis del sistema (historia larga): cuánto se espera que la acción se mueva con el IPSA">β esperada</th><th class="r" title="β estimada por regresión con los cierres reales de TU período de seguimiento">β realizada</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${betaNote}${psNote}</div>`,flush:true});
+  const psTbl=card("Detalle y contribución por acción","Quién mueve tu cartera · cuántas acciones tienes de cada papel, P. compra promedio (comparable con tu corredora), Δ del último período, <b>β esperada vs realizada</b>, ganancia y aporte al retorno total",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r" title="Cantidad de acciones en cartera">Acciones</th><th class="r" title="Costo registrado ÷ acciones — comparable con el «P. Compra» de tu corredora">P. compra</th><th class="r">Precio actual</th><th class="r">Δ ${fr.u}</th><th class="r" title="β del análisis del sistema (historia larga): cuánto se espera que la acción se mueva con el IPSA"><span class="gl">β</span> esperada</th><th class="r" title="β estimada por regresión con los cierres reales de TU período de seguimiento"><span class="gl">β</span> realizada</th><th class="r">Valor hoy</th><th class="r">Ganancia</th><th class="r">Retorno</th><th class="r">Aporte</th></tr></thead><tbody>${psRows}</tbody></table>${_srcNote}${betaNote}${psNote}</div>`,flush:true});
   // SECCIÓN 1 · rentabilidad: portafolio vs IPSA (va ARRIBA: lo primero es cómo rinde la estrategia)
   const evoSeries=[{label:"Portafolio",c:indigo,vals:_dix.map(i=>+(100*(1+IM.series[i].ret)).toFixed(2)),w:2.7,op:1},{label:"IPSA",c:"#475569",vals:_dix.map(i=>+(100*(1+IM.series[i].ipsaRet)).toFixed(2)),dash:true,w:2.4,op:0.95}];
   const evoChart=nd>=2?card("1 · Rentabilidad: portafolio vs IPSA","Base 100 desde la compra · ¿tu cartera rinde más o menos que el mercado?",svgMulti({series:evoSeries,labels:dates,h:310,id:"invevo",unit:"",signBase:100,ttfmt:ret100}),`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>Portafolio</span><span><span class="lgdot" style="background:#475569"></span>IPSA</span></div>`):"";
@@ -3679,11 +3702,11 @@ function viewInvActive(){
       return `<div class="tw tbl-compact" style="margin-top:15px"><table>
         <thead><tr><th>Acción</th>
           <th class="r" title="Cuánto pesa hoy en el valor de la cartera">Peso</th>
-          <th class="r" title="β esperada: la del análisis, la que se usa para exigir retorno">β esp.</th>
-          <th class="r" title="β realizada: regresión de sus retornos contra el IPSA en este período">β real.</th>
-          <th class="r" title="Crecimiento de su precio de mercado desde que entró a la cartera">Retorno del período</th>
+          <th class="r" title="β esperada: la del análisis, la que se usa para exigir retorno"><span class="gl">β</span> esp.</th>
+          <th class="r" title="β realizada: regresión de sus retornos contra el IPSA en este período"><span class="gl">β</span> real.</th>
+          <th class="r" title="Crecimiento de su precio de mercado desde que entró a la cartera">Retorno período</th>
           <th class="r" title="Rf + β × prima, compuesto a los días transcurridos">Exigido CAPM</th>
-          <th class="r" title="Retorno real menos el exigido por su β">α de Jensen</th>
+          <th class="r" title="Retorno real menos el exigido por su β"><span class="gl">α</span> Jensen</th>
           <th>Veredicto</th></tr></thead>
         <tbody>${cuerpo}</tbody>${pie}</table></div>`;
     })();
@@ -3820,13 +3843,14 @@ function opValHTML(t,price){
 }
 function viewOperar(){
   syncProj();
-  if(!PROJECTS.length) return viewInv();
-  if(!PF){activeId=PROJECTS[0].id;syncProj();}
+  if(!projVivos().length) return viewInv();
+  if(!PF){activeId=(projFallbackActivo()||{}).id||null;syncProj();}
+  if(!PF)return viewInv();
   try{if(projFixTargets(PF)){saveProjects();}}catch(e){}   // repara objetivo de acciones incorporadas después (0%) — mismo criterio que el seguimiento
   const fr=FREQ[PF.freq||"diario"];
-  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+PROJECTS.map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
+  const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+projVivos().map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
   const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
-  const summary=card(PF.name,`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
+  const summary=card(PF.name,`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="archpf" title="Archivar: lo apaga sin perder ni un dato">🗄 Archivar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const IM=invMetrics();
   if(!IM)return projbar+summary+notecard("Primero registra la <b>compra inicial</b> en la pestaña <b>Ingresar datos</b>. Luego podrás comprar y vender aquí.");
   const L=IM.last,V=L.val,lastW=WEEKS[WEEKS.length-1];
@@ -4172,8 +4196,12 @@ function attachInv(){
   document.querySelectorAll("[data-ctxtab]").forEach(b=>b.onclick=()=>{contabTxTab=b.dataset.ctxtab;render();});
   const rp=document.getElementById("renpf");
   if(rp)rp.onclick=()=>{const p=curProj();if(!p)return;const nm=window.prompt("Nuevo nombre del proyecto:",p.name);if(nm!==null&&nm.trim()){p.name=nm.trim();saveProjects();syncProj();render();}};
+  // archivar/eliminar pasan por el MISMO camino que el módulo Proyectos: aviso de lo que está en juego,
+  // respaldo automático antes de borrar y limpieza de escenarios y selecciones colgadas
+  const ap=document.getElementById("archpf");
+  if(ap)ap.onclick=()=>{if(projArchivarPreguntando(activeId))render();};
   const rs=document.getElementById("resetpf");
-  if(rs)rs.onclick=()=>{if(window.confirm("¿Eliminar este proyecto y todo su seguimiento? Esta acción no se puede deshacer.")){PROJECTS=PROJECTS.filter(p=>p.id!==activeId);activeId=PROJECTS.length?PROJECTS[0].id:null;editIdx=null;saveProjects();syncProj();render();}};
+  if(rs)rs.onclick=()=>{if(projEliminarPreguntando(activeId))render();};
 }
 
 // ===== RENDER =====// ===== RENDER =====// ===== RENDER =====
@@ -4824,8 +4852,8 @@ function cpRunTool(name,input){
       // recupera si el proyecto activo quedó desincronizado (activeId vacío/rancio): usa el que tenga
       // seguimiento, o el primero. Las vistas ya hacen esto; la tool no lo hacía y el agente respondía
       // "no hay cartera activa" pese a que el usuario sí tiene una.
-      if(!PF&&PROJECTS.length){activeId=(PROJECTS.find(p=>(p.weeks||[]).length&&(p.holdings||[]).length)||PROJECTS.find(p=>(p.holdings||[]).length)||PROJECTS[0]).id;try{saveProjects();}catch(e){}syncProj();}
-      if(!PROJECTS.length||!PF)return "No hay ningún proyecto de inversión activo. Sugiere armar uno en Simulación → Constructor y aplicarlo.";
+      if(!PF&&projVivos().length){const _c=projFallbackActivo();if(_c){activeId=_c.id;try{saveProjects();}catch(e){}syncProj();}}
+      if(!PF)return "No hay ningún proyecto de inversión activo. Sugiere armar uno en Simulación → Constructor y aplicarlo.";
       const _IMw=(function(){try{return invMetrics();}catch(e){return null;}})();
       const _V=(_IMw&&_IMw.last)?_IMw.last.val:0;
       const _aw={};if(_IMw&&_V>0)_IMw.perStock.forEach(p=>{_aw[p.hd.t]=+(p.val/_V*100).toFixed(1);});
@@ -7073,7 +7101,7 @@ function cpSystemDynamic(){
   // ── EJE CARTERA (ortogonal; se anexa en TODOS los estados) ──
   let pfName=null,pfHoldings=0,hasTracking=false;
   try{syncProj();
-    if(!PF&&(PROJECTS||[]).length){const c=(PROJECTS.find(p=>(p.weeks||[]).length&&(p.holdings||[]).length)||PROJECTS.find(p=>(p.holdings||[]).length)||PROJECTS[0]);if(c){activeId=c.id;syncProj();}}
+    if(!PF&&projVivos().length){const c=projFallbackActivo();if(c){activeId=c.id;syncProj();}}
     if(PF&&(PF.holdings||[]).length>0){pfName=PF.name;pfHoldings=PF.holdings.length;hasTracking=(typeof invMetrics==="function")&&!!invMetrics();}   // solo cartera con holdings reales (una copia de respaldo vacía no cuenta)
   }catch(e){}
   const pfNote=pfName
@@ -7718,9 +7746,9 @@ function viewContab(){
     ${tile("Dividendos recibidos",T.div?("+"+fmtCLP(T.div)):"—","ganancia cobrada en efectivo",indigo,T.div?green:muted)}
     ${tile("Ganancia no realizada",(T.unreal>=0?"+":"")+fmtCLP(T.unreal),"posiciones abiertas",indigo,T.unreal>=0?green:red)}
     ${tile("Rentabilidad total",(totPct>=0?"+":"")+totPct.toFixed(2)+"%",(totGain>=0?"+":"")+fmtCLP(totGain),indigo,totGain>=0?green:red)}</div>`;
-  const projRows=per.map(({p,A})=>{const s=projSummary(p);const act=p.id===activeId;
-    return `<tr><td class="cut" title="${(""+p.name).replace(/</g,"&lt;")}"><b style="color:var(--navy)">${(""+p.name).replace(/</g,"&lt;")}</b>${act?' <span class="badge pos" style="font-size:8.5px">ACTIVO</span>':""}</td><td>${fD(p.date)||"—"}</td><td class="r">${fmtCLP(s.invested)}</td><td class="r">${s.hasData?fmtCLP(s.value):"—"}</td><td class="r" style="color:${s.gain>=0?green:red};font-weight:700">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</td><td class="r" style="color:${s.gainPct>=0?green:red};font-weight:700">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</td><td class="r" style="color:var(--muted)">${A?A.L.tx.length:0}</td></tr>`;}).join("");
-  const projCard=card("Por proyecto","Capital invertido, valor actual y rentabilidad de cada proyecto",
+  const projRows=per.map(({p,A})=>{const s=projSummary(p);const arch=projArchivado(p),act=!arch&&p.id===activeId;
+    return `<tr><td class="cut" title="${(""+p.name).replace(/</g,"&lt;")}"><b style="color:var(--navy)">${(""+p.name).replace(/</g,"&lt;")}</b>${act?' <span class="badge pos" style="font-size:8.5px">ACTIVO</span>':""}${arch?' <span class="badge neu" style="font-size:8.5px" title="Archivado: fuera de la operativa, pero su contabilidad sigue contando aquí">ARCHIVADO</span>':""}</td><td>${fD(p.date)||"—"}</td><td class="r">${fmtCLP(s.invested)}</td><td class="r">${s.hasData?fmtCLP(s.value):"—"}</td><td class="r" style="color:${s.gain>=0?green:red};font-weight:700">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</td><td class="r" style="color:${s.gainPct>=0?green:red};font-weight:700">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</td><td class="r" style="color:var(--muted)">${A?A.L.tx.length:0}</td></tr>`;}).join("");
+  const projCard=card("Por proyecto","Capital invertido, valor actual y rentabilidad de cada proyecto"+(projArchivados().length?" · los proyectos archivados siguen incluidos: su historia no se borra al apagarlos":""),
     `<div class="tw tbl-compact"><table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th><th class="r">Ops.</th></tr></thead><tbody>${projRows}</tbody></table></div>`);
   const allTx=[];withOps.forEach(({p,A})=>A.L.tx.forEach(x=>allTx.push(Object.assign({proj:p.name,projId:p.id},x))));
   allTx.sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:0));   // orden CRONOLÓGICO: la más antigua arriba (libro contable)
@@ -8026,7 +8054,7 @@ function viewCambios(){
         <td class="r" style="font-weight:700">${r.w1>0.005?r.w1.toFixed(1)+"%":"—"}</td>
         <td class="r">${Math.abs(r.w1-r.w0)<0.05?'<span style="color:var(--faint)">—</span>':`<span style="color:${r.w1>r.w0?green:red};font-weight:700">${(r.w1>r.w0?"+":"−")+Math.abs(r.w1-r.w0).toFixed(1)} pts</span>`}</td></tr>`;}).join("");
     return card("Composición antes y después","Acciones y peso de cada posición · el peso es sobre el costo, igual que el β esperado",
-      `<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">β</th><th class="r">Acciones ahora</th><th class="r">Acciones simuladas</th><th class="r">Peso ahora</th><th class="r">Peso simulado</th><th class="r">Cambio</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+      `<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r"><span class="gl">β</span></th><th class="r">Acciones ahora</th><th class="r">Acciones simuladas</th><th class="r">Peso ahora</th><th class="r">Peso simulado</th><th class="r">Cambio</th></tr></thead><tbody>${rows}</tbody></table></div>`);
   })():"";
   const guardar=R.nOps&&B?`<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:2px"><button class="btn" id="cambscen">💾 Guardar como escenario</button><span class="mc-hint" style="margin:0;align-self:center">Lo deja en <b>Comparación de escenarios</b> para contrastarlo con otras carteras. Sigue sin tocar tu cartera real.</span></div>`:"";
   return banner+setup+paramCard+cajaCard+compCard+(guardar?card("Guardar la simulación","",guardar):"");
@@ -8139,7 +8167,7 @@ function _normCdf(z){
    concreta: sin esto, una propuesta de venta ignora si la comisión se come el resultado. */
 function activaHoldings(soloP){
   const out={};
-  ((soloP?[soloP]:PROJECTS)||[]).forEach(p=>{
+  ((soloP?[soloP]:projVivos())||[]).forEach(p=>{
     try{const A=contabAggFor(p);if(!A||!A.rows)return;
       A.rows.forEach(r=>{if(!(r.sh>1e-9))return;
         const o=out[r.t]||(out[r.t]={t:r.t,sh:0,costo:0,valor:0,proyectos:[]});
@@ -8231,7 +8259,7 @@ function activaMetrics(){
 /* DIAGNÓSTICO DE LA OPERATIVA REAL: qué tan activo eres de verdad y cuánto te está costando */
 function activaOperativa(soloP){
   const out=[];
-  (soloP?[soloP]:PROJECTS).forEach(p=>{
+  (soloP?[soloP]:projVivos()).forEach(p=>{
     try{withProject(p,function(){
       const L=ledger(),IM=invMetrics();
       if(!L||!IM||!L.tx.length)return;
@@ -8296,7 +8324,7 @@ function viewActiva(){
       <td class="r" style="color:${opera?green:red};font-weight:700" title="${opera?"Un día típico se mueve más que el costo de ida y vuelta: la acción da espacio para operarla":"Un día típico NO alcanza a pagar la ida y vuelta: rotarla seguido destruye rentabilidad"}">${r.dias!=null?r.dias.toFixed(1):"—"}</td>
       <td class="r" title="Correlación media con las demás acciones en la ventana diaria: más baja = aporta más diversificación">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td></tr>`;}).join("");
   const rankCard=card("Ranking de rotación",`${M.rows.length} acciones · ventana de ${M.win} días hábiles (${fD(M.desde)} → ${fD(M.hasta)}) · el score premia tendencia y fuerza relativa, y castiga que la comisión se coma el movimiento`,
-    `<div class="tw"><table><thead><tr><th class="r t-idx">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r">σ anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
+    `<div class="tw"><table><thead><tr><th class="r t-idx">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r"><span class="gl">σ</span> anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
      <div class="note" style="margin-top:11px"><b>Días para pagar</b> dice si una acción se mueve lo suficiente para operarla: divide el costo de ida y vuelta (<b>${rt.pct.toFixed(2)}%</b>, fijo al operar desde el mínimo) por lo que se mueve un día típico. Si necesitas <b>más de un día</b> de movimiento solo para empatar, cada vuelta corta te resta. <b>Corr. media</b> baja = esa acción se mueve distinto al resto: es la que de verdad diversifica cuando amplías el número de nombres.</div>`);
   // ── 2b · HORIZONTES: cuántos días para pagar la comisión y para superar el umbral de venta ──
   const HOLD=activaHoldings(PA);   // posiciones de la cartera ELEGIDA arriba
@@ -8383,7 +8411,7 @@ function viewActiva(){
       return Math.sqrt(Math.max(0,v))*100*Math.sqrt(252);};
     const ns=[2,3,5,8,12,Math.min(20,M.rows.length)].filter((v,i,a)=>v<=M.rows.length&&a.indexOf(v)===i);
     const curva=ns.map(n=>({n,s:sigN(n)})).filter(x=>x.s!=null);
-    const barras=curva.length?`<div class="tw"><table><thead><tr><th class="r">Acciones en cartera</th><th class="r">σ anual de la cartera</th><th class="r">Baja vs la anterior</th></tr></thead><tbody>${curva.map((x,i)=>`<tr><td class="r"><b>${x.n}</b></td><td class="r">${x.s.toFixed(1)}%</td><td class="r" style="color:${i?(x.s<curva[i-1].s?green:red):"var(--faint)"}">${i?((x.s-curva[i-1].s>=0?"+":"")+(x.s-curva[i-1].s).toFixed(2)+" pts"):"—"}</td></tr>`).join("")}</tbody></table></div>`:"";
+    const barras=curva.length?`<div class="tw"><table><thead><tr><th class="r">Acciones en cartera</th><th class="r"><span class="gl">σ</span> anual de la cartera</th><th class="r">Baja vs la anterior</th></tr></thead><tbody>${curva.map((x,i)=>`<tr><td class="r"><b>${x.n}</b></td><td class="r">${x.s.toFixed(1)}%</td><td class="r" style="color:${i?(x.s<curva[i-1].s?green:red):"var(--faint)"}">${i?((x.s-curva[i-1].s>=0?"+":"")+(x.s-curva[i-1].s).toFixed(2)+" pts"):"—"}</td></tr>`).join("")}</tbody></table></div>`:"";
     return card("¿Cuánto suma agregar más nombres?","Riesgo de una cartera equiponderada armada con las acciones MENOS correlacionadas entre sí · el beneficio de diversificar se agota rápido",
       `<div class="home-grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div><div class="genl" style="margin:0 0 8px">Las que más diversifican (correlación media baja)</div><div class="home-mvgrid">${li(mejores,green)}</div></div>
@@ -9239,6 +9267,47 @@ function projDefaultScenario(p){
     m:{bp:p.bp||0,erCapm:p.erCapm||0,retH:(p.erCapm||0),sig:p.sig||0,sharpe:p.sharpe||0,corrAvg:p.corrAvg||0},comp:comp};
 }
 function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p||!id)return;const L=projLinks(p),arr=kind==="analysis"?L.analyses:L.scenarios,s=String(id);if(arr.map(String).indexOf(s)<0)arr.push(s);if(kind==="analysis")L.primary=s;saveProjects();render();}
+/* ═══ ARCHIVAR UN PROYECTO ═══════════════════════════════════════════════════════════════════════
+   La alternativa a eliminarlo, y la honesta: el proyecto se APAGA (sale de la operativa — no se puede
+   activar, no aparece en los selectores de Gestión activa / Simular cambios / Markowitz / Monte Carlo,
+   no genera propuestas de compra o venta) pero NO se toca ni un dato. Su contabilidad, sus comisiones
+   con IVA, su ganancia realizada, sus dividendos y su valor siguen contando en la Contabilidad
+   consolidada y en el patrimonio del Inicio, exactamente como antes.
+   Por eso archivar es lo correcto para cerrar un proyecto: eliminar limpiaría la vista PERO también
+   borraría el resultado, y un historial sin los proyectos que salieron mal se ve mejor de lo que fue
+   (sesgo de supervivencia). Se puede reactivar cuando quieras y vuelve tal como estaba. */
+function projArchivado(p){return !!(p&&p.archived);}
+function projVivos(){return (PROJECTS||[]).filter(p=>p&&!projArchivado(p));}
+function projArchivados(){return (PROJECTS||[]).filter(p=>p&&projArchivado(p));}
+/* a cuál saltar cuando el proyecto activo deja de estarlo: se prefiere uno con seguimiento real */
+function projFallbackActivo(){const v=projVivos();
+  return v.find(p=>(p.weeks||[]).length&&(p.holdings||[]).length)||v.find(p=>(p.holdings||[]).length)||v[0]||null;}
+/* suelta las selecciones de los módulos operativos que apuntaban a un proyecto que ya no está disponible */
+function projSoltarSelecciones(pid,nuevo){
+  const nid=nuevo?nuevo.id:null;
+  try{if(String(actProjId)===String(pid)){actProjId=nid;lsSet("inv_act_proj",actProjId);}}catch(e){}
+  try{if(cambState&&String(cambState.pid)===String(pid)){cambState.pid=nid;cambState.ops=[];cambSave();}}catch(e){}
+  try{if(typeof mkwProjId!=="undefined"&&String(mkwProjId)===String(pid))mkwProjId=null;}catch(e){}
+  try{if(typeof mcState!=="undefined"&&mcState&&String(mcState.projId)===String(pid))mcState=null;}catch(e){}
+}
+function projArchivar(pid){
+  const p=PROJECTS.find(x=>String(x.id)===String(pid));
+  if(!p||projArchivado(p))return false;
+  p.archived=new Date().toISOString();
+  p.archivedDay=(typeof localDay==="function")?localDay():null;
+  if(String(activeId)===String(p.id)){const n=projFallbackActivo();activeId=n?n.id:null;editIdx=null;invNew=null;invStkSel=null;}
+  projSoltarSelecciones(p.id,projFallbackActivo());
+  saveProjects();syncProj();
+  return true;
+}
+function projReactivar(pid){
+  const p=PROJECTS.find(x=>String(x.id)===String(pid));
+  if(!p||!projArchivado(p))return false;
+  delete p.archived;delete p.archivedDay;
+  if(!curProj()){activeId=p.id;editIdx=null;}   // si no quedaba ninguno operativo, éste vuelve a ser el activo
+  saveProjects();syncProj();
+  return true;
+}
 /* ELIMINAR UN PROYECTO Y TODO LO SUYO.
    El seguimiento, la contabilidad, las comisiones y su parte del patrimonio consolidado son DERIVADOS: se
    calculan desde PROJECTS en cada render, así que desaparecen solos al quitar el proyecto y el resto se
@@ -9261,15 +9330,55 @@ function projEliminar(pid){
     aBorrar.forEach(id=>{try{purgeLinkEverywhere("scenario",id);}catch(e){}});
   }
   PROJECTS=PROJECTS.filter(x=>String(x.id)!==String(pid));
-  if(String(activeId)===String(pid))activeId=PROJECTS.length?PROJECTS[0].id:null;
+  const _n=projFallbackActivo();
+  if(String(activeId)===String(pid))activeId=_n?_n.id:null;
   saveProjects();
-  // selecciones de otros módulos que apuntaban a él: se sueltan para que elijan el primero que quede
-  try{if(String(actProjId)===String(pid)){actProjId=PROJECTS.length?PROJECTS[0].id:null;lsSet("inv_act_proj",actProjId);}}catch(e){}
-  try{if(cambState&&String(cambState.pid)===String(pid)){cambState.pid=PROJECTS.length?PROJECTS[0].id:null;cambState.ops=[];cambSave();}}catch(e){}
-  try{if(typeof mkwProjId!=="undefined"&&String(mkwProjId)===String(pid))mkwProjId=null;}catch(e){}
-  try{if(typeof mcState!=="undefined"&&mcState&&String(mcState.projId)===String(pid))mcState=null;}catch(e){}
+  projSoltarSelecciones(pid,_n);   // selecciones de otros módulos que apuntaban a él
   syncProj();
   return {escenarios:aBorrar.length};
+}
+/* resumen de lo que un proyecto aporta hoy a las cifras consolidadas — lo que está en juego al
+   archivarlo o eliminarlo. Se calcula igual que en pantalla (mismas funciones), no aparte. */
+function projLoQueTiene(p){
+  try{const IM=withProject(p,()=>invMetrics());const C=contabAggFor(p);
+    return {reg:(p.weeks||[]).length,ops:C?C.rows.length:0,
+      real:C?C.totReal:null,fees:C?(C.fees+C.feesIva):null,
+      val:IM&&IM.last?IM.last.val:null,ret:IM&&IM.last?IM.last.ret*100:null};}catch(e){return null;}
+}
+function projEscenariosPropios(p){
+  try{const mios=((p.links&&p.links.scenarios)||[]).map(String);
+    const otros=PROJECTS.filter(x=>x.id!==p.id);
+    const usado=id=>otros.some(x=>(((x.links&&x.links.scenarios)||[]).map(String)).indexOf(String(id))>=0);
+    return (SCEN||[]).map(s=>String(s.id)).filter(id=>(id==="sim_"+p.id||mios.indexOf(id)>=0)&&!usado(id)).length;}catch(e){return 0;}
+}
+/* ELIMINAR con todo dicho de frente: qué se lleva por delante, y que archivar es la salida sin pérdida */
+function projEliminarPreguntando(pid){
+  const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return false;
+  const R=projLoQueTiene(p),nEsc=projEscenariosPropios(p);
+  const det=R?("\n\nSe lleva por delante:\n• "+R.reg+" registro(s) de seguimiento y "+R.ops+" operación(es)"
+    +(R.val!=null?("\n• su valor actual ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2)+"%) dejan de contar en el patrimonio consolidado del Inicio"):"")
+    +(R.real!=null?("\n• su contabilidad: "+fmtCLP(R.real)+" de ganancia realizada y "+fmtCLP(R.fees)+" de comisiones pagadas"):"")
+    +(nEsc?("\n• "+nEsc+" escenario(s) suyos en Comparación de escenarios"):"")
+    +"\n\nTodo se recalcula sobre los proyectos que queden."
+    +"\n\nOJO: si lo cierras porque salió mal, borrarlo deja tu historial viéndose MEJOR de lo que fue."
+    +'\nSi solo quieres sacarlo de la operativa sin perder nada, usa ARCHIVAR (🗄).'):"";
+  if(!confirm('¿Eliminar el proyecto "'+p.name+'" y todo su seguimiento?'+det+"\n\nNo se puede deshacer."))return false;
+  // misma red que el resto de acciones destructivas: copia interna antes de tocar nada
+  try{if(typeof autobkSnapshot==="function")autobkSnapshot('antes de eliminar el proyecto "'+p.name+'"');}catch(e){}
+  projEliminar(p.id);return true;
+}
+/* ARCHIVAR: la confirmación dice explícitamente qué se conserva, porque el valor de archivar es eso */
+function projArchivarPreguntando(pid){
+  const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p||projArchivado(p))return false;
+  const R=projLoQueTiene(p);
+  const det="\n\nQueda apagado: sale de los selectores de Gestión activa, Simular cambios, Markowitz y Monte Carlo, "
+    +"no se puede activar y deja de generar propuestas de compra o venta."
+    +"\n\nSE CONSERVA TODO:"
+    +(R?("\n• sus "+R.reg+" registro(s) y "+R.ops+" operación(es)"
+       +(R.real!=null?("\n• su contabilidad: "+fmtCLP(R.real)+" de ganancia realizada y "+fmtCLP(R.fees)+" de comisiones con IVA"):"")
+       +(R.val!=null?("\n• su valor ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2)+"%) siguen contando en el patrimonio del Inicio"):"")):"")
+    +"\n\nPuedes reactivarlo cuando quieras y vuelve tal como está.";
+  return confirm('¿Archivar el proyecto "'+p.name+'"?'+det)?projArchivar(p.id):false;
 }
 function projDelLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;const L=projLinks(p),s=String(id);if(kind==="analysis")L.analyses=L.analyses.filter(x=>String(x)!==s);else L.scenarios=L.scenarios.filter(x=>String(x)!==s);saveProjects();render();}
 function projPrimaryAnalysis(p){const L=projLinks(p);if(L.primary&&L.analyses.map(String).indexOf(String(L.primary))>=0)return String(L.primary);return L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}
@@ -9382,7 +9491,7 @@ function attachMcHover(){
    con tope por acción). El APORTE adicional se suma al valor actual: el objetivo en $ se calcula sobre
    (valor + aporte) y, si no se permiten ventas, SOLO se reparte el aporte hacia el óptimo. */
 let mkwProjId=null,mkwMode="sharpe",mkwWmax=40,mkwAporte=0,mkwSell=true,mkwRes=null;
-function mkwProjects(){const out=[];try{CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{if((p.weeks||[]).length)out.push(p);});});}catch(e){}return out;}
+function mkwProjects(){const out=[];try{CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{if((p.weeks||[]).length&&!projArchivado(p))out.push(p);});});}catch(e){}return out;}   // los archivados están apagados: no se optimizan, no se simulan, no se operan
 function mkwCompute(){
   const ps=mkwProjects();const p=ps.find(x=>x.id===mkwProjId)||ps[0];
   if(!p)return {err:"Aún no tienes proyectos con seguimiento para optimizar."};
@@ -9614,9 +9723,10 @@ function viewProyectos(){
   const all=PROJECTS.map(p=>({p,s:projSummary(p)}));
   // la ganancia se SUMA de cada proyecto (no es valor − comprado: eso ignoraría las ventas y dividendos ya rescatados)
   const totInv=all.reduce((a,x)=>a+x.s.invested,0),totVal=all.reduce((a,x)=>a+x.s.value,0),totGain=all.reduce((a,x)=>a+(x.s.gain||0),0),totPct=totInv>0?totGain/totInv*100:0;
-  const head=card("Proyectos de inversión","Gestiona tus proyectos y lo que cada uno tiene vinculado: análisis y simulaciones · rentabilidad consolidada",
+  const _nArch=projArchivados().length,_nVivos=PROJECTS.length-_nArch;
+  const head=card("Proyectos de inversión","Gestiona tus proyectos y lo que cada uno tiene vinculado: análisis y simulaciones · rentabilidad consolidada"+(_nArch?" · los archivados siguen sumando en la contabilidad y el patrimonio":""),
     PROJECTS.length?`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-      ${tile("Proyectos",PROJECTS.length+"","de inversión",indigo,ink)}
+      ${tile("Proyectos",_nVivos+"",_nArch?("activos · "+_nArch+" archivado"+(_nArch!==1?"s":"")):"de inversión",indigo,ink)}
       ${tile("Capital invertido",fmtCLP(totInv),"suma aportada",indigo,ink)}
       ${tile("Valor actual",fmtCLP(totVal),"a últimos precios",indigo,accentT)}
       ${tile("Rentabilidad",(totGain>=0?"+":"")+fmtCLP(totGain),"ganancia/pérdida total",indigo,totGain>=0?green:red)}
@@ -9635,11 +9745,14 @@ function viewProyectos(){
     L.analyses=[];if(L.primary)L.primary=null;L.scenarios=L.scenarios.filter(id=>_validS.has(String(id)));
     if(a0||L.scenarios.length!==s0)_healed=true;});
   if(_healed)try{saveProjects();}catch(e){}
-  const cards=all.map(({p,s})=>{const active=p.id===activeId,L=projLinks(p);
+  const tarjeta=({p,s})=>{const arch=projArchivado(p),active=!arch&&p.id===activeId,L=projLinks(p);
     const sChips=L.scenarios.length?L.scenarios.map(id=>`<span class="prj-chip sc">${scenName(id)}<button class="prj-x" data-unlink="${p.id}|scenario|${id}">✕</button></span>`).join(""):'<span class="prj-none">— sin simulaciones —</span>';
-    return `<div class="prj-card ${active?"on":""}">
-      <div class="prj-head"><div style="flex:1;min-width:0"><span class="prj-namewrap"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}" title="Haz clic para editar el nombre del proyecto" aria-label="Nombre del proyecto"></span><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${fD(p.date)||"—"}</div></div>
-        ${active?'<span class="badge pos">ACTIVO</span>':`<button class="btn prj-act" data-pact="${p.id}">Activar</button>`}<button class="prj-del" data-pdel="${p.id}" title="Eliminar proyecto">🗑</button></div>
+    return `<div class="prj-card ${active?"on":""}${arch?" arch":""}">
+      <div class="prj-head"><div style="flex:1;min-width:0"><span class="prj-namewrap"><input class="prj-name" data-prename="${p.id}" value="${(""+p.name).replace(/"/g,"&quot;")}" title="Haz clic para editar el nombre del proyecto" aria-label="Nombre del proyecto"></span><div class="prj-sub">${p.holdings.length} acciones · ${s.nrec} registro${s.nrec!==1?"s":""} · creado ${fD(p.date)||"—"}${arch?" · archivado "+(fD(p.archivedDay)||fD((""+p.archived).slice(0,10))||"—"):""}</div></div>
+        ${arch
+          ?`<span class="badge neu" title="Proyecto apagado: fuera de la operativa, pero sus datos siguen contando en la contabilidad y el patrimonio">ARCHIVADO</span><button class="btn prj-act" data-preact="${p.id}" title="Volver a ponerlo en operación">↩ Reactivar</button>`
+          :`${active?'<span class="badge pos">ACTIVO</span>':`<button class="btn prj-act" data-pact="${p.id}">Activar</button>`}<button class="prj-arc" data-parch="${p.id}" title="Archivar: lo apaga sin perder ni un dato">🗄</button>`
+        }<button class="prj-del" data-pdel="${p.id}" title="Eliminar proyecto">🗑</button></div>
       <div class="prj-metrics">
         <div class="prj-m"><span class="l">Invertido</span><b>${fmtCLP(s.invested)}</b></div>
         <div class="prj-m"><span class="l">Valor actual</span><b>${s.hasData?fmtCLP(s.value):"—"}</b></div>
@@ -9650,39 +9763,26 @@ function viewProyectos(){
         <div class="prj-m" title="Sharpe modelado de la cartera (retorno esperado por unidad de riesgo, según su construcción CAPM/Markowitz)"><span class="l">Sharpe</span><b style="color:${accentT}">${(s.sharpe||0).toFixed(2)}</b></div>
       </div>
       <div class="prj-links">
-        <div class="prj-lrow"><span class="prj-llbl">Simulaciones</span><div class="prj-chips">${sChips}</div><select class="prj-add" data-addlink="${p.id}|scenario"><option value="">+ vincular simulación…</option>${sOpts}</select></div>
+        <div class="prj-lrow"><span class="prj-llbl">Simulaciones</span><div class="prj-chips">${sChips}</div>${arch?"":`<select class="prj-add" data-addlink="${p.id}|scenario"><option value="">+ vincular simulación…</option>${sOpts}</select>`}</div>
       </div>
-      <div class="prj-foot"><button class="btn" data-pgoto="${p.id}|inv|seguimiento">Seguimiento →</button><button class="btn" data-pgoto="${p.id}|inv|operar">Operar →</button><button class="btn" data-pgoto="${p.id}|inv|contabilidad">Contabilidad →</button></div>
-    </div>`;}).join("");
-  const projCard=PROJECTS.length?`<div class="prj-list">${cards}</div>`:"";
+      <div class="prj-foot">${arch
+        ?`<span class="prj-archnote">Sus datos siguen contando en Contabilidad y en el patrimonio del Inicio. Reactívalo para volver a operarlo.</span>`
+        :`<button class="btn" data-pgoto="${p.id}|inv|seguimiento">Seguimiento →</button><button class="btn" data-pgoto="${p.id}|inv|operar">Operar →</button><button class="btn" data-pgoto="${p.id}|inv|contabilidad">Contabilidad →</button>`}</div>
+    </div>`;};
+  const vivos=all.filter(x=>!projArchivado(x.p)),archs=all.filter(x=>projArchivado(x.p));
+  const projCard=vivos.length?`<div class="prj-list">${vivos.map(tarjeta).join("")}</div>`:"";
+  const archCard=archs.length?card("Proyectos archivados ("+archs.length+")",
+    "Apagados: fuera de los selectores, del seguimiento y de las propuestas de Gestión activa · sus datos —contabilidad, comisiones con IVA, ganancia realizada y valor— siguen íntegros en la Contabilidad consolidada y en el patrimonio del Inicio",
+    `<div class="prj-list">${archs.map(tarjeta).join("")}</div>`):"";
   // Nota: los análisis y las simulaciones se gestionan DENTRO de cada proyecto (Análisis / Simulación), no aquí.
-  return head+guided+projCard;
+  return head+guided+projCard+archCard;
 }
 function attachProyectos(){
   document.querySelectorAll("[data-prename]").forEach(inp=>inp.onchange=()=>{const p=PROJECTS.find(x=>String(x.id)===inp.dataset.prename);if(p){p.name=(inp.value||"").trim()||p.name;saveProjects();}});
   document.querySelectorAll("[data-pact]").forEach(b=>b.onclick=()=>projActivate(b.dataset.pact));
-  document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{
-    const p=PROJECTS.find(x=>String(x.id)===b.dataset.pdel);if(!p)return;
-    // se dice QUÉ se lleva por delante: un proyecto no es solo su nombre, es su contabilidad y su historia
-    // dentro de las cifras consolidadas. Borrar el que salió mal deja un historial que se ve mejor de lo que fue.
-    const R=(function(){try{const IM=withProject(p,()=>invMetrics());const C=contabAggFor(p);
-      return {reg:(p.weeks||[]).length,ops:C?C.rows.length:0,
-        real:C?C.totReal:null,fees:C?(C.fees+C.feesIva):null,
-        val:IM&&IM.last?IM.last.val:null,ret:IM&&IM.last?IM.last.ret*100:null};}catch(e){return null;}})();
-    const det=R?("\n\nSe lleva por delante:\n• "+R.reg+" registro(s) de seguimiento y "+R.ops+" operación(es)"
-      +(R.val!=null?("\n• su valor actual ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2)+"%) dejan de contar en el patrimonio consolidado del Inicio"):"")
-      +(R.real!=null?("\n• su contabilidad: "+fmtCLP(R.real)+" de ganancia realizada y "+fmtCLP(R.fees)+" de comisiones pagadas"):"")
-      +(function(){try{const mios=((p.links&&p.links.scenarios)||[]).map(String);
-        const otros=PROJECTS.filter(x=>x.id!==p.id);
-        const usado=id=>otros.some(x=>(((x.links&&x.links.scenarios)||[]).map(String)).indexOf(String(id))>=0);
-        const n=(SCEN||[]).map(s=>String(s.id)).filter(id=>(id==="sim_"+p.id||mios.indexOf(id)>=0)&&!usado(id)).length;
-        return n?("\n• "+n+" escenario(s) suyos en Comparación de escenarios"):"";}catch(e){return "";}})()
-      +"\n\nTodo se recalcula sobre los proyectos que queden."
-      +"\n\nOJO: si lo cierras porque salió mal, borrarlo deja tu historial viéndose MEJOR de lo que fue."):"";
-    if(!confirm('¿Eliminar el proyecto "'+p.name+'" y todo su seguimiento?'+det+"\n\nNo se puede deshacer."))return;
-    // misma red que el resto de acciones destructivas: copia interna antes de tocar nada
-    try{if(typeof autobkSnapshot==="function")autobkSnapshot('antes de eliminar el proyecto "'+p.name+'"');}catch(e){}
-    projEliminar(p.id);render();});
+  document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{if(projEliminarPreguntando(b.dataset.pdel))render();});
+  document.querySelectorAll("[data-parch]").forEach(b=>b.onclick=()=>{if(projArchivarPreguntando(b.dataset.parch))render();});
+  document.querySelectorAll("[data-preact]").forEach(b=>b.onclick=()=>{if(projReactivar(b.dataset.preact))render();});
   document.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>{const[pid,kind,id]=b.dataset.unlink.split("|");projDelLink(pid,kind,id);});
   document.querySelectorAll("[data-addlink]").forEach(sel=>sel.onchange=()=>{const[pid,kind]=sel.dataset.addlink.split("|");if(sel.value)projAddLink(pid,kind,sel.value);});
   document.querySelectorAll("[data-pgoto]").forEach(b=>b.onclick=()=>{const[pid,m,pg]=b.dataset.pgoto.split("|");activeId=PROJECTS.find(x=>String(x.id)===pid).id;saveProjects();syncProj();modulo=m;page=pg;render();});
@@ -9730,7 +9830,7 @@ function viewClientes(){
     </tr>`;}).join("");
   const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${red}">${T.fees>0?fmtCLP(T.fees):"—"}</td><td style="color:${T.gainNet>=0?green:red}">${(T.gainNet>=0?"+":"−")+fmtCLP(Math.abs(T.gainNet))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%</td><td class="adm-c">—</td><td class="adm-b" style="color:${accentT}">${Tbeta>0?Tbeta.toFixed(2):"—"}</td><td></td></tr>`;
   const tbl=card("Carteras por cliente","Capital aportado y retirado, valor actual, comisiones pagadas, ganancia neta de comisiones ($ y %), acciones distintas, perfil de riesgo y β de la cartera. Entra a un cliente para gestionar sus proyectos.",
-    `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Comisiones</th><th>Ganancia neta $</th><th>Rentab. %</th><th class="cc">Acciones</th><th class="cc">β cartera</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
+    `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Comisiones</th><th>Ganancia neta $</th><th>Rentab. %</th><th class="cc">Acciones</th><th class="cc"><span class="gl">β</span> cartera</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
      <div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-pri" id="cliAddBtn">+ Nuevo cliente</button><button class="btn" data-go-proj>Ver proyectos de ${(""+activeClientObj().name).replace(/</g,"&lt;")} →</button></div>`);
   const disc=notecard("Cifras de gestión netas de comisiones del operador configurado. La <b>β de cartera</b> es la β <b>esperada</b> (ex-ante, de la simulación), ponderada por valor. Herramienta de simulación educativa, <b>no constituye asesoría financiera</b>.");
   return head+tbl+disc;
