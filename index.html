@@ -1531,15 +1531,23 @@
   .fw-hint{font-size:11.5px;color:var(--mut);font-weight:600;}
   @media(max-width:760px){.home-fundgrid.n2{grid-template-columns:1fr;}}
   /* FONDO ÚNICO: ocupa la tarjeta entera — gráfico con ejes y los parámetros como tiles */
-  .fsolo{display:flex;flex-direction:column;gap:14px;}
-  .fsolo-head{display:flex;align-items:center;gap:11px;flex-wrap:wrap;}
-  .fsolo-head .rk-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;}
-  .fsolo-name{font-size:17px;font-weight:800;color:var(--navy);letter-spacing:-.2px;min-width:0;flex:1 1 auto;}
-  .fsolo-pct{font-size:27px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;}
-  .fsolo-pct span{font-size:15px;font-weight:700;margin-left:1px;}
-  .fsolo-chart{border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:12px 13px 10px;}
+  .fsolo{display:flex;flex-direction:column;gap:10px;}
+  .fsolo-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .fsolo-head .rk-dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;}
+  .fsolo-name{font-size:15.5px;font-weight:800;color:var(--navy);letter-spacing:-.2px;min-width:0;flex:1 1 auto;}
+  .fsolo-pct{font-size:23px;font-weight:800;letter-spacing:-.8px;font-variant-numeric:tabular-nums;}
+  .fsolo-pct span{font-size:13px;font-weight:700;margin-left:1px;}
+  .fsolo-chart{border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:8px 10px 6px;}
   .fsolo-chart .chart{width:100%;max-width:none;display:block;}
-  @media(max-width:700px){.fsolo-name{flex:1 1 100%;}.fsolo-pct{font-size:23px;}}
+  /* tiles compactos: son 10 y con el alto normal la tarjeta se iba de pantalla */
+  .fsolo .tiles{gap:9px;}
+  .fsolo .tile{padding:.6rem .68rem .62rem .75rem;border-radius:10px;}
+  .fsolo .tile .l{font-size:9.5px;margin-bottom:4px;}
+  .fsolo .tile .v{font-size:1.02rem;}
+  .fsolo .tile .s{font-size:10px;margin-top:3px;}
+  .fsolo .tile:hover{transform:none;box-shadow:var(--sh);}
+  .fsolo .legend{font-size:10.5px;margin-top:6px!important;}
+  @media(max-width:700px){.fsolo-name{flex:1 1 100%;}.fsolo-pct{font-size:20px;}}
   @media(max-width:880px){.home-grid-news{grid-template-columns:1fr;}}
   /* ── Montecarlo (beta) ── */
   .mc-beta{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:var(--muted);
@@ -1952,7 +1960,8 @@ function svgMulti(o){
   const X=i=>m.l+step*i,Y=v=>H-m.b-(v-bd.min)/(bd.max-bd.min)*(H-m.t-m.b);
   let g="";
   for(let i=0;i<=4;i++){const v=bd.min+(bd.max-bd.min)*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}">${(o.yfmt||(z=>z.toFixed(0)))(v)}</text>`;}
-  if(bd.min<100&&bd.max>100){const z=Y(100);g+=`<line x1="${m.l}" y1="${z.toFixed(1)}" x2="${W-m.r}" y2="${z.toFixed(1)}" stroke="${AC}" stroke-width="1.2" stroke-dasharray="3 4"/>`;}
+  const _zr=(o.zero!=null?o.zero:100);   // línea de referencia: 100 en las series base-100, 0 en las que van en %
+  if(bd.min<_zr&&bd.max>_zr){const z=Y(_zr);g+=`<line x1="${m.l}" y1="${z.toFixed(1)}" x2="${W-m.r}" y2="${z.toFixed(1)}" stroke="${AC}" stroke-width="1.2" stroke-dasharray="3 4"/>`;}
   const _liveI=o.live?n-1:-1;   // punto EN VIVO: el ÚLTIMO índice se dibuja aparte (tramo punteado + punto pulsante), nunca como parte de la historia
   if(o.area&&o.series[0]){const s0=o.series[0];let fi=0;while(fi<s0.vals.length&&(s0.vals[fi]==null||!isFinite(s0.vals[fi])))fi++;   // primer índice con dato: el área empieza ahí (soporta series que arrancan más tarde)
     const PA=[];for(let i=fi;i<s0.vals.length;i++){if(i===_liveI)continue;const v=s0.vals[i];if(v==null||!isFinite(v))continue;PA.push([X(i),Y(v)]);}
@@ -10599,7 +10608,7 @@ function viewHome(){
       +stat("Volatilidad",p.vol!=null?p.vol.toFixed(1)+"%":"—",null,"ntr","Volatilidad realizada anualizada de los retornos del fondo. Con pocos registros es ruidosa.")
       +stat("Sharpe",p.sharpeR!=null?p.sharpeR.toFixed(2):"—",p.sharpeR!=null?(p.sharpeR>=0?green:red):null,"ntr",p.sharpeR!=null?"Sharpe realizado: retorno ajustado por la volatilidad efectiva (sobre 1 es bueno).":"Sharpe realizado: se muestra desde los 30 días de seguimiento y ≥8 retornos. Con menos, anualizar una racha corta dispara el ratio (Sharpe irreal), por eso se omite.")
       +`</div>`;
-    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}" title="Curva: rentabilidad acumulada (base 100) — mide la gestión, sin los saltos de capital de las compras"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» dentro del proyecto mide la estrategia y puede diferir cuando hay aportes en distintos momentos.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${row1}${row2}</div></button>`;};
+    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}" title="Curva: rentabilidad acumulada — mide la gestión, sin los saltos de capital de las compras"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» dentro del proyecto mide la estrategia y puede diferir cuando hay aportes en distintos momentos.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${row1}${row2}</div></button>`;};
   /* UN SOLO FONDO: con una sola cartera en gestión, la tarjeta comprimida desperdicia todo el ancho y el
      sparkline sin ejes no dice nada. Aquí el fondo ocupa la tarjeta entera: gráfico grande CON ejes, fechas
      y la curva del IPSA al lado (que es la comparación que importa: ¿le gano al mercado?), y los parámetros
@@ -10612,30 +10621,37 @@ function viewHome(){
     const hayIpsa=hayCurva&&I.length===R.length&&I.filter(v=>v!=null).length>1;
     const ultIpsa=hayIpsa?(function(){for(let i=I.length-1;i>=0;i--)if(I[i]!=null)return I[i];return null;})():null;
     const vsIpsa=(ultIpsa!=null&&p.twr!=null)?(p.twr-(ultIpsa-100)):null;   // gestión vs mercado, en puntos
+    // la curva va en RENTABILIDAD ACUMULADA (%), no en base 100: "+6,8%" se lee solo, "106,8" hay que
+    // traducirlo mentalmente cada vez. La referencia deja de ser 100 y pasa a ser el 0.
+    const aPct=v=>(v==null||!isFinite(v))?null:+(v-100).toFixed(2);
+    const fp1=v=>(Math.abs(+v)<0.05?"0%":((+v>0?"+":"−")+Math.abs(+v).toFixed(1)+"%"));   // el cero de la línea de referencia no lleva signo
+    const fp2=v=>(Math.abs(+v)<0.005?"0%":((+v>0?"+":"−")+Math.abs(+v).toFixed(2)+"%"));
     const chart=hayCurva
-      ? svgMulti({series:[{label:"Tu cartera",c:pos?green:red,vals:R,w:2.4,op:1}]
-            .concat(hayIpsa?[{label:"IPSA",c:muted,vals:I,w:1.8,dash:true}]:[]),
-          labels:F,h:262,area:!hayIpsa,flatx:true,id:"homesolo",unit:"",
-          yfmt:v=>(+v).toFixed(1),ttfmt:v=>(+v).toFixed(2)})
+      ? svgMulti({series:[{label:"Tu cartera",c:pos?green:red,vals:R.map(aPct),w:2.4,op:1}]
+            .concat(hayIpsa?[{label:"IPSA",c:muted,vals:I.map(aPct),w:1.8,dash:true}]:[]),
+          labels:F,h:196,area:!hayIpsa,flatx:true,id:"homesolo",unit:"",zero:0,
+          yfmt:fp1,ttfmt:fp2})
       : `<div class="note" style="margin:0">Con un solo registro todavía no hay curva. Registra el seguimiento en <b>Inversión → Ingresar datos</b> y aquí verás tu evolución contra el IPSA.</div>`;
-    const leg=hayCurva?`<div class="legend" style="margin-top:9px"><span><span class="lgdot" style="background:${pos?green:red}"></span>Tu cartera (base 100)</span>${hayIpsa?`<span><span class="lgdot" style="background:${muted}"></span>IPSA en el mismo período</span>`:""}<span style="color:var(--faint);font-weight:600">${F.length} fecha${F.length!==1?"s":""} de seguimiento${sd?" · desde "+sd:""}</span></div>`:"";
+    const leg=hayCurva?`<div class="legend" style="margin-top:9px"><span><span class="lgdot" style="background:${pos?green:red}"></span>Tu cartera · rentabilidad acumulada</span>${hayIpsa?`<span><span class="lgdot" style="background:${muted}"></span>IPSA en el mismo período</span>`:""}<span style="color:var(--faint);font-weight:600">${F.length} fecha${F.length!==1?"s":""} de seguimiento${sd?" · desde "+sd:""}</span></div>`:"";
     const aR=p.alphaReal!=null?p.alphaReal*100:null;
-    const dinero=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(148px,1fr))">
+    const sgp=(v,d)=>(v>=0?"+":"−")+Math.abs(v).toFixed(d==null?2:d)+"%";
+    const num=(v,d)=>(v<0?"−":"")+Math.abs(v).toFixed(d==null?2:d);
+    const dinero=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(142px,1fr))">
       ${tile("Valor actual",fmtCLP(p.val),"a los últimos cierres",indigo,pos?green:red)}
       ${tile("Capital aportado",fmtCLP(p.inv),"lo que pusiste",indigo,ink)}
-      ${tile("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),(pos?"+":"")+p.pct.toFixed(2)+"% sobre lo aportado",indigo,pos?green:red)}
-      ${tile("Retorno TWR",p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—","la estrategia, neteando aportes",indigo,p.twr!=null?(p.twr>=0?green:red):muted)}
+      ${tile("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),sgp(p.pct)+" sobre lo aportado",indigo,pos?green:red)}
+      ${tile("Retorno TWR",p.twr!=null?sgp(p.twr):"—","la estrategia, neteando aportes",indigo,p.twr!=null?(p.twr>=0?green:red):muted)}
       ${tile("vs IPSA",vsIpsa!=null?((vsIpsa>=0?"+":"−")+Math.abs(vsIpsa).toFixed(2)+" pts"):"—",vsIpsa!=null?(vsIpsa>=0?"le ganas al mercado":"vas bajo el mercado"):"sin índice comparable",indigo,vsIpsa!=null?(vsIpsa>=0?green:red):muted)}</div>`;
-    const riesgo=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(148px,1fr));margin-top:11px">
-      ${tile('<span class="gl">β</span> realizada',p.betaR!=null?p.betaR.toFixed(2):"—",p.betaR!=null?("esperada "+(p.beta||0).toFixed(2)):"faltan ≥5 fechas",indigo,accentT)}
-      ${tile('<span class="gl">α</span> de Jensen',aR!=null?((aR>=0?"+":"")+aR.toFixed(2)+"%"):"—","sobre lo exigido por su riesgo",indigo,aR!=null?(aR>=0?green:red):muted)}
+    const riesgo=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(142px,1fr))">
+      ${tile('<span class="gl">β</span> realizada',p.betaR!=null?num(p.betaR):"—",p.betaR!=null?("esperada "+(p.beta||0).toFixed(2)):"faltan ≥5 fechas",indigo,accentT)}
+      ${tile('<span class="gl">α</span> de Jensen',aR!=null?sgp(aR):"—","sobre lo exigido por su riesgo",indigo,aR!=null?(aR>=0?green:red):muted)}
       ${tile("Volatilidad",p.vol!=null?p.vol.toFixed(1)+"%":"—","anualizada, realizada",indigo,ink)}
-      ${tile("Sharpe",p.sharpeR!=null?p.sharpeR.toFixed(2):"—",p.sharpeR!=null?"retorno por unidad de riesgo":"desde 30 días de seguimiento",indigo,p.sharpeR!=null?(p.sharpeR>=0?green:red):muted)}
+      ${tile("Sharpe",p.sharpeR!=null?num(p.sharpeR):"—",p.sharpeR!=null?"retorno por unidad de riesgo":"desde 30 días de seguimiento",indigo,p.sharpeR!=null?(p.sharpeR>=0?green:red):muted)}
       ${tile("Inicio",sd||"—",p.nrec+" registro"+(p.nrec!==1?"s":"")+" de seguimiento",indigo,ink)}</div>`;
     return `<div class="fsolo">
       <div class="fsolo-head"><span class="rk-dot" style="background:${p.col}"></span>
         <span class="fsolo-name">${nm}</span>
-        <span class="fsolo-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado)">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span>
+        <span class="fsolo-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado)">${(pos?"+":"−")+Math.abs(p.pct).toFixed(2)}<span>%</span></span>
         <button class="btn btn-pri" data-gohome="${p.cliId}|${p.pid}">Entrar al proyecto →</button></div>
       <div class="fsolo-chart">${chart}${leg}</div>
       ${dinero}${riesgo}</div>`;
@@ -10650,7 +10666,7 @@ function viewHome(){
   const fundsCard=card(funds.length===1?"Fondo administrado":"Fondos administrados",
     funds.length===1
       ? (funds[0].hasData
-         ? `Tu única cartera en gestión · la curva es su rentabilidad acumulada (base 100) contra el IPSA del mismo período — mide la GESTIÓN, sin los saltos de capital de las compras`
+         ? `Tu única cartera en gestión · la curva es su rentabilidad acumulada (%) contra el IPSA del mismo período — mide la GESTIÓN, sin los saltos de capital de las compras`
          : `Tu única cartera en gestión · aún sin seguimiento registrado`)
       : `${funds.length} carteras en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,
     fundsInner);
