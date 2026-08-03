@@ -4296,8 +4296,9 @@ function attachInv(){
       if(!(nq>0)||!(nm>0)){alert("La operación necesita una cantidad y un monto total válidos (mayores a 0).");return;}
       const np=nm/nq;
       if(nq!==+rec.ev.shares||Math.abs(np-(+rec.ev.price))>1e-9){rec.ev=Object.assign({},rec.ev,{shares:nq,price:np});_evTouched=true;}
-      // sin cierre real del papel ese día, el precio del día es el de la transacción corregida (guardia ±15%)
-      if(rec.fresh&&rec.fresh.indexOf(rec.ev.t)<0){const _cur=rec.prices[rec.ev.t];if(!(_cur>0)||Math.abs(np/_cur-1)<=0.15)rec.prices[rec.ev.t]=np;}
+      // el precio de la operación NO se escribe como precio del día: corregir la cantidad o el monto de una
+      // compra no puede mover el cierre de esa acción. La valorización del día la resuelve invMetrics
+      // (lo movido hoy se valoriza a lo que costó mientras no haya cierre real).
     }
     // corrección del MONTO de un dividendo mal ingresado
     const _edv=document.getElementById("evdiv");
@@ -4312,12 +4313,18 @@ function attachInv(){
     // precios — así la sincronización automática no repone el valor viejo (caso real: Yahoo cambió
     // retroactivamente el cierre de LATAM y no había forma de corregirlo en un día con operaciones).
     if(editIdx!=null&&!compraMode&&_owPrices){
-      // el precio del papel operado re-derivado de la transacción (sin cierre real ese día) NO es un cierre
-      // manual: no se propaga ni se ancla — solo los precios que el usuario cambió en los campos del día
-      const _skipEvT=(rec.ev&&rec.ev.kind==="trade"&&rec.fresh&&rec.fresh.indexOf(rec.ev.t)<0)?rec.ev.t:null;
-      const _chg={};PF.holdings.forEach(hd=>{if(hd.t===_skipEvT)return;const nv=rec.prices[hd.t];const ov=_owPrices[hd.t];if(nv>0&&isFinite(nv)&&nv!==ov)_chg[hd.t]=nv;});
+      // TODAS las acciones cuentan, incluida la que operaste ese día. Antes se excluía —cuando el precio
+      // del día se derivaba de la transacción, no era una corrección del usuario— y el resultado era que
+      // corregir a mano el cierre del papel recién comprado NO SERVÍA DE NADA: no se propagaba, no se
+      // anclaba, y volvía a quedar el precio de la orden. Ahora un precio que el usuario cambió es un
+      // cierre manual, con o sin operación ese día.
+      const _chg={};PF.holdings.forEach(hd=>{const nv=rec.prices[hd.t];const ov=_owPrices[hd.t];if(nv>0&&isFinite(nv)&&nv!==ov)_chg[hd.t]=nv;});
       if(Object.keys(_chg).length){
-        WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date){w.prices=w.prices||{};Object.keys(_chg).forEach(t=>{w.prices[t]=_chg[t];});}});
+        // un cierre puesto a mano ES un cierre real: se marca fresh para que cuente como tal (Δ del día,
+        // valorización de lo comprado hoy) en vez de seguir tratándose como arrastre
+        rec.fresh=rec.fresh||[];Object.keys(_chg).forEach(t=>{if(rec.fresh.indexOf(t)<0)rec.fresh.push(t);});
+        WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date){w.prices=w.prices||{};w.fresh=w.fresh||[];
+          Object.keys(_chg).forEach(t=>{w.prices[t]=_chg[t];if(w.fresh.indexOf(t)<0)w.fresh.push(t);});}});
         try{pricedbUpsertDay(rec.date,null,_chg);}catch(e){}
       }
       // CORRECCIÓN MANUAL DEL IPSA del día: se marca como cierre real (ipsaFresh), se propaga a los otros
