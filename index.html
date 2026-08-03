@@ -2214,13 +2214,13 @@ function viewDetalle(){
   const _thr=_W?Math.max(0.3,winYears()):1;   // el umbral ±1pp del veredicto es ANUAL: en ventana corta se prorratea (con piso 0,3pp), o casi todo saldría "EQUILIBRIO"
   const sg=_alfa>_thr?"SUBVALORADA":_alfa<-_thr?"SOBREVALORADA":"EQUILIBRIO",sgc=_alfa>_thr?green:_alfa<-_thr?red:muted;
   const tiles=`<div class="tiles">
-    ${tile("β regresión",s.b.toFixed(2),s.b<0.8?"defensiva":s.b<1?"moderada":"agresiva",s.c,accentT)}
+    ${tile("<span class=\"gl\">β</span> regresión",s.b.toFixed(2),s.b<0.8?"defensiva":s.b<1?"moderada":"agresiva",s.c,accentT)}
     ${tile("R²",a.r2.toFixed(2),"sistemático "+(a.r2*100).toFixed(0)+"%",s.c)}
     ${_W?tile("Retorno "+winShort(),pc(a.tot),"anualizado (proyección) "+pc(a.ret),s.c,col(a.tot)):tile("Retorno anual",pc(a.ret),"total "+winShort()+" "+pc(a.tot),s.c,col(a.ret))}
-    ${tile("Volatilidad σ",p0(a.sig),(a.sig/MKT.sig).toFixed(1)+"× IPSA",s.c)}
+    ${tile("Volatilidad <span class=\"gl\">σ</span>",p0(a.sig),(a.sig/MKT.sig).toFixed(1)+"× IPSA",s.c)}
     ${tile("Sharpe",a.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),s.c,a.sharpe>=0?green:red)}
     ${tile("E(R) CAPM",p0(a.er),_W?("exigido en la ventana "+p0(erWin(s.b),2)):"retorno exigido",s.c,indigo)}
-    ${_W?tile("α ventana",pc(_alfa),"real − exigido en "+winShort(),s.c,col(_alfa)):tile("α Jensen",pc(a.jensen),"real − exigido",s.c,col(a.jensen))}</div>`;
+    ${_W?tile("<span class=\"gl\">α</span> ventana",pc(_alfa),"real − exigido en "+winShort(),s.c,col(_alfa)):tile("<span class=\"gl\">α</span> Jensen",pc(a.jensen),"real − exigido",s.c,col(a.jensen))}</div>`;
   // rentabilidad reciente de la acción desde la BASE DE PRECIOS (día/semana/mes móviles, igual que el Home y el IPSA)
   const _rr=(typeof stkPeriodReturns==="function")?stkPeriodReturns(sel):null;
   const _rrD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(2,4):"";
@@ -2787,12 +2787,12 @@ function simResults(){
   const M=simMetrics();
   if(!M.ws.length)return `<div class="card"><div class="bd"><div class="note">Selecciona al menos una acción para construir el portafolio.</div></div></div>`;
   const tiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(158px,1fr))">`+
-    tile("β portafolio",M.bp.toFixed(2),M.bp<0.8?"defensivo":M.bp<1?"moderado":"agresivo",indigo,indigo)+
+    tile("<span class=\"gl\">β</span> portafolio",M.bp.toFixed(2),M.bp<0.8?"defensivo":M.bp<1?"moderado":"agresivo",indigo,indigo)+
     tile("E(R) CAPM anual",p0(M.erCapm),"retorno exigido",indigo,indigo)+
     tile("E(R) CAPM mensual",p0(M.erM,2),"compuesto",indigo,ink)+
     tile("E(R) CAPM semanal",p0(M.erW,2),"compuesto",indigo,ink)+
     tile("Retorno histórico",pc(M.retH),(winMode()?"anualizado (referencial: ventana "+winShort()+" <1 año)":"anual · "+winShort()),indigo,col(M.retH))+
-    tile("Riesgo σ",p0(M.sig),"prom. pond. "+p0(M.wavgSig),indigo,ink)+
+    tile("Riesgo <span class=\"gl\">σ</span>",p0(M.sig),"prom. pond. "+p0(M.wavgSig),indigo,ink)+
     tile("Sharpe",M.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),indigo,M.sharpe>=0?green:red)+tile("Correlación portafolio",M.corrAvg.toFixed(2),"media entre acciones",indigo,ink)+`</div>`;
   const arows=M.ws.map(x=>`<tr><td>${tk(x.s)}</td><td>${badge(x.s.s,x.s.c)}</td><td class="tnum">${(x.w*100).toFixed(1)}%</td><td class="tnum" style="font-weight:700">${fmtCLP(simState.amount*x.w)}</td><td class="tnum" style="color:${accentT};font-weight:700">${x.s.b.toFixed(2)}</td></tr>`).join("");
   const foot=`<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td class="tnum">100%</td><td class="tnum">${fmtCLP(simState.amount)}</td><td class="tnum" style="color:${accentT}">${M.bp.toFixed(2)}</td></tr>`;
@@ -3623,8 +3623,8 @@ function viewInvActive(){
     ${tile("Retorno real",pc(L.ret*100),days+" días",indigo,col(L.ret*100))}
     ${tile("Exigido CAPM",pc(reqRet*100),"prorrateado al período",indigo,indigo)}
     ${tile("Alpha realizado",pc(alphaReal*100),_shortWin?"muestra corta · referencial":(alphaReal>=0?"batiendo lo exigido":"bajo lo exigido"),indigo,col(alphaReal*100))}
-    ${tile("β esperado (CAPM)",PF.bp.toFixed(2),"sobre el capital invertido actual",indigo,accentT)}
-    ${tile("β realizado",IM.betaR!=null?IM.betaR.toFixed(2):"—",IM.betaR!=null?((IM.betaR>PF.bp?"más sensible":"menos sensible")+" que lo esperado"):"≥5 registros para calcular",indigo,accentT)}</div>`;
+    ${tile("<span class=\"gl\">β</span> esperado (CAPM)",PF.bp.toFixed(2),"sobre el capital invertido actual",indigo,accentT)}
+    ${tile("<span class=\"gl\">β</span> realizado",IM.betaR!=null?IM.betaR.toFixed(2):"—",IM.betaR!=null?((IM.betaR>PF.bp?"más sensible":"menos sensible")+" que lo esperado"):"≥5 registros para calcular",indigo,accentT)}</div>`;
   // rango de fechas del CAPM: filtra las FECHAS colapsadas (ambas curvas y los flujos por igual)
   const _ckIdx=dates.map((d,k)=>k).filter(k=>(!invCapmFrom||dates[k]>=invCapmFrom)&&(!invCapmTo||dates[k]<=invCapmTo));
   const _crOn=!!(invCapmFrom||invCapmTo);
@@ -3944,7 +3944,31 @@ function reportStripUI(html){
   // una sola y confunden. Se marcan con rp-omit en su tarjeta y no llegan al informe.
   d.querySelectorAll(".rp-omit").forEach(e=>{try{e.remove();}catch(_){}});
   d.querySelectorAll(".bd").forEach(x=>{if(!x.textContent.trim()&&!x.querySelector("svg,img,table"))x.remove();});   // cuerpos que solo tenían un botón: fuera la franja vacía
+  // Una tarjeta que se queda SIN CUERPO era pura navegación (la barra de proyectos, por ejemplo): en papel
+  // ocupaba 68 px para no decir nada. Se va entera, no solo su cuerpo.
+  d.querySelectorAll(".card").forEach(c=>{if(!c.querySelector(".bd"))try{c.remove();}catch(_){}});
   d.querySelectorAll(".card").forEach(c=>{if(c.querySelectorAll("tbody tr").length>12)c.classList.add("rp-flow");});   // tablas largas: fluyen entre páginas (el thead se repite solo)
+  // rótulos que perdieron su control al quitarlo: un "Desde hasta" suelto en la esquina de un gráfico
+  // no dice nada en papel (no hay dónde escribir la fecha)
+  d.querySelectorAll("div,span").forEach(x=>{
+    if(!x.children.length)return;
+    if(x.querySelector("svg,img,table,canvas"))return;
+    if(Array.prototype.every.call(x.children,c=>c.matches&&c.matches(".genl,.ml,.altml,label")))try{x.remove();}catch(_){}
+  });
+  // elementos vacíos sueltos entre tarjetas: suman márgenes y no pintan nada
+  Array.from(d.children).forEach(x=>{if(!x.textContent.trim()&&!x.querySelector("svg,img,table"))try{x.remove();}catch(_){}});
+  return d.innerHTML;
+}
+/* Dos secciones del mismo módulo comparten cabecera (la ficha del portafolio, por ejemplo). En pantalla
+   es correcto —cada pestaña se lee sola— pero en papel es la MISMA tarjeta repetida ocupando media hoja.
+   Se conserva la primera aparición y se descartan las siguientes. */
+function repSinRepetir(html,vistos){
+  const d=document.createElement("div");d.innerHTML=html;
+  d.querySelectorAll(".card").forEach(c=>{
+    const t=c.querySelector(".ct");if(!t)return;
+    const k=(t.textContent||"").trim();if(!k)return;
+    if(vistos.has(k)){try{c.remove();}catch(_){}}else vistos.add(k);
+  });
   return d.innerHTML;
 }
 /* título de sección de la carátula: numera las vistas capturadas dentro del informe */
@@ -3976,8 +4000,8 @@ function invReportShell(o){
        alta que la hoja se corta sin control). En bloque, cada tarjeta se pagina por sí sola y el
        break-inside de abajo manda de verdad. Era la causa de que el informe quedara "cortado". */
     .rp-page{max-width:1054px;margin:0 auto;padding:12px 0 0;display:block;}
-    .rp-page>*+*{margin-top:12px;}
-    .rp-sec{display:flex;align-items:center;gap:9px;font-size:13px;color:#10306A;font-weight:800;border-bottom:1.5px solid #E1EAF6;padding-bottom:7px;margin-top:10px;break-after:avoid;page-break-after:avoid;}
+    .rp-page>*+*{margin-top:9px;}
+    .rp-sec{display:flex;align-items:center;gap:9px;font-size:12.5px;color:#10306A;font-weight:800;border-bottom:1.5px solid #E1EAF6;padding-bottom:5px;margin-top:7px;break-after:avoid;page-break-after:avoid;}
     .rp-sec .sn{display:inline-flex;width:21px;height:21px;border-radius:7px;background:#1E5FD1;color:#fff;font-size:10.5px;align-items:center;justify-content:center;font-weight:800;flex:0 0 auto;}
     .rp-sec .ss{font-size:9.5px;color:#7A8CA8;font-weight:600;margin-left:auto;text-align:right;}
     .rp-brk{break-before:page;page-break-before:always;}
@@ -3994,6 +4018,29 @@ function invReportShell(o){
     .rp-page tfoot{display:table-row-group;}   /* el pie va tras la última fila, no repetido en cada página */
     .rp-page tr{page-break-inside:avoid;}
     .rp-page svg{max-width:100%;height:auto;}
+    /* un lienzo de 820 px de ancho estirado a 1054 crece TAMBIÉN a lo alto (330 → 425 px): media hoja
+       gastada en ampliar un gráfico que ya se leía. Se centra y se acota. */
+    /* 660 px NO es un número al azar: con este ancho el lienzo mide ~266 px de alto y la tarjeta
+       completa ~340, así que DOS tarjetas de gráfico caben en una hoja (718 px útiles) con holgura
+       para títulos y notas más largos. A 730 se pasaba por 15 px y entraba una sola. */
+    .rp-page .chart,.rp-page .ipsa-chart{max-width:var(--rp-chart,660px);margin-left:auto;margin-right:auto;}
+    /* ── DENSIDAD DE PAPEL ────────────────────────────────────────────────────────────────────────
+       Medido: las tarjetas quedaban entre 400 y 480 px y la hoja útil son 718, así que entraba UNA
+       por hoja y sobraban 300 px de blanco. Recortando el aire de pantalla —que en papel no hace
+       falta— caben dos, y el informe pasa de 14 hojas mal repartidas a menos hojas bien llenas. */
+    .rp-page .card>.hd{padding:.62rem .95rem;}
+    .rp-page .card .bd{padding:.72rem .95rem .8rem;}
+    .rp-page .card .ct{font-size:12.5px;}
+    .rp-page .card .cs{font-size:9.5px;margin-top:2px;}
+    .rp-page .card+.card{margin-top:0;}
+    .rp-page .note{font-size:9.5px;line-height:1.5;padding-left:11px;margin-top:8px!important;}
+    .rp-page .tiles{gap:8px;}
+    .rp-page .tile{padding:.5rem .6rem;border-radius:9px;}
+    .rp-page .tile .l{font-size:8px;margin-bottom:3px;letter-spacing:.3px;}
+    .rp-page .tile .v{font-size:.95rem;}
+    .rp-page .tile .s{font-size:8.5px;margin-top:2px;}
+    .rp-page .legend{font-size:9px;gap:4px 12px;}
+    .rp-page .tw+.note,.rp-page .tw{margin-top:0;}
     /* nada de párrafos partidos por una línea suelta */
     .rp-page p,.rp-page .note,.rp-page .cs{orphans:3;widows:3;}
     /* bloques que se leen como una unidad: si no caben, pasan enteros a la página siguiente */
@@ -4002,9 +4049,9 @@ function invReportShell(o){
     .rp-page svg,.rp-page .chart,.rp-page .ipsa-chart{break-inside:avoid;page-break-inside:avoid;}
     /* al empezar una sección nueva no se hereda el margen de la anterior */
     .rp-page .rp-sec.rp-brk{margin-top:0;}
-    .rp-sig{display:flex;gap:44px;margin:34px auto 0;max-width:1054px;break-inside:avoid;}
+    .rp-sig{display:flex;gap:44px;margin:18px auto 0;max-width:1054px;break-inside:avoid;}
     .rp-sig .s1{flex:1;max-width:250px;border-top:1.5px solid #9FB2CF;padding-top:6px;font-size:9.5px;color:#52668A;text-align:center;line-height:1.5;}
-    .rp-foot{margin:20px auto 24px;max-width:1054px;border-top:1.5px solid #E1EAF6;padding-top:10px;font-size:9px;color:#7A8CA8;line-height:1.7;}
+    .rp-foot{margin:12px auto 14px;max-width:1054px;border-top:1.5px solid #E1EAF6;padding-top:10px;font-size:9px;color:#7A8CA8;line-height:1.7;}
     .rp-foot b{color:#405577;}
     .rp-brand{display:flex;justify-content:space-between;gap:14px;margin-top:9px;font-size:8.5px;color:#9AACC8;letter-spacing:.4px;text-transform:uppercase;font-weight:700;}`;
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${o.docTitle}</title><style>${reportAppCss()}</style><style>${over}</style></head><body>
@@ -4015,7 +4062,106 @@ function invReportShell(o){
   <div class="rp-page">${o.bodyHTML}</div>
   ${o.sigHTML||""}
   <div class="rp-foot">${o.footHTML||""}<div class="rp-brand"><span>Investor · Inteligencia que genera valor</span><span>${o.folio||""}</span><span>Emitido el ${o.fch||""}</span></div></div>
-  \x3cscript>window.onload=function(){setTimeout(function(){window.print();},400);};\x3c/script></body></html>`;
+  \x3cscript>
+  /* AJUSTE MEDIDO ANTES DE IMPRIMIR.
+     El problema real del informe no era el contenido sino la ATOMICIDAD: cada tarjeta llevaba
+     break-inside:avoid, y una tarjeta más alta que la hoja útil (718 px en A4 apaisado con estos
+     márgenes) NO se puede respetar — el motor la empuja entera y la corta igual, dejando además
+     media hoja en blanco detrás. Aquí se mide cada tarjeta ya maquetada y la que no cabe holgada
+     pasa a FLUIR: se parte por sus costuras naturales (gráfico, tabla, nota), que sí son atómicas.
+     El resto de las tarjetas siguen entrando enteras, que es como se leen mejor. */
+  var RP_HOJA=(210-9-11)*(96/25.4);   // alto útil de una hoja A4 apaisada con los márgenes de @page
+
+  /* Marca como FLUIDA toda tarjeta que no quepa holgada en una hoja. Solo toca las que marcó ella
+     misma (data-rpauto): las que ya venían fluyendo por tener una tabla larga se respetan. */
+  function rpFlow(){
+    var cs=document.querySelectorAll(".rp-page .card");
+    for(var i=0;i<cs.length;i++){var c=cs[i];
+      if(c.getAttribute("data-rpauto")){c.classList.remove("rp-flow");c.removeAttribute("data-rpauto");}}
+    for(var j=0;j<cs.length;j++){var d=cs[j];
+      if(!d.classList.contains("rp-flow")&&d.offsetHeight>RP_HOJA*0.78){d.classList.add("rp-flow");d.setAttribute("data-rpauto","1");}}
+  }
+  /* Los bloques ATÓMICOS de la paginación: lo que el motor de impresión no puede partir. Una tarjeta
+     normal es uno solo; una fluida aporta su cabecera y cada pieza de su cuerpo (gráfico, nota) y,
+     si hay tabla, su encabezado, cada fila y su pie. */
+  function rpAtomos(){
+    var out=[];
+    function push(el,brk){var b=el.getBoundingClientRect();
+      out.push({t:b.top+window.scrollY,h:b.height,brk:!!brk});}
+    Array.prototype.forEach.call(document.querySelectorAll(".rp-band,.rp-meta,.rp-exec"),function(e){push(e);});
+    Array.prototype.forEach.call(document.querySelectorAll(".rp-page > *"),function(e){
+      var brk=e.classList.contains("rp-brk");
+      if(e.classList.contains("rp-flow")){
+        var hd=e.querySelector(".hd");if(hd)push(hd,brk);
+        var bd=e.querySelector(".bd"),hijos=bd?bd.children:[];
+        Array.prototype.forEach.call(hijos,function(x){
+          var tb=(x.tagName==="TABLE")?x:(x.querySelector?x.querySelector("table"):null);
+          if(tb){var th=tb.querySelector("thead");if(th)push(th);
+            Array.prototype.forEach.call(tb.querySelectorAll("tbody tr"),function(tr){push(tr);});
+            var tf=tb.querySelector("tfoot");if(tf)push(tf);}
+          else push(x);
+        });
+        return;
+      }
+      push(e,brk);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".rp-sig,.rp-foot"),function(e){push(e);});
+    out.sort(function(a,b){return a.t-b.t;});
+    return out;
+  }
+  /* Simula la paginación y devuelve cuánto papel se desperdicia. El blanco de la ÚLTIMA hoja no
+     cuenta: al final siempre sobra algo y penalizarlo empujaría a decisiones absurdas. */
+  function rpMedir(){
+    var at=rpAtomos(),usado=0,cursor=0,blancos=[],primera=true;
+    for(var i=0;i<at.length;i++){var a=at[i];
+      var gap=Math.max(0,a.t-cursor);
+      if((a.brk&&!primera&&usado>0)||a.h+gap>RP_HOJA-usado){blancos.push(RP_HOJA-usado);usado=a.h;}
+      else usado+=a.h+gap;
+      cursor=a.t+a.h;primera=false;
+    }
+    var total=0,peor=0;
+    for(var k=0;k<blancos.length;k++){total+=blancos[k];if(blancos[k]>peor)peor=blancos[k];}
+    return {hojas:blancos.length+1,blanco:Math.round(total),peor:Math.round(peor)};
+  }
+  function rpDensidad(z){
+    var es=document.querySelectorAll(".rp-page,.rp-meta,.rp-exec,.rp-foot,.rp-sig");
+    for(var i=0;i<es.length;i++)es[i].style.zoom=(z===1?"":z);
+  }
+  /* AJUSTE MEDIDO ANTES DE IMPRIMIR.
+     El informe quedaba con hojas a medio llenar por MUY POCO: una tarjeta se pasaba por 5 px del
+     hueco que quedaba y saltaba entera, dejando 300 px de blanco detrás. Perseguir ese margen con
+     números fijos en la hoja de estilos es imposible: cambian con cada cartera, cada título, cada
+     tabla y cada cantidad de registros. Así que el informe se pagina a sí mismo — prueba unas pocas
+     combinaciones de DENSIDAD y ANCHO DE GRÁFICO, simula la paginación de cada una y se queda con la
+     que menos papel desperdicia. Se prefiere, en orden: menos hojas, la peor hoja menos vacía, menos
+     blanco total y —a igualdad— la versión más grande, que es la que mejor se lee. */
+  function rpAjustar(){
+    try{
+      var zooms=[1,0.96,0.93,0.90],anchos=[760,720,680,640,600],mejor=null;
+      for(var i=0;i<zooms.length;i++){
+        rpDensidad(zooms[i]);
+        for(var j=0;j<anchos.length;j++){
+          document.documentElement.style.setProperty("--rp-chart",anchos[j]+"px");
+          rpFlow();
+          var m=rpMedir(),c={z:zooms[i],w:anchos[j],m:m};
+          if(!mejor||rpMejor(c,mejor))mejor=c;
+        }
+      }
+      rpDensidad(mejor.z);
+      document.documentElement.style.setProperty("--rp-chart",mejor.w+"px");
+      rpFlow();
+      window.__rpFit=mejor;   // queda a la vista para poder verificarlo desde fuera
+    }catch(e){}
+  }
+  function rpMejor(a,b){
+    if(a.m.hojas!==b.m.hojas)return a.m.hojas<b.m.hojas;
+    if(Math.abs(a.m.peor-b.m.peor)>18)return a.m.peor<b.m.peor;      // la hoja más vacía es lo que se nota
+    if(Math.abs(a.m.blanco-b.m.blanco)>25)return a.m.blanco<b.m.blanco;
+    if(a.z!==b.z)return a.z>b.z;                                      // a igualdad, la letra más grande
+    return a.w>b.w;
+  }
+  window.onload=function(){rpAjustar();setTimeout(function(){window.print();},450);};
+  \x3c/script></body></html>`;
 }
 function invReportMeta(items){return items.filter(x=>x&&x[1]!=null&&x[1]!=="").map(x=>`<div class="mi"><span class="ml">${x[0]}</span><span class="mv">${x[1]}</span></div>`).join("");}
 function genInvReport(){
@@ -4038,11 +4184,12 @@ function genInvReport(){
     ["Registros",String(WEEKS.length)]
   ]);
   const _execVs=L.diff!=null?(L.diff>=0?`superando al IPSA por <b>${(L.diff*100).toFixed(2)} pts</b>`:`bajo el IPSA por <b>${Math.abs(L.diff*100).toFixed(2)} pts</b>`):"";
-  const execHTML=`El portafolio <b>${(""+PF.name).replace(/</g,"&lt;")}</b> vale hoy <b>${fmtCLP(L.val)}</b> sobre <b>${fmtCLP(IM.aport)}</b> aportados netos: una ganancia de <b>${sgnC(gain)}</b> (TWR <b>${sg(L.ret*100)}</b> en ${days} días${_execVs?", "+_execVs:""}). ${IM.betaR!=null?`El β realizado es <b>${IM.betaR.toFixed(2)}</b> (esperado ${(+PF.bp).toFixed(2)})`:`β esperado <b>${(+PF.bp).toFixed(2)}</b>`}${IM.realizedVol!=null?`, con volatilidad realizada de <b>${IM.realizedVol.toFixed(1)}%</b>`:""}. La peor caída diaria fue <b>${IM.worstRet!=null?sg(IM.worstRet*100):"—"}</b>${IM.worstRetDate?` (${fD(IM.worstRetDate)}${IM.worstBaseVal!=null?`, sobre ${fmtCLP(IM.worstBaseVal)}`:""})`:""} y el drawdown máximo <b>${sg(IM.maxDD*100)}</b>. Las secciones siguientes son la copia fiel de los módulos Seguimiento e Historial.`;
+  const execHTML=`El portafolio <b>${(""+PF.name).replace(/</g,"&lt;")}</b> vale hoy <b>${fmtCLP(L.val)}</b> sobre <b>${fmtCLP(IM.aport)}</b> aportados netos: una ganancia de <b>${sgnC(gain)}</b> (TWR <b>${sg(L.ret*100)}</b> en ${days} días${_execVs?", "+_execVs:""}). ${IM.betaR!=null?`El β realizado es <b>${IM.betaR.toFixed(2)}</b> (esperado ${(+PF.bp).toFixed(2)})`:`β esperado <b>${(+PF.bp).toFixed(2)}</b>`}${IM.realizedVol!=null?`, con volatilidad realizada de <b>${IM.realizedVol.toFixed(1)}%</b>`:""}. ${IM.worstRet!=null?`La peor caída diaria fue <b>${sg(IM.worstRet*100)}</b>${IM.worstRetDate?` (${fD(IM.worstRetDate)}${IM.worstBaseVal!=null?`, sobre ${fmtCLP(IM.worstBaseVal)}`:""})`:""} y el drawdown máximo <b>${sg(IM.maxDD*100)}</b>.`:`El drawdown máximo fue <b>${sg(IM.maxDD*100)}</b>.`} Las secciones siguientes son la copia fiel de los módulos Seguimiento e Historial.`;
   // captura de las vistas reales (Seguimiento e Historial), sin controles
   const _m=modulo,_p=page;modulo="inv";
-  page="seguimiento";const segHTML=reportCapture(viewInv);
-  page="historial";const histHTML=reportCapture(viewInv);
+  const _vistas=new Set();
+  page="seguimiento";const segHTML=repSinRepetir(reportCapture(viewInv),_vistas);
+  page="historial";const histHTML=repSinRepetir(reportCapture(viewInv),_vistas);
   modulo=_m;page=_p;
   const bodyHTML=repSec("1","Seguimiento","copia fiel de Inversión → Seguimiento")+segHTML
     +repSec("2","Historial de registros","copia fiel de Inversión → Historial",true)+histHTML;
@@ -5532,7 +5679,7 @@ function viewPerfil(){
     const saa=card("Asignación estratégica sugerida (SAA)","Banda objetivo por clase de activo para tu nivel · rebalancea con tolerancia ±5%",
       profAllocBar(p.alloc)+`<div class="note" style="margin-top:12px">Esta plataforma se enfoca en <b>renta variable chilena (IPSA)</b>: dentro de esa porción, el análisis multifactor y el asistente aplican el sesgo de factores de tu perfil. La renta fija/alternativos son referencia de diversificación.</div>`);
     const guide=card("Qué significa para tu estrategia de acciones","Cómo se ajustan el análisis multifactor y el asistente a tu perfil",`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
-      ${tile("Factores a enfatizar",p.factores.split(",")[0],p.factores,indigo,indigo)}${tile("Composición sugerida",p.mix.split(",")[0],p.mix,indigo,ink)}${tile("β objetivo de cartera",p.betaGuide,"sensibilidad al mercado",indigo,accentT)}
+      ${tile("Factores a enfatizar",p.factores.split(",")[0],p.factores,indigo,indigo)}${tile("Composición sugerida",p.mix.split(",")[0],p.mix,indigo,ink)}${tile("<span class=\"gl\">β</span> objetivo de cartera",p.betaGuide,"sensibilidad al mercado",indigo,accentT)}
       </div><div class="note" style="margin-top:13px">Tu perfil <b>personaliza el Agente de inversiones</b> y queda como <b>perfil por defecto del Asistente de simulación</b>.</div>`,`<button class="btn" id="profEdit">↺ Volver a evaluar</button>`);
     const cta=notecard(`¿Quieres que el agente arme una cartera para tu perfil <b>${p.label.toLowerCase()}</b>? <button class="btn btn-pri" data-opencopilot style="margin-left:6px;padding:.32rem .7rem">✨ Abrir Agente de inversiones</button>`);
     return hero+dims+saa+guide+cta;
@@ -8037,9 +8184,9 @@ function viewCambios(){
       `<div class="note" style="margin:0">Todavía no hay operaciones simuladas. La cartera <b>${(""+p.name).replace(/</g,"&lt;")}</b> tiene hoy β esperado <b>${f2(A.bp)}</b>, retorno exigido CAPM <b>${p2(A.erCapm)}</b>, riesgo σ <b>${p2(A.sig)}</b> y correlación media <b>${f2(A.corrAvg)}</b>.</div>`);
     if(!B)return card("Cómo quedarían los parámetros","",`<div class="note" style="margin:0">Las ventas simuladas dejarían la cartera <b>sin posiciones</b>: no hay parámetros que calcular.</div>`);
     const tiles=`<div class="tiles">
-      ${tile("β esperado",f2(B.bp),"antes "+f2(A.bp)+" · "+(B.bp>A.bp?"más sensible al IPSA":B.bp<A.bp?"menos sensible al IPSA":"sin cambio"),indigo,Math.abs(B.bp-A.bp)<0.005?ink:(B.bp>A.bp?amber:green))}
+      ${tile("<span class=\"gl\">β</span> esperado",f2(B.bp),"antes "+f2(A.bp)+" · "+(B.bp>A.bp?"más sensible al IPSA":B.bp<A.bp?"menos sensible al IPSA":"sin cambio"),indigo,Math.abs(B.bp-A.bp)<0.005?ink:(B.bp>A.bp?amber:green))}
       ${tile("Retorno exigido CAPM",p2(B.erCapm),"antes "+p2(A.erCapm)+" · Rf "+p0(RF)+" + β × prima "+p0(PRIMA),indigo,ink)}
-      ${tile("Riesgo σ",p2(B.sig),"antes "+p2(A.sig)+" · "+(B.sig<A.sig?"cartera más tranquila":B.sig>A.sig?"cartera más volátil":"sin cambio"),indigo,Math.abs(B.sig-A.sig)<0.005?ink:(B.sig<A.sig?green:red))}
+      ${tile("Riesgo <span class=\"gl\">σ</span>",p2(B.sig),"antes "+p2(A.sig)+" · "+(B.sig<A.sig?"cartera más tranquila":B.sig>A.sig?"cartera más volátil":"sin cambio"),indigo,Math.abs(B.sig-A.sig)<0.005?ink:(B.sig<A.sig?green:red))}
       ${tile("Sharpe esperado",f2(B.sharpe),"antes "+f2(A.sharpe)+" · retorno por unidad de riesgo",indigo,Math.abs(B.sharpe-A.sharpe)<0.005?ink:(B.sharpe>A.sharpe?green:red))}</div>`;
     return card("Cómo quedarían los parámetros",`Con las ${R.nOps} operación${R.nOps!==1?"es":""} simulada${R.nOps!==1?"s":""} · los pesos se miden sobre el costo, la misma vara con que la app calcula el β esperado de tus carteras`,
       `${tiles}
@@ -9762,7 +9909,7 @@ function viewClientes(){
       ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}
       ${tile("Ganancia neta",(T.gainNet>=0?"+":"−")+fmtCLP(Math.abs(T.gainNet)),"después de comisiones",indigo,T.gainNet>=0?green:red)}
       ${tile("Rentabilidad neta %",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}
-      ${tile("β consolidado",Tbeta>0?Tbeta.toFixed(2):"—",Tbeta>0?("esperada · "+betaTag(Tbeta)):"sin posiciones",indigo,accentT)}</div>`);
+      ${tile("<span class=\"gl\">β</span> consolidado",Tbeta>0?Tbeta.toFixed(2):"—",Tbeta>0?("esperada · "+betaTag(Tbeta)):"sin posiciones",indigo,accentT)}</div>`);
   const rows=stats.map(({c,s,pr})=>{const act=c.id===activeClient;
     return `<tr class="adm-row ${act?"on":""}">
       <td class="adm-cli"><span class="cli-dot" style="background:${c.color}"></span><div><div class="adm-name">${(""+c.name).replace(/</g,"&lt;")}${act?' <span class="badge pos">ACTIVO</span>':''}</div><div class="adm-sub">${s.n} proyecto${s.n!==1?"s":""}${(s.n-s.withData)>0?` · ${s.n-s.withData} sin seguimiento`:""} · ${riskChip(pr)}</div></div></td>
