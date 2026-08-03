@@ -10680,16 +10680,14 @@ function viewHome(){
     ${tile("Dividendos recibidos",T.divs>0?("+"+fmtCLP(T.divs)):"—",T.divs>0?"ganancia cobrada en efectivo · sin comisión":"aún no cobras dividendos",indigo,T.divs>0?green:muted)}
     ${(()=>{
       // La fila de abajo se lee como la cuenta que es, de izquierda a derecha:
-      //   ganancia bruta − comisiones = ganancia neta → rentabilidad neta sobre el capital.
-      // Las dos ganancias llevan su % debajo del monto, con el mismo formato, para poder compararlas.
-      const _pc=v=>`<div style="font-size:.82em;font-weight:800;letter-spacing:-.2px;color:${col(v)};margin-top:2px">${(v>=0?"+":"−")+Math.abs(v).toFixed(2)}%</div>`;
+      //   ganancia bruta − comisiones = ganancia neta, y su rentabilidad sobre el capital.
+      // UNA CIFRA POR TARJETA: el monto y el porcentaje van separados, cada uno en la suya.
       const _gbp=T.aportado>0?Tgain/T.aportado*100:0;
-      return tile("Ganancia bruta",sg(Tgain)+_pc(_gbp),"bruta · antes de comisiones",indigo,Tgain>=0?green:red)
-        +tile("Comisiones",(T.fees>0?fmtCLP(T.fees):"$0")+((T.aportado+T.ventas)>0?`<div style="font-size:.82em;font-weight:800;letter-spacing:-.2px;color:${red};margin-top:2px">${(T.fees/(T.aportado+T.ventas)*100).toFixed(2)}% de lo movido</div>`:""),brokerName()+" · con IVA",indigo,red)
-        +tile("Ganancia neta",sg(TgainNet)+_pc(Tpct),"después de comisiones",indigo,TgainNet>=0?green:red)
-        +tile("Rentabilidad neta",(Tpct>=0?"+":"−")+Math.abs(Tpct).toFixed(2)+"%"
-          +`<div style="font-size:.82em;font-weight:800;letter-spacing:-.2px;color:${red};margin-top:2px">−${Math.abs(_gbp-Tpct).toFixed(2)} pts en comisiones</div>`,
-          "sobre el capital aportado",indigo,Tpct>=0?green:red);
+      const _pct=v=>(v>=0?"+":"−")+Math.abs(v).toFixed(2)+"%";
+      return tile("Ganancia bruta",sg(Tgain),"antes de comisiones · "+_pct(_gbp),indigo,Tgain>=0?green:red)
+        +tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName()+" · con IVA",indigo,red)
+        +tile("Ganancia neta",sg(TgainNet),"después de comisiones",indigo,TgainNet>=0?green:red)
+        +tile("Rentabilidad neta",_pct(Tpct),"neta · sobre el capital aportado",indigo,Tpct>=0?green:red);
     })()}</div>`);
   // IPSA del último día / semana / mes (desde la base del sistema)
   const _ips=ipsaSnapshot("IPSA");
