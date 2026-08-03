@@ -9239,6 +9239,38 @@ function projDefaultScenario(p){
     m:{bp:p.bp||0,erCapm:p.erCapm||0,retH:(p.erCapm||0),sig:p.sig||0,sharpe:p.sharpe||0,corrAvg:p.corrAvg||0},comp:comp};
 }
 function projAddLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p||!id)return;const L=projLinks(p),arr=kind==="analysis"?L.analyses:L.scenarios,s=String(id);if(arr.map(String).indexOf(s)<0)arr.push(s);if(kind==="analysis")L.primary=s;saveProjects();render();}
+/* ELIMINAR UN PROYECTO Y TODO LO SUYO.
+   El seguimiento, la contabilidad, las comisiones y su parte del patrimonio consolidado son DERIVADOS: se
+   calculan desde PROJECTS en cada render, así que desaparecen solos al quitar el proyecto y el resto se
+   recalcula sobre los que sobreviven. Lo que NO se iba solo son los ESCENARIOS que el proyecto creó: se
+   quedaban en Comparación de escenarios con el nombre de una cartera que ya no existe. Aquí se limpian —
+   salvo los que otro proyecto también esté usando, que no son de este para borrarlos. */
+function projEliminar(pid){
+  const p=PROJECTS.find(x=>String(x.id)===String(pid));
+  if(!p)return {escenarios:0};
+  const mios=((p.links&&p.links.scenarios)||[]).map(String);
+  const otros=PROJECTS.filter(x=>String(x.id)!==String(pid));
+  const usadoPorOtro=id=>otros.some(x=>(((x.links&&x.links.scenarios)||[]).map(String)).indexOf(String(id))>=0);
+  // el escenario AUTOMÁTICO de un proyecto lleva su id en el nombre ("sim_<id>"): se va con él aunque el
+  // vínculo se hubiera perdido
+  const esAuto=id=>String(id)==="sim_"+p.id;
+  const aBorrar=(SCEN||[]).map(s=>String(s.id)).filter(id=>(esAuto(id)||mios.indexOf(id)>=0)&&!usadoPorOtro(id));
+  if(aBorrar.length){
+    SCEN=SCEN.filter(s=>aBorrar.indexOf(String(s.id))<0);
+    lsSet("pf_scenarios_v1",SCEN);
+    aBorrar.forEach(id=>{try{purgeLinkEverywhere("scenario",id);}catch(e){}});
+  }
+  PROJECTS=PROJECTS.filter(x=>String(x.id)!==String(pid));
+  if(String(activeId)===String(pid))activeId=PROJECTS.length?PROJECTS[0].id:null;
+  saveProjects();
+  // selecciones de otros módulos que apuntaban a él: se sueltan para que elijan el primero que quede
+  try{if(String(actProjId)===String(pid)){actProjId=PROJECTS.length?PROJECTS[0].id:null;lsSet("inv_act_proj",actProjId);}}catch(e){}
+  try{if(cambState&&String(cambState.pid)===String(pid)){cambState.pid=PROJECTS.length?PROJECTS[0].id:null;cambState.ops=[];cambSave();}}catch(e){}
+  try{if(typeof mkwProjId!=="undefined"&&String(mkwProjId)===String(pid))mkwProjId=null;}catch(e){}
+  try{if(typeof mcState!=="undefined"&&mcState&&String(mcState.projId)===String(pid))mcState=null;}catch(e){}
+  syncProj();
+  return {escenarios:aBorrar.length};
+}
 function projDelLink(pid,kind,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;const L=projLinks(p),s=String(id);if(kind==="analysis")L.analyses=L.analyses.filter(x=>String(x)!==s);else L.scenarios=L.scenarios.filter(x=>String(x)!==s);saveProjects();render();}
 function projPrimaryAnalysis(p){const L=projLinks(p);if(L.primary&&L.analyses.map(String).indexOf(String(L.primary))>=0)return String(L.primary);return L.analyses.length?String(L.analyses[L.analyses.length-1]):null;}
 function projSetPrimary(pid,id){const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return;projLinks(p).primary=String(id);saveProjects();render();}
@@ -9640,12 +9672,17 @@ function attachProyectos(){
     const det=R?("\n\nSe lleva por delante:\n• "+R.reg+" registro(s) de seguimiento y "+R.ops+" operación(es)"
       +(R.val!=null?("\n• su valor actual ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2)+"%) dejan de contar en el patrimonio consolidado del Inicio"):"")
       +(R.real!=null?("\n• su contabilidad: "+fmtCLP(R.real)+" de ganancia realizada y "+fmtCLP(R.fees)+" de comisiones pagadas"):"")
+      +(function(){try{const mios=((p.links&&p.links.scenarios)||[]).map(String);
+        const otros=PROJECTS.filter(x=>x.id!==p.id);
+        const usado=id=>otros.some(x=>(((x.links&&x.links.scenarios)||[]).map(String)).indexOf(String(id))>=0);
+        const n=(SCEN||[]).map(s=>String(s.id)).filter(id=>(id==="sim_"+p.id||mios.indexOf(id)>=0)&&!usado(id)).length;
+        return n?("\n• "+n+" escenario(s) suyos en Comparación de escenarios"):"";}catch(e){return "";}})()
+      +"\n\nTodo se recalcula sobre los proyectos que queden."
       +"\n\nOJO: si lo cierras porque salió mal, borrarlo deja tu historial viéndose MEJOR de lo que fue."):"";
     if(!confirm('¿Eliminar el proyecto "'+p.name+'" y todo su seguimiento?'+det+"\n\nNo se puede deshacer."))return;
     // misma red que el resto de acciones destructivas: copia interna antes de tocar nada
     try{if(typeof autobkSnapshot==="function")autobkSnapshot('antes de eliminar el proyecto "'+p.name+'"');}catch(e){}
-    PROJECTS=PROJECTS.filter(x=>x.id!==p.id);if(activeId===p.id)activeId=PROJECTS.length?PROJECTS[0].id:null;
-    saveProjects();syncProj();render();});
+    projEliminar(p.id);render();});
   document.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>{const[pid,kind,id]=b.dataset.unlink.split("|");projDelLink(pid,kind,id);});
   document.querySelectorAll("[data-addlink]").forEach(sel=>sel.onchange=()=>{const[pid,kind]=sel.dataset.addlink.split("|");if(sel.value)projAddLink(pid,kind,sel.value);});
   document.querySelectorAll("[data-pgoto]").forEach(b=>b.onclick=()=>{const[pid,m,pg]=b.dataset.pgoto.split("|");activeId=PROJECTS.find(x=>String(x.id)===pid).id;saveProjects();syncProj();modulo=m;page=pg;render();});
