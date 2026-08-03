@@ -1530,24 +1530,12 @@
   .fw-sv{font:800 17px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.2px;}
   .fw-hint{font-size:11.5px;color:var(--mut);font-weight:600;}
   @media(max-width:760px){.home-fundgrid.n2{grid-template-columns:1fr;}}
-  /* FONDO ÚNICO: ocupa la tarjeta entera — gráfico con ejes y los parámetros como tiles */
-  .fsolo{display:flex;flex-direction:column;gap:10px;}
-  .fsolo-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .fsolo-head .rk-dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;}
-  .fsolo-name{font-size:15.5px;font-weight:800;color:var(--navy);letter-spacing:-.2px;min-width:0;flex:1 1 auto;}
-  .fsolo-pct{font-size:23px;font-weight:800;letter-spacing:-.8px;font-variant-numeric:tabular-nums;}
-  .fsolo-pct span{font-size:13px;font-weight:700;margin-left:1px;}
-  .fsolo-chart{border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:8px 10px 6px;}
-  .fsolo-chart .chart{width:100%;max-width:none;display:block;}
-  /* tiles compactos: son 10 y con el alto normal la tarjeta se iba de pantalla */
-  .fsolo .tiles{gap:9px;}
-  .fsolo .tile{padding:.6rem .68rem .62rem .75rem;border-radius:10px;}
-  .fsolo .tile .l{font-size:9.5px;margin-bottom:4px;}
-  .fsolo .tile .v{font-size:1.02rem;}
-  .fsolo .tile .s{font-size:10px;margin-top:3px;}
-  .fsolo .tile:hover{transform:none;box-shadow:var(--sh);}
-  .fsolo .legend{font-size:10.5px;margin-top:6px!important;}
-  @media(max-width:700px){.fsolo-name{flex:1 1 100%;}.fsolo-pct{font-size:20px;}}
+  /* FONDO ÚNICO: no lleva estilos propios — usa la misma anatomía que las otras tarjetas del Home
+     (cabecera de la tarjeta, gráfico en .ipsa-chart y tiles estándar). Lo único suyo es que sus tiles
+     van pegados al gráfico, sin el margen que separa dos bloques distintos. */
+  .card .ipsa-chart+.legend{margin-top:8px;}
+  .card .legend+.tiles{margin-top:12px;}
+  .card .tiles.fsolo-t+.tiles.fsolo-t{margin-top:12px;}
   @media(max-width:880px){.home-grid-news{grid-template-columns:1fr;}}
   /* ── Montecarlo (beta) ── */
   .mc-beta{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:var(--muted);
@@ -10776,32 +10764,30 @@ function viewHome(){
     const chart=hayCurva
       ? svgMulti({series:[{label:"Tu cartera",c:pos?green:red,vals:R.map(aPct),w:2.4,op:1}]
             .concat(hayIpsa?[{label:"IPSA",c:muted,vals:I.map(aPct),w:1.8,dash:true}]:[]),
-          labels:F,h:196,area:!hayIpsa,flatx:true,id:"homesolo",unit:"",zero:0,
+          labels:F,h:210,area:!hayIpsa,flatx:true,id:"homesolo",unit:"",zero:0,
           yfmt:fp1,ttfmt:fp2})
       : `<div class="note" style="margin:0">Con un solo registro todavía no hay curva. Registra el seguimiento en <b>Inversión → Ingresar datos</b> y aquí verás tu evolución contra el IPSA.</div>`;
     const leg=hayCurva?`<div class="legend" style="margin-top:9px"><span><span class="lgdot" style="background:${pos?green:red}"></span>Tu cartera · rentabilidad acumulada</span>${hayIpsa?`<span><span class="lgdot" style="background:${muted}"></span>IPSA en el mismo período</span>`:""}<span style="color:var(--faint);font-weight:600">${F.length} fecha${F.length!==1?"s":""} de seguimiento${sd?" · desde "+sd:""}</span></div>`:"";
     const aR=p.alphaReal!=null?p.alphaReal*100:null;
     const sgp=(v,d)=>(v>=0?"+":"−")+Math.abs(v).toFixed(d==null?2:d)+"%";
     const num=(v,d)=>(v<0?"−":"")+Math.abs(v).toFixed(d==null?2:d);
-    const dinero=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(142px,1fr))">
+    const cinco='style="grid-template-columns:repeat(auto-fit,minmax(158px,1fr))"';
+    const fichas=`<div class="tiles fsolo-t" ${cinco}>
       ${tile("Valor actual",fmtCLP(p.val),"a los últimos cierres",indigo,pos?green:red)}
       ${tile("Capital aportado",fmtCLP(p.inv),"lo que pusiste",indigo,ink)}
       ${tile("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),sgp(p.pct)+" sobre lo aportado",indigo,pos?green:red)}
       ${tile("Retorno TWR",p.twr!=null?sgp(p.twr):"—","la estrategia, neteando aportes",indigo,p.twr!=null?(p.twr>=0?green:red):muted)}
-      ${tile("vs IPSA",vsIpsa!=null?((vsIpsa>=0?"+":"−")+Math.abs(vsIpsa).toFixed(2)+" pts"):"—",vsIpsa!=null?(vsIpsa>=0?"le ganas al mercado":"vas bajo el mercado"):"sin índice comparable",indigo,vsIpsa!=null?(vsIpsa>=0?green:red):muted)}</div>`;
-    const riesgo=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(142px,1fr))">
+      ${tile("vs IPSA",vsIpsa!=null?((vsIpsa>=0?"+":"−")+Math.abs(vsIpsa).toFixed(2)+" pts"):"—",vsIpsa!=null?(vsIpsa>=0?"le ganas al mercado":"vas bajo el mercado"):"sin índice comparable",indigo,vsIpsa!=null?(vsIpsa>=0?green:red):muted)}</div>
+      <div class="tiles fsolo-t" ${cinco}>
       ${tile('<span class="gl">β</span> realizada',p.betaR!=null?num(p.betaR):"—",p.betaR!=null?("esperada "+(p.beta||0).toFixed(2)):"faltan ≥5 fechas",indigo,accentT)}
       ${tile('<span class="gl">α</span> de Jensen',aR!=null?sgp(aR):"—","sobre lo exigido por su riesgo",indigo,aR!=null?(aR>=0?green:red):muted)}
       ${tile("Volatilidad",p.vol!=null?p.vol.toFixed(1)+"%":"—","anualizada, realizada",indigo,ink)}
       ${tile("Sharpe",p.sharpeR!=null?num(p.sharpeR):"—",p.sharpeR!=null?"retorno por unidad de riesgo":"desde 30 días de seguimiento",indigo,p.sharpeR!=null?(p.sharpeR>=0?green:red):muted)}
-      ${tile("Inicio",sd||"—",p.nrec+" registro"+(p.nrec!==1?"s":"")+" de seguimiento",indigo,ink)}</div>`;
-    return `<div class="fsolo">
-      <div class="fsolo-head"><span class="rk-dot" style="background:${p.col}"></span>
-        <span class="fsolo-name">${nm}</span>
-        <span class="fsolo-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado)">${(pos?"+":"−")+Math.abs(p.pct).toFixed(2)}<span>%</span></span>
-        <button class="btn btn-pri" data-gohome="${p.cliId}|${p.pid}">Entrar al proyecto →</button></div>
-      <div class="fsolo-chart">${chart}${leg}</div>
-      ${dinero}${riesgo}</div>`;
+      ${tile("Registros",String(p.nrec),"fechas de seguimiento",indigo,ink)}</div>`;
+    // MISMA ANATOMÍA que las otras tarjetas del Home: gráfico en .ipsa-chart, pie de referencia y tiles.
+    // El nombre y la rentabilidad viven en la CABECERA de la tarjeta (título y subtítulo), no en un
+    // encabezado propio con tipografías que no existen en ningún otro sitio de Investor.
+    return `<div class="ipsa-chart">${chart}</div>${leg}${fichas}`;
   };
   const fundsInner=funds.length
     ? (funds.length===1
@@ -10810,13 +10796,16 @@ function viewHome(){
       ? `<div class="home-fundgrid n2">${funds.map(fundWide).join("")}</div>`
       : `<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`)
     : `<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`;
-  const fundsCard=card(funds.length===1?"Fondo administrado":"Fondos administrados",
-    funds.length===1
-      ? (funds[0].hasData
-         ? `Tu única cartera en gestión · la curva es su rentabilidad acumulada (%) contra el IPSA del mismo período — mide la GESTIÓN, sin los saltos de capital de las compras`
+  const _f1=funds.length===1?funds[0]:null;
+  const fundsCard=card(
+    _f1?("Fondo administrado · "+(""+_f1.name).replace(/</g,"&lt;")):"Fondos administrados",
+    _f1
+      ? (_f1.hasData
+         ? `<b style="color:${_f1.pct>=0?green:red}">${(_f1.pct>=0?"+":"−")+Math.abs(_f1.pct).toFixed(2)}%</b> sobre tu capital aportado · la curva es la rentabilidad acumulada (%) contra el IPSA del mismo período — mide la GESTIÓN, sin los saltos de capital de las compras`
          : `Tu única cartera en gestión · aún sin seguimiento registrado`)
       : `${funds.length} carteras en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,
-    fundsInner);
+    fundsInner,
+    _f1?`<button class="btn" data-gohome="${_f1.cliId}|${_f1.pid}">Entrar al proyecto →</button>`:"");
   // gráfico gestionado en el tiempo: la CURVA es la historia de la RENTABILIDAD NETA — (valor − aportado −
   // comisiones) ÷ aportado a cada fecha, la MISMA base que la tarjeta "Rentabilidad" del Resumen consolidado
   // (el último punto coincide exacto con ella). El patrimonio queda como dato en el pie (y en el hero).
@@ -10930,7 +10919,9 @@ function viewHome(){
     const sub="Un mes por columna: compras hacia arriba, ventas hacia abajo y las comisiones en su carril inferior (IVA incluido, escala propia) · <b>haz clic en un mes para ver el detalle de sus operaciones</b> · el libro completo va en Contabilidad";
     return card("Operaciones y comisiones",sub,body);
   })();
-  return greetStrip+avisoBase+hero+tiles+totalCard+fundsCard+patrCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
+  // los dos gráficos del consolidado van juntos: primero la rentabilidad neta y debajo el patrimonio,
+  // que es la misma historia en pesos. Los fondos vienen después.
+  return greetStrip+avisoBase+hero+tiles+totalCard+patrCard+fundsCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
 /* color por tramo del score */
 function iscCol(v){return v>=70?green:v>=55?indigo:v>=40?amber:red;}
