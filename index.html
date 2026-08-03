@@ -3162,12 +3162,32 @@ function invMetrics(){
   // regresión, el β realizado, el tracking error, el information ratio y los "aciertos vs IPSA" quedarían
   // sesgados por días de mercado inventados. Se calculan solo sobre el subconjunto con índice real.
   const mrOK=[];let prevIpsaOK=false;
+  /* AJUSTE DE VALORIZACIÓN DEL DÍA DE LA OPERACIÓN.
+     Compras hoy y el cierre de hoy todavía no existe: el registro valoriza tus acciones al último cierre
+     conocido (el de ayer), pero el aporte entra al precio REAL al que compraste. Esa diferencia se convertía
+     en rentabilidad del día que nunca ocurrió — hacia abajo si compraste sobre el cierre de ayer, hacia
+     arriba si compraste bajo él. (Antes se tapaba escribiendo el precio de tu orden como cierre del día, lo
+     que era peor: revalorizaba toda la posición que ya tenías a un precio que no fue un cierre.)
+     Aquí las acciones movidas HOY se valorizan a su PRECIO DE TRANSACCIÓN mientras no haya cierre real de esa
+     fecha para ese papel: el aporte y el valor cuadran al peso y el día no inventa retorno. El ajuste dura
+     exactamente hasta que llega el cierre oficial de ese papel — ahí manda el mercado y la diferencia entre
+     lo que pagaste y el cierre pasa a ser rentabilidad REAL, que es lo que es. */
+  const ajVal={};
   WEEKS.forEach((w,i)=>{
     let inflow=0;
+    // el cierre real de un papel deshace su ajuste: desde ese registro las acciones valen lo que dice el mercado
+    if(w.fresh&&w.fresh.length)w.fresh.forEach(t=>{if(ajVal[t]!=null)delete ajVal[t];});
     if(w.ev){
       if(w.ev.kind==="inject"){const al=w.ev.alloc||{},sq=w.ev.shares;Object.keys(al).forEach(t=>{const q=(sq&&sq[t]>0)?sq[t]:al[t]/(w.prices[t]||base.prices[t]||1);sh[t]=(sh[t]||0)+q;cost[t]=(cost[t]||0)+al[t];if(!firstBuy[t]&&q>0)firstBuy[t]={idx:i,price:al[t]/q};});inflow=w.ev.amount||0;aport+=inflow;}   // ev.shares = cantidades reales compradas (los aportes antiguos sin shares se derivan del precio)
       else if(w.ev.kind==="rebal"&&w.ev.shares){PF.holdings.forEach(hd=>{const old=sh[hd.t]||0,nw=w.ev.shares[hd.t]!=null?w.ev.shares[hd.t]:old,p=w.prices[hd.t]||base.prices[hd.t]||1;if(nw<old)cost[hd.t]=(cost[hd.t]||0)*(old>0?nw/old:1);else if(nw>old)cost[hd.t]=(cost[hd.t]||0)+(nw-old)*p;sh[hd.t]=nw;});}
-      else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;if(sh[tt]<=1e-9)delete firstBuy[tt];}else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;if(!firstBuy[tt]&&qy>0)firstBuy[tt]={idx:i,price:pp};}}
+      else if(w.ev.kind==="trade"){const tt=w.ev.t,qy=+w.ev.shares||0,pp=+w.ev.price||(w.prices[tt]||base.prices[tt]||1);
+        // ¿este registro trae el CIERRE REAL de ese papel? Si no, lo movido hoy se valoriza a lo que costó.
+        const _cierreReal=!!(w.fresh&&w.fresh.indexOf(tt)>=0);
+        const _pxDia=(w.prices[tt]!=null&&w.prices[tt]>0)?w.prices[tt]:(lastPx[tt]||0);
+        if(w.ev.side==="sell"){const old=sh[tt]||0,sold=Math.min(qy,old);cost[tt]=(cost[tt]||0)*(old>0?(old-sold)/old:0);sh[tt]=old-sold;inflow=-(sold*pp);aport+=inflow;if(sh[tt]<=1e-9)delete firstBuy[tt];
+          if(!_cierreReal&&_pxDia>0)ajVal[tt]=(ajVal[tt]||0)-sold*(pp-_pxDia);}
+        else{sh[tt]=(sh[tt]||0)+qy;cost[tt]=(cost[tt]||0)+qy*pp;inflow=qy*pp;aport+=inflow;if(!firstBuy[tt]&&qy>0)firstBuy[tt]={idx:i,price:pp};
+          if(!_cierreReal&&_pxDia>0)ajVal[tt]=(ajVal[tt]||0)+qy*(pp-_pxDia);}}
       // DIVIDENDO: efectivo que SALE de la cartera hacia el usuario (dinero rescatado) sin tocar acciones ni
       // costos. Como flujo negativo, el TWR del día lo CUENTA como retorno — (val + D)/prev − 1 — que es
       // exactamente lo que corresponde: el precio ex-dividendo ya cayó en el mercado y el dividendo compensa.
@@ -3175,7 +3195,8 @@ function invMetrics(){
       else if(w.ev.kind==="div"){const amt=+w.ev.amount||0;if(amt>0){inflow=-amt;aport+=inflow;}}
     }
     PF.holdings.forEach(hd=>{const p=w.prices[hd.t];if(p!=null&&p>0)lastPx[hd.t]=p;});   // actualiza el último precio conocido con los cierres reales del registro
-    const val=PF.holdings.reduce((a,hd)=>{const p=w.prices[hd.t];const px=(p!=null&&p>0)?p:(lastPx[hd.t]||0);return a+(sh[hd.t]||0)*px;},0);
+    const _aj=Object.keys(ajVal).reduce((a,t)=>a+(ajVal[t]||0),0);
+    const val=PF.holdings.reduce((a,hd)=>{const p=w.prices[hd.t];const px=(p!=null&&p>0)?p:(lastPx[hd.t]||0);return a+(sh[hd.t]||0)*px;},0)+_aj;
     dayFlow+=inflow;
     // TWR POR FECHA: la rentabilidad del día = (cierre del día − aportes del día) vs el cierre del día anterior —
     // EXACTAMENTE la fórmula del KPI "Cambio último día". Antes se encadenaba registro a registro y, con varias
@@ -7694,10 +7715,15 @@ function opDo(){
   // PRECIOS DE MERCADO del día de la operación: se prefieren los cierres REALES de la base para ESA fecha (todas
   // las tenencias + IPSA), no se arrastran los del último registro — así el seguimiento queda valorizado al cierre
   // del día de la compra. Si la base aún no tiene ese día, se arrastra el último conocido (y al sincronizar el
-  // cierre, pricedbApplyToProjects lo actualiza). Para el PAPEL OPERADO, si su cierre de HOY aún no existe, el
-  // precio del día es el de la TRANSACCIÓN (es un precio REAL de mercado de HOY, más fresco que el arrastre de
-  // ayer): sin esto, comprar hoy sobre el cierre de ayer fabricaba una "pérdida del día" fantasma (aporte al
-  // precio real vs valorización al arrastre). El cierre REAL del mismo día, cuando existe o llega después, manda.
+  // cierre, pricedbApplyToProjects lo actualiza).
+  // UNA OPERACIÓN NO FIJA EL CIERRE DEL DÍA. El precio al que compras o vendes es un dato de contabilidad, no
+  // un cierre de mercado: escribirlo como precio del día revalorizaba TODA la posición que ya tenías de ese
+  // papel al precio de tu orden — un retorno inventado, y un "cierre" en el historial que nunca existió. La
+  // única excepción es una posición COMPLETAMENTE nueva, sin ningún precio conocido: sin sembrarla se
+  // valorizaría en $0. Aun así jamás se marca como cierre real (no entra en `fresh`).
+  // El desajuste que esto provocaba —comprar a un precio distinto del último cierre— se resuelve donde
+  // corresponde, en invMetrics: las acciones compradas/vendidas HOY, mientras no haya cierre real de hoy, se
+  // valorizan a su PRECIO DE TRANSACCIÓN, así el aporte y el valor cuadran y el día no fabrica rentabilidad.
   const prices=Object.assign({},basePrices);
   const fresh=[];let _ipFresh=false;
   try{const C=consolidatedSeries();if(C){
@@ -7705,12 +7731,7 @@ function opDo(){
     const mpt=C.tick[t];if(mpt&&mpt[date]!=null){prices[t]=mpt[date];if(fresh.indexOf(t)<0)fresh.push(t);}
     if(C.ipsaMap&&C.ipsaMap[date]!=null){ipsa=C.ipsaMap[date];_ipFresh=true;}
   }}catch(e){}
-  if(fresh.indexOf(t)<0&&p>0){
-    // sin cierre real de HOY para el papel operado → el precio del día es el de la transacción. Guardia anti
-    // dedo-gordo: si difiere >15% del último precio conocido (posible error de unidad), NO revaloriza la posición
-    // existente con él; solo se usa cuando no hay ningún precio (posición completamente nueva).
-    if(!(prices[t]>0)||Math.abs(p/prices[t]-1)<=0.15)prices[t]=p;
-  }
+  if(fresh.indexOf(t)<0&&p>0&&!(prices[t]>0))prices[t]=p;   // posición nueva sin ningún precio conocido: se siembra (pero NO es un cierre)
   // fresh SIEMPRE se estampa (aunque vacío): marca qué precios son cierre REAL del día vs arrastre. Un arreglo
   // vacío = ningún cierre real ese día → los Δ del período de esas acciones se muestran "—" (no un % arrastrado).
   const _wk={date,prices,ipsa,fresh,ev:{kind:"trade",t,side,shares:qty,price:p}};if(_ipFresh)_wk.ipsaFresh=true;
@@ -9309,17 +9330,30 @@ function projFixTargets(p){
    (precio real de mercado de ese día) — no el arrastre de ayer, que fabricaba una "pérdida del día" fantasma
    al comprar sobre el cierre anterior. Idempotente; respeta la guardia anti dedo-gordo (±15%). Cuando el
    cierre real llega, pricedbApplyToProjects lo pisa igual que siempre. */
-function projFixTradeDayPrices(){
+/* SANEA LOS REGISTROS QUE YA QUEDARON CON UN CIERRE QUE NO EXISTIÓ.
+   Hasta ahora, al operar un papel sin cierre publicado para esa fecha, el precio de la ORDEN se escribía
+   como precio del día — y esta misma migración lo re-escribía en cada arranque. Eso revaloriza toda la
+   posición que ya tenías de ese papel al precio de tu orden: un "cierre" inventado en el historial y una
+   rentabilidad que nunca ocurrió.
+   Ahora hace lo contrario: donde el precio del día es EXACTAMENTE el de la orden y no hay cierre real de
+   ese papel esa fecha, devuelve el último cierre conocido. Si no hay ninguno (posición estrenada ese día)
+   lo deja: es el único precio que existe. Nada de esto toca la operación —cantidad, precio y monto siguen
+   intactos en el libro—, solo la VALORIZACIÓN del día. */
+function projSanearPreciosDeOperacion(){
   let n=0;
   try{CLIENTS.forEach(c=>{const projs=clientProjects(c.id)||[];let ch=false;
-    projs.forEach(p=>{(p.weeks||[]).forEach(w=>{
-      if(!w||!w.ev||w.ev.kind!=="trade")return;
-      const t=w.ev.t,pp=+w.ev.price;
-      if(!(pp>0)||!w.fresh||w.fresh.indexOf(t)>=0)return;   // con cierre real del papel ese día, el cierre manda
-      const cur=w.prices?w.prices[t]:null;
-      if(cur===pp)return;
-      if(!(cur>0)||Math.abs(pp/cur-1)<=0.15){w.prices=w.prices||{};w.prices[t]=pp;n++;ch=true;}
-    });});
+    projs.forEach(p=>{
+      const ult={};   // último precio conocido por papel que NO viene de una orden
+      (p.weeks||[]).forEach(w=>{
+        if(!w)return;
+        if(w.ev&&w.ev.kind==="trade"&&Array.isArray(w.fresh)){
+          const t=w.ev.t,pp=+w.ev.price,cur=w.prices?w.prices[t]:null;
+          // solo si NO hay cierre real de ese papel ese día y el precio del día ES el de la orden
+          if(pp>0&&w.fresh.indexOf(t)<0&&cur===pp&&ult[t]>0&&ult[t]!==pp){w.prices[t]=ult[t];n++;ch=true;}
+        }
+        if(w.prices)Object.keys(w.prices).forEach(t=>{const v=+w.prices[t];if(v>0)ult[t]=v;});
+      });
+    });
     if(ch)clientSaveProjects(c.id,projs);
   });if(n)syncProj();}catch(e){}
   return n;
@@ -9941,7 +9975,7 @@ function clientLoad(){
   catch(e){ DATASET="none"; }
   try{pricedbAutoSeed();}catch(e){}   // base poblada (demo + cierres) una vez por cliente
   try{pricedbSanitize();}catch(e){}   // auto-saneo en cada carga: sin fines de semana ni arrastres (fidelidad de la base)
-  try{projFixTradeDayPrices();}catch(e){}   // operaciones guardadas con valorización de arrastre → precio real de la transacción
+  try{projSanearPreciosDeOperacion();}catch(e){}   // el precio de una orden no es el cierre del día: se devuelve el último cierre real
   try{analysisSystemOnly();}catch(e){}
   syncProj();
   simState.sel={};if(invProfile)simState.profile=invProfile.profile;
@@ -11068,7 +11102,7 @@ function removeExampleClients(){try{
 }catch(e){}}
 try{removeExampleClients();}catch(e){}
 try{pricedbAutoSeed();}catch(e){}
-try{projFixTradeDayPrices();}catch(e){}
+try{projSanearPreciosDeOperacion();}catch(e){}
 try{analysisSystemOnly();}catch(e){}
 /* drawer móvil: la hamburguesa abre/cierra el menú lateral; el fondo lo cierra */
 (function(){const bg=document.getElementById("navburger"),bk=document.getElementById("navBk");
