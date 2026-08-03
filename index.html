@@ -882,6 +882,13 @@
      que cede: primero se aprieta, luego pierde la etiqueta «beta» y por último se queda en iconos (los
      nombres siguen en el menú ☰). Los controles de la derecha tienen su sitio asegurado. */
   .topbar{min-width:0;}
+  /* El bloque de título ocupa lo MISMO en todos los módulos: «Resumen general» y «Optimización de cartera»
+     no miden igual, y como navFit() reparte el sitio que sobra, la barra se reorganizaba al navegar —
+     aparecían y desaparecían las etiquetas «beta» de un módulo a otro. Con un ancho fijo, el grado de la
+     navegación depende solo del ancho de la ventana. */
+  .topbar>div:not(.tnav):not(.spacer){width:186px;flex:0 0 186px;min-width:0;}
+  .topbar .crumb,.topbar .ptitle{overflow:hidden;text-overflow:ellipsis;}
+  .topbar .ptitle{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.15;}
   .tnav{min-width:0;flex-shrink:1;overflow:hidden;}
   .topbar .iconbtn,.topbar .mkpill,.topbar .burger{flex-shrink:0;}
   @media(max-width:1500px){.tnav{gap:6px;}.topnav{padding:0 .72rem;font-size:12.5px;gap:7px;}}
@@ -1028,7 +1035,6 @@
   .sesspill #sessPillTxt{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .sesspill.otro{border-color:var(--amber-line);background:var(--amberbg);color:var(--amber);}
   .sesspill.otro .live-dot{background:var(--amber);box-shadow:0 0 0 3px var(--amberbg);}
-  .sesspill.compacta .rl{display:none;}
   .verc-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
   .verc-item{display:flex;align-items:center;gap:11px;padding:.6rem .75rem;border:1px solid var(--line2);
     border-radius:11px;background:var(--card2);cursor:pointer;text-align:left;transition:.13s var(--ease);width:100%;}
@@ -3652,10 +3658,11 @@ function viewInvActive(){
       const vd=a=>a>=0
         ?`<span class="badge pos" title="Rindió más de lo que el CAPM exige por su β">pagó el riesgo</span>`
         :`<span class="badge neg" title="Rindió menos de lo que el CAPM exige por su β">no lo pagó</span>`;
-      const fA=a=>`<span style="color:${a>=0?green:red};font-weight:800">${a>=0?"+":"−"}${Math.abs(a).toFixed(2)} pts</span>`;
+      // mismo criterio de signo y decimales que pc(): la columna no puede tener dos estilos de número
+      const fA=a=>`<span style="color:${a>=0?green:red};font-weight:800">${(a>=0?"+":"-")+Math.abs(a).toFixed(2)} pts</span>`;
       const cuerpo=filas.map(r=>`<tr>
         <td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${(r.ps&&r.ps.hd&&r.ps.hd.n&&(""+r.ps.hd.n).toUpperCase()!==(""+r.t).toUpperCase())?`<div class="t-sub">${(""+r.ps.hd.n).replace(/</g,"&lt;")}</div>`:""}</td>
-        <td class="r">${r.peso!=null?r.peso.toFixed(1)+"%":"—"}</td>
+        <td class="r">${r.peso!=null?p0(r.peso,1):"—"}</td>
         <td class="r">${r.b.toFixed(2)}</td>
         <td class="r">${(r.ps&&r.ps.betaR!=null)?r.ps.betaR.toFixed(2):"—"}</td>
         <td class="r">${pc(r.real)}</td>
@@ -3664,10 +3671,10 @@ function viewInvActive(){
         <td>${vd(r.alpha)}</td></tr>`).join("");
       const pie=`<tfoot>
         <tr><td><b>${(""+PF.name).replace(/</g,"&lt;")}</b><div class="t-sub">tu portafolio</div></td>
-          <td class="r">100,0%</td><td class="r">${bp.toFixed(2)}</td><td class="r">${IM.betaR!=null?IM.betaR.toFixed(2):"—"}</td>
+          <td class="r">${p0(100,1)}</td><td class="r">${bp.toFixed(2)}</td><td class="r">${IM.betaR!=null?IM.betaR.toFixed(2):"—"}</td>
           <td class="r">${pc(pR)}</td><td class="r">${pc(req(bp))}</td><td class="r">${fA(aP)}</td><td>${vd(aP)}</td></tr>
         <tr><td><b>IPSA</b><div class="t-sub">el mercado</div></td>
-          <td class="r">—</td><td class="r">1,00</td><td class="r">1,00</td>
+          <td class="r">—</td><td class="r">${(1).toFixed(2)}</td><td class="r">${(1).toFixed(2)}</td>
           <td class="r">${pc(iR)}</td><td class="r">${pc(req(1))}</td><td class="r">${fA(aM)}</td><td>${vd(aM)}</td></tr></tfoot>`;
       return `<div class="tw tbl-compact" style="margin-top:15px"><table>
         <thead><tr><th>Acción</th>
@@ -7113,14 +7120,11 @@ cfgEnsureDOM();
 function navFit(){
   try{
     const nav=document.querySelector(".tnav");if(!nav)return;
-    const pill=document.getElementById("sessPill");
     nav.classList.remove("sin-beta","solo-iconos");
-    if(pill)pill.classList.remove("compacta");
     const cabe=()=>nav.scrollWidth<=nav.clientWidth+1;
     if(cabe())return;
     nav.classList.add("sin-beta");
     if(cabe())return;
-    if(pill){pill.classList.add("compacta");if(cabe())return;}   // la pastilla suelta el papel antes que la navegación los nombres
     nav.classList.add("solo-iconos");
   }catch(e){}
 }
@@ -7140,7 +7144,7 @@ function sessPillSync(){
       b.title="Estás trabajando en el espacio de "+(v.name||v.user)+" ("+rol(v.role)+"). Pulsa para volver a tu sesión o cambiar de usuario.";
       b.classList.add("otro");
     }else{
-      t.innerHTML=esc(yo.name||yo.user)+'<span class="rl"> · '+rol(yo.role)+"</span>";
+      t.textContent=(yo.name||yo.user);
       b.title="Sesión de "+(yo.name||yo.user)+" ("+rol(yo.role)+")"+(isAdmin()?" · pulsa para ver la interfaz de otro usuario":"");
       b.classList.remove("otro");
     }
