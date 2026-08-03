@@ -3229,14 +3229,16 @@ function invMetrics(){
   // "Crecimiento por acción": base 100 desde la PRIMERA compra de cada acción. Antes de esa fecha va en null,
   // por lo que la línea NO existe (svgMulti la dibuja recién desde la compra): ENEL, comprada más tarde, arranca
   // en su fecha de incorporación y no arrastra el crecimiento previo de la cartera. Estándar para cualquier acción.
-  // El ANCLA es el CIERRE del día de incorporación (el mismo valor que se grafica en ese índice), no el precio de
-  // la transacción: si compraste a $81,42 y ese día cerró a $80,90, la línea parte EXACTO en 100 y mide el
-  // crecimiento de mercado desde la incorporación. El retorno sobre tu precio de compra vive en la tabla (gain/costo).
+  // El ANCLA es el precio al que la acción ENTRÓ a la cartera: el de la TRANSACCIÓN (un precio real de mercado
+  // de ese momento) y, si no lo hay, el cierre del día de incorporación. Así el primer cierre del papel ya
+  // muestra el movimiento compra→cierre, que es mercado posterior a tu entrada: comprada hoy a $1.857,8 con
+  // cierre manual de hoy a $1.845,2, la línea marca −0,68% — no un falso +0,00% clavado en la base. Para la
+  // compra inicial ancla y cierre coinciden (los precios del registro 0 SON los de compra): nada cambia allí.
   // SOLO se grafican CIERRES REALES: un registro sin cierre del papel (operación de hoy antes de la sincronización,
   // o precio arrastrado) NO aporta punto — la línea termina en el último cierre y el punto del día aparece cuando
   // llega el cierre. Así una COMPRA/VENTA jamás "mueve" el crecimiento (su precio vale para valorizar, no como cierre).
   const stockSeries=PF.holdings.map(hd=>{const fb=firstBuy[hd.t],fi=fb?fb.idx:0;
-    const cl=WEEKS[fi]?WEEKS[fi].prices[hd.t]:null,anc=(cl>0)?cl:((fb&&fb.price>0)?fb.price:b0[hd.t]);
+    const cl=WEEKS[fi]?WEEKS[fi].prices[hd.t]:null,anc=(fb&&fb.price>0)?fb.price:((cl>0)?cl:b0[hd.t]);
     return {label:hd.t,c:hd.c,vals:WEEKS.map((w,i)=>(i<fi||!freshOK(w,hd.t)||!(w.prices[hd.t]>0))?null:+(100*(w.prices[hd.t]/anc)).toFixed(2))};});
   const lastW=WEEKS[WEEKS.length-1],prevW=WEEKS.length>=2?WEEKS[WEEKS.length-2]:null,last=series[series.length-1];
   // retorno por acción = sobre el capital REALMENTE invertido en ella (gain/costo): mide desde su compra, no desde
@@ -3710,8 +3712,8 @@ function viewInvActive(){
       }).sort((a,b)=>b.alpha-a.alpha);
       if(!filas.length)return "";
       const vd=a=>a>=0
-        ?`<span class="badge pos" title="Rindió más de lo que el CAPM exige por su β">pagó el riesgo</span>`
-        :`<span class="badge neg" title="Rindió menos de lo que el CAPM exige por su β">no lo pagó</span>`;
+        ?`<span class="badge pos" title="Rindió MÁS de lo que el CAPM exige por su β (α positivo): estaba barata para su riesgo — sobre la SML">subvalorada</span>`
+        :`<span class="badge neg" title="Rindió MENOS de lo que el CAPM exige por su β (α negativo): estaba cara para su riesgo — bajo la SML">sobrevalorada</span>`;
       // mismo criterio de signo y decimales que pc(): la columna no puede tener dos estilos de número
       const fA=a=>`<span style="color:${a>=0?green:red};font-weight:800">${(a>=0?"+":"-")+Math.abs(a).toFixed(2)} pts</span>`;
       const cuerpo=filas.map(r=>`<tr>
@@ -3741,7 +3743,7 @@ function viewInvActive(){
           <th>Veredicto</th></tr></thead>
         <tbody>${cuerpo}</tbody>${pie}</table></div>`;
     })();
-    const body=svg+leg+smlTbl+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar): la <b style="color:${green}">zona verde</b> (sobre la línea) es rendimiento por ENCIMA de lo exigido y la <b style="color:${red}">rojiza</b>, por debajo. Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → la línea punteada vertical es tu <b>alpha realizado</b>: <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b>. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} exigido → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${stkPts.length?` Cada <b>acción del portafolio</b> va con su nombre en su β, con el crecimiento de su <b>precio de mercado</b> desde que entró a la cartera: en zona verde = le pagó su riesgo; en zona roja = el lastre de tu alpha. Pasa el cursor por cualquier punto para los valores exactos.`:""} La tabla de arriba es el mismo cálculo acción por acción: <b>α de Jensen = retorno del período − exigido CAPM</b>, ordenada de la que más pagó su riesgo a la que menos.${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
+    const body=svg+leg+smlTbl+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar): la <b style="color:${green}">zona verde</b> (sobre la línea) es rendimiento por ENCIMA de lo exigido y la <b style="color:${red}">rojiza</b>, por debajo. Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → la línea punteada vertical es tu <b>alpha realizado</b>: <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b>. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} exigido → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${stkPts.length?` Cada <b>acción del portafolio</b> va con su nombre en su β, con el crecimiento de su <b>precio de mercado</b> desde que entró a la cartera: en zona verde = le pagó su riesgo; en zona roja = el lastre de tu alpha. Pasa el cursor por cualquier punto para los valores exactos.`:""} La tabla de arriba es el mismo cálculo acción por acción: <b>α de Jensen = retorno del período − exigido CAPM</b>, ordenada de la más subvalorada (α+) a la más sobrevalorada (α−).${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
     return card("Security Market Line: ¿te pagó el riesgo que tomaste?","Retorno del período vs β · la línea punteada vertical de tu portafolio (◆) a la SML ES el alpha realizado · el IPSA (▲) separa cuánto es mercado y cuánto gestión · pasa el cursor por los puntos",body);
   }catch(e){return "";}})();
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA sobre las <b>"+(IM.nretIdx!=null?IM.nretIdx:IM.nret)+" fechas con cierre REAL del índice</b>"+((IM.nretIdx!=null&&IM.nret>IM.nretIdx)?(" (de "+IM.nret+" registros; las fechas sin índice quedan fuera para no inventar días de mercado)"):"")+"; compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ fechas con cierre real del IPSA</b> calcularé el β realizado por regresión de tus retornos vs el índice.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
@@ -10725,7 +10727,7 @@ function viewHome(){
       // UNA CIFRA POR TARJETA: el monto y el porcentaje van separados, cada uno en la suya.
       const _gbp=T.aportado>0?Tgain/T.aportado*100:0;
       const _pct=v=>(v>=0?"+":"−")+Math.abs(v).toFixed(2)+"%";
-      return tile("Ganancia bruta",sg(Tgain),"antes de comisiones · "+_pct(_gbp),indigo,Tgain>=0?green:red)
+      return tile("Ganancia bruta",sg(Tgain),`antes de comisiones · <b style="color:${col(_gbp)}">${_pct(_gbp)}</b>`,indigo,Tgain>=0?green:red)
         +tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName()+" · con IVA",indigo,red)
         +tile("Ganancia neta",sg(TgainNet),"después de comisiones",indigo,TgainNet>=0?green:red)
         +tile("Rentabilidad neta",_pct(Tpct),"neta · sobre el capital aportado",indigo,Tpct>=0?green:red);
