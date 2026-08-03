@@ -9629,7 +9629,23 @@ function viewProyectos(){
 function attachProyectos(){
   document.querySelectorAll("[data-prename]").forEach(inp=>inp.onchange=()=>{const p=PROJECTS.find(x=>String(x.id)===inp.dataset.prename);if(p){p.name=(inp.value||"").trim()||p.name;saveProjects();}});
   document.querySelectorAll("[data-pact]").forEach(b=>b.onclick=()=>projActivate(b.dataset.pact));
-  document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{const p=PROJECTS.find(x=>String(x.id)===b.dataset.pdel);if(p&&confirm('¿Eliminar el proyecto "'+p.name+'" y todo su seguimiento? No se puede deshacer.')){PROJECTS=PROJECTS.filter(x=>x.id!==p.id);if(activeId===p.id)activeId=PROJECTS.length?PROJECTS[0].id:null;saveProjects();syncProj();render();}});
+  document.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{
+    const p=PROJECTS.find(x=>String(x.id)===b.dataset.pdel);if(!p)return;
+    // se dice QUÉ se lleva por delante: un proyecto no es solo su nombre, es su contabilidad y su historia
+    // dentro de las cifras consolidadas. Borrar el que salió mal deja un historial que se ve mejor de lo que fue.
+    const R=(function(){try{const IM=withProject(p,()=>invMetrics());const C=contabAggFor(p);
+      return {reg:(p.weeks||[]).length,ops:C?C.rows.length:0,
+        real:C?C.totReal:null,fees:C?(C.fees+C.feesIva):null,
+        val:IM&&IM.last?IM.last.val:null,ret:IM&&IM.last?IM.last.ret*100:null};}catch(e){return null;}})();
+    const det=R?("\n\nSe lleva por delante:\n• "+R.reg+" registro(s) de seguimiento y "+R.ops+" operación(es)"
+      +(R.val!=null?("\n• su valor actual ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2)+"%) dejan de contar en el patrimonio consolidado del Inicio"):"")
+      +(R.real!=null?("\n• su contabilidad: "+fmtCLP(R.real)+" de ganancia realizada y "+fmtCLP(R.fees)+" de comisiones pagadas"):"")
+      +"\n\nOJO: si lo cierras porque salió mal, borrarlo deja tu historial viéndose MEJOR de lo que fue."):"";
+    if(!confirm('¿Eliminar el proyecto "'+p.name+'" y todo su seguimiento?'+det+"\n\nNo se puede deshacer."))return;
+    // misma red que el resto de acciones destructivas: copia interna antes de tocar nada
+    try{if(typeof autobkSnapshot==="function")autobkSnapshot('antes de eliminar el proyecto "'+p.name+'"');}catch(e){}
+    PROJECTS=PROJECTS.filter(x=>x.id!==p.id);if(activeId===p.id)activeId=PROJECTS.length?PROJECTS[0].id:null;
+    saveProjects();syncProj();render();});
   document.querySelectorAll("[data-unlink]").forEach(b=>b.onclick=()=>{const[pid,kind,id]=b.dataset.unlink.split("|");projDelLink(pid,kind,id);});
   document.querySelectorAll("[data-addlink]").forEach(sel=>sel.onchange=()=>{const[pid,kind]=sel.dataset.addlink.split("|");if(sel.value)projAddLink(pid,kind,sel.value);});
   document.querySelectorAll("[data-pgoto]").forEach(b=>b.onclick=()=>{const[pid,m,pg]=b.dataset.pgoto.split("|");activeId=PROJECTS.find(x=>String(x.id)===pid).id;saveProjects();syncProj();modulo=m;page=pg;render();});
