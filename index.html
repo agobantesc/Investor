@@ -1659,6 +1659,11 @@
   .note::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--line2);}
   /* Controles segmentados: pastilla más definida y foco visible */
   .home-seg{background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:2px;display:inline-flex;gap:2px;}
+  /* rentabilidad del tramo dibujado, pegada al selector de ventana: la cifra que responde "elegí 6 meses,
+     ¿cuánto rindió?" — las variaciones de arriba son móviles y no siguen a este selector */
+  .ipsa-venret{display:inline-flex;align-items:baseline;gap:5px;font-size:13px;font-weight:800;letter-spacing:-.3px;
+    font-variant-numeric:tabular-nums;border:1px solid;border-radius:9px;padding:.26rem .55rem;white-space:nowrap;}
+  .ipsa-venret small{font-size:9.5px;font-weight:700;opacity:.8;letter-spacing:.2px;}
   .home-seg button.on{box-shadow:var(--sh-xs);}
   .home-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
   /* Leyendas de gráficos: separadas del lienzo, alineadas entre sí */
@@ -10293,7 +10298,7 @@ let homeTotFrom="",homeTotTo="";
 function homeTotRangeSave(){try{lsSet("inv_home_tot_range",{f:homeTotFrom,t:homeTotTo});}catch(e){}}
 let homeIpsaWin=(()=>{const v=+lsGet("inv_home_ipsa_win");return [3,6,12,24].indexOf(v)>=0?v:24;})();   // VENTANA (meses) del gráfico del IPSA en Home
 let homeIpsaFreq=(()=>{const v=lsGet("inv_home_ipsa_freq");return ["diario","semanal","mensual"].indexOf(v)>=0?v:"mensual";})();   // CADENCIA de la curva: cierre de cada día, semana o mes
-let homeIpsaBase=(()=>{const v=lsGet("inv_home_ipsa_base");return ["indice","cap","eq"].indexOf(v)>=0?v:"indice";})();   // QUÉ CURVA: el índice tal cual, o una canasta reconstruida desde los precios de las acciones
+let homeIpsaBase=(()=>{const v=lsGet("inv_home_ipsa_base");return ["indice","cap"].indexOf(v)>=0?v:"indice";})();   // QUÉ CURVA: el índice tal cual, o la canasta reconstruida por capitalización desde los precios de las acciones
 /* CANASTA: índice reconstruido encadenando los retornos DIARIOS de las acciones que hay en la base, en vez de
    leer el nivel del índice. Se ancla al IPSA del primer día de la serie para que quede en la misma escala.
    · "cap" pondera por capitalización bursátil (canal de fundamentos) → reproduce el IPSA: es la comprobación
@@ -10749,12 +10754,17 @@ function viewHome(){
       const _bk=homeIpsaBase!=="indice"?ipsaBasketMap(homeIpsaBase):null;
       const _mapa=_bk?_bk.map:C.ipsaMap;
       const _bkFalla=homeIpsaBase!=="indice"&&!_bk;
-      const BS={indice:{lbl:"Índice",nom:"IPSA"},cap:{lbl:"Capitaliz.",nom:"Canasta por capitalización"},eq:{lbl:"Equipond.",nom:"Canasta equiponderada"}}[_bkFalla?"indice":homeIpsaBase];
+      const BS={indice:{lbl:"Índice",nom:"IPSA"},cap:{lbl:"Capitaliz.",nom:"Canasta por capitalización"}}[_bkFalla?"indice":homeIpsaBase]||{lbl:"Índice",nom:"IPSA"};
       const rs=dropTrailingFlat(resampleMap(_mapa,homeIpsaFreq)).filter(x=>x.d>=_corte);
       const cap=FR.cap+" · últimos "+homeIpsaWin+" meses ("+rs.length+" punto"+(rs.length===1?"":"s")+")"+(_bk?(" · canasta de "+_bk.n+" acciones"):"");
       const segF=`<div class="home-seg" role="group" aria-label="Cadencia del gráfico del IPSA">${[["diario","D"],["semanal","S"],["mensual","M"]].map(([k,l])=>`<button data-ipsafreq="${k}" class="${homeIpsaFreq===k?"on":""}" title="Un punto por cada ${({diario:"día hábil",semanal:"semana",mensual:"mes"})[k]} con cierre del índice">${l}</button>`).join("")}</div>`;
-      const segB=`<div class="home-seg" role="group" aria-label="Base de la curva">${[["indice","Índice","El nivel del IPSA tal como está en la base (cierres oficiales y, cuando la fuente no los publica, la reconstrucción por capitalización)"],["cap","Capitaliz.","Canasta reconstruida encadenando los retornos diarios de las acciones de la base, ponderados por capitalización bursátil: reproduce el índice y sirve para comprobar que es fiel a sus propias acciones"],["eq","Equipond.","Canasta con todas las acciones pesando lo mismo: muestra cómo le fue a la acción TÍPICA, sin que los pesos pesados manden la curva"]].map(([k,l,ti])=>`<button data-ipsabase="${k}" class="${(_bkFalla?"indice":homeIpsaBase)===k?"on":""}" title="${ti}">${l}</button>`).join("")}</div>`;
-      const seg=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="genl" style="margin:0">Cadencia</span>${segF}<span class="genl" style="margin:0 0 0 4px">Ventana</span><div class="home-seg" role="group" aria-label="Ventana del gráfico del IPSA">${[3,6,12,24].map(k=>`<button data-ipsawin="${k}" class="${homeIpsaWin===k?"on":""}" title="Últimos ${k} meses de historia; las variaciones de arriba no se tocan">${k}m</button>`).join("")}</div><span class="genl" style="margin:0 0 0 4px">Base</span>${segB}</div>`;
+      const segB=`<div class="home-seg" role="group" aria-label="Base de la curva">${[["indice","Índice","El nivel del IPSA tal como está en la base (cierres oficiales y, cuando la fuente no los publica, la reconstrucción por capitalización)"],["cap","Capitaliz.","Canasta reconstruida encadenando los retornos diarios de las acciones de la base, ponderados por capitalización bursátil: reproduce el índice y sirve para comprobar que es fiel a sus propias acciones"]].map(([k,l,ti])=>`<button data-ipsabase="${k}" class="${(_bkFalla?"indice":homeIpsaBase)===k?"on":""}" title="${ti}">${l}</button>`).join("")}</div>`;
+      // RENTABILIDAD DEL TRAMO que se está viendo: del primer al último punto DIBUJADO. Es la respuesta a
+      // "elegí 6 meses, ¿cuánto rindió?" — las variaciones de arriba (día/semana/mes/12m) son móviles y fijas,
+      // no siguen al selector. El título lleva las fechas exactas para que el número sea auditable.
+      const _venRet=rs.length>=2&&rs[0].v>0?(rs[rs.length-1].v/rs[0].v-1)*100:null;
+      const _venChip=_venRet==null?"":`<span class="ipsa-venret" style="color:${_venRet>=0?green:red};border-color:${_venRet>=0?green:red}33;background:${_venRet>=0?green:red}14" title="Rentabilidad del tramo dibujado: del cierre del ${_fD(rs[0].d)} (${(+rs[0].v).toLocaleString("es-CL",{maximumFractionDigits:2})} pts) al del ${_fD(rs[rs.length-1].d)} (${(+rs[rs.length-1].v).toLocaleString("es-CL",{maximumFractionDigits:2})} pts)">${(_venRet>=0?"+":"−")+Math.abs(_venRet).toFixed(2)}%<small>en ${homeIpsaWin}m</small></span>`;
+      const seg=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="genl" style="margin:0">Cadencia</span>${segF}<span class="genl" style="margin:0 0 0 4px">Ventana</span><div class="home-seg" role="group" aria-label="Ventana del gráfico del IPSA">${[3,6,12,24].map(k=>`<button data-ipsawin="${k}" class="${homeIpsaWin===k?"on":""}" title="Últimos ${k} meses de historia; las variaciones de arriba no se tocan">${k}m</button>`).join("")}</div>${_venChip}<span class="genl" style="margin:0 0 0 4px">Base</span>${segB}</div>`;
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
         // en mensual la etiqueta es MM/AA (un "DD/MM" se repetiría idéntico entre años); en día y semana, DD/MM
         const labels=homeIpsaFreq==="mensual"?rs.map(x=>x.d.slice(5,7)+"/"+x.d.slice(2,4)):rs.map(x=>x.d);
@@ -10762,7 +10772,7 @@ function viewHome(){
         let _cmp="";
         if(_bk){try{const ri=dropTrailingFlat(resampleMap(C.ipsaMap,homeIpsaFreq)).filter(x=>x.d>=_corte);
           if(ri.length>=2){const gI=(ri[ri.length-1].v/ri[0].v-1)*100,gB=(rs[rs.length-1].v/rs[0].v-1)*100,dif=gB-gI;
-            _cmp=`<div class="note" style="margin:9px 0 0;font-size:10.5px">En esta ventana la <b>${BS.nom.toLowerCase()}</b> rinde <b style="color:${gB>=0?green:red}">${(gB>=0?"+":"")+gB.toFixed(2)}%</b> contra <b style="color:${gI>=0?green:red}">${(gI>=0?"+":"")+gI.toFixed(2)}%</b> del índice (<b>${(dif>=0?"+":"")+dif.toFixed(2)} pts</b> de diferencia).${homeIpsaBase==="eq"?" La brecha mide cuánto del movimiento del índice lo explican las acciones grandes: si la equiponderada rinde menos, el alza vino de los pesos pesados y no del mercado completo.":" Al ponderar por capitalización la canasta debe seguir de cerca al índice: una diferencia grande delataría cierres faltantes o mal cargados."}</div>`;}
+            _cmp=`<div class="note" style="margin:9px 0 0;font-size:10.5px">En esta ventana la <b>${BS.nom.toLowerCase()}</b> rinde <b style="color:${gB>=0?green:red}">${(gB>=0?"+":"")+gB.toFixed(2)}%</b> contra <b style="color:${gI>=0?green:red}">${(gI>=0?"+":"")+gI.toFixed(2)}%</b> del índice (<b>${(dif>=0?"+":"")+dif.toFixed(2)} pts</b> de diferencia). Al ponderar por capitalización la canasta debe seguir de cerca al índice: una diferencia grande delataría cierres faltantes o mal cargados.</div>`;}
         }catch(e){}}
         ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:BS.nom,c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 0;flex-wrap:wrap">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div>${_bkFalla?`<div class="note" style="margin:9px 0 0;font-size:10.5px">No se pudo armar esa canasta (faltan capitalizaciones en <b>Análisis → Fundamentos</b> o hay muy pocas acciones en la base): se muestra el índice.</div>`:""}${_cmp}</div>`;}
       else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 0;flex-wrap:wrap">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes en esta ventana</div></div></div>`;
