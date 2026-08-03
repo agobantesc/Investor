@@ -1530,6 +1530,16 @@
   .fw-sv{font:800 17px var(--font);color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.2px;}
   .fw-hint{font-size:11.5px;color:var(--mut);font-weight:600;}
   @media(max-width:760px){.home-fundgrid.n2{grid-template-columns:1fr;}}
+  /* FONDO ÚNICO: ocupa la tarjeta entera — gráfico con ejes y los parámetros como tiles */
+  .fsolo{display:flex;flex-direction:column;gap:14px;}
+  .fsolo-head{display:flex;align-items:center;gap:11px;flex-wrap:wrap;}
+  .fsolo-head .rk-dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;}
+  .fsolo-name{font-size:17px;font-weight:800;color:var(--navy);letter-spacing:-.2px;min-width:0;flex:1 1 auto;}
+  .fsolo-pct{font-size:27px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;}
+  .fsolo-pct span{font-size:15px;font-weight:700;margin-left:1px;}
+  .fsolo-chart{border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:12px 13px 10px;}
+  .fsolo-chart .chart{width:100%;max-width:none;display:block;}
+  @media(max-width:700px){.fsolo-name{flex:1 1 100%;}.fsolo-pct{font-size:23px;}}
   @media(max-width:880px){.home-grid-news{grid-template-columns:1fr;}}
   /* ── Montecarlo (beta) ── */
   .mc-beta{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:var(--muted);
@@ -2319,7 +2329,10 @@ const HZNDEF={semanal:52,mensual:36,anual:3};
    usuario costaría cientos de KB y dejaría a cada uno con un IPSA distinto.
    Esto es control de acceso de una aplicación LOCAL: separa espacios de trabajo y deja registro de sesiones
    en ESTE navegador. No es seguridad de servidor — quien tenga acceso al equipo puede leer el almacenamiento. */
-const USERS_KEY="inv_users_v1",SESS_KEY="inv_session_v1",SESSLOG_KEY="inv_sesslog_v1";
+const USERS_KEY="inv_users_v1",SESS_KEY="inv_session_v1";
+/* El REGISTRO DE SESIONES se retiró: Investor no lleva historial de entradas. Se borra lo que hubiera
+   quedado guardado de la versión anterior — si ya no se muestra, tampoco tiene que seguir ocupando espacio. */
+try{localStorage.removeItem("inv_sesslog_v1");sessionStorage.removeItem("inv_sessid_v1");}catch(e){}
 function usersAll(){try{const v=JSON.parse(localStorage.getItem(USERS_KEY)||"null");return Array.isArray(v)?v:[];}catch(e){return [];}}
 function usersSave(us){try{localStorage.setItem(USERS_KEY,JSON.stringify(us));return true;}catch(e){return false;}}
 function userById(id){return usersAll().find(u=>u.id===id)||null;}
@@ -8458,12 +8471,10 @@ function attachActiva(){
 /* ═══════════ PANEL DE ACCESOS (solo administrador) ═══════════ */
 let accSel=null;         // usuario abierto en el panel
 let accNuevo=false;      // formulario de alta desplegado
-let accSrvSes=null;      // sesiones traídas del servidor (null = aún sin pedir)
-/* con cuentas en el servidor, la lista y las sesiones vienen de allá */
+/* con cuentas en el servidor, la lista de cuentas viene de allá */
 async function accCargarServidor(){
   if(!srvActivo())return;
-  try{await srvUsuarios();const j=await srvApi("GET","/api/sessions");accSrvSes=j.sessions||[];}
-  catch(e){accSrvSes=[];}
+  try{await srvUsuarios();}catch(e){}
   try{if(cfgTab==="accesos")cfgRender();}catch(e){}
 }
 /* tarjeta para PUBLICAR las cuentas en el servidor: lo que convierte a Investor en multi-equipo */
@@ -8495,11 +8506,10 @@ function cfgAccesosLocal(){
       <td>${rol(u.role)}</td>
       <td class="r">${R.proyectos}</td>
       <td class="r">${R.kb} KB</td>
-      <td class="r">${R.sesiones}${R.ultima?`<div class="t-sub">${fD((""+R.ultima).slice(0,10))}</div>`:""}</td>
       <td>${u.activo===false?'<span class="badge neg">Suspendida</span>':'<span class="badge pos">Activa</span>'}</td>
       <td class="r"><button class="btn" data-accsel="${u.id}" style="padding:.28rem .6rem;font-size:11px">Gestionar</button></td></tr>`;}).join("");
   const tabla=us.length?`<div class="tw tbl-compact"><table>
-      <thead><tr><th>Usuario</th><th>Papel</th><th class="r">Proy.</th><th class="r" title="Cuánto ocupa su espacio de datos en este navegador">Espacio</th><th class="r" title="Entradas registradas y la más reciente">Sesiones</th><th>Estado</th><th class="r"></th></tr></thead>
+      <thead><tr><th>Usuario</th><th>Papel</th><th class="r">Proy.</th><th class="r" title="Cuánto ocupa su espacio de datos en este navegador">Espacio</th><th>Estado</th><th class="r"></th></tr></thead>
       <tbody>${filas}</tbody></table></div>`
     :'<div class="note" style="margin:0">Aún no hay cuentas creadas.</div>';
   // alta
@@ -8536,35 +8546,13 @@ function cfgAccesosLocal(){
       ${soloAdmin?'<div class="mc-hint">Es la única cuenta de administrador: no se puede cambiar de papel ni eliminar, o quedarías sin acceso a la Configuración.</div>':""}
       ${u.role!=="admin"?`<div class="mc-hint">Cambiar el papel a <b>administrador</b> le da acceso total, incluida esta pantalla. Su espacio de datos actual deja de usarse: un administrador trabaja sobre el espacio principal.</div>`:""}`);
   })():"";
-  // sesiones
-  const log=srvActivo()?((accSrvSes||[]).slice()):sessLogAll().slice().reverse();
-  const logFilt=accSel?log.filter(x=>x.uid===accSel):log;
-  const abierta=id=>{try{return sessionStorage.getItem("inv_sessid_v1")===id||(srvActivo()&&srvToken().slice(0,12)===id);}catch(e){return false;}};
-  const sfilas=logFilt.slice(0,60).map(x=>{
-    const d=x.ini?new Date(x.ini):null;
-    return `<tr><td><b>${(""+(x.name||x.user)).replace(/</g,"&lt;")}</b><div class="t-sub">${(""+(x.disp||"—")).replace(/</g,"&lt;")}</div></td>
-      <td>${x.role==="admin"?'<span class="badge info">Administrador</span>':'<span class="badge">Inversionista</span>'}</td>
-      <td>${d?fD(x.ini.slice(0,10)):"—"}</td>
-      <td class="r">${d?d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}):"—"}</td>
-      <td class="r">${x.fin?new Date(x.fin).toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}):(abierta(x.id)?'<span style="color:var(--green);font-weight:700">abierta</span>':"—")}</td>
-      <td class="r">${sessDur(x)}</td></tr>`;}).join("");
-  const sesiones=card("Sesiones"+(accSel&&u?(" de "+(""+(u.name||u.user)).replace(/</g,"&lt;")):""),
-    logFilt.length?`${logFilt.length} sesión${logFilt.length===1?"":"es"} registrada${logFilt.length===1?"":"s"} ${srvActivo()?"en el servidor · de cualquier equipo":"en este navegador"}${accSel?" · filtrado por la cuenta abierta arriba":""}`:"Aún sin entradas registradas",
-    logFilt.length?`<div class="tw tbl-compact"><table>
-      <thead><tr><th>Usuario</th><th>Papel</th><th>Fecha</th><th class="r">Entrada</th><th class="r">Salida</th><th class="r">Duración</th></tr></thead>
-      <tbody>${sfilas}</tbody></table></div>
-      <div class="mc-hint">${srvActivo()
-        ?"Las guarda el <b>servidor</b>: se ven las entradas desde cualquier equipo, con su dispositivo. Una sesión caduca a las 12 horas o al cerrarla."
-        :"Se guardan las últimas 300 entradas de <b>este</b> navegador. Una sesión termina al bloquear o cerrar la pestaña; si el navegador se cierra de golpe puede quedar sin hora de salida. Es un registro local: no viaja en el respaldo."}</div>`
-    :'<div class="note" style="margin:0">Cuando alguien entre con su cuenta, su sesión quedará registrada aquí.</div>',
-    logFilt.length?'<button class="btn" id="accLogClr" style="color:var(--red);border-color:var(--red-line)">Vaciar registro</button>':"");
   return card("Usuarios con acceso",us.length+" cuenta"+(us.length===1?"":"s")+(srvActivo()?" en el servidor · se entra desde cualquier equipo":" en este navegador")+" · el administrador tiene acceso total; el inversionista usa Investor completo sobre su propio espacio de datos",
       tabla+alta,accNuevo?"":'<button class="btn btn-pri" id="accAdd">+ Nueva cuenta</button>')
-    +gestion+sesiones;
+    +gestion;
 }
 function cfgAccesosWire(m){
   const q=x=>m.querySelector(x);
-  if(srvActivo()&&accSrvSes===null)accCargarServidor();
+  if(srvActivo())accCargarServidor();
   // medidores de fuerza en los tres campos de contraseña del panel
   try{pwEnlazar("accNPass","accNMeter",()=>(q("#accNUser")||{}).value,()=>(q("#accNName")||{}).value);}catch(e){}
   try{pwEnlazar("accEPass","accEMeter",()=>(q("#accEUser")||{}).value,()=>(q("#accEName")||{}).value);}catch(e){}
@@ -8584,7 +8572,7 @@ function cfgAccesosWire(m){
       const local=userById(j.user.id)||j.user;
       try{sessionStorage.setItem(SESS_KEY,JSON.stringify({uid:local.id,user:local.user,at:new Date().toISOString()}));}catch(e){}
       SESSION=local;USER_NS=userNs(local);
-      accSrvSes=null;cfgRender();try{userChipSync();render();}catch(e){}
+      cfgRender();try{userChipSync();render();}catch(e){}
       window.alert("Listo: tu cuenta ya vive en el servidor.\n\nAhora puedes entrar con «"+usr+"» y esa contraseña desde cualquier equipo. Para ver tus proyectos allá, restaura el respaldo de la nube desde ese equipo.");
     }catch(e){window.alert("No se pudo publicar la cuenta: "+srvErrorTexto(e));}
   };
@@ -8649,16 +8637,11 @@ function cfgAccesosWire(m){
     if(srvActivo()){
       srvApi("DELETE","/api/users/"+encodeURIComponent(u.id))
         .then(()=>{userDelete(u.id);return srvUsuarios();})
-        .then(()=>{accSel=null;accSrvSes=null;cfgRender();accCargarServidor();window.alert("Cuenta eliminada.");})
+        .then(()=>{accSel=null;cfgRender();accCargarServidor();window.alert("Cuenta eliminada.");})
         .catch(e=>window.alert("No se pudo eliminar: "+srvErrorTexto(e)));
       return;}
     if(!userDelete(u.id)){window.alert("No se puede eliminar la única cuenta de administrador.");return;}
     accSel=null;cfgRender();window.alert("Cuenta eliminada.");};
-  const lc=q("#accLogClr");
-  if(lc)lc.onclick=()=>{if(!window.confirm("¿Vaciar el registro de sesiones?\n\nSe pierde el historial de entradas; las cuentas y sus datos no se tocan."))return;
-    if(srvActivo()){srvApi("DELETE","/api/sessions").then(()=>{accSrvSes=null;cfgRender();accCargarServidor();})
-      .catch(e=>window.alert("No se pudo vaciar: "+srvErrorTexto(e)));return;}
-    sessLogSave([]);cfgRender();};
 }
 
 /* ═══════════ MI CUENTA (cualquier usuario cambia sus propios datos) ═══════════ */
@@ -8721,44 +8704,6 @@ function miCuentaOpen(){
   };
 }
 
-/* ═══════════ REGISTRO DE SESIONES ═══════════
-   Cada entrada y salida queda anotada en ESTE navegador para que el administrador pueda revisar quién
-   entró y cuánto duró la sesión. Se guardan las últimas 300. Es un registro local, no una auditoría de
-   servidor: no viaja en el respaldo ni sale del equipo. */
-function sessLogAll(){try{const v=JSON.parse(localStorage.getItem(SESSLOG_KEY)||"null");return Array.isArray(v)?v:[];}catch(e){return [];}}
-function sessLogSave(l){try{localStorage.setItem(SESSLOG_KEY,JSON.stringify(l.slice(-300)));}catch(e){}}
-function sessDispositivo(){try{const ua=navigator.userAgent||"";
-  const so=/Windows/i.test(ua)?"Windows":/Android/i.test(ua)?"Android":/iPhone|iPad|iPod/i.test(ua)?"iOS":/Mac OS X/i.test(ua)?"macOS":/Linux/i.test(ua)?"Linux":"—";
-  const nav=/Edg\//i.test(ua)?"Edge":/OPR\//i.test(ua)?"Opera":/Chrome\//i.test(ua)?"Chrome":/Firefox\//i.test(ua)?"Firefox":/Safari\//i.test(ua)?"Safari":"navegador";
-  return nav+" · "+so;}catch(e){return "—";}}
-function sessLogStart(u){
-  if(!u)return null;
-  const id="s"+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);
-  const l=sessLogAll();
-  l.push({id,uid:u.id,user:u.user,name:u.name||u.user,role:u.role,ini:new Date().toISOString(),fin:null,disp:sessDispositivo()});
-  sessLogSave(l);
-  try{sessionStorage.setItem("inv_sessid_v1",id);}catch(e){}
-  return id;
-}
-function sessLogEnd(){
-  try{const id=sessionStorage.getItem("inv_sessid_v1");if(!id)return;
-    const l=sessLogAll(),i=l.map(x=>x.id).lastIndexOf(id);
-    if(i>=0&&!l[i].fin){l[i].fin=new Date().toISOString();sessLogSave(l);}
-    sessionStorage.removeItem("inv_sessid_v1");
-  }catch(e){}
-}
-try{window.addEventListener("pagehide",()=>{try{sessLogEnd();}catch(e){}});}catch(e){}
-/* duración legible de una sesión (o "en curso" si sigue abierta) */
-function sessDur(x){try{
-  if(!x||!x.ini)return "—";
-  const t0=Date.parse(x.ini),t1=x.fin?Date.parse(x.fin):null;
-  if(!isFinite(t0))return "—";
-  if(t1==null)return "en curso";
-  const m=Math.max(0,Math.round((t1-t0)/60000));
-  if(m<1)return "menos de 1 min";
-  if(m<60)return m+" min";
-  const h=Math.floor(m/60);return h+" h "+(m%60)+" min";
-}catch(e){return "—";}}
 
 /* ═══════════ CUENTAS EN EL SERVIDOR ═══════════
    Una cuenta guardada en el navegador solo sirve en ESE navegador. Para entrar a Investor desde cualquier
@@ -8922,7 +8867,6 @@ function userDelete(id){
   const ns=userNs(u);
   if(ns){try{Object.keys(localStorage).forEach(k=>{if(k.indexOf("@"+ns)>=0)localStorage.removeItem(k);});}catch(e){}}
   usersSave(us.filter(x=>x.id!==id));
-  try{sessLogSave(sessLogAll().filter(x=>x.uid!==id));}catch(e){}
   return true;
 }
 /* cuánto ocupa y cuánto tiene el espacio de un usuario (para el panel de accesos) */
@@ -8933,10 +8877,8 @@ function userResumen(u){
     let bytes=0;Object.keys(localStorage).forEach(k=>{
       const mio=ns?(k.indexOf(suf)>=0):(Object.keys(CLIENT_KEYS).some(c=>k.indexOf(c)===0)&&k.indexOf("@")<0);
       if(mio)bytes+=(localStorage.getItem(k)||"").length;});
-    const ses=sessLogAll().filter(x=>x.uid===u.id);
-    return {proyectos:Array.isArray(pr)?pr.length:0,kb:Math.round(bytes/1024),
-      sesiones:ses.length,ultima:ses.length?ses[ses.length-1].ini:null};
-  }catch(e){return {proyectos:0,kb:0,sesiones:0,ultima:null};}
+    return {proyectos:Array.isArray(pr)?pr.length:0,kb:Math.round(bytes/1024)};
+  }catch(e){return {proyectos:0,kb:0};}
 }
 /* MIGRACIÓN: el acceso de siempre (usuario + contraseña únicos) pasa a ser la cuenta de ADMINISTRADOR, con
    su misma contraseña — nadie tiene que volver a crearla ni pierde nada. */
@@ -8976,11 +8918,7 @@ function authInit(){
     if(AUTH&&AUTH.enabled===false){authShow(false);return;}   // el usuario eligió trabajar sin contraseña
     authMode="create";authRender();authShow(true);return;
   }
-  if(SESSION&&SESSION.activo!==false){
-    // tras recargar para cambiar de espacio de datos, la sesión ya está abierta: se anota si aún no lo estaba
-    try{if(!sessionStorage.getItem("inv_sessid_v1"))sessLogStart(SESSION);}catch(e){}
-    authShow(false);return;
-  }
+  if(SESSION&&SESSION.activo!==false){authShow(false);return;}
   authMode="login";authRender();authShow(true);
 }
 function authSaludo(){const h=new Date().getHours();return h<12?"Buenos días":h<20?"Buenas tardes":"Buenas noches";}
@@ -9003,7 +8941,8 @@ function authRender(){
   ].map(([t,d])=>`<li><span class="ck">✓</span><div><b>${t}</b><span>${d}</span></div></li>`).join("");
   const marca=est.tk?`<div class="auth-stats"><div><span class="k">Acciones en la base</span><span class="v">${est.tk}</span></div><div><span class="k">Fechas de IPSA</span><span class="v">${est.ip.toLocaleString("es-CL")}</span></div>${est.al?`<div><span class="k">Al día</span><span class="v">${est.al}</span></div>`:""}</div>`:"";
   const usuarios=usersAll().filter(u=>u.activo!==false);
-  const ultimo=(function(){try{const l=sessLogAll();for(let i=l.length-1;i>=0;i--){const u=usuarios.find(x=>x.id===l[i].uid);if(u)return u.user;}}catch(e){}return "";})();
+  // último usuario que entró: sale del campo `ultimo` de cada cuenta, no de un registro de sesiones
+  const ultimo=(function(){try{const c=usuarios.filter(x=>x.ultimo).sort((a,b)=>(""+a.ultimo<""+b.ultimo?1:-1));return c.length?c[0].user:"";}catch(e){return "";}})();
   g.innerHTML=`<div class="auth-wrap">
     <aside class="auth-side">
       <div class="auth-side-top"><div class="auth-mark">${logoW}</div><div><div class="auth-eye">Inteligencia que genera valor</div><div class="auth-wm">Investor</div></div></div>
@@ -9088,7 +9027,6 @@ function authSesionAbrir(u){
   try{sessionStorage.setItem(SESS_KEY,JSON.stringify({uid:u.id,user:u.user,at:new Date().toISOString()}));}catch(e){}
   try{sessionStorage.setItem("inv_sess_v1",u.user);}catch(e){}
   userUpdate(u.id,{ultimo:new Date().toISOString()});
-  sessLogStart(u);
   if(userNs(u)!==USER_NS){try{location.reload();return;}catch(e){}}
   SESSION=u;USER_NS=userNs(u);
   authMsg="";authShow(false);
@@ -9096,7 +9034,6 @@ function authSesionAbrir(u){
   try{render();}catch(e){}
 }
 function authLock(){
-  sessLogEnd();
   if(srvActivo()&&srvToken()){try{srvApi("POST","/api/auth/logout");}catch(e){}srvTokenSet("");}
   try{sessionStorage.removeItem("inv_sess_v1");sessionStorage.removeItem(SESS_KEY);localStorage.removeItem("inv_remember_v1");}catch(e){}
   // si la sesión que se cierra tenía un espacio de datos propio, hay que recargar: la pestaña ya cargó
@@ -9152,7 +9089,9 @@ function projSummary(p,opts){return withProject(p,()=>{const IM=invMetrics();con
   const _perDate=IM.series.filter((s,i,a)=>i===a.length-1||a[i+1].date!==s.date);
   const serie=_perDate.map(s=>Math.round(s.val));
   const serieRet=_perDate.map(s=>+(100*(1+s.ret)).toFixed(2));
-  return {invested:base,capitalNeto:inv,value:val,gain:gain,gainPct:base>0?gain/base*100:0,gainNet:gainNet,gainNetPct:base>0?gainNet/base*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,since};});}
+  const serieFechas=_perDate.map(s=>s.date);
+  const serieIpsa=_perDate.map(s=>(s.ipsaRet!=null&&isFinite(s.ipsaRet))?+(100*(1+s.ipsaRet)).toFixed(2):null);
+  return {invested:base,capitalNeto:inv,value:val,gain:gain,gainPct:base>0?gain/base*100:0,gainNet:gainNet,gainNetPct:base>0?gainNet/base*100:0,fees:fees,twr:L.ret*100,hasData:true,beta:p.bp||0,betaR:IM.betaR!=null?+IM.betaR.toFixed(2):null,sharpe:p.sharpe||0,sharpeR:IM.sharpeR!=null?+IM.sharpeR.toFixed(2):null,vol:IM.realizedVol!=null?+IM.realizedVol.toFixed(1):null,alphaReal:alphaReal,nrec:(p.weeks||[]).length,series:serie,retSeries:serieRet,retDates:serieFechas,ipsaSeries:serieIpsa,since};});}
 function projLinks(p){if(!p.links)p.links={analyses:[],scenarios:[]};if(!p.links.analyses)p.links.analyses=[];if(!p.links.scenarios)p.links.scenarios=[];return p.links;}
 /* Sincroniza la SIMULACIÓN del proyecto con la inversión REAL: como se compran acciones enteras a precio de
    mercado, la ponderación ejecutada no calza exacto con la simulada. Al registrar la compra (weeks[0].qty),
@@ -10338,7 +10277,7 @@ function homeData(){
   const clients=CLIENTS.map(c=>({c,s:clientStats(c.id)}));
   const T=clients.reduce((a,x)=>{a.aportado+=x.s.aportado;a.retirado+=x.s.retirado;a.divs+=(x.s.divs||0);a.ventas+=(x.s.ventas||0);a.value+=x.s.value;a.gain+=x.s.gain;a.gainNet+=x.s.gainNet;a.fees+=x.s.fees;a.nproj+=x.s.n;return a;},{aportado:0,retirado:0,divs:0,ventas:0,value:0,gain:0,gainNet:0,fees:0,nproj:0,live:false});
   const projs=[];
-  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,betaR:(s.betaR!=null?s.betaR:null),twr:(s.twr!=null?s.twr:null),sharpeR:(s.sharpeR!=null?s.sharpeR:null),vol:(s.vol!=null?s.vol:null),alphaReal:(s.alphaReal!=null?s.alphaReal:null),nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],since:s.since||null});}catch(e){}});});
+  CLIENTS.forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{try{const s=projSummary(p);projs.push({cli:c.name,cliId:c.id,col:c.color,pid:p.id,name:p.name,inv:s.invested,val:s.value,gain:s.gain,pct:s.gainPct,gainNet:s.gainNet,pctNet:s.gainNetPct,beta:s.beta,betaR:(s.betaR!=null?s.betaR:null),twr:(s.twr!=null?s.twr:null),sharpeR:(s.sharpeR!=null?s.sharpeR:null),vol:(s.vol!=null?s.vol:null),alphaReal:(s.alphaReal!=null?s.alphaReal:null),nrec:s.nrec,hasData:s.hasData,series:s.series||[],retSeries:s.retSeries||[],retDates:s.retDates||[],ipsaSeries:s.ipsaSeries||[],nrecFechas:(s.retDates||[]).length,since:s.since||null});}catch(e){}});});
   return {clients,T,projs};
 }
 /* serie agregada de patrimonio (alineada por la cola) para el sparkline del hero */
@@ -10661,12 +10600,60 @@ function viewHome(){
       +stat("Sharpe",p.sharpeR!=null?p.sharpeR.toFixed(2):"—",p.sharpeR!=null?(p.sharpeR>=0?green:red):null,"ntr",p.sharpeR!=null?"Sharpe realizado: retorno ajustado por la volatilidad efectiva (sobre 1 es bueno).":"Sharpe realizado: se muestra desde los 30 días de seguimiento y ≥8 retornos. Con menos, anualizar una racha corta dispara el ratio (Sharpe irreal), por eso se omite.")
       +`</div>`;
     return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}" title="Curva: rentabilidad acumulada (base 100) — mide la gestión, sin los saltos de capital de las compras"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» dentro del proyecto mide la estrategia y puede diferir cuando hay aportes en distintos momentos.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${row1}${row2}</div></button>`;};
+  /* UN SOLO FONDO: con una sola cartera en gestión, la tarjeta comprimida desperdicia todo el ancho y el
+     sparkline sin ejes no dice nada. Aquí el fondo ocupa la tarjeta entera: gráfico grande CON ejes, fechas
+     y la curva del IPSA al lado (que es la comparación que importa: ¿le gano al mercado?), y los parámetros
+     como tiles, el mismo formato que el resto de Investor. */
+  const fundSolo=p=>{
+    const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=p.since?fD(p.since):null;
+    if(!p.hasData)return `<div class="home-fundgrid n1">${fundWide(p)}</div>`;
+    const R=p.retSeries||[],F=p.retDates||[],I=p.ipsaSeries||[];
+    const hayCurva=R.length>1&&F.length===R.length;
+    const hayIpsa=hayCurva&&I.length===R.length&&I.filter(v=>v!=null).length>1;
+    const ultIpsa=hayIpsa?(function(){for(let i=I.length-1;i>=0;i--)if(I[i]!=null)return I[i];return null;})():null;
+    const vsIpsa=(ultIpsa!=null&&p.twr!=null)?(p.twr-(ultIpsa-100)):null;   // gestión vs mercado, en puntos
+    const chart=hayCurva
+      ? svgMulti({series:[{label:"Tu cartera",c:pos?green:red,vals:R,w:2.4,op:1}]
+            .concat(hayIpsa?[{label:"IPSA",c:muted,vals:I,w:1.8,dash:true}]:[]),
+          labels:F,h:262,area:!hayIpsa,flatx:true,id:"homesolo",unit:"",
+          yfmt:v=>(+v).toFixed(1),ttfmt:v=>(+v).toFixed(2)})
+      : `<div class="note" style="margin:0">Con un solo registro todavía no hay curva. Registra el seguimiento en <b>Inversión → Ingresar datos</b> y aquí verás tu evolución contra el IPSA.</div>`;
+    const leg=hayCurva?`<div class="legend" style="margin-top:9px"><span><span class="lgdot" style="background:${pos?green:red}"></span>Tu cartera (base 100)</span>${hayIpsa?`<span><span class="lgdot" style="background:${muted}"></span>IPSA en el mismo período</span>`:""}<span style="color:var(--faint);font-weight:600">${F.length} fecha${F.length!==1?"s":""} de seguimiento${sd?" · desde "+sd:""}</span></div>`:"";
+    const aR=p.alphaReal!=null?p.alphaReal*100:null;
+    const dinero=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(148px,1fr))">
+      ${tile("Valor actual",fmtCLP(p.val),"a los últimos cierres",indigo,pos?green:red)}
+      ${tile("Capital aportado",fmtCLP(p.inv),"lo que pusiste",indigo,ink)}
+      ${tile("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),(pos?"+":"")+p.pct.toFixed(2)+"% sobre lo aportado",indigo,pos?green:red)}
+      ${tile("Retorno TWR",p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—","la estrategia, neteando aportes",indigo,p.twr!=null?(p.twr>=0?green:red):muted)}
+      ${tile("vs IPSA",vsIpsa!=null?((vsIpsa>=0?"+":"−")+Math.abs(vsIpsa).toFixed(2)+" pts"):"—",vsIpsa!=null?(vsIpsa>=0?"le ganas al mercado":"vas bajo el mercado"):"sin índice comparable",indigo,vsIpsa!=null?(vsIpsa>=0?green:red):muted)}</div>`;
+    const riesgo=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(148px,1fr));margin-top:11px">
+      ${tile('<span class="gl">β</span> realizada',p.betaR!=null?p.betaR.toFixed(2):"—",p.betaR!=null?("esperada "+(p.beta||0).toFixed(2)):"faltan ≥5 fechas",indigo,accentT)}
+      ${tile('<span class="gl">α</span> de Jensen',aR!=null?((aR>=0?"+":"")+aR.toFixed(2)+"%"):"—","sobre lo exigido por su riesgo",indigo,aR!=null?(aR>=0?green:red):muted)}
+      ${tile("Volatilidad",p.vol!=null?p.vol.toFixed(1)+"%":"—","anualizada, realizada",indigo,ink)}
+      ${tile("Sharpe",p.sharpeR!=null?p.sharpeR.toFixed(2):"—",p.sharpeR!=null?"retorno por unidad de riesgo":"desde 30 días de seguimiento",indigo,p.sharpeR!=null?(p.sharpeR>=0?green:red):muted)}
+      ${tile("Inicio",sd||"—",p.nrec+" registro"+(p.nrec!==1?"s":"")+" de seguimiento",indigo,ink)}</div>`;
+    return `<div class="fsolo">
+      <div class="fsolo-head"><span class="rk-dot" style="background:${p.col}"></span>
+        <span class="fsolo-name">${nm}</span>
+        <span class="fsolo-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado)">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span>
+        <button class="btn btn-pri" data-gohome="${p.cliId}|${p.pid}">Entrar al proyecto →</button></div>
+      <div class="fsolo-chart">${chart}${leg}</div>
+      ${dinero}${riesgo}</div>`;
+  };
   const fundsInner=funds.length
-    ? (funds.length<=2
-      ? `<div class="home-fundgrid n${funds.length}">${funds.map(fundWide).join("")}</div>`
+    ? (funds.length===1
+      ? fundSolo(funds[0])
+      : funds.length===2
+      ? `<div class="home-fundgrid n2">${funds.map(fundWide).join("")}</div>`
       : `<div class="home-cartgrid">${funds.slice(0,12).map(fundCard).join("")}</div>${funds.length>12?`<div class="note" style="margin:11px 0 0">+${funds.length-12} fondos más · <a data-go="proyectos|hub" style="color:var(--accent);cursor:pointer;font-weight:700">ver todos →</a></div>`:""}`)
     : `<div class="note" style="margin:0">Aún no tienes fondos en gestión. Arma una cartera en el <b>Constructor</b> y registra su compra inicial.</div>`;
-  const fundsCard=card("Fondos administrados",`${funds.length} cartera${funds.length!==1?"s":""} en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,fundsInner);
+  const fundsCard=card(funds.length===1?"Fondo administrado":"Fondos administrados",
+    funds.length===1
+      ? (funds[0].hasData
+         ? `Tu única cartera en gestión · la curva es su rentabilidad acumulada (base 100) contra el IPSA del mismo período — mide la GESTIÓN, sin los saltos de capital de las compras`
+         : `Tu única cartera en gestión · aún sin seguimiento registrado`)
+      : `${funds.length} carteras en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,
+    fundsInner);
   // gráfico gestionado en el tiempo: la CURVA es la historia de la RENTABILIDAD NETA — (valor − aportado −
   // comisiones) ÷ aportado a cada fecha, la MISMA base que la tarjeta "Rentabilidad" del Resumen consolidado
   // (el último punto coincide exacto con ella). El patrimonio queda como dato en el pie (y en el hero).
@@ -10881,6 +10868,7 @@ function attachHome(){
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
   try{attachMultiHover("ipsahome");}catch(e){}
+  try{attachMultiHover("homesolo");}catch(e){}   // fondo único: tooltip con la fecha y el valor de la cartera y del IPSA
   try{attachMultiHover("mgret");}catch(e){}   // rentabilidad neta en el tiempo: tooltip con fecha y % al pasar el mouse
   try{attachOpsHover("mgops");}catch(e){}   // operaciones y comisiones: tooltip mensual + clic abre el detalle del mes
   {const _oc=document.querySelector("[data-opsdetclose]");if(_oc)_oc.onclick=()=>{homeOpsMonthSel=null;render();};}

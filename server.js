@@ -136,13 +136,15 @@ const SESS_FILE = path.join(DATA_DIR, "sessions.json");
 const PBKDF2_IT = 210000, PBKDF2_LEN = 32;
 const MAX_INTENTOS = 5, BLOQUEO_MS = 15 * 60 * 1000;
 const SESION_MS = 12 * 60 * 60 * 1000;          // 12 h de validez
-const SESLOG_MAX = 500;
+/* NO se lleva registro de entradas: el archivo de sesiones guarda SOLO los tokens vivos, que son lo que
+   hace falta para mantener la sesión abierta entre recargas y reinicios. Un historial de quién entró y
+   cuándo no lo pidió nadie y es dato personal que no aporta a decidir una inversión. */
 
 function leerJSON(f, porDefecto) { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return porDefecto; } }
 function escribirJSON(f, v) { try { const t = f + ".tmp"; fs.writeFileSync(t, JSON.stringify(v)); fs.renameSync(t, f); return true; } catch (e) { return false; } }
 function usersLeer() { const v = leerJSON(USERS_FILE, null); return Array.isArray(v) ? v : []; }
 function usersEscribir(v) { return escribirJSON(USERS_FILE, v); }
-function sesLeer() { const v = leerJSON(SESS_FILE, null); return (v && typeof v === "object") ? v : { tokens: {}, log: [] }; }
+function sesLeer() { const v = leerJSON(SESS_FILE, null); return { tokens: (v && typeof v === "object" && v.tokens) ? v.tokens : {} }; }   // un `log` de una versión anterior se descarta al primer guardado
 function sesEscribir(v) { return escribirJSON(SESS_FILE, v); }
 
 function pwHash(pass, salt) { return crypto.pbkdf2Sync(String(pass), salt, PBKDF2_IT, PBKDF2_LEN, "sha256").toString("hex"); }
@@ -175,15 +177,10 @@ const slug = u => String(u || "").trim().toLowerCase();
 function usuarioPublico(u) {
   return { id: u.id, user: u.user, name: u.name, role: u.role, ns: u.ns, creado: u.creado, activo: u.activo !== false, ultimo: u.ultimo || null };
 }
-function sesionNueva(u, req) {
+function sesionNueva(u) {
   const S = sesLeer(), token = crypto.randomBytes(32).toString("hex");
   const ahora = Date.now();
   S.tokens[token] = { uid: u.id, ini: ahora, exp: ahora + SESION_MS };
-  S.log.push({ id: token.slice(0, 12), uid: u.id, user: u.user, name: u.name, role: u.role,
-    ini: new Date(ahora).toISOString(), fin: null,
-    disp: String((req.headers["user-agent"] || "").slice(0, 160)),
-    ip: String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim() });
-  if (S.log.length > SESLOG_MAX) S.log = S.log.slice(-SESLOG_MAX);
   sesEscribir(S);
   return token;
 }
@@ -200,8 +197,6 @@ function sesionDe(req) {
 function sesionCerrar(token) {
   const S = sesLeer();
   if (S.tokens[token]) delete S.tokens[token];
-  const i = S.log.map(x => x.id).lastIndexOf(String(token).slice(0, 12));
-  if (i >= 0 && !S.log[i].fin) S.log[i].fin = new Date().toISOString();
   sesEscribir(S);
 }
 const VER_RE = /^backup-[\w.\-]+\.json$/;   // nombre de versión aceptable (sin travesía de directorios)
@@ -253,7 +248,7 @@ const server = http.createServer((req, res) => {
   /* ── CUENTAS ── entran antes que la caja fuerte: para iniciar sesión no se puede exigir el SYNC_TOKEN
      (nadie lo tiene en un equipo nuevo). Lo que protege esta zona es la contraseña del usuario y, si está
      activada, la puerta del sitio. ── */
-  if (p.startsWith("/api/auth/") || p === "/api/users" || p.startsWith("/api/users/") || p === "/api/sessions") {
+  if (p.startsWith("/api/auth/") || p === "/api/users" || p.startsWith("/api/users/")) {
     const leerCuerpo = cb => {
       let n = 0; const ch = [];
       req.on("data", c => { n += c.length; if (n > 1e6) { sendJSON(res, 413, { error: "cuerpo demasiado grande" }); req.destroy(); } else ch.push(c); });
@@ -284,7 +279,7 @@ const server = http.createServer((req, res) => {
         const u = { id: "u" + crypto.randomBytes(6).toString("hex"), user, name, role: "admin", ns: "",
           salt, hash, it, creado: new Date().toISOString(), activo: true, intentos: 0, bloqueadoHasta: 0 };
         usersEscribir([u]);
-        const token = sesionNueva(u, req);
+        const token = sesionNueva(u);
         return sendJSON(res, 200, { token, user: usuarioPublico(u) });
       });
     }
@@ -313,7 +308,7 @@ const server = http.createServer((req, res) => {
         }
         u.intentos = 0; u.bloqueadoHasta = 0; u.ultimo = new Date().toISOString();
         usersEscribir(us);
-        const token = sesionNueva(u, req);
+        const token = sesionNueva(u);
         return sendJSON(res, 200, { token, user: usuarioPublico(u) });
       });
     }
@@ -355,7 +350,7 @@ const server = http.createServer((req, res) => {
     /* ── gestión de cuentas: SOLO administrador ── */
     const ses = sesionDe(req);
     const esAdmin = !!(ses && ses.user.role === "admin");
-    if (p === "/api/users" || p.startsWith("/api/users/") || p === "/api/sessions") {
+    if (p === "/api/users" || p.startsWith("/api/users/")) {
       if (!ses) return sendJSON(res, 401, { error: "sesión no válida o expirada" });
       if (!esAdmin) return sendJSON(res, 403, { error: "solo el administrador puede gestionar los accesos" });
     }
@@ -414,16 +409,7 @@ const server = http.createServer((req, res) => {
       usersEscribir(us.filter(x => x.id !== u.id));
       const S = sesLeer();
       Object.keys(S.tokens).forEach(t => { if (S.tokens[t].uid === u.id) delete S.tokens[t]; });
-      S.log = S.log.filter(x => x.uid !== u.id);
       sesEscribir(S);
-      return sendJSON(res, 200, { ok: true });
-    }
-    if (p === "/api/sessions" && req.method === "GET") {
-      const S = sesLeer(), vivos = new Set(Object.values(S.tokens).map(t => t.uid));
-      return sendJSON(res, 200, { sessions: S.log.slice().reverse(), activos: Array.from(vivos) });
-    }
-    if (p === "/api/sessions" && req.method === "DELETE") {
-      sesEscribir({ tokens: sesLeer().tokens, log: [] });
       return sendJSON(res, 200, { ok: true });
     }
     return sendJSON(res, 404, { error: "endpoint no existe" });
