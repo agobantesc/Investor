@@ -1030,6 +1030,14 @@
   .auth-skip a{font-size:11.5px;color:var(--indigo);font-weight:700;cursor:pointer;}
   .auth-skip a:hover{text-decoration:underline;}
   .auth-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);font-size:9.5px;color:var(--faint);text-align:center;line-height:1.55;}
+  /* nota bajo el campo del token del servidor: explica POR QUÉ se pide, sin robarle peso al formulario */
+  .auth-nota{font-size:10.5px;color:var(--muted);line-height:1.5;margin:-6px 0 13px;}
+  /* estado mientras se le pregunta al servidor quién administra las cuentas: la puerta queda cerrada */
+  .auth-espera{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--muted);font-weight:600;
+    background:var(--soft2);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;}
+  .auth-espera .sp{width:13px;height:13px;flex:0 0 13px;border-radius:50%;border:2px solid var(--line);
+    border-top-color:var(--accent);animation:authSpin .7s linear infinite;}
+  @keyframes authSpin{to{transform:rotate(360deg);}}
   /* Pastilla de SESIÓN: dice siempre en el espacio de quién se está trabajando. Cuando el administrador
      entra al de otro usuario cambia de color: confundirse de cartera sería el peor error posible aquí. */
   .sesspill #sessPillTxt{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -2458,10 +2466,15 @@ function autobkRestore(){let s;try{s=JSON.parse(localStorage.getItem("inv_autobk
   if(!window.confirm("Restaurar la copia interna automática del "+when+" reemplazará los datos actuales de TODOS los clientes.\n\n(Es la red de seguridad ante borrados accidentales dentro de la app.)\n\n¿Continuar?"))return;
   if(restoreFromPayload(s.data)){window.alert("Copia interna restaurada ("+when+").");render();}else{window.alert("No se pudo restaurar la copia interna.");}}
 function autobkTick(){try{
+  // Con la puerta de acceso abierta no se le pregunta NADA a quien todavía no ha entrado: la copia interna
+  // se hace igual (es silenciosa), pero la descarga se ofrece después. Antes esto quedaba tapado por la
+  // puerta del sitio de Render; retirada esa capa, un desconocido que abriera la URL se encontraba con un
+  // confirm() ofreciéndole descargar un respaldo. authSesionAbrir vuelve a llamar aquí al entrar.
+  const _gate=document.getElementById("authGate"),_cerrada=!!(_gate&&_gate.classList.contains("open"));
   // 1) copia interna si la última tiene más de 1 día (no toca el archivo descargado)
   const info=autobkSnapInfo();if(!info||(info.reason==="periódico"&&autobkDaysSince(info.date)>=1))autobkSnapshot("periódico");   // no pisa una copia de SEGURIDAD reciente (antes de limpiar/eliminar)
   // 2) descarga periódica fuera del navegador (única protección real ante borrar el navegador / cambiar de equipo)
-  if(AUTOBK.on&&autobkDaysSince(AUTOBK.lastDL)>=(AUTOBK.days||7)){
+  if(!_cerrada&&AUTOBK.on&&autobkDaysSince(AUTOBK.lastDL)>=(AUTOBK.days||7)){
     const d=Math.floor(autobkDaysSince(AUTOBK.lastDL));
     const msg=AUTOBK.lastDL?("🛡️ Respaldo automático de Investor\n\nHan pasado "+d+" día(s) desde tu última descarga de respaldo.\n¿Descargar ahora tu copia de seguridad como archivo en tu equipo?"):("🛡️ Respaldo automático de Investor\n\nTus datos viven solo en este navegador. Para no perderlos si se borra el caché o cambias de equipo, conviene guardar una copia como archivo.\n\n¿Descargar ahora tu primer respaldo?");
     if(window.confirm(msg)){try{downloadBackup(backupPayload());}catch(e){}}
@@ -6472,6 +6485,11 @@ async function cloudRestore(manual){
 /* al abrir la versión web con el navegador VACÍO (teléfono nuevo, navegador borrado): ofrece restaurar la nube */
 async function cloudBoot(){
   if(!cloudServerMode())return;
+  // NO se ofrece restaurar mientras la puerta de acceso siga abierta. Restaurar un respaldo es una acción de
+  // quien ya entró; con la puerta del sitio retirada, un desconocido que abra la URL habría recibido un
+  // window.prompt pidiéndole el token del servidor por encima de la pantalla de entrada. No filtraba nada
+  // —sin token no se restaura— pero es una pregunta que no le corresponde a quien todavía no es nadie aquí.
+  try{const g=document.getElementById("authGate");if(g&&g.classList.contains("open"))return;}catch(e){}
   try{
     const localEmpty=(!PROJECTS||!PROJECTS.length)&&(typeof pricedbTickers!=="function"||!pricedbTickers().length);
     if(!localEmpty)return;
@@ -8673,7 +8691,10 @@ function accActivarHTML(){
      <div class="mc-hint">Hay que elegir la contraseña de nuevo: este navegador nunca la guardó en claro —solo su huella— así que no se puede trasladar sola. Desde ese momento el servidor es quien verifica: guarda las contraseñas con <b>PBKDF2 · 210.000 iteraciones</b> y bloquea la cuenta <b>${PW_BLOQUEO_MIN} minutos tras ${PW_INTENTOS} intentos fallidos</b>. Tus proyectos siguen donde están; para verlos en otro equipo, restaura el respaldo de la nube desde ahí.</div>`);
 }
 function cfgAccesosBody(){
-  if(SRV.modo&&!SRV.hayCuentas)return accActivarHTML()+cfgAccesosLocal();
+  // La tarjeta de "publicar en el servidor" solo tiene sentido si HAY servidor y todavía no administra
+  // cuentas. Con el acceso ya en sus manos no hay nada que publicar; y sin servidor detrás (archivo local
+  // u hosting estático) ofrecerlo sería prometer algo que no existe.
+  if(srvHay()&&!SRV.hayCuentas)return accActivarHTML()+cfgAccesosLocal();
   return cfgAccesosLocal();
 }
 function cfgAccesosLocal(){
@@ -8896,14 +8917,25 @@ function miCuentaOpen(){
    misma pantalla pide crear la contraseña del administrador en el servidor — el navegador nunca tuvo la
    contraseña en claro, así que no se puede migrar sola. */
 const SRVTOK_KEY="inv_srvtok_v1";
-let SRV={modo:false,hayCuentas:false,listo:false};
-function srvActivo(){return !!(SRV.modo&&SRV.hayCuentas);}
+/* `modo` se resuelve YA, no dentro de srvInit: authInit corre antes que la consulta al servidor y tiene que
+   saber, desde la primera pasada, que hay que esperar. Si no, alcanzaba a dibujarse la pantalla local —con
+   su "usar sin contraseña" en funcionamiento— durante todo lo que tardara la red. */
+let SRV={modo:(typeof cloudServerMode==="function")&&cloudServerMode(),srv:false,hayCuentas:false,listo:false};
+/* ¿RESPONDIÓ el servidor de Investor? No basta con que la URL sea http(s) —eso también es cierto en un
+   hosting estático sin API—: se confirma con /api/auth/estado, que solo este servidor contesta. */
+function srvHay(){return !!SRV.srv;}
+/* REGLA: si hay servidor, las cuentas viven ALLÁ. Sin excepción y sin modo local paralelo — dos padrones
+   de usuarios para la misma app es la forma más segura de que uno de los dos quede sin actualizar. */
+function srvObliga(){return !!SRV.srv;}
+function srvActivo(){return !!(SRV.srv&&SRV.hayCuentas);}
 function srvToken(){try{return sessionStorage.getItem(SRVTOK_KEY)||"";}catch(e){return "";}}
 function srvTokenSet(t){try{if(t)sessionStorage.setItem(SRVTOK_KEY,t);else sessionStorage.removeItem(SRVTOK_KEY);}catch(e){}}
+/* conToken: true → manda el SYNC_TOKEN guardado; un string → manda ESE token (el que se escribe en la
+   pantalla de entrada para crear la primera cuenta, cuando el navegador todavía no lo tiene guardado). */
 async function srvApi(method,ruta,body,conToken){
   const res=await fetch(ruta,{method,cache:"no-store",
     headers:Object.assign({"x-investor-session":srvToken()},
-      conToken?{"x-investor-token":((typeof CLOUD!=="undefined"&&CLOUD&&CLOUD.token)||"")}:{},
+      conToken?{"x-investor-token":(typeof conToken==="string"?conToken:((typeof CLOUD!=="undefined"&&CLOUD&&CLOUD.token)||""))}:{},
       body?{"Content-Type":"application/json"}:{}),
     body:body?JSON.stringify(body):undefined});
   let j=null;try{j=await res.json();}catch(e){}
@@ -8914,7 +8946,10 @@ async function srvApi(method,ruta,body,conToken){
 async function srvInit(){
   SRV.modo=(typeof cloudServerMode==="function")&&cloudServerMode();
   if(!SRV.modo){SRV.listo=true;return SRV;}
-  try{const j=await srvApi("GET","/api/auth/estado");SRV.hayCuentas=!!j.hayCuentas;}catch(e){SRV.hayCuentas=false;}
+  // `servidor:true` solo lo devuelve el servidor de Investor: es la prueba de que hay API detrás, no un
+  // hosting estático. Si falla (404, red caída, archivo abierto desde el disco) se sigue en modo local.
+  try{const j=await srvApi("GET","/api/auth/estado");SRV.srv=(j&&j.servidor===true);SRV.hayCuentas=!!j.hayCuentas;}
+  catch(e){SRV.srv=false;SRV.hayCuentas=false;}
   SRV.listo=true;
   if(SRV.hayCuentas&&srvToken()){
     // ¿la sesión de esta pestaña sigue siendo válida en el servidor?
@@ -8943,6 +8978,9 @@ function srvErrorTexto(e){
   const d=(e&&e.data)||{};
   if(e&&e.code===429)return "Demasiados intentos fallidos: la cuenta queda bloqueada "+(d.minutos||PW_BLOQUEO_MIN)+" minuto(s).";
   if(d.fallos&&d.fallos.length)return "La contraseña debe:\n\n• "+d.fallos.join("\n• ");
+  // un 401 al crear la PRIMERA cuenta no es una contraseña mala: es el token del servidor. Decir
+  // "usuario o contraseña incorrectos" mandaba a revisar justo lo que estaba bien.
+  if(e&&e.code===401&&/token/i.test(""+(d.error||"")))return d.error;
   if(e&&e.code===401)return "Usuario o contraseña incorrectos."+(d.restantes!=null?(" Te quedan "+d.restantes+" intento(s) antes del bloqueo."):"");
   return (e&&e.message)||"No se pudo completar la operación.";
 }
@@ -9091,8 +9129,15 @@ function authInit(){
   usersMigrar();
   AUTH=lsGet("inv_auth_v1");
   try{localStorage.removeItem("inv_remember_v1");}catch(e){}   // ya no se recuerda la contraseña: siempre se pide al entrar
-  if(srvActivo()){
-    // las cuentas viven en el servidor: se entra desde cualquier equipo
+  // Mientras no se sepa si hay servidor detrás, NO se resuelve el acceso: se deja la puerta cerrada.
+  // Si no, la primera pasada (síncrona) podía abrir con una cuenta local —o sin ninguna, si alguna vez
+  // se eligió "usar sin contraseña"— y recién después srvInit corregía. Un parpadeo que además era una
+  // rendija: por un instante la app quedaba a la vista sin haber pasado por el servidor.
+  if(SRV.modo&&!SRV.listo){authMode="espera";authRender();authShow(true);return;}
+  if(srvObliga()){
+    // HAY SERVIDOR ⇒ las cuentas viven allá. No hay camino local: ni cuenta de este navegador, ni
+    // "usar sin contraseña". Si el servidor aún no administra ninguna, lo primero es crear la tuya.
+    if(!SRV.hayCuentas){authMode="bootstrap";authRender();authShow(true);return;}
     if(SESSION&&srvToken()){authShow(false);return;}
     authMode="login";authRender();authShow(true);return;
   }
@@ -9107,7 +9152,9 @@ function authInit(){
 function authSaludo(){const h=new Date().getHours();return h<12?"Buenos días":h<20?"Buenas tardes":"Buenas noches";}
 function authRender(){
   const g=authGateEl();if(!g)return;
-  const create=authMode==="create";
+  const boot=authMode==="bootstrap";        // primera cuenta, EN EL SERVIDOR
+  const espera=authMode==="espera";         // todavía se está preguntando si hay servidor
+  const create=authMode==="create"||boot;   // ambos modos piden nombre, contraseña y repetición
   const logo='<svg viewBox="0 0 40 40" width="46" height="46" aria-hidden="true"><defs><linearGradient id="agG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><rect x="2" y="2" width="36" height="36" rx="10.5" fill="url(#agG)"/><rect x="10.6" y="23.5" width="3.4" height="6.5" rx="1.4" fill="#fff" opacity=".42"/><rect x="16.8" y="20" width="3.4" height="10" rx="1.4" fill="#fff" opacity=".6"/><rect x="23" y="16" width="3.4" height="14" rx="1.4" fill="#fff" opacity=".8"/><path d="M10 22.5 L17.5 16.5 L22.5 19.8 L31.5 11.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.8 11.5 H31.5 V17.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const logoW='<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="2" y="2" width="36" height="36" rx="10.5" fill="rgba(255,255,255,.13)" stroke="rgba(255,255,255,.3)"/><rect x="10.6" y="23.5" width="3.4" height="6.5" rx="1.4" fill="#fff" opacity=".42"/><rect x="16.8" y="20" width="3.4" height="10" rx="1.4" fill="#fff" opacity=".62"/><rect x="23" y="16" width="3.4" height="14" rx="1.4" fill="#fff" opacity=".85"/><path d="M10 22.5 L17.5 16.5 L22.5 19.8 L31.5 11.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M25.8 11.5 H31.5 V17.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   // lo que se muestra en el panel de bienvenida sale de la BASE REAL: nada inventado
@@ -9128,6 +9175,32 @@ function authRender(){
   const usuarios=usersAll().filter(u=>u.activo!==false);
   // último usuario que entró: sale del campo `ultimo` de cada cuenta, no de un registro de sesiones
   const ultimo=(function(){try{const c=usuarios.filter(x=>x.ultimo).sort((a,b)=>(""+a.ultimo<""+b.ultimo?1:-1));return c.length?c[0].user:"";}catch(e){return "";}})();
+  // el token del servidor solo hace falta para crear la PRIMERA cuenta: es lo que impide que, en una URL
+  // pública, el primero que llegue se quede con la administración. Si ya está guardado no se vuelve a pedir.
+  const tokGuardado=(function(){try{return (typeof CLOUD!=="undefined"&&CLOUD&&CLOUD.token)?""+CLOUD.token:"";}catch(e){return "";}})();
+  const pie=srvObliga()
+    ? "Cuentas en el servidor · entras con el mismo usuario desde cualquier equipo"
+    : "Acceso local · tus datos viven solo en este navegador";
+  const cuerpo=espera
+    ?`<div class="auth-h">${authSaludo()}</div>
+      <div class="auth-sub">Comprobando el acceso…</div>
+      <div class="auth-espera"><span class="sp"></span> Preguntando al servidor quién administra las cuentas</div>`
+    :`<div class="auth-h">${create?"Crea tu cuenta de administrador":authSaludo()}</div>
+        <div class="auth-sub">${boot
+          ?"Todavía no hay ninguna cuenta en el servidor. La primera es la de administrador —la tuya— y desde ella se crean las demás."
+          :create
+          ?"Serás el administrador: acceso total, incluida la gestión de usuarios. Después puedes crear cuentas de inversionista."
+          :"Bienvenido de vuelta. Ingresa para continuar con tu análisis y seguimiento."}</div>
+        ${create?`<div class="auth-f"><label>Tu nombre</label><input id="authName" type="text" autocomplete="name" placeholder="cómo quieres que te llamemos"></div>`:""}
+        <div class="auth-f"><label>Usuario</label><input id="authUser" type="text" autocomplete="username" value="${(!create&&ultimo)?(""+ultimo).replace(/"/g,"&quot;"):""}" placeholder="tu usuario"></div>
+        <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
+        ${create?`<div id="authPwMeter"></div><div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
+        ${(boot&&!tokGuardado)?`<div class="auth-f"><label>Token del servidor</label><input id="authTok" type="password" autocomplete="off" placeholder="SYNC_TOKEN · panel de Render → Environment"></div>
+          <div class="auth-nota">Se pide una sola vez, para probar que administras este servidor: sin él, en una dirección pública cualquiera podría reclamar la cuenta de administrador.</div>`:""}
+        ${(boot&&usuarios.length)?`<div class="auth-nota">Este navegador guarda ${usuarios.length} cuenta${usuarios.length===1?"":"s"} de la etapa local (${usuarios.map(x=>(""+x.user).replace(/</g,"&lt;")).join(", ")}). Al crear la del servidor, esa lista se reemplaza por la de allá — la contraseña hay que elegirla de nuevo porque el navegador nunca la guardó en claro, solo su huella. Tus proyectos y tu base de precios no se tocan.</div>`:""}
+        ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
+        <button class="auth-btn" id="authGo">${create?"Crear cuenta y entrar":"Entrar"}</button>
+        ${boot?"":create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}`;
   g.innerHTML=`<div class="auth-wrap">
     <aside class="auth-side">
       <div class="auth-side-top"><div class="auth-mark">${logoW}</div><div><div class="auth-eye">Inteligencia que genera valor</div><div class="auth-wm">Investor</div></div></div>
@@ -9140,30 +9213,50 @@ function authRender(){
     <section class="auth-main">
       <div class="auth-card">
         <div class="auth-brand-sm"><div class="auth-mark">${logo}</div><div class="auth-wm2">Investor</div></div>
-        <div class="auth-h">${create?"Crea tu cuenta de administrador":authSaludo()}</div>
-        <div class="auth-sub">${create
-          ?"Serás el administrador: acceso total, incluida la gestión de usuarios. Después puedes crear cuentas de inversionista."
-          :"Bienvenido de vuelta. Ingresa para continuar con tu análisis y seguimiento."}</div>
-        ${create?`<div class="auth-f"><label>Tu nombre</label><input id="authName" type="text" autocomplete="name" placeholder="cómo quieres que te llamemos"></div>`:""}
-        <div class="auth-f"><label>Usuario</label><input id="authUser" type="text" autocomplete="username" value="${(!create&&ultimo)?(""+ultimo).replace(/"/g,"&quot;"):""}" placeholder="tu usuario"></div>
-        <div class="auth-f"><label>Contraseña</label><input id="authPass" type="password" autocomplete="${create?"new-password":"current-password"}" placeholder="••••••••"></div>
-        ${create?`<div id="authPwMeter"></div><div class="auth-f"><label>Repite la contraseña</label><input id="authPass2" type="password" autocomplete="new-password" placeholder="••••••••"></div>`:""}
-        ${authMsg?`<div class="auth-msg">${authMsg}</div>`:""}
-        <button class="auth-btn" id="authGo">${create?"Crear cuenta y entrar":"Entrar"}</button>
-        ${create?`<div class="auth-skip"><a id="authSkip">Usar sin contraseña</a></div>`:`<div class="auth-skip"><a id="authForgot">¿Olvidaste tu contraseña?</a></div>`}
-        <div class="auth-foot">Acceso local · tus datos viven solo en este navegador</div>
+        ${cuerpo}
+        <div class="auth-foot">${pie}</div>
       </div>
     </section>
   </div>`;
+  if(espera)return;
   const go=document.getElementById("authGo");if(go)go.onclick=authSubmit;
-  ["authName","authUser","authPass","authPass2"].forEach(id=>{const e=document.getElementById(id);if(e)e.onkeydown=ev=>{if(ev.key==="Enter")authSubmit();};});
+  ["authName","authUser","authPass","authPass2","authTok"].forEach(id=>{const e=document.getElementById(id);if(e)e.onkeydown=ev=>{if(ev.key==="Enter")authSubmit();};});
   try{const f=document.getElementById(create?"authName":"authUser");if(f&&!f.value)f.focus();else{const q=document.getElementById("authPass");if(q)q.focus();}}catch(e){}
   if(create)try{pwEnlazar("authPass","authPwMeter",()=>(document.getElementById("authUser")||{}).value,()=>(document.getElementById("authName")||{}).value);}catch(e){}
   const sk=document.getElementById("authSkip");if(sk)sk.onclick=()=>{AUTH={enabled:false};lsSet("inv_auth_v1",AUTH);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authShow(false);};
-  const fg=document.getElementById("authForgot");if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Si eres el administrador puedes restablecer todas las cuentas: tus proyectos y tu base de precios se conservan.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer las cuentas";f.onclick=()=>{if(confirm('¿Restablecer TODAS las cuentas de acceso?\n\nSe borran los usuarios y sus contraseñas para que crees uno nuevo. Los proyectos, la base de precios y los respaldos NO se tocan.')){try{localStorage.removeItem(USERS_KEY);}catch(e){}AUTH=null;lsSet("inv_auth_v1",null);try{sessionStorage.removeItem(SESS_KEY);}catch(e){}SESSION=null;authMode="create";authMsg="";authRender();}};}};
+  const fg=document.getElementById("authForgot");
+  if(fg&&srvObliga()){
+    // con las cuentas en el servidor, borrar los usuarios de ESTE navegador no restablece nada: solo
+    // rompería el espejo local. La verdad está en el servidor y el camino de vuelta es otro.
+    fg.onclick=()=>{authMsg="Las contraseñas las guarda y verifica el servidor, cifradas: nadie —ni tú— puede leerlas. Si otra cuenta de administrador sigue activa, pídele que te ponga una nueva en ⚙ Configuración → Accesos. Si eras el único administrador, hay que borrar <b>users.json</b> del disco del servidor para volver a crear la primera cuenta; tus proyectos y respaldos no se tocan.";authRender();};
+  }else if(fg)fg.onclick=()=>{authMsg="El acceso es local y la contraseña no se puede recuperar. Si eres el administrador puedes restablecer todas las cuentas: tus proyectos y tu base de precios se conservan.";authRender();const f=document.getElementById("authForgot");if(f){f.textContent="Restablecer las cuentas";f.onclick=()=>{if(confirm('¿Restablecer TODAS las cuentas de acceso?\n\nSe borran los usuarios y sus contraseñas para que crees uno nuevo. Los proyectos, la base de precios y los respaldos NO se tocan.')){try{localStorage.removeItem(USERS_KEY);}catch(e){}AUTH=null;lsSet("inv_auth_v1",null);try{sessionStorage.removeItem(SESS_KEY);}catch(e){}SESSION=null;authMode="create";authMsg="";authRender();}};}};
 }
 async function authSubmit(){
+  if(authMode==="espera")return;
   const u=(document.getElementById("authUser")||{}).value||"",p=(document.getElementById("authPass")||{}).value||"";
+  // ── PRIMERA CUENTA, EN EL SERVIDOR ──
+  // Antes esto solo se podía hacer desde ⚙ Configuración → Accesos, o sea desde DENTRO. Con la puerta del
+  // sitio retirada, la pantalla de entrada es la primera puerta y tiene que saber abrir la casa vacía.
+  if(authMode==="bootstrap"){
+    const p2=(document.getElementById("authPass2")||{}).value||"";
+    const nm=(document.getElementById("authName")||{}).value||"";
+    const campoTok=document.getElementById("authTok");
+    const tok=((campoTok?campoTok.value:"")||"").trim()||((typeof CLOUD!=="undefined"&&CLOUD&&CLOUD.token)||"");
+    if(u.trim().length<2){authMsg="Elige un usuario de al menos 2 caracteres.";authRender();return;}
+    const ev=pwEvaluar(p,u,nm);
+    if(!ev.ok){authMsg="La contraseña debe: "+ev.fallos.join(" · ")+".";authRender();return;}
+    if(p!==p2){authMsg="Las contraseñas no coinciden.";authRender();return;}
+    if(!tok){authMsg="Falta el token del servidor (variable SYNC_TOKEN en el panel de Render).";authRender();return;}
+    try{
+      const j=await srvApi("POST","/api/auth/bootstrap",{user:u.trim(),name:(nm.trim()||u.trim()),pass:p},tok);
+      // el token queda guardado: es el mismo que usan los respaldos, y así no se vuelve a pedir
+      try{if(typeof CLOUD!=="undefined"&&CLOUD&&!CLOUD.token){CLOUD.token=tok;cloudSave();}}catch(e){}
+      srvTokenSet(j.token);SRV.hayCuentas=true;srvEspejar([j.user]);
+      const local=userById(j.user.id)||j.user;
+      authMsg="";authSesionAbrir(local);
+    }catch(e){authMsg=srvErrorTexto(e);authRender();}
+    return;
+  }
   if(authMode==="create"){
     const p2=(document.getElementById("authPass2")||{}).value||"";
     const nm=(document.getElementById("authName")||{}).value||"";
@@ -9178,7 +9271,10 @@ async function authSubmit(){
     return;
   }
   // ── ENTRAR ──
-  if(srvActivo()){
+  // srvObliga(), no srvActivo(): si hay servidor, la contraseña la verifica ÉL aunque este navegador
+  // todavía tenga cuentas locales de antes. Comparar contra el espejo local sería dejar viva la puerta
+  // que se está cerrando — bastaría un navegador con el localStorage viejo para saltarse el servidor.
+  if(srvObliga()){
     // el SERVIDOR verifica y cuenta los intentos: el bloqueo vale para todos los equipos, no solo para este
     try{
       const j=await srvApi("POST","/api/auth/login",{user:u.trim(),pass:p});
@@ -9215,6 +9311,13 @@ function authSesionAbrir(u){
   authMsg="";authShow(false);
   try{userChipSync();}catch(e){}
   try{render();}catch(e){}
+  // Recién ahora —con la puerta cerrada detrás— se ofrece restaurar la nube si este navegador está vacío
+  // (el caso del equipo nuevo: entras y lo primero que corresponde es traer tus datos) y se retoma el
+  // recordatorio de respaldo. Ambos preguntan, y preguntar es cosa de después de entrar.
+  setTimeout(function(){
+    try{if(typeof cloudBoot==="function")cloudBoot();}catch(e){}
+    try{if(typeof autobkTick==="function")autobkTick();}catch(e){}
+  },250);
 }
 function authLock(){
   if(srvActivo()&&srvToken()){try{srvApi("POST","/api/auth/logout");}catch(e){}srvTokenSet("");}
@@ -11132,13 +11235,17 @@ try{analysisSystemOnly();}catch(e){}
   if(bg)bg.onclick=()=>document.body.classList.toggle("nav-open");
   if(bk)bk.onclick=()=>document.body.classList.remove("nav-open");})();
 render();
+// authInit va PRIMERO: es quien decide si la puerta queda cerrada. Lo que viene después consulta ese estado
+// para no interrumpir con diálogos a quien todavía no ha entrado, y se retoma solo al abrir la sesión.
+authInit();
 try{autobkTick();}catch(e){}
 try{autopxAutoRun();}catch(e){}   // sincroniza los cierres del día desde la fuente automática (si está configurada)
-authInit();
 try{userChipSync();}catch(e){}
 /* si Investor corre sobre su servidor, se le pregunta si ya administra cuentas: en ese caso la pantalla de
-   entrada valida contra él y la sesión sirve desde cualquier equipo */
-(async function(){try{await srvInit();if(SRV.modo){authInit();userChipSync();}}catch(e){}})();
+   entrada valida contra él y la sesión sirve desde cualquier equipo. Hasta que responda, authInit dejó la
+   puerta cerrada en "comprobando": la decisión de abrir es SIEMPRE posterior a esta respuesta. */
+(async function(){try{await srvInit();}catch(e){SRV.listo=true;}
+  try{if(SRV.modo){authInit();userChipSync();}}catch(e){}})();
 setTimeout(function(){try{cloudBoot();}catch(e){}},900);   // nube: si este navegador está vacío y el servidor tiene respaldo, ofrece restaurarlo
 </script>
 </body>

@@ -44,16 +44,18 @@ services:
       # tú una frase larga en el panel: el resto funciona igual.
       - key: SYNC_TOKEN
         generateValue: true
-      # ── CAPA 2 · PUERTA DEL SITIO (usuario y contraseña del navegador) ───────────────────
-      # Con AMBAS definidas, el navegador pide credenciales ANTES de mostrar nada: ni la página ni los
-      # datos quedan a la vista de un desconocido que dé con la URL. Es el diálogo nativo del navegador,
-      # así que tu gestor de contraseñas lo recuerda y no lo escribes cada vez.
-      # · AUTH_USER lo eliges tú (cámbialo aquí o en el panel de Render).
-      # · AUTH_PASS lo genera Render; cópialo de Environment la primera vez.
-      # Para dejar el sitio abierto (como antes), borra estas dos variables en el panel: el servidor
-      # detecta que faltan y no exige nada. /api/health queda siempre accesible —Render la consulta sin
-      # credenciales para saber si el servicio vive— y sin autenticar no revela dato alguno del respaldo.
-      - key: AUTH_USER
-        value: investor
-      - key: AUTH_PASS
-        generateValue: true
+      # ── CAPA 2 · PUERTA DEL SITIO (HTTP Basic Auth) · RETIRADA A PROPÓSITO ──────────────
+      # Aquí vivían AUTH_USER y AUTH_PASS. Con ambas definidas el navegador levantaba su diálogo nativo
+      # antes de mostrar nada. Se quitaron por dos razones:
+      #   1. Basic Auth no tiene sesión: la credencial vive en la memoria del navegador y se pierde al
+      #      cerrarlo, al abrir desde el celular o al descargarse una pestaña de fondo. Reaparecía "de la
+      #      nada", incluso a mitad de uso, cuando el respaldo automático tocaba el servidor.
+      #   2. Eran DOS puertas encadenadas para el mismo dueño. La que manda ahora es la de Investor, que
+      #      sí tiene sesión, guarda las contraseñas con PBKDF2 · 210.000 iteraciones y bloquea la cuenta
+      #      tras varios intentos fallidos — cosas que Basic Auth no hace.
+      # Con las cuentas en el servidor (users.json en el disco persistente) el acceso se administra desde
+      # ⚙ Configuración → Accesos, y se entra con el mismo usuario desde cualquier equipo.
+      # El servidor conserva el soporte: si algún día quieres la capa extra, basta volver a definir AMBAS
+      # variables en el panel de Render (el código de server.js sigue ahí y la activa solo).
+      # OJO: quitar estas líneas del blueprint NO borra las variables ya creadas en el servicio. Hay que
+      # borrarlas a mano en Render → investor → Environment, y luego Save (el servicio reinicia).

@@ -17,12 +17,18 @@
      AUTH_USER   → (opcional) usuario de la puerta de entrada del SITIO
      AUTH_PASS   → (opcional) contraseña de esa puerta
 
-   DOS CAPAS INDEPENDIENTES:
-   · PUERTA DEL SITIO (HTTP Basic Auth, opcional): si defines AUTH_USER y AUTH_PASS,
-     el navegador pide usuario y contraseña ANTES de mostrar nada — ni la página ni
-     los datos. Es el diálogo nativo del navegador, así que tu gestor de contraseñas
-     lo recuerda. Si NO las defines, el sitio queda público como antes (la app se ve
-     vacía para un desconocido, porque los datos viven en el navegador de cada uno).
+   TRES CAPAS INDEPENDIENTES:
+   · CUENTAS (users.json en el disco): la puerta REAL de Investor. El servidor guarda
+     las contraseñas con PBKDF2 · 210.000 iteraciones, verifica el ingreso, cuenta los
+     intentos fallidos y bloquea la cuenta. La primera cuenta —la de administrador— se
+     crea con el SYNC_TOKEN: "todavía no hay cuentas" no es una credencial, y sin esa
+     exigencia el primero que llegara a una URL pública se quedaría con el servicio.
+   · PUERTA DEL SITIO (HTTP Basic Auth, opcional y HOY APAGADA): si defines AUTH_USER y
+     AUTH_PASS, el navegador pide usuario y contraseña ANTES de mostrar nada — ni la
+     página ni los datos. Se retiró del blueprint porque Basic Auth no tiene sesión: la
+     credencial vive en la memoria del navegador y el diálogo reaparecía solo. El código
+     sigue aquí; basta volver a definir AMBAS variables para reactivarla. Sin ellas el
+     sitio queda público, y lo que protege el acceso son las cuentas de arriba.
    · CAJA FUERTE (SYNC_TOKEN): protege la API de respaldos aunque alguien pasara la
      puerta. Se define en el panel de Render y se pega una vez en Investor
      (⚙ Configuración → Respaldo → Nube). Sin token válido: 401.
