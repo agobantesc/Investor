@@ -1059,8 +1059,8 @@
   /* OJO: la app define una regla global «aside{width:252px;flex-shrink:0;…}» para su barra lateral. Este
      panel también es un <aside>, así que heredaba ese ancho fijo y se quedaba en una columna estrechísima
      dentro de una celda de 621px. Aquí se le devuelve el ancho de su celda y se anulan borde y sombra. */
-  .auth-side{position:relative;display:flex;flex-direction:column;gap:20px;padding:38px 40px 30px;color:#fff;
-    width:auto;flex-shrink:1;border:none;box-shadow:none;overflow-y:auto;
+  .auth-side{position:relative;display:flex;flex-direction:column;gap:26px;padding:40px 42px 30px;color:#fff;
+    width:auto;flex-shrink:1;border:none;box-shadow:none;overflow:hidden;
     background:linear-gradient(150deg,#0A1E3D 0%,#123566 52%,#1E5FD1 165%);}
   .auth-side::after{content:"";position:absolute;inset:auto -30% -45% -30%;height:70%;
     background:radial-gradient(closest-side,rgba(59,130,246,.34),transparent);pointer-events:none;}
@@ -1068,21 +1068,21 @@
   .auth-side .auth-mark{width:40px;height:40px;filter:none;}
   .auth-side .auth-eye{color:#8FC1FF;margin-bottom:3px;}
   .auth-side .auth-wm{color:#fff;font-size:21px;}
-  .auth-side-mid{position:relative;z-index:1;margin-top:6px;}
-  .auth-side-mid h2{font:850 27px var(--font);letter-spacing:-.7px;line-height:1.18;color:#fff;}
-  .auth-side-mid p{font-size:12.5px;line-height:1.62;color:#C4D8F5;margin-top:11px;max-width:46ch;}
-  .auth-caps{list-style:none;margin:22px 0 0;padding:0;display:flex;flex-direction:column;gap:13px;}
-  .auth-caps li{display:flex;gap:11px;align-items:flex-start;}
-  .auth-caps .ck{flex:0 0 auto;width:19px;height:19px;border-radius:50%;background:rgba(143,193,255,.18);
-    border:1px solid rgba(143,193,255,.45);color:#8FC1FF;font-size:10px;font-weight:800;
-    display:flex;align-items:center;justify-content:center;margin-top:1px;}
-  .auth-caps b{display:block;font-size:12.5px;font-weight:800;color:#fff;letter-spacing:-.1px;}
-  .auth-caps span:not(.ck){display:block;font-size:11.5px;line-height:1.55;color:#A8C4E8;margin-top:2px;}
-  .auth-stats{display:flex;flex-wrap:wrap;gap:9px 26px;margin-top:24px;padding-top:17px;border-top:1px solid rgba(255,255,255,.16);}
-  .auth-stats .k{display:block;font-size:8px;letter-spacing:1.1px;text-transform:uppercase;color:#8FA9CE;font-weight:800;}
-  .auth-stats .v{display:block;font:800 15px var(--font);color:#fff;margin-top:2px;font-variant-numeric:tabular-nums;}
-  .auth-side-foot{position:relative;z-index:1;margin-top:auto;padding-top:20px;font-size:9.5px;letter-spacing:.5px;
-    text-transform:uppercase;font-weight:700;color:#7C97BF;}
+  .auth-side-mid{position:relative;z-index:1;margin-top:auto;margin-bottom:auto;}
+  .auth-side-mid h2{font:850 30px var(--font);letter-spacing:-.9px;line-height:1.14;color:#fff;max-width:15ch;}
+  /* puntos clave: una línea cada uno. Explicarlos era texto que nadie lee antes de escribir su clave. */
+  .auth-caps{list-style:none;margin:26px 0 0;padding:0;display:flex;flex-direction:column;gap:11px;}
+  .auth-caps li{display:flex;gap:11px;align-items:center;}
+  .auth-caps .ck{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:rgba(143,193,255,.18);
+    border:1px solid rgba(143,193,255,.45);color:#8FC1FF;font-size:9.5px;font-weight:800;
+    display:flex;align-items:center;justify-content:center;}
+  .auth-caps .tx{font-size:12.5px;line-height:1.45;color:#C4D8F5;font-weight:600;}
+  .auth-stats{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:10.5px;color:#8FA9CE;font-weight:600;
+    font-variant-numeric:tabular-nums;}
+  .auth-stats b{color:#DCE9FB;font-weight:800;}
+  .auth-side-foot{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;
+    padding-top:18px;border-top:1px solid rgba(255,255,255,.14);}
+  .auth-side-foot .dis{font-size:9px;letter-spacing:.5px;text-transform:uppercase;font-weight:700;color:#6F8AB2;}
   .auth-main{display:flex;align-items:center;justify-content:center;padding:34px 30px;overflow-y:auto;background:var(--card);}
   .auth-wrap .auth-card{width:100%;max-width:352px;border:none;border-radius:0;box-shadow:none;padding:0;
     animation:none;background:transparent;}
@@ -1346,6 +1346,10 @@
   .note{border-radius:10px;}
   .home-greet .hg-hi{letter-spacing:-.02em;}
   .tiles-consol .tile .v{letter-spacing:-.02em;}
+  /* el % del pie puede ir más grande sin descuadrar la fila: alto de línea FIJO (longitud, no factor),
+     así lo heredan los hijos ya calculado y una letra mayor no estira la caja */
+  .tiles-consol .tile .s{line-height:16px;}
+  .tiles-consol .tile .s b{font-size:13.5px;letter-spacing:-.2px;font-variant-numeric:tabular-nums;}
   .chart{border-radius:8px;}
   th[data-fsort],th[data-fsort2]{cursor:pointer;user-select:none;white-space:nowrap;}
   th[data-fsort]:hover,th[data-fsort2]:hover{color:var(--accent);}
@@ -9113,12 +9117,14 @@ function authRender(){
     const ds=(typeof PRICEDB!=="undefined"&&PRICEDB&&PRICEDB.ipsa)?Object.keys(PRICEDB.ipsa).sort():[];
     return {tk,ip,al:ds.length?fD(ds[ds.length-1]):null};
   }catch(e){return {tk:0,ip:0,al:null};}})();
+  // PUNTOS CLAVE DE GESTIÓN, una línea cada uno: la pantalla de entrada no es el lugar para explicar
+  // la plataforma — es el lugar para reconocerla y entrar.
   const capa=[
-    ["Seguimiento fiel","Rentabilidad time-weighted, β realizado y alpha contra el IPSA — con tus operaciones y comisiones reales."],
-    ["Análisis del sistema","CAPM, multifactor y fundamentos construidos sobre la base de precios, sin datos de ejemplo."],
-    ["Simulación","Markowitz, Monte Carlo y «qué pasa si compro o vendo» sobre tus carteras de verdad."]
-  ].map(([t,d])=>`<li><span class="ck">✓</span><div><b>${t}</b><span>${d}</span></div></li>`).join("");
-  const marca=est.tk?`<div class="auth-stats"><div><span class="k">Acciones en la base</span><span class="v">${est.tk}</span></div><div><span class="k">Fechas de IPSA</span><span class="v">${est.ip.toLocaleString("es-CL")}</span></div>${est.al?`<div><span class="k">Al día</span><span class="v">${est.al}</span></div>`:""}</div>`:"";
+    "Rentabilidad TWR, β realizado y α contra el IPSA",
+    "CAPM, multifactor y fundamentos sobre cierres reales",
+    "Markowitz, Monte Carlo y simulación de cambios"
+  ].map(t=>`<li><span class="ck">✓</span><span class="tx">${t}</span></li>`).join("");
+  const marca=est.tk?`<div class="auth-stats"><span><b>${est.tk}</b> acciones</span><span><b>${est.ip.toLocaleString("es-CL")}</b> fechas de IPSA</span>${est.al?`<span>al día <b>${est.al}</b></span>`:""}</div>`:"";
   const usuarios=usersAll().filter(u=>u.activo!==false);
   // último usuario que entró: sale del campo `ultimo` de cada cuenta, no de un registro de sesiones
   const ultimo=(function(){try{const c=usuarios.filter(x=>x.ultimo).sort((a,b)=>(""+a.ultimo<""+b.ultimo?1:-1));return c.length?c[0].user:"";}catch(e){return "";}})();
@@ -9127,11 +9133,9 @@ function authRender(){
       <div class="auth-side-top"><div class="auth-mark">${logoW}</div><div><div class="auth-eye">Inteligencia que genera valor</div><div class="auth-wm">Investor</div></div></div>
       <div class="auth-side-mid">
         <h2>${create?"Pon en marcha tu plataforma":"Tu cartera, medida como corresponde"}</h2>
-        <p>${create?"Investor deja de ser una planilla: mide tu inversión con las mismas varas que usa la industria, sobre cierres reales de la Bolsa de Santiago.":"Todo lo que ves aquí sale de tus operaciones y de los cierres reales del mercado chileno. Nada de datos de ejemplo."}</p>
         <ul class="auth-caps">${capa}</ul>
-        ${marca}
       </div>
-      <div class="auth-side-foot">Simulación educativa · no constituye asesoría financiera</div>
+      <div class="auth-side-foot">${marca}<span class="dis">Simulación educativa · no constituye asesoría financiera</span></div>
     </aside>
     <section class="auth-main">
       <div class="auth-card">
