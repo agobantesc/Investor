@@ -115,8 +115,12 @@ function backupMeta() {
 /* ¿cuánto trae un respaldo? Se usa para distinguir un respaldo REAL de uno vacío sin descargarlo entero:
    así la app puede ofrecer "restaurar la última versión CON datos" cuando la última quedó en blanco. */
 function backupResumen(file) {
+  try { return backupResumen0(JSON.parse(fs.readFileSync(file, "utf8"))); }
+  catch (e) { return { carteras: 0, precios: 0, dias: 0, tieneDatos: false, error: true }; }
+}
+/* el mismo resumen, sobre un objeto ya leído (los datos de una cuenta viven dentro de un sobre con `rev`) */
+function backupResumen0(j) {
   try {
-    const j = JSON.parse(fs.readFileSync(file, "utf8"));
     const cs = (j && j.clients) || {};
     let carteras = 0, precios = 0, dias = 0;
     for (const id of Object.keys(cs)) {
@@ -145,6 +149,58 @@ const SESION_MS = 12 * 60 * 60 * 1000;          // 12 h de validez
 /* NO se lleva registro de entradas: el archivo de sesiones guarda SOLO los tokens vivos, que son lo que
    hace falta para mantener la sesión abierta entre recargas y reinicios. Un historial de quién entró y
    cuándo no lo pidió nadie y es dato personal que no aporta a decidir una inversión. */
+
+/* ═══════════════════ DATOS DE CADA CUENTA ═══════════════════
+   La cuenta ya viajaba; los datos no. Entrar desde otro equipo dejaba la app vacía y había que restaurar a
+   mano un respaldo pegando el SYNC_TOKEN. Aquí el estado completo de Investor de cada cuenta vive en el
+   disco, atado a su sesión: entras con tu usuario y tus inversiones están ahí, al día.
+
+   REVISIÓN (`rev`): cada guardado incrementa un número. Quien sube manda cuál creía que era el último; si no
+   coincide, el servidor RECHAZA con 409 en vez de pisar. Es lo que evita que un equipo con datos de hace una
+   semana borre el trabajo del equipo que sí está al día — no se pueden fusionar dos estados, pero sí se puede
+   negar a perder uno en silencio.
+   Cada versión anterior queda en el disco (las últimas VER_KEEP): el camino de vuelta si algo sale mal. */
+const UD_DIR = path.join(DATA_DIR, "userdata");
+const UD_KEEP = 20;
+const UID_RE = /^[\w-]{1,64}$/;
+function udArchivo(uid) { return path.join(UD_DIR, uid + ".json"); }
+function udLeer(uid) {
+  const v = leerJSON(udArchivo(uid), null);
+  return (v && typeof v === "object" && v.payload) ? v : { rev: 0, savedAt: null, payload: null };
+}
+function udMeta(uid) {
+  const v = udLeer(uid);
+  let bytes = 0; try { bytes = fs.statSync(udArchivo(uid)).size; } catch (e) {}
+  return { rev: v.rev || 0, savedAt: v.savedAt || null, bytes, hayDatos: !!v.payload };
+}
+/* las versiones viejas de ESTA cuenta, de la más nueva a la más vieja */
+function udVersiones(uid) {
+  let arch = [];
+  try { arch = fs.readdirSync(UD_DIR).filter(f => f.indexOf(uid + ".v") === 0 && f.endsWith(".json")).sort().reverse(); } catch (e) {}
+  return arch.map(f => {
+    const full = path.join(UD_DIR, f);
+    let bytes = 0, savedAt = null;
+    try { const st = fs.statSync(full); bytes = st.size; savedAt = st.mtime.toISOString(); } catch (e) {}
+    const j = leerJSON(full, null);
+    return Object.assign({ file: f, rev: (j && j.rev) || 0, savedAt, bytes }, backupResumen0((j && j.payload) || null));
+  });
+}
+function udPodar(uid) {
+  try {
+    const v = fs.readdirSync(UD_DIR).filter(f => f.indexOf(uid + ".v") === 0 && f.endsWith(".json")).sort();
+    while (v.length > UD_KEEP) { try { fs.unlinkSync(path.join(UD_DIR, v.shift())); } catch (e) {} }
+  } catch (e) {}
+}
+function udEscribir(uid, payload, rev) {
+  fs.mkdirSync(UD_DIR, { recursive: true });
+  const reg = { rev, savedAt: new Date().toISOString(), payload };
+  const body = JSON.stringify(reg);
+  const f = udArchivo(uid), tmp = f + ".tmp";
+  fs.writeFileSync(tmp, body); fs.renameSync(tmp, f);                       // escritura atómica
+  fs.writeFileSync(path.join(UD_DIR, uid + ".v" + String(rev).padStart(6, "0") + ".json"), body);
+  udPodar(uid);
+  return reg;
+}
 
 function leerJSON(f, porDefecto) { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return porDefecto; } }
 function escribirJSON(f, v) { try { const t = f + ".tmp"; fs.writeFileSync(t, JSON.stringify(v)); fs.renameSync(t, f); return true; } catch (e) { return false; } }
@@ -250,6 +306,56 @@ const server = http.createServer((req, res) => {
 
   /* ── PUERTA DEL SITIO: todo lo demás (app, datos y API) exige credenciales si está activada ── */
   if (!gateOK(req)) return pedirCredenciales(res);
+
+  /* ── DATOS DE LA CUENTA ── lo que hace que Investor se pueda usar desde cualquier equipo. La llave es la
+     SESIÓN (tu usuario y contraseña), no el SYNC_TOKEN: pedir el token aquí obligaría a llevarlo encima de
+     viaje, que es justo lo que había que quitar de en medio. Cada cuenta solo alcanza lo suyo. ── */
+  if (p === "/api/data" || p === "/api/data/meta" || p === "/api/data/versions") {
+    const s = sesionDe(req);
+    if (!s) return sendJSON(res, 401, { error: "sesión no válida o expirada" });
+    const uid = String(s.user.id || "");
+    if (!UID_RE.test(uid)) return sendJSON(res, 400, { error: "cuenta inválida" });
+
+    if (p === "/api/data/meta" && req.method === "GET") return sendJSON(res, 200, udMeta(uid));
+    if (p === "/api/data/versions" && req.method === "GET") return sendJSON(res, 200, { versions: udVersiones(uid) });
+
+    if (p === "/api/data" && req.method === "GET") {
+      const v = (u.searchParams.get("v") || "").trim();
+      if (v) {
+        // una versión anterior de ESTA cuenta: el nombre se valida y se ancla al uid, nada de rutas ajenas
+        if (!/^[\w-]{1,64}\.v\d{6}\.json$/.test(v) || v.indexOf(uid + ".v") !== 0)
+          return sendJSON(res, 400, { error: "versión inválida" });
+        const j = leerJSON(path.join(UD_DIR, v), null);
+        if (!j) return sendJSON(res, 404, { error: "esa versión no existe" });
+        return sendJSON(res, 200, { rev: j.rev || 0, savedAt: j.savedAt || null, payload: j.payload || null });
+      }
+      return sendJSON(res, 200, udLeer(uid));
+    }
+
+    if (p === "/api/data" && req.method === "PUT") {
+      let size = 0; const chunks = [];
+      req.on("data", c => { size += c.length; if (size > MAX_BODY) { sendJSON(res, 413, { error: "los datos son demasiado grandes" }); req.destroy(); } else chunks.push(c); });
+      req.on("end", () => {
+        if (res.writableEnded) return;
+        let j = null;
+        try { j = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"); } catch (e) { return sendJSON(res, 400, { error: "JSON inválido" }); }
+        const pl = j && j.payload;
+        if (!pl || pl._app !== "portfolio-dashboard" || !pl.clients) return sendJSON(res, 400, { error: "no parecen datos de Investor" });
+        const act = udLeer(uid), rev = act.rev || 0;
+        const base = +j.rev;
+        // CONFLICTO: este equipo partió de una revisión que ya no es la última. Se rechaza en vez de pisar —
+        // que es exactamente lo que pasaba antes, en silencio y sin que nadie se enterara.
+        if (!(base >= 0) || base !== rev)
+          return sendJSON(res, 409, { error: "los datos del servidor cambiaron desde otro equipo", rev, savedAt: act.savedAt, resumen: backupResumen0(act.payload) });
+        let reg = null;
+        try { reg = udEscribir(uid, pl, rev + 1); }
+        catch (e) { return sendJSON(res, 500, { error: "no se pudo escribir en el disco: " + e.message }); }
+        return sendJSON(res, 200, { ok: true, rev: reg.rev, savedAt: reg.savedAt });
+      });
+      return;
+    }
+    return sendJSON(res, 405, { error: "método no permitido" });
+  }
 
   /* ── CUENTAS ── entran antes que la caja fuerte: para iniciar sesión no se puede exigir el SYNC_TOKEN
      (nadie lo tiene en un equipo nuevo). Lo que protege esta zona es la contraseña del usuario y, si está

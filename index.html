@@ -2476,7 +2476,14 @@ function autobkTick(){try{
   // 2) descarga periódica fuera del navegador (única protección real ante borrar el navegador / cambiar de equipo)
   if(!_cerrada&&AUTOBK.on&&autobkDaysSince(AUTOBK.lastDL)>=(AUTOBK.days||7)){
     const d=Math.floor(autobkDaysSince(AUTOBK.lastDL));
-    const msg=AUTOBK.lastDL?("🛡️ Respaldo automático de Investor\n\nHan pasado "+d+" día(s) desde tu última descarga de respaldo.\n¿Descargar ahora tu copia de seguridad como archivo en tu equipo?"):("🛡️ Respaldo automático de Investor\n\nTus datos viven solo en este navegador. Para no perderlos si se borra el caché o cambias de equipo, conviene guardar una copia como archivo.\n\n¿Descargar ahora tu primer respaldo?");
+    // el texto cambia según dónde estén los datos: decirle "viven solo en este navegador" a quien ya los
+    // tiene en su cuenta del servidor sería mentirle para asustarlo
+    const enCuenta=(function(){try{return datosActivo();}catch(e){return false;}})();
+    const msg=AUTOBK.lastDL
+      ?("🛡️ Respaldo automático de Investor\n\nHan pasado "+d+" día(s) desde tu última descarga de respaldo.\n¿Descargar ahora tu copia de seguridad como archivo en tu equipo?")
+      :enCuenta
+      ?("🛡️ Respaldo automático de Investor\n\nTus datos ya se guardan en tu cuenta del servidor. Una copia como archivo, además, te cubre si algún día el servidor no está.\n\n¿Descargar ahora tu primer respaldo?")
+      :("🛡️ Respaldo automático de Investor\n\nTus datos viven solo en este navegador. Para no perderlos si se borra el caché o cambias de equipo, conviene guardar una copia como archivo.\n\n¿Descargar ahora tu primer respaldo?");
     if(window.confirm(msg)){try{downloadBackup(backupPayload());}catch(e){}}
     AUTOBK.lastDL=new Date().toISOString();autobkSave();   // se aceptó o se pospuso: en ambos casos no insistir hasta el próximo intervalo
   }
@@ -6414,10 +6421,127 @@ async function cloudApi(method,pathU,body){
   return j;
 }
 var _cloudTimer=null,_cloudPushing=false;
-/* auto-respaldo: ~45 s después del último cambio guardado (debounce), si hay token y está activado */
+/* auto-respaldo: ~45 s después del último cambio guardado (debounce), si hay token y está activado.
+   Además —y esto es lo que permite viajar sin llevar nada encima— programa la subida de los datos a TU
+   cuenta del servidor, que no necesita token: le basta tu sesión. */
 function cloudSchedulePush(){
+  try{datosMarcarPendiente();}catch(e){}
   if(!CLOUD||!CLOUD.token||CLOUD.auto===false||!cloudServerMode())return;
   clearTimeout(_cloudTimer);_cloudTimer=setTimeout(function(){cloudPush(false).catch(function(){});},45e3);
+}
+
+/* ═══════════ TUS DATOS, EN TU CUENTA DEL SERVIDOR ═══════════
+   Hasta aquí la CUENTA viajaba y los DATOS no: entrabas desde otro equipo y encontrabas Investor vacío, con
+   la única salida de restaurar a mano un respaldo pegando el SYNC_TOKEN — o sea, llevando de viaje una clave
+   de administración del servidor. Ahora el estado completo se guarda contra tu sesión: entras con tu usuario
+   y tus inversiones están ahí.
+
+   REVISIÓN: el servidor numera cada guardado. Este navegador recuerda de qué revisión partió; si al subir ya
+   no es la última, el servidor responde 409 y aquí se PREGUNTA en vez de pisar. Es la red de seguridad para
+   el caso de dos equipos: no se pueden fusionar dos estados, pero sí evitar perder uno sin avisar. */
+const DATOS_KEY="inv_datos_v1";
+var _datosTimer=null,_datosSubiendo=false,_datosOcupado=false,_datosMetaVista=null;
+/* ¿la cuenta ya guarda datos en el servidor? Lo responde la última sincronización. Distingue "tus datos
+   viajan solos" de "todavía no hay nada allá", que es cuando el respaldo con token aún hace falta. */
+var _datosEnCuenta=false;
+/* lo que muestra la Configuración: se refresca al abrirla, no en cada dibujo (sería una llamada por tecla) */
+async function datosMetaRefrescar(){
+  if(!datosActivo())return null;
+  try{_datosMetaVista=await srvApi("GET","/api/data/meta");}catch(e){}
+  return _datosMetaVista;
+}
+function datosEstado(){try{const v=JSON.parse(localStorage.getItem(DATOS_KEY)||"null");
+  return (v&&typeof v==="object")?{uid:v.uid||"",rev:+v.rev||0,pend:!!v.pend}:{uid:"",rev:0,pend:false};}catch(e){return {uid:"",rev:0,pend:false};}}
+function datosEstadoSet(o){try{localStorage.setItem(DATOS_KEY,JSON.stringify(Object.assign(datosEstado(),o)));}catch(e){}}
+function datosActivo(){try{return srvActivo()&&!!srvToken()&&!!SESSION;}catch(e){return false;}}
+/* hay cambios locales sin subir: si el servidor resulta ir más adelantado, no se descartan en silencio */
+function datosMarcarPendiente(){
+  if(!datosActivo()||_datosOcupado)return;
+  datosEstadoSet({uid:SESSION.id,pend:true});
+  clearTimeout(_datosTimer);_datosTimer=setTimeout(function(){datosSubir(false);},45e3);
+}
+function datosTieneAlgo(){try{return backupTieneDatos(backupPayload());}catch(e){return false;}}
+/* aplica un estado traído del servidor y recarga: media app leyó sus claves al arrancar */
+function datosAplicar(reg){
+  if(!reg||!reg.payload)return false;
+  if(!restoreFromPayload(reg.payload))return false;
+  datosEstadoSet({uid:SESSION.id,rev:+reg.rev||0,pend:false});
+  return true;
+}
+async function datosSubir(manual){
+  if(!datosActivo())return null;
+  if(_datosSubiendo)return null;
+  const payload=backupPayload();
+  // nunca se sube un estado VACÍO encima de uno con datos: el equipo recién estrenado no borra tu cartera
+  if(!backupTieneDatos(payload)&&!manual)return null;
+  const st=datosEstado();
+  _datosSubiendo=true;
+  try{
+    const r=await srvApi("PUT","/api/data",{rev:(st.uid===SESSION.id?st.rev:0),payload});
+    datosEstadoSet({uid:SESSION.id,rev:+r.rev||0,pend:false});_datosEnCuenta=true;
+    return r;
+  }catch(e){
+    if(e&&e.code===409){await datosConflicto(e.data||{});return null;}
+    if(manual)throw e;
+    return null;
+  }finally{_datosSubiendo=false;}
+}
+/* DOS EQUIPOS, DOS ESTADOS. No hay fusión posible —son carteras completas, no líneas de texto— así que se
+   muestran ambos con sus cifras y decide la persona. Antes de reemplazar nada se ofrece bajar el archivo. */
+async function datosConflicto(d){
+  _datosOcupado=true;
+  try{
+    const rs=d.resumen||{},cuando=d.savedAt?new Date(d.savedAt).toLocaleString("es-CL"):"—";
+    const mio=(function(){try{const p=backupPayload(),c=Object.values(p.clients||{});
+      let ca=0,px=0;c.forEach(o=>{if(Array.isArray(o.pf_projects_v1))ca+=o.pf_projects_v1.length;
+        if(o.inv_pricedb_v1&&o.inv_pricedb_v1.px)px=Math.max(px,Object.keys(o.inv_pricedb_v1.px).length);});
+      return ca+" cartera(s) · "+px+" acción(es) en la base";}catch(e){return "—";}})();
+    const txt="Tus datos cambiaron desde OTRO equipo mientras este tenía cambios sin subir.\n\n"
+      +"EN EL SERVIDOR (guardado el "+cuando+"):\n   "+(rs.carteras||0)+" cartera(s) · "+(rs.precios||0)+" acción(es) en la base\n\n"
+      +"EN ESTE EQUIPO:\n   "+mio+"\n\n"
+      +"No se pueden juntar: hay que quedarse con uno.\n\n"
+      +"Aceptar = traer lo del SERVIDOR (se pierde lo de este equipo)\n"
+      +"Cancelar = conservar lo de ESTE equipo y subirlo (reemplaza lo del servidor)";
+    // pase lo que pase, primero queda una copia en el disco de este equipo: nada se decide sin red
+    try{downloadBackup(backupPayload());}catch(e){}
+    if(window.confirm(txt)){
+      const reg=await srvApi("GET","/api/data");
+      if(datosAplicar(reg)){window.alert("Listo: quedaron los datos del servidor. Investor se recargará.");location.reload();}
+    }else{
+      const meta=await srvApi("GET","/api/data/meta");
+      datosEstadoSet({uid:SESSION.id,rev:+meta.rev||0});
+      _datosOcupado=false;
+      const r=await datosSubir(true);
+      if(r)window.alert("Listo: se subieron los datos de este equipo. La versión anterior del servidor queda guardada en el historial.");
+    }
+  }catch(e){}
+  finally{_datosOcupado=false;}
+}
+/* AL ENTRAR: pone este navegador al día con tu cuenta. Es el momento correcto —la puerta acaba de cerrarse
+   detrás— y es lo único que hace falta para abrir Investor en el hotel y ver la cartera de hoy. */
+async function datosSincronizar(){
+  if(!datosActivo())return {estado:"no-aplica"};
+  let meta=null;
+  try{meta=await srvApi("GET","/api/data/meta");}catch(e){return {estado:"sin-servidor"};}
+  _datosEnCuenta=!!meta.hayDatos;
+  const st=datosEstado(),mismaCuenta=(st.uid===SESSION.id);
+  if(!meta.hayDatos){
+    // cuenta nueva en el servidor: este navegador ADOPTA lo que ya tenga (la primera vez, tu equipo de siempre)
+    if(datosTieneAlgo()){datosEstadoSet({uid:SESSION.id,rev:0});const r=await datosSubir(true);
+      if(r)_datosEnCuenta=true;
+      return {estado:r?"subido":"nada",rev:r?r.rev:0};}
+    datosEstadoSet({uid:SESSION.id,rev:0,pend:false});
+    return {estado:"vacio"};
+  }
+  if(mismaCuenta&&st.rev===meta.rev)return {estado:"al-dia",rev:meta.rev};
+  // el servidor va por otra revisión. Si aquí había cambios sin subir, decide la persona; si no, se trae.
+  if(mismaCuenta&&st.pend&&datosTieneAlgo()){
+    await datosConflicto({rev:meta.rev,savedAt:meta.savedAt,resumen:null});
+    return {estado:"conflicto"};
+  }
+  const reg=await srvApi("GET","/api/data");
+  if(!datosAplicar(reg))return {estado:"error"};
+  return {estado:"traido",rev:reg.rev,recarga:true};
 }
 /* ¿este respaldo tiene DATOS de verdad? (al menos una cartera o una base de precios con contenido).
    Un navegador recién estrenado —abrir la app publicada por primera vez— produce un payload con la
@@ -6490,6 +6614,11 @@ async function cloudBoot(){
   // window.prompt pidiéndole el token del servidor por encima de la pantalla de entrada. No filtraba nada
   // —sin token no se restaura— pero es una pregunta que no le corresponde a quien todavía no es nadie aquí.
   try{const g=document.getElementById("authGate");if(g&&g.classList.contains("open"))return;}catch(e){}
+  // Y si tu cuenta YA guarda datos en el servidor, esto sobra: viajan con tu sesión, sin token. Pedirlo ahí
+  // sería volver a exigir de viaje justo la llave que se quitó de en medio.
+  // Ojo con el matiz: si la cuenta todavía no guarda nada (el primer arranque tras la actualización), el
+  // respaldo con token sigue siendo el único camino de vuelta y hay que dejarlo ofrecerse.
+  try{if(datosActivo()&&_datosEnCuenta)return;}catch(e){}
   try{
     const localEmpty=(!PROJECTS||!PROJECTS.length)&&(typeof pricedbTickers!=="function"||!pricedbTickers().length);
     if(!localEmpty)return;
@@ -7102,7 +7231,9 @@ function cfgEnsureDOM(){if(document.getElementById("cfgBack"))return;const back=
 function cfgOpen(){
   // la Configuración es del ADMINISTRADOR: aquí se cambian los datos de mercado, los respaldos y los accesos
   if(!isAdmin()){window.alert("Tu cuenta es de inversionista: la Configuración es del administrador.\n\nPuedes cambiar tu nombre y tu contraseña en «Mi cuenta» (el icono de persona, arriba a la derecha).");return;}
-  cfgEnsureDOM();cfgRender();document.getElementById("cfgBack").classList.add("open");setTimeout(()=>{const x=document.getElementById("cfgX");if(x)try{x.focus();}catch(e){}},60);}
+  cfgEnsureDOM();cfgRender();document.getElementById("cfgBack").classList.add("open");setTimeout(()=>{const x=document.getElementById("cfgX");if(x)try{x.focus();}catch(e){}},60);
+  // la ficha de "tus datos" muestra fecha y peso reales: se piden al abrir y se redibuja cuando llegan
+  try{datosMetaRefrescar().then(m=>{if(m&&cfgTab==="respaldo")cfgRender();});}catch(e){}}
 function cfgClose(){const b=document.getElementById("cfgBack");if(b)b.classList.remove("open");}
 function cfgGo(m,p){modulo=m;if(p)page=p;cfgClose();render();}
 let cfgTab="general";   // pestaña activa de Configuración (persiste durante la sesión)
@@ -7157,7 +7288,20 @@ function cfgRender(){
     const bkLast=(AUTOBK&&AUTOBK.lastDL)?(""+AUTOBK.lastDL).slice(0,10):"nunca";
     const bkSnap=bkInfo?((""+bkInfo.date).slice(0,16).replace("T"," ")):"—";
     const daysOpts=[7,14,30].map(d=>`<option value="${d}" ${(AUTOBK&&AUTOBK.days===d)?"selected":""}>cada ${d} días</option>`).join("");
-    body=sec("Respaldo manual","Todo tu Investor (proyectos, base, análisis) en un archivo JSON",
+    body=(function(){
+      // TUS DATOS EN TU CUENTA — lo primero de esta pestaña, porque es lo que hace que Investor se pueda usar
+      // desde varios equipos. Lo de abajo (archivo, caja fuerte con token) pasa a ser la red de seguridad.
+      if(!datosActivo())return "";
+      const st=datosEstado(),m=_datosMetaVista;
+      const pill=st.pend?'<span class="cfg-pill no">Cambios sin subir</span>':'<span class="cfg-pill ok">Al día</span>';
+      const cuando=(m&&m.savedAt)?new Date(m.savedAt).toLocaleString("es-CL"):"—";
+      const peso=(m&&m.bytes)?(" · "+Math.round(m.bytes/1024)+" KB"):"";
+      return sec("Tus datos · en tu cuenta del servidor","Entras con tu usuario y contraseña desde cualquier equipo y tus inversiones están ahí, al día. No hace falta el token: basta tu sesión",
+        row(`Estado ${pill}`,"Cuenta <b>"+(""+((SESSION&&(SESSION.name||SESSION.user))||"")).replace(/</g,"&lt;")+"</b> · revisión <b>"+(st.rev||0)+"</b> · guardado <b>"+cuando+"</b>"+peso,
+          '<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-pri" id="cfgDatosPush">↑ Guardar ahora</button><button class="btn" id="cfgDatosPull">↓ Traer del servidor</button><button class="btn" id="cfgDatosVer">🕘 Revisiones</button></div>')+
+        `<div class="cfg-sub" style="margin-top:6px">Si dos equipos cambian cosas distintas, el servidor <b>no deja que uno pise al otro</b>: avisa y te muestra ambos para que elijas. Cada revisión anterior queda guardada.</div>`);
+    })()+
+    sec("Respaldo manual","Todo tu Investor (proyectos, base, análisis) en un archivo JSON",
       row("Respaldar / restaurar","Exporta o vuelve a un respaldo anterior",'<div style="display:flex;gap:7px"><button class="btn btn-pri" id="cfgBkp">💾 Respaldar</button><button class="btn" id="cfgRst">📥 Restaurar</button></div>'))+
       sec("Respaldo automático","Una red de seguridad periódica",
         row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkOn" ${(AUTOBK&&AUTOBK.on)?"checked":""}> Respaldo automático activado</label>`,`Te propone descargar una copia cada cierto tiempo · última descarga: <b>${bkLast}</b> · copia interna: <b>${bkSnap}</b>`,`<select id="cfgBkDays">${daysOpts}</select>`)+
@@ -7268,6 +7412,36 @@ function cfgRender(){
   // ── nube (Render) ──
   const _ctk=q("#cfgCloudTok");if(_ctk)_ctk.onchange=()=>{const v=_ctk.value.trim();if(v){CLOUD.token=v;cloudSave();cfgRender();}};
   const _cau=q("#cfgCloudAuto");if(_cau)_cau.onchange=()=>{CLOUD.auto=_cau.checked;cloudSave();};
+  // ── tus datos en tu cuenta del servidor ──
+  const _dpu=q("#cfgDatosPush");if(_dpu)_dpu.onclick=async()=>{
+    try{const r=await datosSubir(true);
+      if(r){await datosMetaRefrescar();window.alert("Guardado en tu cuenta del servidor · revisión "+r.rev+".");cfgRender();}
+    }catch(e){window.alert("No se pudo guardar: "+srvErrorTexto(e));}};
+  const _dpl=q("#cfgDatosPull");if(_dpl)_dpl.onclick=async()=>{
+    try{
+      const meta=await srvApi("GET","/api/data/meta");
+      if(!meta.hayDatos){window.alert("Tu cuenta todavía no tiene datos guardados en el servidor.");return;}
+      if(!window.confirm("Traer los datos de tu cuenta del servidor (guardados el "+(meta.savedAt?new Date(meta.savedAt).toLocaleString("es-CL"):"—")+").\n\nREEMPLAZA lo que haya en este equipo. ¿Continuar?"))return;
+      const reg=await srvApi("GET","/api/data");
+      if(datosAplicar(reg)){window.alert("Listo. Investor se recargará.");location.reload();}
+      else window.alert("No se pudieron aplicar los datos.");
+    }catch(e){window.alert("No se pudo traer: "+srvErrorTexto(e));}};
+  const _dvr=q("#cfgDatosVer");if(_dvr)_dvr.onclick=async()=>{
+    try{
+      const vs=(await srvApi("GET","/api/data/versions")).versions||[];
+      if(!vs.length){window.alert("Aún no hay revisiones guardadas.");return;}
+      const lista=vs.slice(0,12).map(v=>"  rev "+v.rev+" · "+(v.savedAt?new Date(v.savedAt).toLocaleString("es-CL"):"—")+" · "+v.carteras+" cartera(s) · "+v.precios+" acción(es)").join("\n");
+      const cual=window.prompt("Revisiones guardadas de tu cuenta:\n\n"+lista+"\n\nEscribe el número de la revisión que quieres traer (o cancela):");
+      if(!cual)return;
+      const v=vs.find(x=>String(x.rev)===String(cual).trim());
+      if(!v){window.alert("No existe esa revisión.");return;}
+      if(!window.confirm("Traer la revisión "+v.rev+" ("+v.carteras+" cartera(s)).\n\nREEMPLAZA lo que haya en este equipo, y al guardar pasará a ser la versión vigente. ¿Continuar?"))return;
+      const reg=await srvApi("GET","/api/data?v="+encodeURIComponent(v.file));
+      // se aplica con la revisión ACTUAL para poder volver a subirla como la nueva última
+      const meta=await srvApi("GET","/api/data/meta");
+      if(restoreFromPayload(reg.payload)){datosEstadoSet({uid:SESSION.id,rev:+meta.rev||0,pend:true});
+        window.alert("Listo. Investor se recargará y quedará con la revisión "+v.rev+".");location.reload();}
+    }catch(e){window.alert("No se pudo: "+srvErrorTexto(e));}};
   const _cpu=q("#cfgCloudPush");if(_cpu)_cpu.onclick=async()=>{try{const r=await cloudPush(true);window.alert("Respaldo guardado en la nube"+((r&&r.savedAt)?(" · "+new Date(r.savedAt).toLocaleString("es-CL")+" · "+(r.versions||1)+" versiones en el servidor"):"")+".");cfgRender();}catch(e){window.alert("No se pudo guardar en la nube: "+e.message);}};
   const _cpl=q("#cfgCloudPull");if(_cpl)_cpl.onclick=()=>cloudRestore(true);
   // HISTORIAL: el disco guarda 40 versiones. Poder elegir una es lo que salva el día si el último respaldo
@@ -9311,10 +9485,14 @@ function authSesionAbrir(u){
   authMsg="";authShow(false);
   try{userChipSync();}catch(e){}
   try{render();}catch(e){}
-  // Recién ahora —con la puerta cerrada detrás— se ofrece restaurar la nube si este navegador está vacío
-  // (el caso del equipo nuevo: entras y lo primero que corresponde es traer tus datos) y se retoma el
-  // recordatorio de respaldo. Ambos preguntan, y preguntar es cosa de después de entrar.
-  setTimeout(function(){
+  // Recién ahora —con la puerta cerrada detrás— se pone este navegador al día con TU cuenta del servidor.
+  // Si eso trae datos, la app se recarga y no hay nada más que hacer. Si no hay servidor (o la cuenta aún no
+  // guarda nada), se cae en lo de siempre: ofrecer el respaldo de la nube y el recordatorio de copia local.
+  setTimeout(async function(){
+    let r=null;
+    try{if(typeof datosSincronizar==="function")r=await datosSincronizar();}catch(e){}
+    if(r&&r.recarga){try{location.reload();return;}catch(e){}}
+    try{render();}catch(e){}
     try{if(typeof cloudBoot==="function")cloudBoot();}catch(e){}
     try{if(typeof autobkTick==="function")autobkTick();}catch(e){}
   },250);
@@ -11245,7 +11423,17 @@ try{userChipSync();}catch(e){}
    entrada valida contra él y la sesión sirve desde cualquier equipo. Hasta que responda, authInit dejó la
    puerta cerrada en "comprobando": la decisión de abrir es SIEMPRE posterior a esta respuesta. */
 (async function(){try{await srvInit();}catch(e){SRV.listo=true;}
-  try{if(SRV.modo){authInit();userChipSync();}}catch(e){}})();
+  try{if(SRV.modo){authInit();userChipSync();}}catch(e){}
+  // sesión ya válida (recarga, pestaña nueva): se pone al día igual que al entrar. Es lo que hace que abrir
+  // Investor en otro equipo muestre lo de hoy sin tocar nada.
+  try{
+    const g=document.getElementById("authGate");
+    if(datosActivo()&&!(g&&g.classList.contains("open"))){
+      const r=await datosSincronizar();
+      if(r&&r.recarga){location.reload();return;}
+      if(r&&r.estado==="traido")render();
+    }
+  }catch(e){}})();
 setTimeout(function(){try{cloudBoot();}catch(e){}},900);   // nube: si este navegador está vacío y el servidor tiene respaldo, ofrece restaurarlo
 </script>
 </body>
