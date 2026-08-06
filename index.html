@@ -3278,7 +3278,10 @@ function invMetrics(){
   // midió. Ese 0% frente a un IPSA que sí cerró es una observación INVENTADA, y arrastra la β hacia 0.
   // La β POR ACCIÓN ya exigía cierre real en ambos extremos (okPx) y el KPI "cambio último día" ya salta esos
   // registros (_hasClose); la β de la CARTERA no lo hacía, y una sola compra bastaba para moverla.
-  const prOK=[];let prevValOK=false;
+  const prOK=[];
+  // ancla de MEDICIÓN, aparte de la de rentabilidad: apunta al último registro valorizado a mercado.
+  let obsVal=null,obsIpsa=null,obsIpsaOK=false,obsOK=false,obsD=null,obsFlow=0;
+  const puenteados=[];   // fechas que no cierran tramo (sin cierres de la cartera): se saltan sin cortar la serie
   /* AJUSTE DE VALORIZACIÓN DEL DÍA DE LA OPERACIÓN.
      Compras hoy y el cierre de hoy todavía no existe: el registro valoriza tus acciones al último cierre
      conocido (el de ayer), pero el aporte entra al precio REAL al que compraste. Esa diferencia se convertía
@@ -3328,9 +3331,34 @@ function invMetrics(){
     // ¿está este registro VALORIZADO A MERCADO? Solo si cada papel que tienes en cartera trae su cierre real.
     // Si alguno viene arrastrado, el patrimonio del registro es una estimación y su "retorno" no es medición.
     const _valReal=PF.holdings.every(hd=>!((sh[hd.t]||0)>1e-9)||(freshOK(w,hd.t)&&w.prices[hd.t]>0));
+    // UN DÍA SIN MEDIR NO ROMPE LA CADENA: SE PUENTEA.
+    // Antes, un registro sin cierres (operar antes de que salgan) cerraba tramo igual. Eso producía DOS pasos
+    // malos: uno de 0% contra un mercado que sí se movió, y otro que metía DOS días de movimiento en un solo
+    // paso —comparado contra UN día de índice—. Descartar ambos dejaba el tramo entero fuera de la medición.
+    // Ahora ese registro simplemente no cierra tramo: el siguiente día medido se compara contra el último día
+    // medido, y el retorno del índice se toma sobre el MISMO intervalo. Los flujos de los días puenteados se
+    // acumulan en dayFlow, así que la resta sigue cuadrando. La rentabilidad acumulada no cambia (los pasos se
+    // telescopian); lo que cambia es que la observación existe y es honesta en vez de perderse.
     if(lastOfDate){
-      if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);prD.push(w.date);prBase.push(prevVal);prFrom.push(_prevD);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);mrOK.push(!!(prevIpsa>0&&prevIpsaOK&&_ipReal));prOK.push(!!(prevValOK&&_valReal));}   // prD/prFrom/prBase: cada retorno lleva su fecha, la fecha BASE del tramo y el PATRIMONIO sobre el que se midió
-      prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;prevValOK=_valReal;dayFlow=0;_prevD=w.date;
+      // ── 1. CADENA DE RENTABILIDAD ── avanza en TODOS los registros, medidos o no. Es contabilidad, no
+      // medición: un dividendo cobrado un día sin cierres ES rentabilidad y tiene que entrar al TWR igual.
+      // (Saltárselo dejaba el retorno acumulado congelado hasta el próximo cierre.)
+      if(prevVal!=null&&prevVal>0)twr*=(1+((val-dayFlow)/prevVal-1));
+      // ── 2. OBSERVACIONES PARA MEDIR ── solo cierran tramo los registros VALORIZADOS A MERCADO. Un día sin
+      // cierres se puentea: el siguiente día medido se compara contra el último día medido, con el índice
+      // tomado sobre el MISMO intervalo y los flujos intermedios acumulados en obsFlow. Así no se inventa
+      // una observación (0% contra un mercado que sí se movió) ni se pierde el movimiento real del tramo.
+      obsFlow+=dayFlow;
+      if(_valReal){
+        if(obsVal!=null&&obsVal>0&&obsOK){const r=(val-obsFlow)/obsVal-1;
+          pr.push(r);prCLP.push((val-obsFlow)-obsVal);prD.push(w.date);prBase.push(obsVal);prFrom.push(obsD);
+          mr.push(obsIpsa>0?(w.ipsa/obsIpsa-1):0);mrOK.push(!!(obsIpsa>0&&obsIpsaOK&&_ipReal));prOK.push(true);}   // prD/prFrom/prBase: cada retorno lleva su fecha, la fecha BASE del tramo y el PATRIMONIO sobre el que se midió
+        obsVal=val;obsIpsa=w.ipsa;obsIpsaOK=_ipReal;obsOK=true;obsD=w.date;obsFlow=0;
+      }else{
+        puenteados.push(w.date);
+        if(obsVal==null){obsVal=val;obsIpsa=w.ipsa;obsIpsaOK=_ipReal;obsOK=false;obsD=w.date;obsFlow=0;}
+      }
+      prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;dayFlow=0;_prevD=w.date;
     }
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
     // ipsaND: el IPSA de este registro viene ARRASTRADO (sin cierre real del índice para la fecha) — sea por el
@@ -3429,12 +3457,36 @@ function invMetrics(){
   // real (mrOK) y cartera valorizada a cierres reales (prOK). Un IPSA arrastrado entraba como "0% de mercado"
   // que nunca ocurrió; una cartera arrastrada entra como "0% de cartera" que tampoco ocurrió — y ese segundo
   // caso es el que aparecía cada vez que se operaba antes de que salieran los cierres del día.
-  const _prB=[],_mrB=[];for(let i=0;i<pr.length;i++)if(mrOK[i]&&prOK[i]){_prB.push(pr[i]);_mrB.push(mr[i]);}
+  const _prB=[],_mrB=[],_dB=[],_fB=[];for(let i=0;i<pr.length;i++)if(mrOK[i]&&prOK[i]){_prB.push(pr[i]);_mrB.push(mr[i]);_dB.push(prD[i]);_fB.push(prFrom[i]);}
   const nretIdx=_prB.length;
   let betaR=null,corrR=null;
   if(_prB.length>=4){const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,mp=mean(_prB),mm=mean(_mrB);let cov=0,vm=0,vp=0;
     for(let i=0;i<_prB.length;i++){cov+=(_prB[i]-mp)*(_mrB[i]-mm);vm+=(_mrB[i]-mm)**2;vp+=(_prB[i]-mp)**2;}
     if(vm>0){betaR=cov/vm;corrR=vp>0?cov/Math.sqrt(vm*vp):null;}}
+  /* INFLUENCIA POR OBSERVACIÓN — de dónde sale realmente tu β.
+     "Se movió mucho en un día" tiene dos explicaciones posibles y opuestas: o entró un dato malo, o la muestra
+     es tan corta que una sola fecha manda. Con la β sola no se distinguen. Aquí se calcula, para cada
+     observación, cuánto valdría la β SIN ella: si quitar una fecha mueve la β medio punto, la β no es una
+     lectura del activo todavía — es esa fecha. Es barato (n regresiones sobre n<centenas) y se calcula una vez. */
+  let betaObs=null,betaTop=null;
+  if(betaR!=null&&_prB.length>=4){
+    betaObs=[];
+    for(let k=0;k<_prB.length;k++){
+      let n=0,sp=0,sm=0;
+      for(let i=0;i<_prB.length;i++){if(i===k)continue;sp+=_prB[i];sm+=_mrB[i];n++;}
+      const mp2=sp/n,mm2=sm/n;let cov2=0,vm2=0;
+      for(let i=0;i<_prB.length;i++){if(i===k)continue;cov2+=(_prB[i]-mp2)*(_mrB[i]-mm2);vm2+=(_mrB[i]-mm2)**2;}
+      const bk=vm2>0?cov2/vm2:null;
+      betaObs.push({d:_dB[k],desde:_fB[k],rp:_prB[k],rm:_mrB[k],sin:bk,dbeta:bk!=null?(betaR-bk):null});
+    }
+    betaTop=betaObs.filter(x=>x.dbeta!=null).slice().sort((a,b)=>Math.abs(b.dbeta)-Math.abs(a.dbeta));
+  }
+  // LO QUE NO ENTRÓ A MEDIR, y por qué: es la otra mitad de la respuesta. Dos casos distintos —
+  // el día PUENTEADO (tu cartera sin cierres: no cierra tramo, pero su movimiento no se pierde, queda dentro
+  // del tramo siguiente) y el tramo con el ÍNDICE arrastrado (ese sí se descarta: no hay contra qué medir).
+  const betaFuera=puenteados.map(d=>({d,motivo:"tu cartera sin cierres ese día"}));
+  for(let i=0;i<pr.length;i++){if(mrOK[i])continue;betaFuera.push({d:prD[i],motivo:"IPSA sin cierre real"});}
+  betaFuera.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
   const perY=PF.freq==="semanal"?52:PF.freq==="mensual"?12:252;
   // VOLATILIDAD REALIZADA: no depende del índice, pero sí de que la cartera se haya MEDIDO. Un registro con
   // precios arrastrados aportaba un 0% que bajaba la σ (y subía el Sharpe) sin que el mercado hubiera estado
@@ -3493,7 +3545,7 @@ function invMetrics(){
   let _ix=1,peakIx=1,peakK=-1,maxDD=0,maxDDCLP=0,maxDDDate=null,maxDDFrom=null;
   for(let k=0;k<pr.length;k++){_ix*=(1+pr[k]);if(_ix>peakIx){peakIx=_ix;peakK=k;}
     const dd=_ix/peakIx-1;if(dd<maxDD){maxDD=dd;maxDDCLP=cumCLP[k]-(peakK>=0?cumCLP[peakK]:0);maxDDDate=prD[k];maxDDFrom=peakK>=0?prD[peakK]:(prFrom[0]||null);}}
-  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,nret:pr.length,nretIdx,worstRet,bestRet,maxDD,maxDDCLP,maxDDDate,maxDDFrom,worstLossCLP,worstRetDate,worstBaseVal,worstStep,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
+  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,betaObs,betaTop,betaFuera,nret:pr.length,nretIdx,worstRet,bestRet,maxDD,maxDDCLP,maxDDDate,maxDDFrom,worstLossCLP,worstRetDate,worstBaseVal,worstStep,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
 }
 
 const FREQ={diario:{u:"día",uc:"Día",us:"días",adj:"diario",cap:"Diario",det:"el día",per:"del día",pf:"D"},semanal:{u:"semana",uc:"Semana",us:"semanas",adj:"semanal",cap:"Semanal",det:"la semana",per:"de la semana",pf:"S"},mensual:{u:"mes",uc:"Mes",us:"meses",adj:"mensual",cap:"Mensual",det:"el mes",per:"del mes",pf:"M"}};
@@ -3874,6 +3926,47 @@ function viewInvActive(){
     const body=svg+leg+smlTbl+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar): la <b style="color:${green}">zona verde</b> (sobre la línea) es rendimiento por ENCIMA de lo exigido y la <b style="color:${red}">rojiza</b>, por debajo. Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → la línea punteada vertical es tu <b>alpha realizado</b>: <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b>. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} exigido → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${stkPts.length?` Cada <b>acción del portafolio</b> va con su nombre en su β, con el crecimiento de su <b>precio de mercado</b> desde que entró a la cartera: en zona verde = le pagó su riesgo; en zona roja = el lastre de tu alpha. Pasa el cursor por cualquier punto para los valores exactos.`:""} La tabla de arriba es el mismo cálculo acción por acción: <b>α de Jensen = retorno del período − exigido CAPM</b>, ordenada de la más subvalorada (α+) a la más sobrevalorada (α−).${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
     return card("Security Market Line: ¿te pagó el riesgo que tomaste?","Retorno del período vs β · la línea punteada vertical de tu portafolio (◆) a la SML ES el alpha realizado · el IPSA (▲) separa cuánto es mercado y cuánto gestión · pasa el cursor por los puntos",body);
   }catch(e){return "";}})();
+  /* ═══ DE DÓNDE SALE TU β ═══
+     La pregunta que ninguna cifra sola responde: "bajó mucho en un día, ¿es un error o es real?".
+     Aquí están las dos mitades. Arriba, cuántas fechas MIDEN y cuántas quedaron fuera y por qué. Abajo, las
+     fechas que más MUEVEN la β: para cada una, cuánto valdría sin ella. Si quitar una sola fecha mueve la β
+     medio punto, la β todavía no habla del activo — habla de esa fecha. */
+  const betaAudit=(function(){
+    if(IM.betaR==null){
+      const n=IM.nretIdx||0,fuera=(IM.betaFuera||[]).length;
+      return card("De dónde sale tu <span class=\"gl\">β</span> realizada",
+        "Aún no hay observaciones suficientes para una regresión",
+        `<div class="note" style="margin:0">Van <b>${n}</b> fecha(s) con cierre real de tu cartera Y del IPSA; hacen falta <b>4</b>.${fuera?` Otras <b>${fuera}</b> quedaron fuera por falta de cierres.`:""} Con cada día de seguimiento la cifra gana sentido.</div>`,"","rp-omit");
+    }
+    const top=(IM.betaTop||[]).slice(0,5);
+    const n=IM.nretIdx;
+    const _p2=v=>(v>=0?"+":"−")+Math.abs(v*100).toFixed(2)+"%";
+    const filas=top.map(x=>{
+      const mueve=Math.abs(x.dbeta);
+      const c=mueve>=0.30?red:mueve>=0.15?amber:muted;
+      return `<tr><td>${fD(x.d)}${x.desde&&x.desde!==x.d?`<div class="t-sub">desde ${fD(x.desde)}</div>`:""}</td>
+        <td class="r" style="color:${col(x.rp*100)};font-weight:800">${_p2(x.rp)}</td>
+        <td class="r" style="color:${col(x.rm*100)};font-weight:800">${_p2(x.rm)}</td>
+        <td class="r">${x.sin!=null?x.sin.toFixed(2):"—"}</td>
+        <td class="r" style="color:${c};font-weight:800">${(x.dbeta>=0?"+":"−")+mueve.toFixed(2)}</td></tr>`;}).join("");
+    const mayor=top.length?Math.abs(top[0].dbeta):0;
+    const veredicto=mayor>=0.30
+      ? `<b style="color:${red}">Una sola fecha manda.</b> Quitar el <b>${fD(top[0].d)}</b> dejaría la β en <b>${top[0].sin.toFixed(2)}</b> en vez de ${IM.betaR.toFixed(2)}. Con ${n} observaciones eso no es un error de cálculo: es que la muestra todavía es corta y un día fuerte la define. Gana estabilidad con semanas de seguimiento.`
+      : mayor>=0.15
+      ? `<b style="color:${amber}">Sensible a fechas puntuales.</b> La de más peso (${fD(top[0].d)}) mueve la β en <b>${mayor.toFixed(2)}</b>. Léela como una referencia, no como un número fino.`
+      : `<b style="color:${green}">Sin fechas dominantes.</b> Ninguna observación mueve la β más de <b>${mayor.toFixed(2)}</b>: con ${n} observaciones la cifra ya es estable.`;
+    const fuera=IM.betaFuera||[];
+    const porMotivo={};fuera.forEach(x=>{porMotivo[x.motivo]=(porMotivo[x.motivo]||0)+1;});
+    const fueraTxt=fuera.length
+      ? `<div class="note" style="margin-top:11px;font-size:10.5px">Quedaron <b>fuera de la medición</b> ${fuera.length} tramo(s): ${Object.keys(porMotivo).map(m=>`${porMotivo[m]} por <b>${m}</b>`).join(", ")}. Un día sin cierres no se mide contra el mercado —sería un 0% que no ocurrió— pero <b>tampoco corta la serie</b>: el siguiente día con cierre se compara contra el último día medido, sobre el mismo tramo del índice.</div>`
+      : `<div class="note" style="margin-top:11px;font-size:10.5px">Las <b>${n}</b> observaciones tienen cierre real de tu cartera y del IPSA: nada quedó fuera.</div>`;
+    return card("De dónde sale tu <span class=\"gl\">β</span> realizada",
+      `β <b>${IM.betaR.toFixed(2)}</b> sobre <b>${n}</b> observaciones${IM.corrR!=null?` · r² <b>${(IM.corrR*IM.corrR*100).toFixed(0)}%</b>`:""} · las fechas que más la mueven`,
+      {html:`<div class="tw tbl-compact"><table>
+        <thead><tr><th>Fecha</th><th class="r">Tu cartera</th><th class="r">IPSA</th><th class="r" title="Cuánto valdría la β si esta fecha no existiera"><span class="gl">β</span> sin ella</th><th class="r" title="Cuánto mueve esta sola fecha a la β">Mueve</th></tr></thead>
+        <tbody>${filas}</tbody></table></div>
+        <div class="note" style="margin-top:11px">${veredicto}</div>${fueraTxt}`,flush:true},"","rp-omit");
+  })();
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA sobre las <b>"+(IM.nretIdx!=null?IM.nretIdx:IM.nret)+" fechas medidas de verdad</b> —cierre real del índice Y de todas tus acciones—"+((IM.nretIdx!=null&&IM.nret>IM.nretIdx)?(" (de "+IM.nret+" registros: "+(IM.nret-IM.nretIdx)+" quedan fuera. Un día sin el cierre del índice, o con tus precios arrastrados —el caso típico: operaste antes de que salieran los cierres— daría un 0% que nunca ocurrió y aplanaría la β)"):"")+"; compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ fechas con cierre real del IPSA y de tus acciones</b> calcularé el β realizado por regresión de tus retornos vs el índice.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
   // HISTORIAL AGRUPADO POR FECHA: varias operaciones el mismo día son varios registros internos (así lo exige
   // el libro y la edición individual), pero el historial muestra UNA fila por día — con la rentabilidad diaria
@@ -3967,7 +4060,7 @@ function viewInvActive(){
       `<div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" data-invtab="operar">⇄ Operar (comprar / vender)</button><button class="btn" data-gomod="proyectos">📁 Proyectos (crear nueva inversión)</button></div>`);
     return projbar+summary+invDetailCard()+opHint;
   }
-  return projbar+invTools+hero+summary+evoChart+valChart+psTbl+allocCard+stkChart+ipsaTiles+verdict+capmKp+capmChart+smlCard+capmNote+riskCard+qualityCard;
+  return projbar+invTools+hero+summary+evoChart+valChart+psTbl+allocCard+stkChart+ipsaTiles+verdict+capmKp+capmChart+smlCard+capmNote+betaAudit+riskCard+qualityCard;
 }
 
 function compraPreview(){
@@ -4080,7 +4173,10 @@ function reportStripUI(html){
   const d=document.createElement("div");d.innerHTML=html;
   d.querySelectorAll("button,input,select,textarea,.ctx-tabs,.projbar,.pbtns,.home-seg,.wbtn,[data-pgoto]").forEach(e=>{try{e.remove();}catch(_){}});
   // secciones que en pantalla dependen de ELEGIR una acción: en papel no hay dónde elegir, así que muestran
-  // una sola y confunden. Se marcan con rp-omit en su tarjeta y no llegan al informe.
+  // una sola y confunden. Se marcan con rp-omit en su tarjeta y no llegan al informe. También lleva la marca
+  // la auditoría de la β: es una herramienta de diagnóstico —"¿por qué se movió?"— que cambia cada día y no
+  // es una sección de un documento. Lo que el informe SÍ dice de la β (valor, r², observaciones) va en la
+  // nota del CAPM.
   d.querySelectorAll(".rp-omit").forEach(e=>{try{e.remove();}catch(_){}});
   d.querySelectorAll(".bd").forEach(x=>{if(!x.textContent.trim()&&!x.querySelector("svg,img,table"))x.remove();});   // cuerpos que solo tenían un botón: fuera la franja vacía
   // Una tarjeta que se queda SIN CUERPO era pura navegación (la barra de proyectos, por ejemplo): en papel
