@@ -3190,7 +3190,18 @@ function invMetrics(){
   // Cuando el IPSA viene arrastrado, mr guarda un 0% que NO ocurrió: si esas observaciones entraran a la
   // regresión, el β realizado, el tracking error, el information ratio y los "aciertos vs IPSA" quedarían
   // sesgados por días de mercado inventados. Se calculan solo sobre el subconjunto con índice real.
+  /* ¿el precio de ESTE papel en ESTE registro es un cierre REAL o viene arrastrado? Se declara aquí arriba
+     porque ahora lo necesita también la valorización del bucle, no solo las series de más abajo. Un registro
+     sin el campo `fresh` es anterior a que existiera la marca: se acepta como real (compatibilidad). */
+  const freshOK=(w,t)=>w?(w.fresh?w.fresh.indexOf(t)>=0:true):false;
   const mrOK=[];let prevIpsaOK=false;
+  // prOK marca lo mismo del OTRO lado: que el retorno de la CARTERA sea una medición real. Un registro donde
+  // los precios vienen arrastrados —el caso típico: operaste hoy y los cierres todavía no salen— vale para
+  // valorizar, pero su "retorno" es 0% por construcción: no es que la cartera no se moviera, es que nadie la
+  // midió. Ese 0% frente a un IPSA que sí cerró es una observación INVENTADA, y arrastra la β hacia 0.
+  // La β POR ACCIÓN ya exigía cierre real en ambos extremos (okPx) y el KPI "cambio último día" ya salta esos
+  // registros (_hasClose); la β de la CARTERA no lo hacía, y una sola compra bastaba para moverla.
+  const prOK=[];let prevValOK=false;
   /* AJUSTE DE VALORIZACIÓN DEL DÍA DE LA OPERACIÓN.
      Compras hoy y el cierre de hoy todavía no existe: el registro valoriza tus acciones al último cierre
      conocido (el de ayer), pero el aporte entra al precio REAL al que compraste. Esa diferencia se convertía
@@ -3237,9 +3248,12 @@ function invMetrics(){
     // ¿el IPSA de ESTE registro es un cierre REAL del índice? (mismo criterio que ipsaND, adelantado aquí
     // para poder marcar la observación del par de retornos antes de que prevIpsa se actualice)
     const _ipReal=(w.ipsa>0)&&(w.ipsaFresh===true||(w.ipsaFresh!==false&&!(i>0&&_ipPrevDate>0&&w.ipsa===_ipPrevDate)));
+    // ¿está este registro VALORIZADO A MERCADO? Solo si cada papel que tienes en cartera trae su cierre real.
+    // Si alguno viene arrastrado, el patrimonio del registro es una estimación y su "retorno" no es medición.
+    const _valReal=PF.holdings.every(hd=>!((sh[hd.t]||0)>1e-9)||(freshOK(w,hd.t)&&w.prices[hd.t]>0));
     if(lastOfDate){
-      if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);prD.push(w.date);prBase.push(prevVal);prFrom.push(_prevD);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);mrOK.push(!!(prevIpsa>0&&prevIpsaOK&&_ipReal));}   // prD/prFrom/prBase: cada retorno lleva su fecha, la fecha BASE del tramo y el PATRIMONIO sobre el que se midió
-      prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;dayFlow=0;_prevD=w.date;
+      if(prevVal!=null&&prevVal>0){const r=(val-dayFlow)/prevVal-1;twr*=(1+r);pr.push(r);prCLP.push((val-dayFlow)-prevVal);prD.push(w.date);prBase.push(prevVal);prFrom.push(_prevD);mr.push(prevIpsa>0?(w.ipsa/prevIpsa-1):0);mrOK.push(!!(prevIpsa>0&&prevIpsaOK&&_ipReal));prOK.push(!!(prevValOK&&_valReal));}   // prD/prFrom/prBase: cada retorno lleva su fecha, la fecha BASE del tramo y el PATRIMONIO sobre el que se midió
+      prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;prevValOK=_valReal;dayFlow=0;_prevD=w.date;
     }
     const yrs=i===0?0:Math.max(0,(new Date(w.date).getTime()+addD-t0)/(365.25*864e5));
     // ipsaND: el IPSA de este registro viene ARRASTRADO (sin cierre real del índice para la fecha) — sea por el
@@ -3254,7 +3268,6 @@ function invMetrics(){
     series.push({date:w.date,val,aport,ret:twr-1,ipsaRet:_ipR,diff:(twr-1)-_ipR,yrs,inflow,ipsaND,ev:w.ev||null});});
   // fresh AUSENTE = semana antigua/compra inicial (precios reales por construcción) → se confía; fresh PRESENTE
   // pero sin el ticker = ese precio es arrastre o precio de transacción (no cierre) → se desconfía.
-  const freshOK=(w,t)=>w?(w.fresh?w.fresh.indexOf(t)>=0:true):false;
   // "Crecimiento por acción": base 100 desde la PRIMERA compra de cada acción. Antes de esa fecha va en null,
   // por lo que la línea NO existe (svgMulti la dibuja recién desde la compra): ENEL, comprada más tarde, arranca
   // en su fecha de incorporación y no arrastra el crecimiento previo de la cartera. Estándar para cualquier acción.
@@ -3334,17 +3347,24 @@ function invMetrics(){
        if(vm>0){betaSt=cov/vm;corrSt=vs>0?cov/Math.sqrt(vm*vs):null;r2St=corrSt!=null?corrSt*corrSt:null;}}}
     return {hd,sh:shx,buy:avg,cur,val:v,ret:cst>0?gain/cst:(b0[hd.t]>0?cur/b0[hd.t]-1:0),dayRet,dayFrom,dayTo,openedLast,gain,contribCum:aport>0?gain/aport:0,cost:cst,
       betaExp:(hd.b!=null&&isFinite(hd.b))?+hd.b:null,betaR:betaSt,corrR:corrSt,r2:r2St,nBeta:nSt};});
-  // PARES CON ÍNDICE REAL: todo lo que se mide CONTRA el mercado (β, correlación, tracking error, information
-  // ratio, aciertos) usa solo estas observaciones. Las fechas con IPSA arrastrado quedan fuera en vez de entrar
-  // como un "0% de mercado" que nunca ocurrió. La volatilidad y el Sharpe NO dependen del índice: usan todo pr.
-  const _prB=[],_mrB=[];for(let i=0;i<pr.length;i++)if(mrOK[i]){_prB.push(pr[i]);_mrB.push(mr[i]);}
+  // OBSERVACIONES REALES, DE LOS DOS LADOS. Todo lo que se mide CONTRA el mercado (β, correlación, tracking
+  // error, information ratio, aciertos) exige que AMBOS retornos del par sean mediciones: índice con cierre
+  // real (mrOK) y cartera valorizada a cierres reales (prOK). Un IPSA arrastrado entraba como "0% de mercado"
+  // que nunca ocurrió; una cartera arrastrada entra como "0% de cartera" que tampoco ocurrió — y ese segundo
+  // caso es el que aparecía cada vez que se operaba antes de que salieran los cierres del día.
+  const _prB=[],_mrB=[];for(let i=0;i<pr.length;i++)if(mrOK[i]&&prOK[i]){_prB.push(pr[i]);_mrB.push(mr[i]);}
   const nretIdx=_prB.length;
   let betaR=null,corrR=null;
   if(_prB.length>=4){const mean=a=>a.reduce((x,y)=>x+y,0)/a.length,mp=mean(_prB),mm=mean(_mrB);let cov=0,vm=0,vp=0;
     for(let i=0;i<_prB.length;i++){cov+=(_prB[i]-mp)*(_mrB[i]-mm);vm+=(_mrB[i]-mm)**2;vp+=(_prB[i]-mp)**2;}
     if(vm>0){betaR=cov/vm;corrR=vp>0?cov/Math.sqrt(vm*vp):null;}}
   const perY=PF.freq==="semanal"?52:PF.freq==="mensual"?12:252;
-  let realizedVol=null;if(pr.length>=2){const mp=pr.reduce((a,b)=>a+b,0)/pr.length;const v=pr.reduce((a,b)=>a+(b-mp)**2,0)/(pr.length-1);realizedVol=Math.sqrt(v)*Math.sqrt(perY)*100;}
+  // VOLATILIDAD REALIZADA: no depende del índice, pero sí de que la cartera se haya MEDIDO. Un registro con
+  // precios arrastrados aportaba un 0% que bajaba la σ (y subía el Sharpe) sin que el mercado hubiera estado
+  // quieto. Se usan los mismos retornos reales; si no alcanzan, se cae a todos antes que no dar cifra.
+  const _prV=[];for(let i=0;i<pr.length;i++)if(prOK[i])_prV.push(pr[i]);
+  const _prVol=_prV.length>=2?_prV:pr;
+  let realizedVol=null;if(_prVol.length>=2){const mp=_prVol.reduce((a,b)=>a+b,0)/_prVol.length;const v=_prVol.reduce((a,b)=>a+(b-mp)**2,0)/(_prVol.length-1);realizedVol=Math.sqrt(v)*Math.sqrt(perY)*100;}
   // CAMBIO ÚLTIMO DÍA: entre los dos últimos registros con CIERRE REAL de mercado. Un registro de OPERACIÓN
   // sin cierre aún (fresh presente y vacío — p.ej. una compra de hoy antes de las ~18:05) NO define el "día":
   // se salta, y sus aportes/retiros se netean del tramo. Así el KPI muestra el día 08→09 real y no un
@@ -3381,7 +3401,9 @@ function invMetrics(){
   // Sharpe irreal (5, 50, 150…). Se piden ≥30 días de seguimiento y ≥8 retornos; bajo eso quedan en null ("—" en
   // la UI), igual criterio que el CAGR (que se reporta recién a los 60 días). La volatilidad sí se muestra antes.
   const _ratioSample=(elapsedDays>=30&&pr.length>=8);
-  if(_ratioSample&&realizedVol){const retAnn=avg(pr)*perY;sharpeR=(retAnn-RF/100)/(realizedVol/100);}
+  // el retorno medio del Sharpe sale del MISMO conjunto que su volatilidad: mezclar el promedio de todos los
+  // pasos con la σ de los medidos daría un ratio que no corresponde a ninguna serie.
+  if(_ratioSample&&realizedVol){const retAnn=avg(_prVol)*perY;sharpeR=(retAnn-RF/100)/(realizedVol/100);}
   // vs MERCADO: solo con pares de índice real (≥8) — si el IPSA falta en buena parte del período, estas tres
   // quedan en "—" antes que entregar un número construido sobre días de mercado inventados.
   if(_prB.length>=8){const act=_prB.map((x,i)=>x-_mrB[i]),ma=avg(act);const va=act.reduce((a,b)=>a+(b-ma)**2,0)/(act.length-1),teP=Math.sqrt(va);trackingError=teP*Math.sqrt(perY)*100;infoRatio=teP>0?(ma*Math.sqrt(perY))/teP:null;winRate=act.filter(x=>x>0).length/act.length*100;}
@@ -3775,7 +3797,7 @@ function viewInvActive(){
     const body=svg+leg+smlTbl+`<div class="note" style="margin-top:11px"><b>Lectura.</b> La línea es el retorno que el CAPM exige por cada nivel de β, prorrateado a tus ${days} días (sin anualizar): la <b style="color:${green}">zona verde</b> (sobre la línea) es rendimiento por ENCIMA de lo exigido y la <b style="color:${red}">rojiza</b>, por debajo. Tu portafolio (◆, β ${bp.toFixed(2)}) rindió ${pc(pR)} vs ${pc(req(bp))} exigido → la línea punteada vertical es tu <b>alpha realizado</b>: <b style="color:${aP>=0?green:red}">${aP>=0?"SOBRE":"BAJO"} la línea por ${Math.abs(aP).toFixed(2)} pts</b>. El IPSA (▲, β=1) rindió ${pc(iR)} contra ${pc(req(1))} exigido → <b style="color:${aM>=0?green:red}">${pc(aM)}</b>: esa brecha es la parte del resultado que es <b>mercado</b> (suerte del período), no gestión.${stkPts.length?` Cada <b>acción del portafolio</b> va con su nombre en su β, con el crecimiento de su <b>precio de mercado</b> desde que entró a la cartera: en zona verde = le pagó su riesgo; en zona roja = el lastre de tu alpha. Pasa el cursor por cualquier punto para los valores exactos.`:""} La tabla de arriba es el mismo cálculo acción por acción: <b>α de Jensen = retorno del período − exigido CAPM</b>, ordenada de la más subvalorada (α+) a la más sobrevalorada (α−).${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días):</b> posiciones sobre/bajo la línea en pocos días son ruido — la lectura gana sentido con semanas/meses.`:""}</div>`;
     return card("Security Market Line: ¿te pagó el riesgo que tomaste?","Retorno del período vs β · la línea punteada vertical de tu portafolio (◆) a la SML ES el alpha realizado · el IPSA (▲) separa cuánto es mercado y cuánto gestión · pasa el cursor por los puntos",body);
   }catch(e){return "";}})();
-  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA sobre las <b>"+(IM.nretIdx!=null?IM.nretIdx:IM.nret)+" fechas con cierre REAL del índice</b>"+((IM.nretIdx!=null&&IM.nret>IM.nretIdx)?(" (de "+IM.nret+" registros; las fechas sin índice quedan fuera para no inventar días de mercado)"):"")+"; compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ fechas con cierre real del IPSA</b> calcularé el β realizado por regresión de tus retornos vs el índice.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
+  const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA sobre las <b>"+(IM.nretIdx!=null?IM.nretIdx:IM.nret)+" fechas medidas de verdad</b> —cierre real del índice Y de todas tus acciones—"+((IM.nretIdx!=null&&IM.nret>IM.nretIdx)?(" (de "+IM.nret+" registros: "+(IM.nret-IM.nretIdx)+" quedan fuera. Un día sin el cierre del índice, o con tus precios arrastrados —el caso típico: operaste antes de que salieran los cierres— daría un 0% que nunca ocurrió y aplanaría la β)"):"")+"; compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ fechas con cierre real del IPSA y de tus acciones</b> calcularé el β realizado por regresión de tus retornos vs el índice.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
   // HISTORIAL AGRUPADO POR FECHA: varias operaciones el mismo día son varios registros internos (así lo exige
   // el libro y la edición individual), pero el historial muestra UNA fila por día — con la rentabilidad diaria
   // REAL (valor de cierre del día, neteando TODOS los aportes del día, vs el cierre del día anterior) — y las
