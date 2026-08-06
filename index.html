@@ -3419,7 +3419,14 @@ function invMetrics(){
   // el precio se toma NUMÉRICO: con "||" un valor no numérico ("x" de un respaldo corrupto o de una planilla
   // mal formada) pasaba por ser truthy y contaminaba valor, ganancia y contribución con NaN. Los ceros,
   // negativos y nulos ya caían al precio base; ahora también lo hace cualquier cosa que no sea un número.
-  const perStock=PF.holdings.map(hd=>{const _lp=+lastW.prices[hd.t],cur=(isFinite(_lp)&&_lp>0)?_lp:b0[hd.t],shx=sh[hd.t]||0,v=shx*cur,cst=cost[hd.t]||0,gain=v-cst,avg=(shx>0&&cst>0)?cst/shx:b0[hd.t];
+  /* PRECIO ACTUAL DE CADA ACCIÓN. Si el ÚLTIMO registro no trae su cierre —una acción comprada en Operar
+     que no aparece en los registros posteriores, o un cierre diario que no la incluyó— se usa el ÚLTIMO
+     precio conocido, igual que la valorización total.
+     Antes se caía a b0, que es el PRIMER precio conocido: un rebobinado, no un arrastre. Como el total sí
+     usaba lastPx, el valor de la cartera dejaba de ser la suma de sus partes — medido: $15.533.270 arriba
+     contra $15.471.270 sumando la tabla, $62.000 de diferencia (400 acciones × los $155 que el papel se
+     había movido). Y con el detalle mal valorizado salían mal su ganancia, su retorno y su peso. */
+  const perStock=PF.holdings.map(hd=>{const _lp=+lastW.prices[hd.t],cur=(isFinite(_lp)&&_lp>0)?_lp:(lastPx[hd.t]>0?lastPx[hd.t]:b0[hd.t]),shx=sh[hd.t]||0,v=shx*cur,cst=cost[hd.t]||0,gain=v-cst,avg=(shx>0&&cst>0)?cst/shx:b0[hd.t];
     let dayRet=null,dayFrom=null,dayTo=null;
     {let i=WEEKS.length-1;
      while(i>=0&&!(freshOK(WEEKS[i],hd.t)&&WEEKS[i].prices[hd.t]>0))i--;
@@ -8259,7 +8266,13 @@ function contabAgg(){
   const perT={};L.tx.forEach(x=>{const o=perT[x.t]||(perT[x.t]={t:x.t,buyMonto:0,buyQty:0,sellMonto:0,sellQty:0,divMonto:0,realized:0});if(x.side==="buy"){o.buyMonto+=x.monto;o.buyQty+=x.shares;}else if(x.side==="div"){o.divMonto+=x.monto;}else{o.sellMonto+=x.monto;o.sellQty+=x.shares;o.realized+=(x.gain||0);}});
   // precio de cierre NUMÉRICO (mismo criterio que invMetrics): un valor no numérico caía como "presente" y
   // contaminaba valor y ganancia no realizada con NaN; ahora se usa el costo promedio como respaldo
-  const rows=Object.values(perT).map(o=>{const sh=L.sh[o.t]||0,avg=L.avg[o.t]||0,_lp=+lastW.prices[o.t],cur=(isFinite(_lp)&&_lp>0)?_lp:avg,val=sh*cur,unreal=(cur-avg)*sh;return Object.assign(o,{sh,avg,cur,val,unreal});});
+  // el precio actual sale del MISMO sitio que la valorización del seguimiento (invMetrics.perStock): si el
+  // último registro no trae el cierre de un papel, ambos usan su último precio conocido. Antes esta función
+  // caía al costo promedio —o sea, ganancia no realizada CERO para ese papel— mientras la cartera sí lo
+  // valorizaba a mercado: la ganancia de la Contabilidad no cuadraba con la del Seguimiento.
+  const _curDe={};(IM.perStock||[]).forEach(x=>{if(x&&x.hd)_curDe[x.hd.t]=x.cur;});
+  const rows=Object.values(perT).map(o=>{const sh=L.sh[o.t]||0,avg=L.avg[o.t]||0,_lp=+lastW.prices[o.t],
+    cur=(isFinite(_lp)&&_lp>0)?_lp:((_curDe[o.t]>0)?_curDe[o.t]:avg),val=sh*cur,unreal=(cur-avg)*sh;return Object.assign(o,{sh,avg,cur,val,unreal});});
   const totBuy=L.tx.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0);
   const totSell=L.tx.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0);
   const totDiv=L.tx.filter(x=>x.side==="div").reduce((a,x)=>a+x.monto,0);
