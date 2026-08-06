@@ -2327,6 +2327,83 @@ function viewCAPM(){
 
 // ===== SIMULACIÓN =====
 const fmtCLP=n=>{const r=Math.round(n||0);return (r<0?"−$":"$")+Math.abs(r).toLocaleString("es-CL");};   // negativo = "−$30.480", nunca "$-30.480"
+
+/* ═══════════ CAMPOS DE DINERO ═══════════
+   Un monto en pesos se ESCRIBE como se lee: $250.000, no 250000. Un <input type="number"> no puede mostrar
+   formato —el navegador solo acepta el dígito crudo—, así que estos campos son type="text" con teclado
+   numérico y se formatean mientras escribes.
+   OJO CON EL PUNTO: en Chile el punto separa MILES y la coma es decimal. parseFloat("250.000") devuelve 250.
+   Por eso NINGÚN campo de dinero se lee con parseFloat/+valor: se lee con mntNum(), que deshace el formato.
+   Formatear y leer viven juntos aquí a propósito — separarlos es la forma segura de que un día no calcen. */
+function mntNum(x){
+  let s=x;
+  if(x&&typeof x==="object")s=x.value;                       // acepta el elemento directamente
+  else if(typeof x==="string"&&!/[\d,.\-]/.test(x)){const e=document.getElementById(x);s=e?e.value:"";}
+  s=(""+(s==null?"":s)).replace(/[^\d,.\-]/g,"");            // fuera el "$", los espacios y cualquier rótulo
+  if(!s)return NaN;
+  s=s.replace(/\./g,"").replace(",",".");                    // miles fuera, la coma pasa a punto decimal
+  const n=parseFloat(s);
+  return isFinite(n)?n:NaN;
+}
+/* pinta un número con separador de miles (y el símbolo, si corresponde). `dec` = decimales máximos. */
+function mntFmt(v,dec,sym){
+  if(v==null||v==="")return "";
+  const n=(typeof v==="number")?v:mntNum(v);
+  if(!isFinite(n))return "";
+  return (sym||"")+n.toLocaleString("es-CL",{maximumFractionDigits:dec||0});
+}
+/* formatea lo que hay escrito CONSERVANDO lo que se está tecleando: una coma final o los decimales a medio
+   escribir no se pueden tocar o el campo pelearía con los dedos ("1.234," volvería a "1.234"). */
+function mntPinta(txt,dec,sym){
+  // El PUNTO se descarta siempre: es separador de miles —el que puso esta misma función en la pasada
+  // anterior, o el que escribió la persona—. Tomarlo por coma decimal hacía que el campo se comiera lo
+  // tecleado: "$3.500" + "0" volvía a leerse como "3,5000" y quedaba en "$3". El decimal es la COMA.
+  let s=(""+(txt==null?"":txt)).replace(/[^\d,\-]/g,"");
+  if(!s||s==="-")return s;
+  const neg=s.charAt(0)==="-";s=s.replace(/-/g,"");
+  const i=s.indexOf(",");
+  let ent=i<0?s:s.slice(0,i),drr=i<0?null:s.slice(i+1).replace(/,/g,"");
+  if(dec>0&&drr!=null&&drr.length>dec)drr=drr.slice(0,dec);
+  if(!(dec>0))drr=null;                                       // campo sin decimales: la coma no aplica
+  const e=ent?(+ent).toLocaleString("es-CL",{maximumFractionDigits:0}):"";
+  if(!e&&drr==null)return "";
+  return (neg?"-":"")+(sym||"")+e+(drr!=null?(","+drr):"");
+}
+/* HTML de un campo de dinero. `sym` "$" para pesos, "" para cantidades o puntos de índice. */
+function mntInput(o){
+  o=o||{};
+  const dec=+o.dec||0,sym=o.sym!=null?o.sym:"$";
+  const val=(o.val==null||o.val==="")?"":mntFmt(o.val,dec,sym);
+  const at=[`type="text"`,`inputmode="${dec>0?"decimal":"numeric"}"`,`autocomplete="off"`,
+    `data-mnt="${dec}"`,`data-mnt-sym="${sym}"`];
+  if(o.id)at.push(`id="${o.id}"`);
+  if(o.cls)at.push(`class="${o.cls}"`);
+  if(o.style)at.push(`style="${o.style}"`);
+  if(o.ph)at.push(`placeholder="${(""+o.ph).replace(/"/g,"&quot;")}"`);
+  if(o.aria)at.push(`aria-label="${(""+o.aria).replace(/"/g,"&quot;")}"`);
+  if(o.title)at.push(`title="${(""+o.title).replace(/"/g,"&quot;")}"`);
+  if(o.dis)at.push("disabled");
+  Object.keys(o.data||{}).forEach(k=>at.push(`data-${k}="${(""+o.data[k]).replace(/"/g,"&quot;")}"`));
+  return `<input ${at.join(" ")} value="${val}">`;
+}
+/* Un ÚNICO oyente delegado para todos: los campos se redibujan constantemente (render() rehace el HTML) y
+   enganchar uno por uno sería garantía de olvidarse de alguno. El cursor se repone contando DÍGITOS, no
+   posiciones: al insertarse un punto de miles la posición cambia y el cursor saltaría solo. */
+(function(){
+  const dig=(s,n)=>{let c=0;for(let i=0;i<n&&i<s.length;i++)if(/\d/.test(s.charAt(i)))c++;return c;};
+  const pos=(s,n)=>{if(n<=0){const m=s.search(/\d/);return m<0?s.length:m;}let c=0;for(let i=0;i<s.length;i++){if(/\d/.test(s.charAt(i))){c++;if(c===n)return i+1;}}return s.length;};
+  document.addEventListener("input",function(ev){
+    const el=ev.target;
+    if(!el||!el.getAttribute||el.getAttribute("data-mnt")==null)return;
+    const dec=+el.getAttribute("data-mnt")||0,sym=el.getAttribute("data-mnt-sym")||"";
+    const antes=el.value,car=el.selectionStart==null?antes.length:el.selectionStart;
+    const nd=dig(antes,car);
+    const salida=mntPinta(antes,dec,sym);
+    if(salida===antes)return;
+    el.value=salida;
+    try{const p=pos(salida,nd);el.setSelectionRange(p,p);}catch(e){}
+  },true);
+})();
 const fmtP=n=>"$"+(n||0).toLocaleString("es-CL",{minimumFractionDigits:0,maximumFractionDigits:2});
 let simState={amount:0,sel:{},profile:"moderado",nstocks:3,proj:"semanal",horizon:52,invFreq:"diario"};
 const HZN={semanal:[12,26,52],mensual:[12,24,36],anual:[1,2,3,4]};
@@ -3450,7 +3527,7 @@ function invNewForm(){
   return card("Definir la inversión del proyecto","Elige libremente las acciones del IPSA y el monto · se reparte en partes iguales y luego registras la compra real (precios y cantidades).",
     `<div class="ca-form">
       <label class="ca-f"><span>Nombre del proyecto</span><input id="invNewName" type="text" maxlength="44" value="${(""+(S.name||"")).replace(/"/g,"&quot;")}" placeholder="ej. Cartera junio 2026"></label>
-      <label class="ca-f ca-f-n"><span>Monto a invertir (CLP)</span><input id="invNewAmt" type="number" min="0" step="any" value="${S.amount||""}" placeholder="ej. 2000000"></label>
+      <label class="ca-f ca-f-n"><span>Monto a invertir (CLP)</span>${mntInput({id:"invNewAmt",val:S.amount||"",ph:"ej. $2.000.000",aria:"Monto a invertir en pesos"})}</label>
     </div>
     <div class="ca-stk"><div class="ca-stk-h"><b>Acciones de la inversión</b><span>${nsel} seleccionada(s) · <a data-invall>todas</a> · <a data-invnone>ninguna</a></span></div>
       <div class="ca-grid">${chips||'<div class="note" style="margin:0">No hay acciones en el universo activo. Carga datos o un análisis primero.</div>'}</div></div>
@@ -3475,9 +3552,9 @@ function projGuidedSteps(p){
 /* handlers del formulario "Realizar nueva inversión" (usado desde el módulo Proyectos) */
 function attachInvNew(){
   if(!invNew)return;
-  const invGrab=()=>{if(!invNew)return;const n=document.getElementById("invNewName");if(n)invNew.name=n.value;const a=document.getElementById("invNewAmt");if(a)invNew.amount=parseFloat(a.value)||0;};
+  const invGrab=()=>{if(!invNew)return;const n=document.getElementById("invNewName");if(n)invNew.name=n.value;const a=document.getElementById("invNewAmt");if(a)invNew.amount=mntNum(a)||0;};   // campo de dinero: se lee con mntNum, no con parseFloat
   const _na=document.getElementById("invNewName");if(_na)_na.oninput=()=>{invNew.name=_na.value;};   // mantiene el estado al día sin re-render (no pierde el foco)
-  const _am=document.getElementById("invNewAmt");if(_am)_am.oninput=()=>{invNew.amount=parseFloat(_am.value)||0;};
+  const _am=document.getElementById("invNewAmt");if(_am)_am.oninput=()=>{invNew.amount=mntNum(_am)||0;};
   document.querySelectorAll("[data-invtk]").forEach(b=>b.onclick=()=>{invGrab();invNew.sel[b.dataset.invtk]=!invNew.sel[b.dataset.invtk];render();});
   const _iva=document.querySelector("[data-invall]");if(_iva)_iva.onclick=()=>{invGrab();(DATA_UNIVERSE||[]).forEach(s=>invNew.sel[s.t]=true);render();};
   const _ivn=document.querySelector("[data-invnone]");if(_ivn)_ivn.onclick=()=>{invGrab();invNew.sel={};render();};
@@ -3546,7 +3623,7 @@ function viewInvActive(){
   try{const _shMap={};if(IM)IM.perStock.forEach(x=>{_shMap[x.hd.t]=x.sh;});
     PF.holdings.forEach(h=>{const hasTrade=(PF.weeks||[]).some(w=>w.ev&&w.ev.t===h.t);const hasQty=(PF.weeks||[]).some(w=>w.qty&&(+w.qty[h.t]||0)>0);_rmSafe[h.t]=!hasTrade&&!hasQty&&((_shMap[h.t]||0)<=1e-6);});}catch(e){}
   const _rmBtn=hd=>_rmSafe[hd.t]?`<button class="wbtn del" data-holdrm="${hd.t}" title="Quitar ${hd.t} de la cartera · no la compraste (0 acciones)" style="color:var(--red);border-color:var(--red-line);margin-left:6px">✕</button>`:"";
-  const priceInputs=PF.holdings.map(hd=>{if(compraMode){return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">obj ${fmtCLP(PF.amount*hd.w)}</span></div><div class="simw" style="gap:5px"><span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px">ACCIONES</span><input type="number" step="any" class="qinp" data-qt="${hd.t}" value="${qv(hd.t)}" placeholder="cantidad" style="width:80px"><span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px;margin-left:8px">MONTO $</span><input type="number" step="any" class="minp" data-mt="${hd.t}" value="${mv(hd.t)}" placeholder="total invertido" style="width:110px">${_rmBtn(hd)}</div></div>`;}return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">${hd.n}</span></div><div class="simw"><span>$</span><input type="number" step="any" class="pinp" data-pt="${hd.t}" value="${pv(hd.t)}" placeholder="cierre">${_rmBtn(hd)}</div></div>`;}).join("");
+  const priceInputs=PF.holdings.map(hd=>{if(compraMode){return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">obj ${fmtCLP(PF.amount*hd.w)}</span></div><div class="simw" style="gap:5px"><span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px">ACCIONES</span>${mntInput({cls:"qinp",data:{qt:hd.t},val:qv(hd.t),sym:"",ph:"cantidad",style:"width:80px",aria:"Cantidad de acciones de "+hd.t})}<span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px;margin-left:8px">MONTO $</span>${mntInput({cls:"minp",data:{mt:hd.t},val:mv(hd.t),ph:"total invertido",style:"width:110px",aria:"Monto invertido en "+hd.t})}${_rmBtn(hd)}</div></div>`;}return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">${hd.n}</span></div><div class="simw"><span>$</span>${mntInput({cls:"pinp",data:{pt:hd.t},val:pv(hd.t),dec:2,ph:"cierre",aria:"Precio de cierre de "+hd.t})}${_rmBtn(hd)}</div></div>`;}).join("");
   const freqBar=card("Periodicidad de registro","Cambia cada cuánto registras los precios. Al pasar a una periodicidad mayor (ej. diario→semanal), reorganizo tus registros previos conservando uno por período.",`<div class="pbtns">`+[["diario","Diario"],["semanal","Semanal"],["mensual","Mensual"]].map(([k,l])=>`<button class="pbtn ${(PF.freq||"diario")===k?"on":""}" data-setfreq="${k}">${l}</button>`).join("")+`</div>`);
   const _edQue=editIdx===0?"la compra inicial":(ed&&ed.ev?("la operación del "+ed.date):("el registro del "+(ed?ed.date:"")));
   const ftitle=editing?("Editar "+(editIdx===0?"compra inicial":(ed&&ed.ev?"operación del ":"registro del ")+(ed?ed.date:""))):(isFirst?"Registrar compra ("+fr.u+" inicial)":"Ingresar "+fr.u+" "+WEEKS.length);
@@ -3557,11 +3634,11 @@ function viewInvActive(){
   const _ipsaInfoHTML=v=>v!=null?(`${(+v).toLocaleString("es-CL",{maximumFractionDigits:2})} <span style="font-weight:600;color:var(--faint);font-size:10.5px">pts · de la base (automático)</span>`):`<span style="color:var(--faint);font-weight:600;font-size:12px">se toma de la base al guardar</span>`;
   const _ipsaHead=compraMode
     ? `<div><div class="genl">IPSA del día</div><div id="wipsaInfo" style="font-weight:800;font-size:15px;color:var(--navy);padding:.42rem 0">${_ipsaInfoHTML(_ipsaAuto)}</div></div>`
-    : `<div><div class="genl">IPSA (cierre)</div><div class="amtwrap"><input type="number" step="any" id="wipsa" value="${editing?ed.ipsa:''}" placeholder="valor IPSA" style="width:140px"></div></div>`;
+    : `<div><div class="genl">IPSA (cierre)</div><div class="amtwrap">${mntInput({id:"wipsa",val:editing?ed.ipsa:"",dec:2,sym:"",ph:"valor IPSA",style:"width:140px",aria:"Cierre del IPSA en puntos"})}</div></div>`;
   const form=card(ftitle,fsub,`${banner}<div class="simhead"><div><div class="genl">Fecha</div><input type="date" id="wdate" value="${editing?ed.date:localDay()}"></div>${_ipsaHead}</div><div class="simlist" style="margin-top:12px">${priceInputs}</div>${compraMode?'<div class="genl" style="margin-top:13px">Monto real invertido vs objetivo · y si compras sobre/bajo el valor intrínseco (columna «vs valor»: verde = bajo su valor)</div><div id="compraprev" style="margin-top:6px"></div>':''}${(editing&&ed.ev&&ed.ev.kind==="trade")?`<div class="genl" style="margin-top:15px">✎ Operación de este registro · <b style="color:${ed.ev.side==="sell"?"var(--red)":"var(--green)"}">${ed.ev.side==="sell"?"VENTA":"COMPRA"} de ${ed.ev.t}</b></div>
-      <div class="simhead" style="margin-top:6px"><div><div class="genl">Cantidad (acciones)</div><input type="number" step="any" id="evqty" value="${ed.ev.shares}"></div><div><div class="genl">Monto total de la operación ($)</div><input type="number" step="any" id="evmonto" value="${Math.round((+ed.ev.shares||0)*(+ed.ev.price||0))}"></div></div>
+      <div class="simhead" style="margin-top:6px"><div><div class="genl">Cantidad (acciones)</div>${mntInput({id:"evqty",val:ed.ev.shares,sym:"",dec:2,aria:"Cantidad de acciones de la operación"})}</div><div><div class="genl">Monto total de la operación ($)</div>${mntInput({id:"evmonto",val:Math.round((+ed.ev.shares||0)*(+ed.ev.price||0)),aria:"Monto total de la operación"})}</div></div>
       <div class="note" style="margin-top:8px;font-size:11px">Si ingresaste mal la <b>cantidad</b> o el <b>monto</b> de la operación (usa los de tu corredora — el precio por acción se deriva; hoy: ${fmtP(+ed.ev.price||0)}), corrígelos aquí: se recalculan el costo, el flujo de caja de la contabilidad y los β/σ/pesos de la cartera. La <b>fecha</b> de arriba mueve la operación completa de día.</div>`:""}${(editing&&ed.ev&&ed.ev.kind==="div")?`<div class="genl" style="margin-top:15px">✎ Operación de este registro · <b style="color:var(--green)">DIVIDENDO de ${ed.ev.t}</b></div>
-      <div class="simhead" style="margin-top:6px"><div><div class="genl">Dividendo recibido ($)</div><input type="number" step="any" id="evdiv" value="${Math.round(+ed.ev.amount||0)}"></div></div>
+      <div class="simhead" style="margin-top:6px"><div><div class="genl">Dividendo recibido ($)</div>${mntInput({id:"evdiv",val:Math.round(+ed.ev.amount||0),aria:"Dividendo recibido"})}</div></div>
       <div class="note" style="margin-top:8px;font-size:11px">Corrige aquí el <b>monto líquido</b> del dividendo abonado: se recalculan la ganancia, el dinero rescatado y el resumen anual. La <b>fecha</b> de arriba mueve la operación de día.</div>`:""}<div style="margin-top:13px;display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" id="savew">${editing?"Actualizar registro":(isFirst?"Guardar compra":"Guardar "+fr.u+" "+WEEKS.length)}</button>${(editing&&editIdx!==0)?`<button class="btn" id="delw" style="color:var(--red);border-color:var(--red-line)">🗑 Eliminar este registro${(ed&&ed.ev)?" y su operación":""}</button>`:""}</div>`);
   const seg=(page==="seguimiento");
   const histPg=(page==="historial");
@@ -3896,7 +3973,7 @@ function viewInvActive(){
 function compraPreview(){
   if(!PF)return "";let tot=0;
   let medPE=null;try{medPE=(typeof fairPE==="function")?fairPE(true):null;}catch(e){}   // P/U de referencia una vez (no por acción)
-  const rows=PF.holdings.map(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?(parseFloat(me.value)||0):0,q=qe?(parseFloat(qe.value)||0):0,p=(q>0&&m>0)?m/q:0;tot+=m;const obj=PF.amount*hd.w,d=m-obj;
+  const rows=PF.holdings.map(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?(mntNum(me)||0):0,q=qe?(mntNum(qe)||0):0,p=(q>0&&m>0)?m/q:0;tot+=m;const obj=PF.amount*hd.w,d=m-obj;
     let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(hd.t,{beta:hd.b,medPE}):null;}catch(e){}
     return {hd,m,q,p,obj,d,iv};});
   const dT=tot-PF.amount;
@@ -3956,8 +4033,8 @@ function viewOperar(){
   const opBody=`<div class="op-form"><div class="op-side" role="group" aria-label="Tipo de operación"><button type="button" class="opbtn buy ${opState.side==="buy"?"on":""}" data-opside="buy" aria-pressed="${opState.side==="buy"}">Comprar</button><button type="button" class="opbtn sell ${opState.side==="sell"?"on":""}" data-opside="sell" aria-pressed="${opState.side==="sell"}">Vender</button><button type="button" class="opbtn ${isDivOp?"on":""}" data-opside="div" aria-pressed="${isDivOp}" title="Registra un pago de dividendos recibido: cuenta como ganancia de la gestión y dinero rescatado" style="${isDivOp?`color:${green}`:""}">Dividendo</button></div>
     <div class="op-grid">
       <div><label class="genl" for="optkr">Acción</label><select id="optkr" aria-label="Acción a operar">${tkrOpts.length?tkrOpts.map(t=>{const st=UNI.find(x=>x.t===t)||{t,n:t};return `<option value="${t}" ${t===osel?"selected":""}>${t} · ${st.n||""}</option>`;}).join(""):'<option value="">Sin acciones en cartera</option>'}</select></div>
-      ${isDivOp?"":`<div><label class="genl" for="opqty">Cantidad (acciones)</label><input type="number" step="any" id="opqty" value="${opState.qty}" placeholder="Ej: 100" aria-label="Cantidad de acciones"></div>`}
-      <div><label class="genl" for="opmonto">${isDivOp?"Dividendo recibido (CLP)":`Monto total ${opState.side==="sell"?"recibido":"invertido"} (CLP)`}</label><input type="number" step="any" id="opmonto" value="${opState.monto||""}" placeholder="${isDivOp?"monto líquido abonado":"el de tu corredora"}" aria-label="${isDivOp?"Monto del dividendo recibido en pesos":"Monto total de la operación en pesos"}"></div>
+      ${isDivOp?"":`<div><label class="genl" for="opqty">Cantidad (acciones)</label>${mntInput({id:"opqty",val:opState.qty,sym:"",dec:2,ph:"Ej: 100",aria:"Cantidad de acciones"})}</div>`}
+      <div><label class="genl" for="opmonto">${isDivOp?"Dividendo recibido (CLP)":`Monto total ${opState.side==="sell"?"recibido":"invertido"} (CLP)`}</label>${mntInput({id:"opmonto",val:opState.monto||"",ph:isDivOp?"monto líquido abonado":"el de tu corredora",aria:isDivOp?"Monto del dividendo recibido en pesos":"Monto total de la operación en pesos"})}</div>
       <div><label class="genl" for="opdate">Fecha</label><input type="date" id="opdate" value="${opState.date||localDay()}" aria-label="Fecha de la operación"></div>
     </div>
     ${opState.side==="buy"?`<div id="opval" class="op-val" style="margin-top:12px;padding:11px 13px;border:1px solid var(--line2);border-radius:11px;background:var(--soft);font-size:12.5px;line-height:1.5">${opValHTML(osel,derPrice||"")}</div>`:""}
@@ -4313,8 +4390,9 @@ function attachInv(){
   if(sv)sv.onclick=()=>{
     const compraMode=(WEEKS.length===0||editIdx===0);
     const prices={};let ok=true,qty=null;
-    if(compraMode){qty={};PF.holdings.forEach(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?parseFloat(me.value):NaN,q=qe?parseFloat(qe.value):NaN;if(!m||m<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=m/q;}});}   // precio DERIVADO = monto/cantidad (cuadra al peso con la corredora)
-    else{PF.holdings.forEach(hd=>{const el=document.querySelector('.pinp[data-pt="'+hd.t+'"]');const v=el?parseFloat(el.value):NaN;if(!v||v<=0)ok=false;else prices[hd.t]=v;});}
+    // campos de dinero: SIEMPRE con mntNum. Con parseFloat, un "1.200.000" formateado se leería como 1,2.
+    if(compraMode){qty={};PF.holdings.forEach(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?mntNum(me):NaN,q=qe?mntNum(qe):NaN;if(!m||m<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=m/q;}});}   // precio DERIVADO = monto/cantidad (cuadra al peso con la corredora)
+    else{PF.holdings.forEach(hd=>{const el=document.querySelector('.pinp[data-pt="'+hd.t+'"]');const v=el?mntNum(el):NaN;if(!v||v<=0)ok=false;else prices[hd.t]=v;});}
     const dEl=document.getElementById("wdate"),date=dEl&&dEl.value?dEl.value:localDay();
     let ipsa;
     if(compraMode){
@@ -4325,7 +4403,7 @@ function attachInv(){
       if(!(ipsa>0)){try{const s=ipsaSnapshot("IPSA");if(s&&s.last>0)ipsa=s.last;}catch(e){}}
       if(!(ipsa>0))ipsa=1000;   // sin ninguna base de IPSA: semilla neutra (se recalibra al cargar la base)
     }else{
-      const ipEl=document.getElementById("wipsa");ipsa=ipEl?parseFloat(ipEl.value):NaN;
+      const ipEl=document.getElementById("wipsa");ipsa=ipEl?mntNum(ipEl):NaN;
     }
     if(!ok||!ipsa||ipsa<=0){alert(compraMode?"Ingresa la cantidad de acciones y el MONTO total invertido de cada papel (los de tu corredora), con números válidos.":"Ingresa todos los precios de cierre y el valor del IPSA con números válidos.");return;}
     if(!weekendGuard(date))return;
@@ -4345,7 +4423,7 @@ function attachInv(){
     let _evTouched=false;
     const _eq=document.getElementById("evqty"),_ep=document.getElementById("evmonto");
     if(rec.ev&&rec.ev.kind==="trade"&&_eq&&_ep){
-      const nq=parseFloat(_eq.value),nm=parseFloat(_ep.value);
+      const nq=mntNum(_eq),nm=mntNum(_ep);   // campos de dinero/cantidad: mntNum deshace el separador de miles
       if(!(nq>0)||!(nm>0)){alert("La operación necesita una cantidad y un monto total válidos (mayores a 0).");return;}
       const np=nm/nq;
       if(nq!==+rec.ev.shares||Math.abs(np-(+rec.ev.price))>1e-9){rec.ev=Object.assign({},rec.ev,{shares:nq,price:np});_evTouched=true;}
@@ -4356,7 +4434,7 @@ function attachInv(){
     // corrección del MONTO de un dividendo mal ingresado
     const _edv=document.getElementById("evdiv");
     if(rec.ev&&rec.ev.kind==="div"&&_edv){
-      const nd2=parseFloat(_edv.value);
+      const nd2=mntNum(_edv);
       if(!(nd2>0)){alert("El dividendo necesita un monto válido (mayor a 0).");return;}
       if(Math.round(nd2)!==Math.round(+rec.ev.amount||0)){rec.ev=Object.assign({},rec.ev,{amount:Math.round(nd2)});_evTouched=true;}
     }
@@ -4423,7 +4501,7 @@ function attachInv(){
   document.querySelectorAll("[data-opside]").forEach(b=>b.onclick=()=>{opState.side=b.dataset.opside;opState.tkr=null;opState.price="";opState.monto="";render();});
   const _ot=document.getElementById("optkr");if(_ot)_ot.onchange=()=>{opState.tkr=_ot.value;opState.price="";opState.monto="";render();};
   // precio DERIVADO en vivo = monto/cantidad (los inputs son los de la cartola de la corredora)
-  function _opAmt(){const q=parseFloat(opState.qty),m=parseFloat(opState.monto);const pd=(q>0&&m>0)?m/q:null;
+  function _opAmt(){const q=mntNum(opState.qty),m=mntNum(opState.monto);const pd=(q>0&&m>0)?m/q:null;   // vienen formateados desde el campo
     const el=document.querySelector(".op-amt b");if(el)el.textContent=pd?fmtP(pd):"—";
     const _ov=document.getElementById("opval");if(_ov&&opState.side==="buy"){const _t=(document.getElementById("optkr")||{}).value||opState.tkr;_ov.innerHTML=opValHTML(_t,pd||"");}}
   const _oq=document.getElementById("opqty");if(_oq)_oq.oninput=()=>{opState.qty=_oq.value;_opAmt();};
@@ -5768,9 +5846,9 @@ function viewPerfil(){
   const g=profGoal||{};
   const goal=`<div class="card"><div class="bd"><div class="prof-grp"><span class="prof-grp-tag" style="background:#D9730D">RR</span><div><div class="prof-grp-n">Tu meta financiera <span class="qhint">· opcional</span></div><div class="prof-grp-s">para calcular la necesidad de riesgo (retorno requerido). No sube tu perfil; detecta si tu objetivo es alcanzable.</div></div></div>
     <div class="prof-goal">
-      <label>Capital actual (CLP)<input type="number" inputmode="numeric" id="pgActual" placeholder="0" value="${g.actual!=null?g.actual:""}"></label>
-      <label>Meta de capital (CLP)<input type="number" inputmode="numeric" id="pgObjetivo" placeholder="0" value="${g.objetivo!=null?g.objetivo:""}"></label>
-      <label>Aporte por período (CLP)<input type="number" inputmode="numeric" id="pgAporte" placeholder="0" value="${g.aporte!=null?g.aporte:""}"></label>
+      <label>Capital actual (CLP)${mntInput({id:"pgActual",val:g.actual!=null?g.actual:"",ph:"$0",aria:"Capital actual en pesos"})}</label>
+      <label>Meta de capital (CLP)${mntInput({id:"pgObjetivo",val:g.objetivo!=null?g.objetivo:"",ph:"$0",aria:"Meta de capital en pesos"})}</label>
+      <label>Aporte por período (CLP)${mntInput({id:"pgAporte",val:g.aporte!=null?g.aporte:"",ph:"$0",aria:"Aporte por período en pesos"})}</label>
       <label>Frecuencia<select id="pgFreq">${[["mensual","Mensual"],["trimestral","Trimestral"],["anual","Anual"]].map(f=>`<option value="${f[0]}" ${(g.freq||"mensual")===f[0]?"selected":""}>${f[1]}</option>`).join("")}</select></label>
       <label>Horizonte (años)<input type="number" inputmode="numeric" id="pgAnios" placeholder="0" value="${g.anios!=null?g.anios:""}"></label>
     </div></div></div>`;
@@ -5783,7 +5861,8 @@ function attachPerfil(){
   document.querySelectorAll("[data-qid]").forEach(b=>b.onclick=()=>keep(()=>{profAns[b.dataset.qid]=+b.dataset.score;}));
   document.querySelectorAll("[data-qbool]").forEach(b=>b.onclick=()=>keep(()=>{profAns[b.dataset.qbool]=+b.dataset.bv;}));
   document.querySelectorAll("[data-qmulti]").forEach(b=>b.onclick=()=>keep(()=>{const id=b.dataset.qmulti,oi=+b.dataset.oi,arr=profAns[id]||[];const k=arr.indexOf(oi);if(k>=0)arr.splice(k,1);else arr.push(oi);profAns[id]=arr;}));
-  const gset=()=>{profGoal={actual:(+(document.getElementById("pgActual")||{}).value)||null,objetivo:(+(document.getElementById("pgObjetivo")||{}).value)||null,aporte:(+(document.getElementById("pgAporte")||{}).value)||null,freq:((document.getElementById("pgFreq")||{}).value)||"mensual",anios:(+(document.getElementById("pgAnios")||{}).value)||null};lsSet("inv_profile_goal_v1",profGoal);};
+  // los tres primeros son campos de dinero formateados: mntNum, no "+valor"
+  const gset=()=>{profGoal={actual:mntNum("pgActual")||null,objetivo:mntNum("pgObjetivo")||null,aporte:mntNum("pgAporte")||null,freq:((document.getElementById("pgFreq")||{}).value)||"mensual",anios:(+(document.getElementById("pgAnios")||{}).value)||null};lsSet("inv_profile_goal_v1",profGoal);};
   ["pgActual","pgObjetivo","pgAporte","pgAnios"].forEach(id=>{const e=document.getElementById(id);if(e)e.onchange=gset;});
   const fr=document.getElementById("pgFreq");if(fr)fr.onchange=gset;
   const c=document.getElementById("profCalc");if(c)c.onclick=()=>{if(profAnswered()<PROF_REQUIRED.length)return;invProfile=profCompute();lsSet("inv_profile_v1",invProfile);simState.profile=invProfile.profile;profEdit=false;render();};
@@ -7027,11 +7106,11 @@ function datosCierre(){
   const C=consolidatedSeries(),tickers=pricedbTickers(),held=allHeldTickers().map(h=>h.t);
   const all=[...new Set([...tickers,...held])].sort();
   const today=lastTradingDay();   // propone el día real (último día hábil); el sistema igual rechaza fines de semana y fechas futuras
-  const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-dct="${t}" value="" placeholder="${(last!=null&&last!=="")?('último '+last):'precio'}" aria-label="Precio ${t}"></div>`;}).join("")
+  const rows=all.length?all.map(t=>{const m=PRICEDB.tickers[t]||((STOCKS||[]).find(s=>s.t===t))||{};const last=lastKnownPrice(t,C);return `<div class="ppx-row"><span class="ppx-dot" style="background:${m.c||"#1E5FD1"}"></span><div class="ppx-tk"><b>${t}</b><span>${(""+(m.n||t)).replace(/</g,"&lt;")}</span></div>${mntInput({cls:"ppx-in",data:{dct:t},val:"",dec:2,ph:(last!=null&&last!=="")?("último "+mntFmt(last,2,"$")):"precio",aria:"Precio "+t})}</div>`;}).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones. Carga una planilla en <b>Cargar planilla</b> o registra una compra en Inversión.</div>`;
   const ipsaFld=(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)
     ? `<div class="ppx-f"><span>IPSA (puntos)</span><div style="display:flex;align-items:center;gap:7px;padding:.45rem .6rem;border:1px dashed var(--line2);border-radius:9px;color:var(--muted);font:600 12px var(--font)">🔒 Lo entrega la fuente automática (último: ${lastKnownIpsa(C)})</div></div>`
-    : `<label class="ppx-f"><span>IPSA (puntos)</span><input id="dcIpsa" type="number" step="any" inputmode="decimal" value="" placeholder="último ${lastKnownIpsa(C)}"></label>`;
+    : `<label class="ppx-f"><span>IPSA (puntos)</span>${mntInput({id:"dcIpsa",val:"",dec:2,sym:"",ph:"último "+mntFmt(lastKnownIpsa(C),2,""),aria:"Cierre del IPSA en puntos"})}</label>`;
   const body=`<div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="dcDate" type="date" value="${today}"></label>${ipsaFld}</div>
     <div class="ppx-grid" style="max-height:52vh">${rows}</div>
     <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:14px"><button class="btn" data-dgo="base">← Volver a la base</button><button class="btn btn-pri" data-dcapply>Guardar cierre y actualizar carteras</button></div>`;
@@ -7065,7 +7144,7 @@ function attachDatos(){
   const dcl=document.querySelector("[data-dclear]");if(dcl)dcl.onclick=()=>{impFiles=[];impMsg="";render();};
   const dm=document.querySelector("[data-dmerge]");if(dm)dm.onclick=()=>{const benchName=(impBench&&impBench!=="__avg__")?impBench:null;const r=pricedbMergeFiles(impFiles,benchName);impFiles=[];impMsg="";try{systemAnalysisRefresh();}catch(e){}const ap=pricedbApplyToProjects();page="base";render();window.alert("Cargado a la base: "+r.added+" precio(s) nuevo(s)"+(r.updated>0?" y "+r.updated+" actualizado(s) (mismo día/acción que ya tenías, p.ej. un cierre manual → se reemplaza por el de la planilla)":"")+" en "+r.tk+" acción(es)."+(r.skipped>0?"\n\n"+r.skipped+" fila(s) ignorada(s) por ser fin de semana o fecha futura.":"")+"\n\nNo se borró ningún otro dato. Seguimientos actualizados: "+ap.nPts+" punto(s) en "+ap.nProj+" cartera(s).");};
   const dtm=document.querySelector("[data-dtmpl]");if(dtm)dtm.onclick=()=>impDownloadTemplate();
-  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=parseFloat((document.getElementById("dcIpsa")||{}).value);if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=parseFloat(e.value);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(res&&res.invalid){window.alert("La fecha "+date+" no corresponde a un día bursátil válido (fin de semana o futura). No se registró nada.");return;}try{systemAnalysisRefresh();}catch(e){}render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
+  const dca=document.querySelector("[data-dcapply]");if(dca)dca.onclick=()=>{const date=(document.getElementById("dcDate")||{}).value,ipsa=mntNum("dcIpsa");if(!date){window.alert("Indica la fecha de cierre.");return;}const pm={};document.querySelectorAll("[data-dct]").forEach(e=>{const v=mntNum(e);if(isFinite(v)&&v>0)pm[e.dataset.dct]=v;});if(!Object.keys(pm).length&&!(isFinite(ipsa)&&ipsa>0)){window.alert("Ingresa al menos un precio o el IPSA.");return;}const res=applyPlatformPrices(date,isFinite(ipsa)?ipsa:null,pm);if(res&&res.invalid){window.alert("La fecha "+date+" no corresponde a un día bursátil válido (fin de semana o futura). No se registró nada.");return;}try{systemAnalysisRefresh();}catch(e){}render();window.alert("Cierre del "+date+" guardado en la base.\n\n"+res.nProj+" cartera(s) actualizada(s)."+(res.nSkip>0?"\n\n"+res.nSkip+" omitida(s) por tener seguimiento posterior.":""));};
 }
 function impDownloadTemplate(){const csv="Fecha;IPSA;BCI;FALABELLA;SQM-B\n2025-01-31;6500;52000;5800;38000\n2025-02-28;6610;53400;6010;36500\n2025-03-31;6720;55100;5950;40200\n2025-04-30;6680;54200;6230;39100\n2025-05-31;6810;56800;6480;42500\n2025-06-30;6905;57500;6390;41000\n";const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8;"});const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download="plantilla_acciones.csv";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}
 /* ===================== AJUSTES DEL ANÁLISIS DEL SISTEMA ===================== */
@@ -7353,8 +7432,8 @@ function cfgRender(){
       row("Operador (corredora)","",`<select id="cfgBkOp">${Object.keys(BROKER_PRESETS).map(k=>`<option value="${k}" ${BROKER.op===k?"selected":""}>${BROKER_PRESETS[k].name}</option>`).join("")}</select>`)+
       `<div class="cfg-fldrow" style="margin-top:12px">
         <label class="cfg-fld">Comisión por operación (%)<input type="number" step="0.01" min="0" id="cfgBkPct" value="${BROKER.pct}"></label>
-        <label class="cfg-fld">Comisión mínima (CLP)<input type="number" min="0" id="cfgBkMin" value="${BROKER.min}"></label>
-        <label class="cfg-fld">Comisión máxima (CLP · 0 = sin tope)<input type="number" min="0" id="cfgBkMax" value="${BROKER.max}"></label>
+        <label class="cfg-fld">Comisión mínima (CLP)${mntInput({id:"cfgBkMin",val:BROKER.min,aria:"Comisión mínima en pesos"})}</label>
+        <label class="cfg-fld">Comisión máxima (CLP · 0 = sin tope)${mntInput({id:"cfgBkMax",val:BROKER.max,aria:"Comisión máxima en pesos"})}</label>
       </div>`+
       row(`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700"><input type="checkbox" id="cfgBkIva" ${BROKER.iva?"checked":""}> Agregar IVA (19%) a la comisión</label>`,`<span id="cfgBkSum">${brokerSummary()}</span>`,"",1)+
       `<div class="cfg-sub" style="margin-top:6px">Montos mínimo/máximo se ingresan <b>sin IVA</b> (se aplica el 19% si está activado). Se descuentan en la Contabilidad.</div>`);
@@ -7395,7 +7474,7 @@ function cfgRender(){
   const _an=q("#cfgAuthOn");if(_an)_an.onclick=()=>{cfgClose();AUTH=null;lsSet("inv_auth_v1",null);try{localStorage.removeItem("inv_remember_v1");}catch(e){}authMode="create";authMsg="";authInit();};
   const bkSync=()=>{if(modulo==="clientes"||(modulo==="inv"&&page==="contabilidad")){try{render();}catch(e){}}};
   const _bkOp=q("#cfgBkOp");if(_bkOp)_bkOp.onchange=()=>{const v=_bkOp.value;if(v==="custom"){BROKER.op="custom";}else{Object.assign(BROKER,BROKER_PRESETS[v]);}saveBroker();cfgRender();bkSync();};
-  const bkSet=()=>{BROKER.op="custom";BROKER.pct=+(q("#cfgBkPct")||{}).value||0;BROKER.min=+(q("#cfgBkMin")||{}).value||0;BROKER.max=+(q("#cfgBkMax")||{}).value||0;BROKER.iva=!!(q("#cfgBkIva")||{}).checked;saveBroker();const su=q("#cfgBkSum");if(su)su.textContent=brokerSummary();const op=q("#cfgBkOp");if(op)op.value="custom";};
+  const bkSet=()=>{BROKER.op="custom";BROKER.pct=+(q("#cfgBkPct")||{}).value||0;BROKER.min=mntNum("cfgBkMin")||0;BROKER.max=mntNum("cfgBkMax")||0;BROKER.iva=!!(q("#cfgBkIva")||{}).checked;saveBroker();const su=q("#cfgBkSum");if(su)su.textContent=brokerSummary();const op=q("#cfgBkOp");if(op)op.value="custom";};
   ["cfgBkPct","cfgBkMin","cfgBkMax"].forEach(id=>{const e=q("#"+id);if(e){e.oninput=bkSet;e.onchange=bkSync;}});
   const _bkIva=q("#cfgBkIva");if(_bkIva)_bkIva.onchange=()=>{bkSet();bkSync();};
   const _ky=q("#cfgKey");if(_ky)_ky.onclick=()=>{cfgClose();cpOpenPanel();};
@@ -7921,7 +8000,7 @@ function realCap(){if(!PF)return 0;const b=(typeof WEEKS!=="undefined"&&WEEKS.le
 function opDo(){
   syncProj();if(!PF)return;
   const selEl=document.getElementById("optkr"),qEl=document.getElementById("opqty"),mEl=document.getElementById("opmonto"),dEl=document.getElementById("opdate");
-  const t=selEl?selEl.value:opState.tkr,side=opState.side,q=parseFloat(qEl?qEl.value:opState.qty),m=parseFloat(mEl?mEl.value:opState.monto);
+  const t=selEl?selEl.value:opState.tkr,side=opState.side,q=mntNum(qEl?qEl.value:opState.qty),m=mntNum(mEl?mEl.value:opState.monto);   // campos de dinero: mntNum, no parseFloat
   if(!t){window.alert("Elige una acción.");return;}
   if(side==="div"){opDoDiv(t,m,(dEl&&dEl.value)||opState.date||localDay());return;}
   if(!(q>0)){window.alert("Indica la cantidad de acciones (mayor que 0).");return;}
@@ -8383,9 +8462,9 @@ function viewCambios(){
     <label class="mc-fld">Acción${tkSel}</label>
     <label class="mc-fld">Ingresar por<div class="home-seg" role="group" style="align-self:stretch">${[["qty","Cantidad"],["monto","Monto $"]].map(([k,l])=>`<button data-cambmodo="${k}" class="${cambState.modo===k?"on":""}" style="flex:1">${l}</button>`).join("")}</div></label>
     ${cambState.modo==="monto"
-      ? `<label class="mc-fld">Monto total (CLP)<input id="cambmonto" type="number" min="0" step="1000" value="${cambState.monto||""}" placeholder="p. ej. 250000"></label>`
-      : `<label class="mc-fld">Cantidad<input id="cambqty" type="number" min="0" step="1" value="${cambState.qty||""}" placeholder="acciones"></label>
-         <label class="mc-fld">Precio por acción<input id="cambpx" type="number" min="0" step="1" value="${cambState.price||(_pxSug!=null?Math.round(_pxSug):"")}" placeholder="${_pxSug!=null?Math.round(_pxSug):"precio"}"></label>`}
+      ? `<label class="mc-fld">Monto total (CLP)${mntInput({id:"cambmonto",val:cambState.monto||"",ph:"p. ej. $250.000",aria:"Monto total en pesos"})}</label>`
+      : `<label class="mc-fld">Cantidad${mntInput({id:"cambqty",val:cambState.qty||"",sym:"",dec:2,ph:"acciones",aria:"Cantidad de acciones"})}</label>
+         <label class="mc-fld">Precio por acción${mntInput({id:"cambpx",val:cambState.price||(_pxSug!=null?Math.round(_pxSug):""),dec:2,ph:_pxSug!=null?mntFmt(Math.round(_pxSug),0,"$"):"precio",aria:"Precio por acción"})}</label>`}
   </div>
   <div class="mc-row" style="margin-top:13px">
     <button class="btn btn-pri" id="cambadd">+ Agregar a la simulación</button>
@@ -8395,7 +8474,7 @@ function viewCambios(){
     // ("invierto $250.000 en X"). El modo CANTIDAD es el que existe para fijar otro nivel de entrada o salida.
     if(cambState.modo==="monto"){
       if(_pxSug==null)return `<div class="mc-hint">No hay un cierre conocido de <b>${_tkr}</b> en la base, así que no se puede convertir un monto a acciones. Cambia a <b>Cantidad</b> para indicar tú el precio.</div>`;
-      const _m=+cambState.monto||0;
+      const _m=mntNum(cambState.monto)||0;   // viene del campo formateado
       if(_m>0){const _q=Math.floor(_m/_pxSug);
         return `<div class="mc-hint">Con <b>${fmtCLP(_m)}</b> al último cierre de ${_tkr} (<b>${fmtP(_pxSug)}</b>) alcanzan ${_q>0?`<b>${_q.toLocaleString("es-CL")} acciones</b> enteras = <b>${fmtCLP(_q*_pxSug)}</b>, y quedan ${fmtCLP(_m-_q*_pxSug)} sin usar`:`<b>menos de una acción</b>: sube el monto`}. La corredora opera acciones enteras.</div>`;}
       return `<div class="mc-hint">Indica cuánto quieres ${cambState.side==="sell"?"vender":"invertir"} en <b>${_tkr}</b>. Se convierte a acciones enteras con su último cierre conocido (<b>${fmtP(_pxSug)}</b>). Para probar otro precio de entrada o salida, cambia a <b>Cantidad</b>.</div>`;
@@ -8488,18 +8567,18 @@ function attachCambios(){
     const t=(selT&&selT.value)||cambState.tkr;
     if(!t){window.alert("Elige la acción de la operación.");return;}
     // En MONTO el precio no se pide: es el último cierre conocido de esa acción.
-    const pr=cambState.modo==="monto"?cambPx(p,t):parseFloat(ip&&ip.value);
+    const pr=cambState.modo==="monto"?cambPx(p,t):mntNum(ip&&ip.value);
     if(!(pr>0)){window.alert(cambState.modo==="monto"
       ? "No hay un cierre conocido de "+t+" en la base, así que no puedo convertir el monto a acciones.\n\nCambia a «Cantidad» e indica tú el precio por acción."
       : "Indica el precio por acción de la operación.");return;}
     let q;
     if(cambState.modo==="monto"){
-      const m=parseFloat(im&&im.value);
+      const m=mntNum(im&&im.value);
       if(!(m>0)){window.alert("Indica el monto total de la operación.");return;}
       q=Math.floor(m/pr);   // la corredora opera acciones ENTERAS: el monto se convierte a lo que alcanza
       if(!(q>0)){window.alert("Con "+fmtCLP(m)+" no alcanza para una acción a "+fmtP(pr)+".");return;}
     }else{
-      q=parseFloat(iq&&iq.value);
+      q=mntNum(iq&&iq.value);
       if(!(q>0)){window.alert("Indica cuántas acciones quieres "+(cambState.side==="sell"?"vender":"comprar")+".");return;}
     }
     cambState.ops.push({side:cambState.side,t,shares:q,price:pr});
@@ -10012,7 +10091,7 @@ function viewMarkowitz(){
       <label class="mc-fld">Proyecto<select data-mkw="proj">${ps.map(p=>`<option value="${p.id}" ${p.id===mkwProjId?"selected":""}>${(""+p.name).replace(/</g,"&lt;")}</option>`).join("")}</select></label>
       <label class="mc-fld">Objetivo<select data-mkw="mode"><option value="sharpe" ${mkwMode!=="minvol"?"selected":""}>Máximo Sharpe (retorno/riesgo)</option><option value="minvol" ${mkwMode==="minvol"?"selected":""}>Mínima volatilidad</option></select></label>
       <label class="mc-fld">Tope por acción (%)<input type="number" min="10" max="100" step="5" data-mkw="wmax" value="${mkwWmax}"></label>
-      <label class="mc-fld">Aporte adicional (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mkw="aporte" value="${mkwAporte||0}"></label>
+      <label class="mc-fld">Aporte adicional (CLP)${mntInput({data:{mkw:"aporte"},val:mkwAporte||0,aria:"Aporte adicional en pesos"})}</label>
     </div>
     <div class="mc-row">
       <label class="mc-goal" title="Con ventas: rebalanceo completo hacia el óptimo (comprar y vender). Sin ventas: SOLO se reparte el aporte hacia el óptimo — no se toca lo que ya tienes."><input type="checkbox" data-mkw-sell ${mkwSell?"checked":""}> Permitir ventas (rebalanceo completo)</label>
@@ -10069,7 +10148,7 @@ function attachMarkowitz(){
     if(k==="proj"){mkwProjId=+el.value;mkwRes=null;render();}
     else if(k==="mode")mkwMode=el.value==="minvol"?"minvol":"sharpe";
     else if(k==="wmax")mkwWmax=Math.max(10,Math.min(100,Math.round(+el.value||100)));
-    else if(k==="aporte")mkwAporte=Math.max(0,+el.value||0);};});
+    else if(k==="aporte")mkwAporte=Math.max(0,mntNum(el)||0);};});   // campo de dinero: mntNum deshace el formato
   const sc=document.querySelector("[data-mkw-sell]");if(sc)sc.onchange=()=>{mkwSell=sc.checked;if(mkwRes&&!mkwRes.err){mkwRes=mkwCompute();render();}};
   const run=document.querySelector("[data-mkw-run]");if(run)run.onclick=()=>{run.disabled=true;run.textContent="⚖ Optimizando…";setTimeout(()=>{mkwRes=mkwCompute();render();},30);};
 }
@@ -10082,15 +10161,15 @@ function viewMontecarlo(){
   const projSel=`<label class="mc-fld">Proyecto<select data-mc-proj aria-label="Proyecto a simular">${_ps.map(x=>`<option value="${x.id}" ${st.projId===x.id?"selected":""}>${(""+x.name).replace(/</g,"&lt;")} · ${(x.holdings||[]).length} acc</option>`).join("")}<option value="" ${st.projId==null?"selected":""}>— Manual / mercado —</option></select></label>`;
   const ctrl=`<div class="mc-form">
       ${projSel}
-      <label class="mc-fld">Capital inicial (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mc="v0" value="${v0}"></label>
+      <label class="mc-fld">Capital inicial (CLP)${mntInput({data:{mc:"v0"},val:v0,aria:"Capital inicial en pesos"})}</label>
       <label class="mc-fld">Retorno esperado μ (% anual)<input type="number" step="0.1" inputmode="decimal" data-mc="mu" value="${mu}"></label>
       <label class="mc-fld">Volatilidad σ (% anual)<input type="number" step="0.1" min="0" inputmode="decimal" data-mc="sig" value="${sg}"></label>
-      <label class="mc-fld">Aporte mensual (CLP)<input type="number" min="0" step="any" inputmode="decimal" data-mc="contrib" value="${st.contrib||0}"></label>
+      <label class="mc-fld">Aporte mensual (CLP)${mntInput({data:{mc:"contrib"},val:st.contrib||0,aria:"Aporte periódico en pesos"})}</label>
     </div>
     <div class="mc-row">
       <span class="mc-seglab">Horizonte</span><div class="home-seg">${hzns.map(y=>`<button data-mchz="${y}" class="${st.horizonY===y?"on":""}">${y} año${y>1?"s":""}</button>`).join("")}</div>
       <span class="mc-seglab">Trayectorias</span><div class="home-seg">${pathsOpts.map(pn=>`<button data-mcp="${pn}" class="${st.paths===pn?"on":""}">${pn}</button>`).join("")}</div>
-      <label class="mc-goal"><input type="checkbox" data-mc-goalon ${st.goalOn?"checked":""}> Meta<input type="number" min="0" step="any" data-mc="goal" value="${st.goal||0}" ${st.goalOn?"":"disabled"}></label>
+      <label class="mc-goal"><input type="checkbox" data-mc-goalon ${st.goalOn?"checked":""}> Meta${mntInput({data:{mc:"goal"},val:st.goal||0,dis:!st.goalOn,aria:"Meta en pesos"})}</label>
       <button class="btn" data-mc-sync title="Volver a tomar el capital, μ y σ actuales de la cartera seleccionada (descarta ajustes manuales)">↺ Re-sincronizar</button>
       <button class="btn btn-pri" data-mc-run>🎲 Volver a simular</button>
     </div>`;
@@ -10141,7 +10220,9 @@ function viewMontecarlo(){
 function attachMontecarlo(){
   attachMcHover();
   const st=mcEnsure();
-  document.querySelectorAll("[data-mc]").forEach(inp=>{inp.onchange=()=>{const k=inp.dataset.mc;st[k]=+inp.value||0;render();};});
+  // los campos de dinero (v0, contrib, goal) llegan formateados: se leen con mntNum, nunca con "+valor"
+  document.querySelectorAll("[data-mc]").forEach(inp=>{inp.onchange=()=>{const k=inp.dataset.mc;
+    const v=(inp.getAttribute("data-mnt")!=null)?mntNum(inp):+inp.value;st[k]=isFinite(v)?v:0;render();};});
   document.querySelectorAll("[data-mchz]").forEach(b=>b.onclick=()=>{st.horizonY=+b.dataset.mchz;render();});
   document.querySelectorAll("[data-mcp]").forEach(b=>b.onclick=()=>{st.paths=+b.dataset.mcp;render();});
   const gon=document.querySelector("[data-mc-goalon]");if(gon)gon.onchange=()=>{st.goalOn=gon.checked;render();};
@@ -10493,15 +10574,15 @@ function platformPricesOpen(){
 }
 function platformPricesRender(){
   const S=_ppxState;if(!S)return;
-  const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div><input class="ppx-in" type="number" step="any" inputmode="decimal" data-ppx="${i}" value="${r.price||''}" placeholder="${(r.last!=null&&r.last!=="")?('último '+r.last):'precio'}" aria-label="Precio ${r.t}"></div>`).join("")
+  const rows=S.rows.length?S.rows.map((r,i)=>`<div class="ppx-row"><span class="ppx-dot" style="background:${r.c}"></span><div class="ppx-tk"><b>${r.t}</b><span>${(""+r.n).replace(/</g,"&lt;")}</span></div>${mntInput({cls:"ppx-in",data:{ppx:i},val:r.price||"",dec:2,ph:(r.last!=null&&r.last!=="")?("último "+mntFmt(r.last,2,"$")):"precio",aria:"Precio "+r.t})}</div>`).join("")
     :`<div class="note" style="margin:0">Aún no hay acciones cargadas. Agrega una abajo o carga una planilla en el módulo Datos.</div>`;
   const inner=`<div class="ppx-head"><div><div class="ct">Actualizar precios · base del sistema</div><div class="cs">Carga los precios de cierre de un día para <b>cualquier acción</b> (las gestiones o no). Las que tengas en cartera actualizan el seguimiento; <b>todas</b> quedan guardadas en la base para análisis y para evaluar cambios de portafolio.</div></div><button class="cfg-x" id="ppxX" aria-label="Cerrar">✕</button></div>
-    <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label>${(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)?`<label class="ppx-f"><span>IPSA (puntos)</span><div class="note" style="margin:0;padding:9px 10px">🔒 Lo entrega la fuente automática${S.ipsaLast?(" · último: "+S.ipsaLast):""}</div></label>`:`<label class="ppx-f"><span>IPSA (puntos)</span><input id="ppxIpsa" type="number" step="any" inputmode="decimal" value="${S.ipsa||''}" placeholder="${S.ipsaLast?('último '+S.ipsaLast):'puntos IPSA'}"></label>`}</div>
+    <div class="ppx-top"><label class="ppx-f"><span>Fecha de cierre</span><input id="ppxDate" type="date" value="${S.date}"></label>${(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL)?`<label class="ppx-f"><span>IPSA (puntos)</span><div class="note" style="margin:0;padding:9px 10px">🔒 Lo entrega la fuente automática${S.ipsaLast?(" · último: "+S.ipsaLast):""}</div></label>`:`<label class="ppx-f"><span>IPSA (puntos)</span>${mntInput({id:"ppxIpsa",val:S.ipsa||"",dec:2,sym:"",ph:S.ipsaLast?("último "+mntFmt(S.ipsaLast,2,"")):"puntos IPSA",aria:"IPSA en puntos"})}</label>`}</div>
     <div class="ppx-grid">${rows}</div>
     <div class="ppx-add"><input id="ppxAddT" type="text" placeholder="Agregar otra acción (ej. CMPC)" maxlength="14" autocomplete="off"><button class="btn btnu" id="ppxAddBtn">+ Agregar acción</button></div>
     <div class="ppx-foot"><button class="btn" id="ppxCancel">Cancelar</button><button class="btn btn-pri" id="ppxApply">Guardar precios</button></div>`;
   const back=modalShell("ppxBack",inner,"Actualizar precios");
-  const sync=()=>{const d=document.getElementById("ppxDate");if(d)S.date=d.value;const ip=document.getElementById("ppxIpsa");if(ip)S.ipsa=parseFloat(ip.value);document.querySelectorAll("[data-ppx]").forEach(e=>{S.rows[+e.dataset.ppx].price=parseFloat(e.value);});};
+  const sync=()=>{const d=document.getElementById("ppxDate");if(d)S.date=d.value;const ip=document.getElementById("ppxIpsa");if(ip)S.ipsa=mntNum(ip);document.querySelectorAll("[data-ppx]").forEach(e=>{S.rows[+e.dataset.ppx].price=mntNum(e);});};
   back.querySelector("#ppxX").onclick=()=>modalCloseId("ppxBack");
   back.querySelector("#ppxCancel").onclick=()=>modalCloseId("ppxBack");
   const addT=()=>{const el=document.getElementById("ppxAddT");if(!el)return;const t=(el.value||"").trim().toUpperCase();if(!t)return;if(S.rows.some(r=>r.t===t)){el.value="";return;}sync();const st=(STOCKS||[]).find(s=>s.t===t)||{};S.rows.push({t,n:st.n||t,c:st.c||"#2563EB",price:""});platformPricesRender();};
