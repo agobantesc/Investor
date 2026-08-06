@@ -3513,7 +3513,9 @@ function invMetrics(){
   let _dj=_di-1;while(_dj>=0&&(WEEKS[_dj].date===WEEKS[_di].date||!_hasClose(WEEKS[_dj])))_dj--;
   const L1=series[_di],L0=_dj>=0?series[_dj]:null;
   let _flow=0;for(let i=_dj+1;i<=_di;i++)_flow+=series[i].inflow||0;
-  const dayAbs=L0?(L1.val-_flow)-L0.val:null,dayPct=L0?((L1.val-_flow)/L0.val-1):null,prevDate=L0?L0.date:null,dayTo=L0?L1.date:null;
+  // con la cartera CERRADA (todo vendido) el patrimonio del día anterior es $0: el porcentaje del día no
+  // existe —dividir por cero daba "NaN%" en la cabecera— aunque la variación en pesos sí se pueda mostrar.
+  const dayAbs=L0?(L1.val-_flow)-L0.val:null,dayPct=(L0&&L0.val>0)?((L1.val-_flow)/L0.val-1):null,prevDate=L0?L0.date:null,dayTo=L0?L1.date:null;
   // "PEOR DÍA" exige que el tramo sea REALMENTE de un período (gap dentro de la tolerancia de la cadencia):
   // un hueco de registros (días sin abrir la app, vacaciones) acumula VARIOS días de mercado en un solo paso
   // y presentarlo como "peor día" infla la pérdida — parecía "% del peor día × más patrimonio". El registro
@@ -3711,7 +3713,7 @@ function viewInvActive(){
   const heroVal=L.val,heroGain=gain;
   const dA=IM.dayAbs,dP=IM.dayPct,dc=dA!=null?col(dA):muted;
   const dayBox=dA!=null
-    ? `<div style="font-size:27px;font-weight:800;color:${dc};line-height:1.05">${dA>=0?"+":"−"}${fmtCLP(Math.abs(dA))}</div><div style="font-size:15px;font-weight:800;color:${dc};margin-top:2px">${pc(dP*100)}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Entre los dos últimos registros con cierre REAL de mercado (una operación de hoy sin cierre aún no define el día)">cierre ${fD(IM.prevDate)} → ${fD(IM.dayTo)}</div>`
+    ? `<div style="font-size:27px;font-weight:800;color:${dc};line-height:1.05">${dA>=0?"+":"−"}${fmtCLP(Math.abs(dA))}</div><div style="font-size:15px;font-weight:800;color:${dc};margin-top:2px">${dP!=null?pc(dP*100):"—"}</div><div style="font-size:10.5px;color:var(--faint);margin-top:3px" title="Entre los dos últimos registros con cierre REAL de mercado (una operación de hoy sin cierre aún no define el día)">cierre ${fD(IM.prevDate)} → ${fD(IM.dayTo)}</div>`
     : `<div style="font-size:20px;font-weight:800;color:var(--faint);line-height:1.1">—</div><div style="font-size:10.5px;color:var(--faint);margin-top:4px">registra otro ${fr.u} para ver el cambio</div>`;
   const hero=`<div class="card"><div class="bd" style="padding:1.35rem 1.5rem">
     <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;justify-content:space-between">
@@ -4040,12 +4042,17 @@ function viewInvActive(){
   const riskCard=card("Riesgo: VaR vs pérdida real","VaR diario / semanal / mensual y pérdida real, en % y en pesos",riskKp+varTbl+riskNote);
   const _pv=p=>p.sh*p.cur;
   const _pTot=IM.perStock.reduce((a,p)=>a+_pv(p),0)||L.val;
+  // CARTERA CERRADA (todo vendido): el patrimonio es $0 y no hay pesos que repartir. Sin este freno cada
+  // división 0/0 llegaba a pantalla como "NaN%" y "NaN pp" en la composición y en el drift.
+  const _hayCart=_pTot>0;
+  const _pctPeso=p=>_hayCart?((_pv(p)/_pTot)*100).toFixed(1)+"%":"—";
+  const _driftPts=p=>_hayCart?((_pv(p)/_pTot-p.hd.w)*100):null;
   const allocItems=IM.perStock.map(p=>({value:_pv(p),color:p.hd.c}));
-  const allocLeg=IM.perStock.map(p=>`<span><span class="lgdot" style="background:${p.hd.c}"></span>${p.hd.t} ${((_pv(p)/_pTot)*100).toFixed(1)}%</span>`).join("");
-  let mxd=0,mxs=null;IM.perStock.forEach(p=>{const d=Math.abs(_pv(p)/_pTot-p.hd.w);if(d>mxd){mxd=d;mxs=p;}});
-  const driftRows=IM.perStock.map(p=>{const cw=_pv(p)/_pTot,dr=(cw-p.hd.w)*100;return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${(cw*100).toFixed(1)}%</td><td class="r" style="color:${Math.abs(dr)<0.05?muted:(dr>=0?green:red)};font-weight:700">${(dr>=0?"+":"")+dr.toFixed(1)} pp</td><td class="r">${fmtCLP(_pv(p))}</td></tr>`;}).join("");
+  const allocLeg=IM.perStock.map(p=>`<span><span class="lgdot" style="background:${p.hd.c}"></span>${p.hd.t} ${_pctPeso(p)}</span>`).join("");
+  let mxd=0,mxs=null;if(_hayCart)IM.perStock.forEach(p=>{const d=Math.abs(_pv(p)/_pTot-p.hd.w);if(d>mxd){mxd=d;mxs=p;}});
+  const driftRows=IM.perStock.map(p=>{const dr=_driftPts(p);return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${_pctPeso(p)}</td><td class="r" style="color:${dr==null?muted:(Math.abs(dr)<0.05?muted:(dr>=0?green:red))};font-weight:700">${dr==null?"—":((dr>=0?"+":"")+dr.toFixed(1)+" pp")}</td><td class="r">${fmtCLP(_pv(p))}</td></tr>`;}).join("");
   const allocBody=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><div style="text-align:center;flex-shrink:0">${svgDonut(allocItems)}<div class="legend" style="justify-content:center;max-width:210px;margin:8px auto 0">${allocLeg}</div></div><div style="flex:1;min-width:300px"><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor</th></tr></thead><tbody>${driftRows}</tbody></table></div></div></div><div class="note" style="margin-top:12px">El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo de compra (por subir o bajar de precio). ${mxs?("La de mayor desviación es <b style='color:"+mxs.hd.c+"'>"+mxs.hd.t+"</b> ("+((_pv(mxs)/_pTot-mxs.hd.w)*100>=0?"+":"")+((_pv(mxs)/_pTot-mxs.hd.w)*100).toFixed(1)+" pp). "):""}Si el drift crece mucho, considera rebalancear para volver a tu asignación objetivo.</div>`;
-  const drifts=IM.perStock.map(p=>({p,dr:(p.val/L.val-p.hd.w)*100}));
+  const drifts=IM.perStock.map(p=>({p,dr:(L.val>0?(p.val/L.val-p.hd.w)*100:0)}));   // cartera cerrada: no hay desvío que corregir
   const breaches=drifts.filter(d=>Math.abs(d.dr)>5);
   const driftAlert=breaches.length?`<div class="note" style="margin-top:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)"><b>⚠ Alerta de rebalanceo:</b> ${breaches.map(d=>d.p.hd.t+" "+(d.dr>=0?"+":"")+d.dr.toFixed(1)+" pp").join(", ")} ${breaches.length>1?"superan":"supera"} el 5% de desviación respecto al objetivo. Revisa la <b>estrategia de rebalanceo</b> más abajo.</div>`:`<div class="note" style="margin-top:12px;border-color:var(--green-line);background:var(--greenbg);color:var(--green)">✓ Todas las posiciones están dentro de ±5 pp de su objetivo · sin necesidad de rebalancear.</div>`;
   // EDITOR DE PESOS OBJETIVO: los objetivos (hd.w) son editables desde aquí — al guardar se normalizan a 100%
@@ -4497,6 +4504,7 @@ function attachInv(){
     if(compraMode){qty={};PF.holdings.forEach(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?mntNum(me):NaN,q=qe?mntNum(qe):NaN;if(!m||m<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=m/q;}});}   // precio DERIVADO = monto/cantidad (cuadra al peso con la corredora)
     else{PF.holdings.forEach(hd=>{const el=document.querySelector('.pinp[data-pt="'+hd.t+'"]');const v=el?mntNum(el):NaN;if(!v||v<=0)ok=false;else prices[hd.t]=v;});}
     const dEl=document.getElementById("wdate"),date=dEl&&dEl.value?dEl.value:localDay();
+    if(fechaEnElFuturo(date)){avisaFechaFutura(date);return;}
     let ipsa;
     if(compraMode){
       // compra inicial: el IPSA se toma de la base as-of la fecha (el usuario ya no lo ingresa). Fallbacks:
@@ -8100,6 +8108,28 @@ function attachMercados(){
 let opState={pid:null,side:"buy",tkr:null,qty:"",price:"",date:""};
 function realCap(){if(!PF)return 0;const b=(typeof WEEKS!=="undefined"&&WEEKS.length)?WEEKS[0]:null;if(b&&b.qty)return PF.holdings.reduce((a,hd)=>a+(b.qty[hd.t]||0)*(b.prices[hd.t]||0),0);return PF.amount||0;}
 
+/* NINGUNA OPERACIÓN OCURRE EN EL FUTURO. Un año mal tecleado en el campo de fecha entraba sin decir nada
+   y arrastraba el proyecto entero hasta esa fecha: medido, un registro con fecha 2027 llevó los días
+   transcurridos de 29 a 542 y el CAGR de 79,66% a 3,18% — la anualización divide por el tiempo, y el tiempo
+   pasó a ser inventado. Se bloquea en las TRES puertas: comprar/vender, dividendo y editar el Historial. */
+function fechaEnElFuturo(d){
+  try{const hoy=localDay();return !!(d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>hoy);}catch(e){return false;}
+}
+/* NINGUNA OPERACIÓN ES ANTERIOR A LA COMPRA INICIAL. Si lo fuera, ese registro pasaría a ser weeks[0] — el
+   lugar del que invMetrics saca las CANTIDADES de la cartera— y como una operación no lleva `qty`, las
+   acciones se vuelven a sembrar desde holdings.monto y todo lo que sigue queda contado dos veces. No es un
+   detalle de orden: es la misma corrupción que operar en la fecha de la compra inicial. */
+function fechaAntesDeLaCompra(d){
+  try{const b=(PF&&PF.weeks&&PF.weeks.length)?PF.weeks[0].date:null;
+    return !!(b&&d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<b);}catch(e){return false;}
+}
+function avisaFechaAnterior(d){
+  const b=(PF&&PF.weeks&&PF.weeks.length)?PF.weeks[0].date:"";
+  window.alert("La fecha "+fD(d)+" es anterior al inicio de la cartera ("+fD(b)+").\n\nLa compra inicial es la que fija cuántas acciones tienes de cada papel; una operación anterior dejaría a la cartera sin ese punto de partida y las cantidades se contarían dos veces.\n\nSi de verdad compraste antes, corrige la FECHA de la compra inicial en el Historial y vuelve a registrar esta operación.");
+}
+function avisaFechaFutura(d){
+  window.alert("La fecha "+fD(d)+" es posterior a hoy ("+fD(localDay())+").\n\nUna operación no puede ocurrir en el futuro: con una fecha futura el proyecto pasa a contarse hasta ese día y las cifras anualizadas (CAGR, volatilidad, retorno exigido) dejan de tener sentido.\n\nCorrige la fecha.");
+}
 function opDo(){
   syncProj();if(!PF)return;
   const selEl=document.getElementById("optkr"),qEl=document.getElementById("opqty"),mEl=document.getElementById("opmonto"),dEl=document.getElementById("opdate");
@@ -8122,9 +8152,20 @@ function opDo(){
     if(held<=1e-9){window.alert("No tienes acciones de "+t+" para vender.");return;}
     if(q>held+1e-6){if(!window.confirm("Indicaste "+q+" pero solo tienes "+held.toLocaleString("es-CL",{maximumFractionDigits:2})+". ¿Vender todo lo que tienes?"))return;qty=held;}}
   const date=(dEl&&dEl.value)?dEl.value:(opState.date||localDay());
+  if(fechaEnElFuturo(date)){avisaFechaFutura(date);return;}
+  if(fechaAntesDeLaCompra(date)){avisaFechaAnterior(date);return;}
   let basePrices=last?last.prices:{},ipsa=last?last.ipsa:1;
   // si ya hay una valoración (no-operación) en esa fecha —p.ej. de una carga masiva del módulo Datos— reutiliza sus precios y reemplázala por la operación (evita fechas duplicadas)
-  const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev);
+  // NUNCA se borra el registro que lleva `qty`. Ese es la COMPRA INICIAL: es el único que guarda cuántas
+  // acciones tienes de cada papel, y todo lo demás (aporte, costo, contabilidad) se reconstruye desde ahí.
+  // Al operar en la MISMA fecha de la compra inicial, este findIndex lo encontraba y el splice de abajo lo
+  // eliminaba: perdido `qty`, invMetrics vuelve a sembrar las acciones desde holdings.monto —que opDo acaba
+  // de reescribir con el costo acumulado— y la operación se cuenta DOS veces, para siempre y creciendo.
+  // Medido: 150 acciones + una compra de 20 el mismo día daban 190 (deberían ser 170), con $971.800 de
+  // ganancia inventada el primer día; con una segunda compra de 10, 229,88 acciones donde hay 180.
+  // Si coincide con la compra inicial se le toman los precios y el IPSA, pero el registro se conserva: la
+  // operación se agrega como un registro aparte de la misma fecha, que es algo que la app ya sabe manejar.
+  const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev&&!w.qty);
   if(sameIdx>=0){const sw=PF.weeks[sameIdx];basePrices=sw.prices||basePrices;if(sw.ipsa!=null)ipsa=sw.ipsa;PF.weeks.splice(sameIdx,1);}
   // PRECIOS DE MERCADO del día de la operación: se prefieren los cierres REALES de la base para ESA fecha (todas
   // las tenencias + IPSA), no se arrastran los del último registro — así el seguimiento queda valorizado al cierre
@@ -8182,12 +8223,14 @@ function opDo(){
    gestión cobrada en efectivo (dinero rescatado). El registro del día lleva los cierres reales de la fecha
    si la base los tiene (misma regla que una compra/venta), para que el seguimiento quede valorizado bien. */
 function opDoDiv(t,m,date){
+  if(fechaEnElFuturo(date)){avisaFechaFutura(date);return;}
+  if(fechaAntesDeLaCompra(date)){avisaFechaAnterior(date);return;}
   if(!(m>0)){window.alert("Indica el monto del dividendo recibido (mayor que 0).");return;}
   const IM=invMetrics();const ps=IM&&IM.perStock.find(x=>x.hd.t===t);const held=ps?ps.sh:0;
   if(held<=1e-9){window.alert("No tienes acciones de "+t+" en cartera para registrar su dividendo.");return;}
   const last=WEEKS.length?WEEKS[WEEKS.length-1]:null;
   let basePrices=last?last.prices:{},ipsa=last?last.ipsa:1;
-  const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev);
+  const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev&&!w.qty);   // el registro con `qty` (la compra inicial) jamás se borra: ver opDo
   if(sameIdx>=0){const sw=PF.weeks[sameIdx];basePrices=sw.prices||basePrices;if(sw.ipsa!=null)ipsa=sw.ipsa;PF.weeks.splice(sameIdx,1);}
   const prices=Object.assign({},basePrices);
   const fresh=[];let _ipFresh=false;
