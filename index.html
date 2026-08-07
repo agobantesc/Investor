@@ -4067,8 +4067,10 @@ function viewInvActive(){
   // una pseudo-rentabilidad intradía entre órdenes.
   const _grp=[];IM.series.forEach((s,i)=>{if(!_grp.length||IM.series[_grp[_grp.length-1][0]].date!==s.date)_grp.push([i]);else _grp[_grp.length-1].push(i);});
   const _evDesc=ev=>{if(!ev)return "";if(ev.kind==="inject")return "Aporte de capital · "+fmtCLP(ev.amount||0);
-    if(ev.kind==="trade")return (ev.side==="sell"?"Venta":"Compra")+" "+ev.t+" · "+(+ev.shares).toLocaleString("es-CL",{maximumFractionDigits:2})+" × "+fmtP(+ev.price||0)+" = "+fmtCLP(Math.round((+ev.shares||0)*(+ev.price||0)));
-    if(ev.kind==="div")return "Dividendo "+ev.t+" · +"+fmtCLP(ev.amount||0)+" (ganancia cobrada, dinero rescatado)";
+    if(ev.kind==="trade")return (ev.side==="sell"?"Venta":"Compra")+(ev.t?(" "+ev.t):"")+" · "+(+ev.shares).toLocaleString("es-CL",{maximumFractionDigits:2})+" × "+fmtP(+ev.price||0)+" = "+fmtCLP(Math.round((+ev.shares||0)*(+ev.price||0)));
+    // un dividendo sin ticker es un registro legítimo (reparto de toda la cartera, o un respaldo antiguo):
+    // lo que NO puede es imprimirse como "Dividendo undefined" en pantalla y en el informe
+    if(ev.kind==="div")return "Dividendo"+(ev.t?(" "+ev.t):" de la cartera")+" · +"+fmtCLP(ev.amount||0)+" (ganancia cobrada, dinero rescatado)";
     return "Rebalanceo";};
   const rows=_grp.map((g,k)=>{const li=g[g.length-1],s=IM.series[li];
     const pv=k>0?IM.series[_grp[k-1][_grp[k-1].length-1]]:null;
@@ -4137,7 +4139,8 @@ function viewInvActive(){
   const qTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("Retorno anualizado (CAGR)",cagrReady?pc(IM.cagr*100):"—",cagrReady?"ritmo anualizado":"≥60 días para un valor realista",indigo,cagrReady?col(IM.cagr*100):muted)}${tile("Sharpe realizado",IM.sharpeR!=null?IM.sharpeR.toFixed(2):"—","retorno por unidad de riesgo",indigo,IM.sharpeR!=null?(IM.sharpeR>=0?green:red):muted)}${tile("Tracking error",IM.trackingError!=null?p0(IM.trackingError):"—","desvío anual vs IPSA",indigo,accentT)}${tile("Information ratio",IM.infoRatio!=null?IM.infoRatio.toFixed(2):"—","retorno activo / TE",indigo,IM.infoRatio!=null?col(IM.infoRatio*100):muted)}${tile("Aciertos vs IPSA",IM.winRate!=null?p0(IM.winRate):"—","% de "+fr.us+" sobre el mercado",indigo,accentT)}${tile("Mejor / peor "+fr.u,(IM.bestRet!=null?`<span style="color:${col(IM.bestRet*100)}">${pc(IM.bestRet*100)}</span>`:"—")+` <span style="color:${faint};font-weight:600">/</span> `+(IM.worstRet!=null?`<span style="color:${col(IM.worstRet*100)}">${pc(IM.worstRet*100)}</span>`:"—"),"rango por período",indigo,ink)}</div>`;
   const qNote=`<div class="note" style="margin-top:11px"><b>Calidad del desempeño.</b> El <b>Sharpe realizado</b> mide tu retorno ajustado por la volatilidad efectiva; el <b>information ratio</b> es el retorno extra sobre el IPSA por unidad de riesgo activo (sobre 0,5 es bueno); <b>aciertos vs IPSA</b> es el % de ${fr.us} en que superaste al mercado. El <b>Sharpe, el tracking error y el information ratio</b> se muestran desde los <b>30 días</b> de seguimiento y ≥8 retornos: con menos, anualizar una racha corta (media × ${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}, volatilidad × √${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}) dispara el ratio y produce un Sharpe irreal.${days<60?` El <b>CAGR</b> se muestra solo a partir de los 60 días, porque anualizar un período tan corto produce valores irreales.`:""}</div>`;
   const qualityCard=nd>=2?card("Calidad y desempeño del seguimiento","Métricas ajustadas por riesgo y desempeño relativo al IPSA",qTiles+qNote):"";
-  const riskCard=card("Riesgo: lo que el modelo espera vs lo que ocurrió","Pérdida máxima esperada por horizonte contra la peor pérdida real de tu cartera · elige el nivel de confianza",riskKp+varTbl+riskNote,riskCtrl);
+  // la invitación a elegir el nivel es de PANTALLA: en papel no hay botones, y el nivel usado lo dice el pie
+  const riskCard=card("Riesgo: lo que el modelo espera vs lo que ocurrió",`Pérdida máxima esperada por horizonte contra la peor pérdida real de tu cartera<span class="rp-omit"> · elige el nivel de confianza</span>`,riskKp+varTbl+riskNote,riskCtrl);
   const _pv=p=>p.sh*p.cur;
   const _pTot=IM.perStock.reduce((a,p)=>a+_pv(p),0)||L.val;
   // CARTERA CERRADA (todo vendido): el patrimonio es $0 y no hay pesos que repartir. Sin este freno cada
@@ -4421,12 +4424,13 @@ function invReportShell(o){
 
   /* Marca como FLUIDA toda tarjeta que no quepa holgada en una hoja. Solo toca las que marcó ella
      misma (data-rpauto): las que ya venían fluyendo por tener una tabla larga se respetan. */
-  function rpFlow(){
+  function rpFlow(f){
+    var lim=RP_HOJA*(f||0.78);
     var cs=document.querySelectorAll(".rp-page .card");
     for(var i=0;i<cs.length;i++){var c=cs[i];
       if(c.getAttribute("data-rpauto")){c.classList.remove("rp-flow");c.removeAttribute("data-rpauto");}}
     for(var j=0;j<cs.length;j++){var d=cs[j];
-      if(!d.classList.contains("rp-flow")&&d.offsetHeight>RP_HOJA*0.78){d.classList.add("rp-flow");d.setAttribute("data-rpauto","1");}}
+      if(!d.classList.contains("rp-flow")&&d.offsetHeight>lim){d.classList.add("rp-flow");d.setAttribute("data-rpauto","1");}}
   }
   /* Los bloques ATÓMICOS de la paginación: lo que el motor de impresión no puede partir. Una tarjeta
      normal es uno solo; una fluida aporta su cabecera y cada pieza de su cuerpo (gráfico, nota) y,
@@ -4484,19 +4488,25 @@ function invReportShell(o){
      blanco total y —a igualdad— la versión más grande, que es la que mejor se lee. */
   function rpAjustar(){
     try{
-      var zooms=[1,0.96,0.93,0.90],anchos=[760,720,680,640,600],mejor=null;
+      /* El UMBRAL de fluidez también se busca. Con el 0,78 fijo, una tarjeta de 450 px no fluía y saltaba
+         entera a la hoja siguiente dejando media hoja en blanco; con un umbral más bajo se parte por sus
+         costuras (el gráfico y la nota siguen siendo atómicos, así que nada se corta por la mitad). Cuál de
+         los dos conviene depende del informe, así que se miden ambos y gana el que deje menos papel muerto. */
+      var zooms=[1,0.96,0.93,0.90],anchos=[760,720,680,640,600],umbrales=[0.78,0.55],mejor=null;
       for(var i=0;i<zooms.length;i++){
         rpDensidad(zooms[i]);
         for(var j=0;j<anchos.length;j++){
           document.documentElement.style.setProperty("--rp-chart",anchos[j]+"px");
-          rpFlow();
-          var m=rpMedir(),c={z:zooms[i],w:anchos[j],m:m};
-          if(!mejor||rpMejor(c,mejor))mejor=c;
+          for(var u=0;u<umbrales.length;u++){
+            rpFlow(umbrales[u]);
+            var m=rpMedir(),c={z:zooms[i],w:anchos[j],f:umbrales[u],m:m};
+            if(!mejor||rpMejor(c,mejor))mejor=c;
+          }
         }
       }
       rpDensidad(mejor.z);
       document.documentElement.style.setProperty("--rp-chart",mejor.w+"px");
-      rpFlow();
+      rpFlow(mejor.f);
       window.__rpFit=mejor;   // queda a la vista para poder verificarlo desde fuera
     }catch(e){}
   }
@@ -4505,6 +4515,7 @@ function invReportShell(o){
     if(Math.abs(a.m.peor-b.m.peor)>18)return a.m.peor<b.m.peor;      // la hoja más vacía es lo que se nota
     if(Math.abs(a.m.blanco-b.m.blanco)>25)return a.m.blanco<b.m.blanco;
     if(a.z!==b.z)return a.z>b.z;                                      // a igualdad, la letra más grande
+    if(a.f!==b.f)return (a.f||0.78)>(b.f||0.78);                      // y las tarjetas enteras antes que partidas
     return a.w>b.w;
   }
   window.onload=function(){rpAjustar();setTimeout(function(){window.print();},450);};
@@ -4540,7 +4551,7 @@ function genInvReport(){
   modulo=_m;page=_p;
   const bodyHTML=repSec("1","Seguimiento","copia fiel de Inversión → Seguimiento")+segHTML
     +repSec("2","Historial de registros","copia fiel de Inversión → Historial",true)+histHTML;
-  const footHTML=`<b>Metodología y supuestos.</b> Rentabilidad time-weighted (TWR), que aísla el efecto de aportes y rebalanceos. Ganancia = valor actual − capital aportado total (los aportes no cuentan como rentabilidad; los <b>dividendos cobrados</b> sí son ganancia: entran como flujo rescatado). Los gráficos muestran un punto por fecha (varias operaciones el mismo día se netean juntas), igual que el módulo Seguimiento. CAPM con benchmark IPSA: Rf ${RF}%, prima ${PRIMA}%, β del portafolio ${(+PF.bp).toFixed(2)}; la curva exigida parte del valor real inicial, crece a la tasa exigida de la composición vigente y escalona por aportes/retiros, recalculando la tasa desde cada operación. VaR 95% paramétrico (μ − 1,645·σ), asume normalidad y subestima los eventos extremos; el «peor real» usa ventanas de días calendario neteando todos los aportes de la ventana y se mide sobre el patrimonio total del momento. El máximo drawdown se calcula sobre la rentabilidad (flujos neteados). β realizado, tracking error e information ratio se estiman contra los retornos del IPSA del mismo período. El CAGR se reporta solo con ≥60 días. Documento informativo generado por Investor — su contenido es la misma vista de los módulos Seguimiento e Historial; no constituye recomendación ni asesoría de inversión.`;
+  const footHTML=`<b>Metodología y supuestos.</b> Rentabilidad time-weighted (TWR), que aísla el efecto de aportes y rebalanceos. Ganancia = valor actual − capital aportado total (los aportes no cuentan como rentabilidad; los <b>dividendos cobrados</b> sí son ganancia: entran como flujo rescatado). Los gráficos muestran un punto por fecha (varias operaciones el mismo día se netean juntas), igual que el módulo Seguimiento. CAPM con benchmark IPSA: Rf ${p0(RF,1)}, prima ${p0(PRIMA,1)}, β del portafolio ${(+PF.bp).toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})}; la curva exigida parte del valor real inicial, crece a la tasa exigida de la composición vigente y escalona por aportes/retiros, recalculando la tasa desde cada operación. <b>Riesgo.</b> El VaR es paramétrico (μ − z·σ) con nivel de confianza <b>${(""+riskConf).replace(".",",")}%</b> (z = ${(""+(RISK_Z[riskConf]||1.6449)).replace(".",",")}), calculado con la σ y el retorno exigido de la composición vigente y aplicado al patrimonio actual: asume normalidad y subestima los eventos extremos. La <b>pérdida real</b> se busca sobre los días con cierre real de toda la cartera —los de precios arrastrados no generan pérdidas— dentro de ventanas de días calendario; su porcentaje encadena los retornos del tramo (TWR), de modo que un aporte intermedio no lo altera, y va sobre el patrimonio que había al inicio del tramo, no sobre el de hoy. El máximo drawdown se calcula sobre la rentabilidad (flujos neteados). β realizado, tracking error e information ratio se estiman contra los retornos del IPSA del mismo período. El CAGR se reporta solo con ≥60 días. Documento informativo generado por Investor — su contenido es la misma vista de los módulos Seguimiento e Historial; no constituye recomendación ni asesoría de inversión.`;
   const html=invReportShell({
     docTitle:"Informe de seguimiento · "+PF.name,
     title:"Informe de seguimiento de inversión",
@@ -5108,8 +5119,12 @@ function viewMultifactor(){
     {label:s.t,c:s.c,vals:pcts,fill:0.18}
   ]});
   const radarLeg=`<div class="legend" style="justify-content:center"><span><span class="lgdot" style="background:${s.c}"></span>${s.t}</span><span><span class="lgdot" style="background:${muted}"></span>Neutral mercado (z=0)</span></div><div class="note" style="text-align:center;margin-top:4px">Más afuera = mejor en ese factor (z transversal de las ${STOCKS.length} acciones)</div>`;
-  const radarCard=card("Perfil de estilo · "+s.t,`${s.n} · ${s.s} · <span class="stylebadges" style="display:inline-flex;gap:5px;vertical-align:middle">${styleBadges(mfSel)}</span>`,`<div class="radarwrap"><div>${radar}${radarLeg}</div></div>`);
-  const attrCard=card("Retorno esperado multifactor · "+s.t,"Descomposición CAPM → multifactor por factor",attribView(mfSel));
+  /* EL PERFIL DE ESTILO Y LA ATRIBUCIÓN son de la acción SELECCIONADA en pantalla. En papel no hay dónde
+     elegir: saldría una sola de las 28 y el informe se leería como si el análisis fuera de esa acción —el
+     mismo motivo por el que «Detalle por acción» tampoco llega al informe. Van con rp-omit: se ven en la
+     pantalla, no en el documento. De paso, eran el bloque que peor paginaba (413 px atómicos). */
+  const radarCard=card("Perfil de estilo · "+s.t,`${s.n} · ${s.s} · <span class="stylebadges" style="display:inline-flex;gap:5px;vertical-align:middle">${styleBadges(mfSel)}</span>`,`<div class="radarwrap"><div>${radar}${radarLeg}</div></div>`,"","rp-omit");
+  const attrCard=card("Retorno esperado multifactor · "+s.t,"Descomposición CAPM → multifactor por factor",attribView(mfSel),"","rp-omit");
 
   // tabla de factores
   const ranked=[...STOCKS].sort((a,b)=>compositeOf(b.t,prof)-compositeOf(a.t,prof));
@@ -8366,7 +8381,7 @@ let BROKER=(function(){try{const v=JSON.parse(localStorage.getItem("inv_broker_v
 function saveBroker(){try{localStorage.setItem("inv_broker_v1",JSON.stringify(BROKER));return true;}catch(e){saveWarn();return false;}}
 function brokerName(){return (BROKER&&(BROKER_PRESETS[BROKER.op]||{}).name)||(BROKER&&BROKER.name)||"Personalizado";}
 function brokerFee(monto){if(!BROKER)return 0;monto=Math.abs(+monto||0);if(!monto)return 0;let f=monto*(+BROKER.pct||0)/100;const mn=+BROKER.min||0,mx=+BROKER.max||0;if(mn>0&&f<mn)f=mn;if(mx>0&&f>mx)f=mx;if(BROKER.iva)f*=1.19;return Math.round(f);}
-function brokerSummary(){if(!BROKER)return "sin operador";const p=[brokerName(),(+BROKER.pct||0)+"%"+(BROKER.iva?"+IVA":"")];if(+BROKER.min>0)p.push("mín "+fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1))));if(+BROKER.max>0)p.push("tope "+fmtCLP(Math.round((+BROKER.max)*(BROKER.iva?1.19:1))));return p.join(" · ");}
+function brokerSummary(){if(!BROKER)return "sin operador";const p=[brokerName(),(+BROKER.pct||0).toLocaleString("es-CL",{maximumFractionDigits:3})+"%"+(BROKER.iva?"+IVA":"")];if(+BROKER.min>0)p.push("mín "+fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1))));if(+BROKER.max>0)p.push("tope "+fmtCLP(Math.round((+BROKER.max)*(BROKER.iva?1.19:1))));return p.join(" · ");}
 /* desglosa la comisión en neta + IVA */
 function feeParts(monto){const total=brokerFee(monto);if(!BROKER||!BROKER.iva||!total)return {base:total,iva:0,total};const base=Math.round(total/1.19);return {base,iva:total-base,total};}
 /* ventas realizadas (para la declaración de renta): cada venta con su resultado neto de comisión */
@@ -8506,7 +8521,7 @@ function viewContab(){
   if(multi&&contabTxTab!=="all"&&!withOps.some(x=>String(x.p.id)===String(contabTxTab)))contabTxTab="all";
   const showProj=multi&&contabTxTab==="all";   // la columna "Proyecto" solo tiene sentido en la vista consolidada
   const txShown=(multi&&contabTxTab!=="all")?allTx.filter(x=>String(x.projId)===String(contabTxTab)):allTx;
-  const txRow=x=>{const st=STOCKS.find(s=>s.t===x.t)||{t:x.t,c:muted};const isDiv=x.side==="div";const efectivo=isDiv?x.monto:(x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0)));return `<tr>${showProj?`<td class="cut" style="color:var(--faint)" title="${(""+x.proj).replace(/</g,"&lt;")}">${(""+x.proj).replace(/</g,"&lt;")}</td>`:""}<td>${fD(x.date)}</td><td><b style="color:${st.c}">${x.t}</b></td><td><span class="badge ${x.side==="sell"?"neg":"pos"}"${isDiv?` style="color:${green}"`:""}>${x.tipo}</span></td><td class="r">${isDiv?"—":x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${isDiv?"—":fmtCLP(x.price)}</td><td class="r">${fmtCLP(x.monto)}</td><td class="r" style="color:var(--mut)">${x.fee?fmtCLP(x.fee):"—"}</td><td class="r" style="color:var(--faint)">${x.feeIva?fmtCLP(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(efectivo)}</td><td class="r" style="color:${x.gain!=null?(x.gain>=0?green:red):muted};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?((x.gain>=0?"+":"")+fmtCLP(x.gain)):"—"}</td></tr>`;};
+  const txRow=x=>{const st=STOCKS.find(s=>s.t===x.t)||{t:x.t,c:muted};const isDiv=x.side==="div";const efectivo=isDiv?x.monto:(x.side==="sell"?(x.monto-(x.fee||0)):(x.monto+(x.fee||0)));return `<tr>${showProj?`<td class="cut" style="color:var(--faint)" title="${(""+x.proj).replace(/</g,"&lt;")}">${(""+x.proj).replace(/</g,"&lt;")}</td>`:""}<td>${fD(x.date)}</td><td><b style="color:${st.c}">${x.t||"—"}</b></td><td><span class="badge ${x.side==="sell"?"neg":"pos"}"${isDiv?` style="color:${green}"`:""}>${x.tipo}</span></td><td class="r">${isDiv?"—":x.shares.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${isDiv?"—":fmtCLP(x.price)}</td><td class="r">${fmtCLP(x.monto)}</td><td class="r" style="color:var(--mut)">${x.fee?fmtCLP(x.fee):"—"}</td><td class="r" style="color:var(--faint)">${x.feeIva?fmtCLP(x.feeIva):"—"}</td><td class="r" style="font-weight:600">${fmtCLP(efectivo)}</td><td class="r" style="color:${x.gain!=null?(x.gain>=0?green:red):muted};font-weight:${x.gain!=null?"700":"400"}">${x.gain!=null?((x.gain>=0?"+":"")+fmtCLP(x.gain)):"—"}</td></tr>`;};
   const txRows=txShown.map(txRow).join("");
   const txTabs=multi?`<div class="ctx-tabs"><button class="ctxtab ${contabTxTab==="all"?"on":""}" data-ctxtab="all">Todos</button>${withOps.map(({p})=>`<button class="ctxtab ${String(contabTxTab)===String(p.id)?"on":""}" data-ctxtab="${p.id}">${(""+p.name).replace(/</g,"&lt;")}</button>`).join("")}</div>`:"";
   const _selName=(multi&&contabTxTab!=="all")?(withOps.find(x=>String(x.p.id)===String(contabTxTab))||{}).p:null;
@@ -8567,9 +8582,11 @@ function genAnalysisReport(){
   let MFok=false;try{MFok=!!(typeof MF!=="undefined"&&MF&&MF.z&&MF.er);}catch(e){}
   const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
   const esc=s=>(""+s).replace(/</g,"&lt;");
-  const sg=(v,d)=>(v>=0?"+":"")+(+v).toFixed(d==null?2:d)+"%";
-  const f2=v=>(+v).toFixed(2);
-  const p0r=(v,d)=>(+v).toFixed(d==null?1:d)+"%";
+  // coma decimal, como el resto de Investor: un informe en español no imprime "1.69" ni "5.5%"
+  const _n=(v,d)=>(+v).toLocaleString("es-CL",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const sg=(v,d)=>(v>=0?"+":"−")+_n(Math.abs(+v),d==null?2:d)+"%";
+  const f2=v=>_n(+v,2);
+  const p0r=(v,d)=>_n(+v,d==null?1:d)+"%";
   const W=(typeof winMode==="function")?winMode():false;
   const winTxt=(typeof winLong==="function")?winLong():((DATA.n||"")+"");
   const perLbl=DATA.perYear===252?"diaria":DATA.perYear===52?"semanal":"mensual";
