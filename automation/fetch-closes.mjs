@@ -448,13 +448,18 @@ let days = Object.values(byDate)
   .filter(d => Object.keys(d.prices).length || d.ipsa != null)
   .sort((a, b) => (a.date < b.date ? -1 : 1));
 
-// DÍA CALCO: si un día repite EXACTO el precio del día anterior en CASI TODAS las acciones (≥5 comparables
-// y ≥85% idénticas), es un arrastre del upstream — un mercado abierto jamás cierra idéntico en 26/28 papeles —
-// no un cierre real. Se descartan las celdas copiadas (el día sobrevive con las acciones que SÍ se movieron o
-// con un IPSA propio distinto). Casos reales: los días 14/15/16-10-2024 repetían el vector del 11-10-2024
-// (28/28), y el backfill de 2 años del 01-08-2026 rellenó 07-21…07-31 con el vector del 17-07 dejando solo a
-// SANTANDER moverse (27/28) — el umbral del 100% no lo veía y se perdieron 9 días de cierres buenos.
+// DÍA CALCO: si un día repite EXACTO el precio de ALGÚN día hábil reciente en CASI TODAS las acciones (≥5
+// comparables y ≥85% idénticas), es un arrastre del upstream — un mercado abierto jamás cierra idéntico en
+// 26/28 papeles — no un cierre real. Se descartan las celdas copiadas (el día sobrevive con las acciones que
+// SÍ se movieron o con un IPSA propio distinto). Casos reales: los días 14/15/16-10-2024 repetían el vector
+// del 11-10-2024 (28/28), y el backfill de 2 años del 01-08-2026 rellenó 07-21…07-31 con el vector del 17-07
+// dejando solo a SANTANDER moverse (27/28) — el umbral del 100% no lo veía y se perdieron 9 días buenos.
+// La comparación NO puede limitarse al día anterior: la fuente también sirve fotos de días LEJANOS. Medido en
+// el archivo del repo — 03-08-2026 repetía las 28 acciones del 24-07-2026 (seis sesiones antes) y 22-07-2026
+// las del 17-07-2026: contra el día previo esos vectores se ven perfectamente normales y entraban enteros.
+// Por eso se busca el MEJOR calce entre los últimos 10 días hábiles con precios.
 const CALCO_MIN = 0.85;
+const CALCO_ATRAS = 10;
 // proporción de acciones de `cur` que repiten EXACTO su valor en `ref` (solo cuenta las comparables)
 const calcoRatio = (cur, ref) => {
   const ks = Object.keys(cur || {}).filter(t => (ref || {})[t] != null);
@@ -462,14 +467,24 @@ const calcoRatio = (cur, ref) => {
   const rep = ks.filter(t => ref[t] === cur[t]).length;
   return { n: ks.length, rep, ratio: rep / ks.length };
 };
+// El recorrido va HACIA ADELANTE y solo compara contra días ya confirmados REALES: si el arrastre se
+// encadena (17-07 → 22-07 → 24-07 → 03-08, todos el mismo vector), un día calco no puede servir de
+// referencia a otro y hacerlo pasar por "movido". Yendo hacia atrás, el 24-07 se comparaba contra el 22-07
+// —que también era una copia— y el vector congelado se validaba a sí mismo.
 let nCalco = 0, nRestore = 0, nCelda = 0; const restoreLog = [], calcoLog = [];
-for (let i = days.length - 1; i >= 1; i--) {
+const reales = [];
+for (let i = 0; i < days.length; i++) {
   const cur = days[i].prices || {};
-  if (Object.keys(cur).length < 5) continue;
-  let j = i - 1; while (j >= 0 && !Object.keys(days[j].prices || {}).length) j--;
-  if (j < 0) continue;
-  const prev = days[j].prices || {};
-  const c = calcoRatio(cur, prev);
+  if (Object.keys(cur).length < 5) { if (Object.keys(cur).length) reales.push(i); continue; }
+  // el día de referencia es el que MÁS se parece entre los últimos CALCO_ATRAS días hábiles REALES
+  let mejor = null;
+  for (let k = reales.length - 1; k >= 0 && reales.length - k <= CALCO_ATRAS; k--) {
+    const j = reales[k], cc = calcoRatio(cur, days[j].prices);
+    if (cc.n >= 5 && (!mejor || cc.ratio > mejor.c.ratio)) mejor = { j, c: cc };
+  }
+  if (!mejor) { reales.push(i); continue; }
+  const j = mejor.j, prev = days[j].prices || {}, c = mejor.c;
+  if (!(c.n >= 5 && c.ratio >= CALCO_MIN)) reales.push(i);
   if (c.n >= 5 && c.ratio >= CALCO_MIN) {
     // ¿el archivo previo tenía para este día cierres REALES (que no son un calco del día de referencia)? → la
     // corrida pisó datos buenos con un arrastre: se restauran los guardados en vez de descartarlos.
@@ -480,10 +495,11 @@ for (let i = days.length - 1; i >= 1; i--) {
       days[i].prices = { ...sp };
       if (days[i].ipsa == null && snap.ipsa != null) { days[i].ipsa = snap.ipsa; if (snap.ipsaSynth) days[i].ipsaSynth = true; }
       nRestore++; restoreLog.push(days[i].date);
+      reales.push(i);   // restaurado con cierres buenos: vuelve a ser un día de referencia válido
     } else {
       // sin respaldo utilizable: se borran SOLO las celdas copiadas y se conservan las que sí se movieron
       const q = {}; Object.keys(cur).forEach(t => { if (!(prev[t] != null && prev[t] === cur[t])) q[t] = cur[t]; else nCelda++; });
-      days[i].prices = q; nCalco++; calcoLog.push(`${days[i].date} (${c.rep}/${c.n})`);
+      days[i].prices = q; nCalco++; calcoLog.push(`${days[i].date} (${c.rep}/${c.n} calcados de ${days[j].date})`);
       if (days[i].ipsa != null && days[i].ipsa === days[j].ipsa) delete days[i].ipsa;
     }
   }

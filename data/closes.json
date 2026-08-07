@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-07T03:25:48.836Z",
+ "updatedAt": "2026-08-07T14:13:07.977Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -17634,41 +17634,6 @@
    "ipsaSynth": true
   },
   {
-   "date": "2026-07-22",
-   "prices": {
-    "CHILE": 188.5,
-    "SANTANDER": 77,
-    "BCI": 62502,
-    "ENELCHILE": 81.01,
-    "COLBUN": 135.29,
-    "FALABELLA": 5835,
-    "CENCOSUD": 1995,
-    "COPEC": 6249.6,
-    "CMPC": 1070,
-    "SQM-B": 65450,
-    "CCU": 5218,
-    "ENTEL": 3643,
-    "LATAM": 24.69,
-    "PARAUCO": 4039.9,
-    "AGUAS-A": 332.4,
-    "IAM": 921.89,
-    "ENELAM": 84.04,
-    "ECL": 1807,
-    "ANDINA-B": 4699.9,
-    "CONCHATORO": 852.33,
-    "QUINENCO": 4279,
-    "MALLPLAZA": 3950,
-    "VAPORES": 46.51,
-    "RIPLEY": 382.96,
-    "SMU": 127.9,
-    "ITAUCL": 20678,
-    "CAP": 6313.3,
-    "SONDA": 309.99
-   },
-   "ipsa": 10891.73,
-   "ipsaSynth": true
-  },
-  {
    "date": "2026-07-23",
    "prices": {
     "CHILE": 190.72,
@@ -17706,37 +17671,8 @@
   {
    "date": "2026-07-24",
    "prices": {
-    "CHILE": 188.5,
-    "SANTANDER": 77,
-    "BCI": 62502,
-    "ENELCHILE": 81.01,
-    "COLBUN": 135.29,
-    "FALABELLA": 5835,
-    "CENCOSUD": 1995,
-    "COPEC": 6249.6,
-    "CMPC": 1070,
-    "SQM-B": 65450,
-    "CCU": 5218,
-    "ENTEL": 3643,
-    "LATAM": 24.69,
-    "PARAUCO": 4039.9,
-    "AGUAS-A": 332.4,
-    "IAM": 921.89,
-    "ENELAM": 84.04,
-    "ECL": 1807,
-    "ANDINA-B": 4699.9,
-    "CONCHATORO": 852.33,
-    "QUINENCO": 4279,
-    "MALLPLAZA": 3950,
-    "VAPORES": 46.51,
-    "RIPLEY": 382.96,
-    "SMU": 127.9,
-    "SONDA": 301.81,
-    "ITAUCL": 20678,
-    "CAP": 6313.3
-   },
-   "ipsa": 10899.66,
-   "ipsaSynth": true
+    "SONDA": 301.81
+   }
   },
   {
    "date": "2026-07-27",
@@ -17915,37 +17851,8 @@
   {
    "date": "2026-08-03",
    "prices": {
-    "CHILE": 188.5,
-    "SANTANDER": 77,
-    "BCI": 62502,
-    "ENELCHILE": 81.01,
-    "COLBUN": 135.29,
-    "FALABELLA": 5835,
-    "CENCOSUD": 1995,
-    "COPEC": 6249.6,
-    "CMPC": 1070,
-    "SQM-B": 65450,
-    "CCU": 5218,
-    "ENTEL": 3643,
-    "LATAM": 24.69,
-    "PARAUCO": 4039.9,
-    "AGUAS-A": 332.4,
-    "IAM": 921.89,
-    "ENELAM": 84.04,
-    "ECL": 1807,
-    "ANDINA-B": 4699.9,
-    "CONCHATORO": 852.33,
-    "QUINENCO": 4279,
-    "MALLPLAZA": 3950,
-    "VAPORES": 46.51,
-    "RIPLEY": 382.96,
-    "SMU": 127.9,
-    "SONDA": 301.81,
-    "ITAUCL": 20678,
-    "CAP": 6313.3
-   },
-   "ipsa": 10916.86,
-   "ipsaSynth": true
+    "SONDA": 301.81
+   }
   },
   {
    "date": "2026-08-04",

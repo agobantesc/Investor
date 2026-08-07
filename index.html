@@ -1391,6 +1391,10 @@
   .isc-sub{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;}
   .isc-all{flex:0 0 auto;border:1px solid var(--accent);background:transparent;color:var(--accent);font:800 11.5px var(--font);padding:.42rem .7rem;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s var(--ease);}
   .isc-all:hover{background:var(--accent);color:#fff;box-shadow:0 6px 16px -8px rgba(30,95,209,.7);}
+  /* la carta de recomendación es la ACCIÓN principal de la tarjeta: va en sólido, "ver todas" queda de apoyo */
+  .isc-carta{flex:0 0 auto;border:1px solid transparent;background:linear-gradient(135deg,var(--accent),#7C4DD8);color:#fff;font:800 11.5px var(--font);padding:.42rem .78rem;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s var(--ease);box-shadow:0 6px 16px -9px rgba(60,80,200,.75);}
+  .isc-carta:hover{filter:brightness(1.07);box-shadow:0 8px 20px -8px rgba(60,80,200,.85);}
+  @media(max-width:760px){.isc-head{flex-wrap:wrap}.isc-carta,.isc-all{font-size:11px;padding:.38rem .6rem}}
   .isc-cols{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;}
   .isc-block{display:flex;flex-direction:column;}
   .isc-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line);background:transparent;padding:.5rem .4rem;cursor:pointer;border-radius:8px;transition:.12s var(--ease);}
@@ -6197,24 +6201,30 @@ function pricedbSanitize(){
   Object.keys(PRICEDB.px||{}).forEach(t=>stripCF(PRICEDB.px[t]));
   Object.keys(ix).forEach(k=>stripCF(ix[k]));
   // 2.2) DÍA CALCO del feed: si en una fecha CASI TODAS las acciones comparables (≥5 y ≥85%) repiten EXACTO su
-  //   cierre del día hábil anterior, ese día es un arrastre del generador — un mercado abierto jamás cierra
-  //   26/28 idéntico al día previo — esté donde esté en la serie (stripCF solo cubre rachas al FINAL). Se
+  //   cierre de ALGÚN día hábil reciente, ese día es un arrastre del generador — un mercado abierto jamás
+  //   cierra 26/28 idéntico a otro día — esté donde esté en la serie (stripCF solo cubre rachas al FINAL). Se
   //   borran las celdas COPIADAS y se conservan las acciones que sí se movieron.
   //   Casos reales: closes.json repetía el vector del 11-10-2024 los días 14, 15 y 16-10-2024 (28/28), y el
   //   backfill del 01-08-2026 rellenó 21-07…31-07 con el vector del 17-07 dejando solo a SANTANDER moverse
   //   (27/28): con el umbral del 100% ese arrastre pasaba entero.
+  //   Y la comparación NO puede ser solo contra el día ANTERIOR: la fuente sirve fotos de días LEJANOS. En el
+  //   archivo del repo, 03-08-2026 repetía las 28 acciones del 24-07-2026 (seis sesiones antes) y 22-07-2026
+  //   las del 17-07-2026; contra su día previo esos vectores se ven normales y entraban enteros a la base.
+  //   Se busca el MEJOR calce entre los últimos 10 días hábiles REALES anteriores.
   let nDup=0;
   (function(){const px=PRICEDB.px||{},tks=Object.keys(px);if(tks.length<5)return;
-    const dates=pricedbAllDates();let prev=dates[0];
-    for(let i=1;i<dates.length;i++){const d=dates[i];let n=0,eq=0;
-      tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null&&m[prev]!=null){n++;if(m[d]===m[prev])eq++;}});
-      if(n>=5&&eq/n>=0.85){
+    const dates=pricedbAllDates();const reales=[dates[0]],ATRAS=10;
+    for(let i=1;i<dates.length;i++){const d=dates[i];let mejor=null;
+      for(let k=reales.length-1;k>=0&&reales.length-k<=ATRAS;k--){const p=reales[k];let n=0,eq=0;
+        tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null&&m[p]!=null){n++;if(m[d]===m[p])eq++;}});
+        if(n>=5&&(!mejor||eq/n>mejor.r))mejor={p,r:eq/n};}
+      if(mejor&&mejor.r>=0.85){const prev=mejor.p;
         tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null&&m[prev]!=null&&m[d]===m[prev]){delete m[d];nDup++;}});
         if(PRICEDB.ipsa&&PRICEDB.ipsa[d]!=null&&PRICEDB.ipsa[d]===PRICEDB.ipsa[prev]){delete PRICEDB.ipsa[d];nDup++;}
         Object.keys(ix).forEach(k=>{if(ix[k][d]!=null&&ix[k][d]===ix[k][prev]){delete ix[k][d];nDup++;}});
-        continue;   // el día calco no pasa a ser "anterior": una racha de calcos se compara siempre contra el último día REAL
+        continue;   // el día calco no entra a la lista de días REALES: una racha de calcos se compara siempre contra cierres de verdad
       }
-      prev=d;
+      reales.push(d);
     }
   })();
   // 2.5) ATÍPICOS de ESCALA en el IPSA/índice: un punto que cae bajo el 60% (o salta sobre 170%) de AMBOS
@@ -7138,7 +7148,7 @@ function detectInconsistencies(){
   // 3) rangos mensuales incompatibles
   (function(){const monthly=tickers.map(t=>{const ds=datesOf(t);return {t,from:ds[0].slice(0,7),to:ds[ds.length-1].slice(0,7),mp:resampleMap(PX[t],"mensual").length};}).filter(x=>x.mp>=2);if(monthly.length<2)return;const ls=monthly.reduce((a,b)=>b.from>a.from?b:a),ee=monthly.reduce((a,b)=>b.to<a.to?b:a);const os=ls.from,oe=ee.to;const months=os<=oe?(periodIndex(oe+"-15","mensual")-periodIndex(os+"-15","mensual")+1):0;if(months<3)issues.push({level:"warn",msg:"Las acciones no comparten suficiente historial mensual (solapamiento "+(months>0?(os+" → "+oe+", "+months+" mes(es)"):"vacío")+"): un análisis mensual conjunto no es comparable.",tickers:[ls.t,ee.t]});})();
   // 4) IPSA ausente donde hay acciones
-  (function(){if(!Object.keys(IPSA).length){if(tickers.length)issues.push({level:"info",msg:"No hay IPSA en la base: las métricas relativas al índice no estarán disponibles."});return;}const need={};tickers.forEach(t=>datesOf(t).forEach(d=>{if(isTradingDay(d))need[d]=1;}));const miss=Object.keys(need).filter(d=>IPSA[d]==null).sort();if(miss.length)issues.push({level:"info",msg:"Faltan "+miss.length+" fecha(s) de IPSA donde sí hay cierres de acciones (ej. "+miss[miss.length-1]+")."});})();
+  (function(){if(!Object.keys(IPSA).length){if(tickers.length)issues.push({level:"info",msg:"No hay IPSA en la base: las métricas relativas al índice no estarán disponibles."});return;}const need={};tickers.forEach(t=>datesOf(t).forEach(d=>{if(isTradingDay(d))need[d]=1;}));const miss=Object.keys(need).filter(d=>IPSA[d]==null).sort();if(miss.length)issues.push({level:"info",msg:"Faltan "+miss.length+" fecha(s) de IPSA donde sí hay cierres de acciones (ej. "+fD(miss[miss.length-1])+")."});})();
   // 5) arrastre sospechado (valores finales idénticos)
   (function(){const cf=[];tickers.forEach(t=>{const rs=resampleMap(PX[t],"diario");if(rs.length<2)return;if(dropTrailingFlat(rs).length<rs.length)cf.push(t);});if(Object.keys(IPSA).length){const ri=resampleMap(IPSA,"diario");if(ri.length>=2&&dropTrailingFlat(ri).length<ri.length)cf.push("IPSA");}if(cf.length)issues.push({level:"warn",msg:"Valores finales repetidos idénticos (un cierre real no repite al decimal): posible arrastre. “Reparar base” los limpia.",tickers:cf});})();
   // 6) SALTO DE ESCALA en el IPSA: dos fuentes/escalas mezcladas (p.ej. 10.800 vs 6.500) → las β de cualquier análisis colapsan a ≈0.
@@ -10984,6 +10994,13 @@ function investorScoreCompute(){
       maxDD:+(mddOf(s)*100).toFixed(1),mom6m:momOf(s)!=null?+momOf(s).toFixed(1):null,pos52:posOf(s)!=null?+posOf(s).toFixed(0):null,
       roe:f.roe!=null?f.roe:null,upside:upv!=null?+upv.toFixed(1):null,
       mos:moss[si]!=null?+moss[si].toFixed(1):null,intrinsic:ivs[si]?Math.round(ivs[si].value):null,intrinsicLo:ivs[si]?Math.round(ivs[si].lo):null,intrinsicHi:ivs[si]?Math.round(ivs[si].hi):null,
+      // valorización COMPLETA de la misma corrida (la carta de recomendación la usa tal cual, sin recalcular:
+      // así el precio de compra que propone la carta no puede discrepar del margen de seguridad del score).
+      // `mos` sigue siendo el del PUNTAJE (exige ≥2 anclas); `ivMos` es el de la valorización, exista o no
+      // triangulación — la carta lo muestra siempre, marcando la fiabilidad.
+      ivN:ivs[si]?ivs[si].n:null,ivMos:ivs[si]?+(ivs[si].mos*100).toFixed(1):null,ivDisp:ivs[si]?+ivs[si].disp.toFixed(3):null,
+      ivPx:ivs[si]?Math.round(ivs[si].px):null,ivR:ivs[si]?+(ivs[si].r*100).toFixed(1):null,ivG:(ivs[si]&&ivs[si].g!=null)?+(ivs[si].g*100).toFixed(1):null,
+      ivMetodos:ivs[si]?ivs[si].methods.map(m=>({n:m.name,v:m.val})):null,
       alertas};
   }).sort((a,b)=>b.score-a.score);
   return {day:localDay(),window:imp.window,n:rows.length,rows};
@@ -10995,7 +11012,9 @@ function investorScore(){
     // reviente la caché aunque no cambie la última fecha) + Nº de fechas de IPSA (base más completa)
     const nTk=(typeof pricedbTickers==="function")?pricedbTickers().length:0;
     const nIp=(typeof PRICEDB!=="undefined"&&PRICEDB.ipsa)?Object.keys(PRICEDB.ipsa).length:0;
-    const key=localDay()+"|"+lastBaseDate()+"|"+((typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)||"")+"|"+nTk+"|"+nIp;
+    // el "v2" versiona la FORMA de la fila: al agregar campos (la valorización completa para la carta de
+    // recomendación) una caché del día anterior con filas viejas dejaría la carta sin datos hasta mañana.
+    const key="v2|"+localDay()+"|"+lastBaseDate()+"|"+((typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)||"")+"|"+nTk+"|"+nIp;
     if(_invScore&&_invScore.k===key)return _invScore.v;
     try{const st=JSON.parse(localStorage.getItem("inv_score_v1")||"null");if(st&&st.k===key&&st.v)return (_invScore=st).v;}catch(e){}   // solo sirve caché con RESULTADO (nunca un null rancio que oculte la tarjeta todo el día)
     const v=investorScoreCompute();
@@ -11544,6 +11563,7 @@ function investorScoreCard(){
   const head=`<div class="isc-head">
       <div class="isc-badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 5.5L20 8.2l-4.2 3.9 1.1 5.7L12 15.6 7.1 17.8l1.1-5.7L4 8.2l5.6-.7z"/></svg></div>
       <div class="isc-h-txt"><div class="isc-title">Investor Score</div><div class="isc-sub">Las mejores alternativas del IPSA según Investor · ${sc.n} acciones · actualizado ${(""+sc.day).slice(8,10)}/${(""+sc.day).slice(5,7)}</div></div>
+      <button class="isc-carta" data-cartareco title="Genera un documento imprimible con las acciones recomendadas para comprar hoy: desempeño del último mes, fundamentos, valor intrínseco y el precio de compra propuesto">✉ Carta de recomendación</button>
       <button class="isc-all" data-scoreall>Ver las ${sc.n} →</button></div>`;
   const legend=`<div class="isc-legend"><span><i style="background:${green}"></i>≥70 fuerte</span><span><i style="background:${indigo}"></i>55–69 sólido</span><span><i style="background:${amber}"></i>40–54 neutro</span><span><i style="background:${red}"></i>&lt;40 evitar</span></div>`;
   const nota=`<div class="note" style="margin:10px 0 0;font-size:10.5px">Síntesis diaria: <b>45% riesgo-retorno</b> + 30% fundamentos (${_fc}/${sc.n} reales) + 25% tendencia, con candado de confianza. Todo el riesgo ya está descontado. <b>Léelo por tramos</b>: diferencias menores a ~5 puntos no son significativas. Clic en una acción para ver por qué. Educativo, no asesoría financiera.</div>`;
@@ -11602,6 +11622,176 @@ function scoreAllModal(){
   back.querySelectorAll("[data-scoredet]").forEach(el=>el.onclick=()=>{modalCloseId("iscAllBack");scoreDetailModal(el.dataset.scoredet);});
   try{attachTableSort();}catch(e){}
 }
+/* ══ CARTA DE RECOMENDACIÓN DE INVERSIÓN ═══════════════════════════════════════════════════════════
+   Documento imprimible que responde a "¿qué compro hoy y a qué precio?". No calcula nada nuevo ni inventa
+   nada: toma el Investor Score de la corrida vigente (los mismos números de la tarjeta del Home y del
+   ranking completo), su valorización intrínseca y los cierres reales de la base de precios.
+   REGLA DURA — si la carta RECOMIENDA COMPRAR, el precio tiene que ser bueno: además de puntuar bien, la
+   acción debe tener MARGEN DE SEGURIDAD positivo y TRIANGULADO (≥2 anclas de valorización). Recomendar una
+   acción que cotiza sobre su valor sería recomendar pagar de más. Las que puntúan alto pero están caras no
+   se esconden: pasan a "en observación", con el PRECIO al que sí valdría la pena entrar.
+   El margen exigido para comprar A MERCADO es del 15%; entre 0% y 15% la carta propone una orden LÍMITE. */
+const CARTA_SCORE_MIN=55;     // "sólido" o mejor, el mismo tramo de la leyenda del Investor Score
+const CARTA_MOS_OBJ=0.15;     // margen de seguridad exigido para comprar al precio de hoy
+const CARTA_MAX=6;            // una carta con veinte "recomendadas" no recomienda nada
+const CARTA_OBS_MAX=12;       // tope de la lista de observación (si se corta, la carta lo dice)
+function cartaRecoData(){
+  let sc=null;try{sc=investorScore();}catch(e){}
+  if(!sc||!sc.rows||sc.rows.length<3)return null;
+  // ¿ya la tienes? — holdings de todos los proyectos de todos los clientes (solo para avisar, no puntúa)
+  const enCartera={};
+  try{(CLIENTS||[]).forEach(c=>{(clientProjects(c.id)||[]).forEach(p=>{(p.holdings||[]).forEach(h=>{
+    if(!h||!h.t)return;(enCartera[h.t]=enCartera[h.t]||[]).push(p.name);});});});}catch(e){}
+  let ipsa=null;try{ipsa=ipsaSnapshot();}catch(e){}
+  const arma=r=>{
+    const f=(typeof fundGet==="function"&&fundGet(r.t))||{};
+    let per=null;try{per=stkPeriodReturns(r.t);}catch(e){}
+    const px=(r.ivPx!=null&&r.ivPx>0)?r.ivPx:((f.px>0)?Math.round(f.px):null);
+    const val=r.intrinsic,mos=(r.ivMos!=null)?r.ivMos/100:null;
+    // fiabilidad con el MISMO criterio que usa el agente (valorizacionJSON): sin triangulación o con las
+    // anclas cercanas a la mediana discrepando, la valorización es una referencia gruesa.
+    const fiab=(val==null)?null:((r.ivN<2||r.ivDisp>0.6)?"baja":(r.ivDisp>0.35?"media":"alta"));
+    // PRECIO DE COMPRA. Se exige el margen objetivo: si el cierre de hoy ya lo entrega, la orden es a
+    // mercado; si no, la carta propone el límite al que sí lo entregaría. Nunca "cómprala igual".
+    // El límite se redondea HACIA ABAJO: redondeando al peso más cercano el margen podía quedar en 14,99%
+    // en vez del 15% exigido — un peso de más en la orden no cambia nada, pero incumplir la regla propia sí.
+    const limite=(val!=null&&val>0)?Math.floor(val*(1-CARTA_MOS_OBJ)):null;
+    const aMercado=(limite!=null&&px!=null&&px<=limite);
+    const entrada=(limite==null)?null:(aMercado?px:limite);
+    // distancia del precio de hoy al límite (cuánto tendría que ceder para ser compra a mercado)
+    const cede=(limite!=null&&px>0&&!aMercado)?((px-limite)/px*100):null;
+    return {r,f,px,val,mos,fiab,limite,aMercado,entrada,cede,
+      mes:per?per.mes:null,semana:per?per.semana:null,dia:per?per.dia:null,fecha:per?per.lastDate:null,
+      ipsaMes:ipsa?ipsa.mes:null,vsIpsa:(per&&per.mes!=null&&ipsa&&ipsa.mes!=null)?(per.mes-ipsa.mes):null,
+      tengo:enCartera[r.t]||null};
+  };
+  const todas=sc.rows.map(arma);
+  // COMPRAR: puntaje sólido + margen de seguridad positivo y triangulado (≥2 anclas)
+  const comprar=todas.filter(x=>x.r.score>=CARTA_SCORE_MIN&&x.r.ivN>=2&&x.mos!=null&&x.mos>0).slice(0,CARTA_MAX);
+  const compradas={};comprar.forEach(x=>compradas[x.r.t]=1);
+  // EN OBSERVACIÓN: puntúan bien, pero hoy no hay precio (o la valorización no triangula)
+  const obsTodas=todas.filter(x=>x.r.score>=CARTA_SCORE_MIN&&!compradas[x.r.t]);
+  const observar=obsTodas.slice(0,CARTA_OBS_MAX);
+  const obsCortadas=obsTodas.length-observar.length;   // si la lista se corta, la carta lo dice (no hay topes callados)
+  // FUERA: las de peor puntaje del universo (lo que la carta NO propone, dicho de frente)
+  const evitar=todas.slice().sort((a,b)=>a.r.score-b.r.score).slice(0,5);
+  return {sc,comprar,observar,obsCortadas,evitar,todas,ipsa,
+    // monto por operación bajo el cual la comisión MÍNIMA del operador se come el margen: no es opinión,
+    // es el punto en que el mínimo deja de ser el porcentaje pactado. Con BTG (0,4%+IVA, mín $1.000+IVA)
+    // son $250.000: bajo eso pagas más del 0,4% aunque el contrato diga 0,4%.
+    montoMin:(BROKER&&+BROKER.min>0&&+BROKER.pct>0)?Math.round((+BROKER.min)/((+BROKER.pct)/100)):null};
+}
+function genCartaReco(){
+  const D=cartaRecoData();
+  if(!D){window.alert("Aún no se puede armar la carta: el Investor Score necesita al menos 3 acciones con cierres suficientes y el IPSA en la base. Carga cierres en ⚙ Configuración → Datos y vuelve a intentarlo.");return;}
+  const esc=s=>(""+(s==null?"":s)).replace(/</g,"&lt;");
+  const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
+  // TODO número que se imprime pasa por aquí: coma decimal y punto de miles, como el resto de Investor.
+  // Un toFixed() suelto imprimía "10.5%" en un documento en español —y, peor, dejaba la carta y la pantalla
+  // mostrando el mismo número escrito de dos formas distintas.
+  const nd=(v,d)=>(+v).toLocaleString("es-CL",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const pct=(v,d)=>v==null?"—":((v>=0?"+":"−")+nd(Math.abs(v),d==null?2:d)+"%");
+  const num=(v,d)=>v==null?"—":(+v).toLocaleString("es-CL",{maximumFractionDigits:d==null?2:d});
+  const _recL={strong_buy:"Compra fuerte",buy:"Compra",overweight:"Sobreponderar",hold:"Mantener",neutral:"Neutral",underweight:"Subponderar",underperform:"Vender",sell:"Vender"};
+  // el "nombre" de muchas acciones en la base ES el ticker: imprimirlo dos veces ("ITAUCL · ITAUCL")
+  // se lee como un error del documento. Solo se muestra cuando aporta algo distinto.
+  const nomDe=r=>{const n=(""+(r.n==null?"":r.n)).trim();return (!n||n.toUpperCase()===(""+r.t).toUpperCase())?"":n;};
+  const flag=x=>(x.fiab==="baja")?' <span style="color:'+amber+'" title="Valorización de fiabilidad baja: sin triangulación o con las anclas discrepando entre sí">⚠</span>':"";
+  // ── una ficha por acción recomendada ──
+  const ficha=(x,i)=>{
+    const r=x.r,f=x.f,col=iscCol(r.score);
+    const tiles=`<div class="tiles">`
+      +tile("Investor Score",r.score+"<small>/100</small>",iscTier(r.score)+" · confianza "+r.confianza+"%",col,col)
+      +tile("Último mes",pct(x.mes),x.vsIpsa!=null?("IPSA "+pct(x.ipsaMes)+" · "+(x.vsIpsa>=0?"le gana por ":"queda ")+nd(Math.abs(x.vsIpsa),2)+" pts"):"vs el cierre de hace ~30 días",x.mes==null?muted:(x.mes>=0?green:red),x.mes==null?muted:(x.mes>=0?green:red))
+      +tile("Valor intrínseco","$"+num(x.val,0),"banda $"+num(r.intrinsicLo,0)+"–$"+num(r.intrinsicHi,0)+" · "+r.ivN+" anclas · fiabilidad "+x.fiab,indigo,indigo)
+      +tile("Margen de seguridad",pct(x.mos*100,1),mosLabel(x.mos).txt+" sobre el cierre de $"+num(x.px,0),x.mos>=CARTA_MOS_OBJ?green:amber,x.mos>=CARTA_MOS_OBJ?green:amber)
+      +tile("Precio de compra","$"+num(x.entrada,0),x.aMercado?"a mercado: el cierre de hoy ya da el margen":"orden límite: hoy está "+nd(x.cede,1)+"% por encima",x.aMercado?green:amber,x.aMercado?green:amber)
+      +`</div>`;
+    const fu=[];
+    if(f.pe!=null)fu.push("P/U "+num(f.pe,1)+(f.fpe!=null?(" (forward "+num(f.fpe,1)+")"):""));
+    if(f.pb!=null)fu.push("P/B "+num(f.pb,2));
+    if(f.dy!=null)fu.push("dividendos "+num(f.dy,2)+"%");
+    if(f.roe!=null)fu.push("ROE "+num(f.roe,1)+"%");
+    if(f.nm!=null)fu.push("margen neto "+num(f.nm,1)+"%");
+    if(f.de!=null)fu.push("deuda/patrimonio "+num(f.de,2)+"×");
+    if(f.target!=null&&x.px>0)fu.push("precio objetivo $"+num(f.target,0)+" ("+pct((f.target/x.px-1)*100,1)+")"+(f.nAn?(" · "+f.nAn+(f.nAn===1?" analista":" analistas")):"")+(f.rec&&_recL[f.rec]?(" · consenso "+_recL[f.rec].toLowerCase()):""));
+    const met=(r.ivMetodos||[]).map(m=>esc(m.n)+" $"+num(m.v,0)).join(" · ");
+    const pOrden=x.aMercado
+      ?`<b style="color:${green}">Comprar a mercado.</b> El cierre de $${num(x.px,0)} del ${fD(x.fecha||D.sc.day)} ya está ${nd(x.mos*100,1)}% bajo su valor estimado de $${num(x.val,0)}, sobre el ${(CARTA_MOS_OBJ*100).toFixed(0)}% de margen que esta carta exige para entrar sin condiciones.`
+      :`<b style="color:${amber}">Comprar con orden límite a $${num(x.entrada,0)}.</b> Hoy cierra en $${num(x.px,0)}: hay margen (${nd(x.mos*100,1)}%), pero para exigir el ${(CARTA_MOS_OBJ*100).toFixed(0)}% que esta carta pide el precio debe ceder ${x.cede.toFixed(1)}%. Si no llega, no se compra.`;
+    const cuerpo=tiles
+      +`<div class="note" style="margin-top:10px">${scoreWhy(r)}</div>`
+      +(fu.length?`<p style="margin:9px 0 0;font-size:11.5px;line-height:1.65"><b>Fundamentos:</b> ${fu.join(" · ")}.</p>`:"")
+      +`<p style="margin:7px 0 0;font-size:11.5px;line-height:1.65"><b>Valorización:</b> valor central $${num(x.val,0)} = mediana de ${r.ivN} ancla(s) — ${met||"—"} — con retorno exigido ${num(r.ivR,1)}% (CAPM, β ${num(r.beta,2)})${r.ivG!=null?" y crecimiento g "+num(r.ivG,1)+"%":""}. Fiabilidad <b>${x.fiab}</b> (dispersión ${num(r.ivDisp,2)}).${x.fiab==="baja"?` <b style="color:${amber}">⚠ Las anclas no coinciden: trata el valor como una referencia gruesa y exige más margen del habitual.</b>`:""}</p>`
+      +`<p style="margin:7px 0 0;font-size:11.5px;line-height:1.65">${pOrden}${D.montoMin?` Por la comisión mínima del operador (${esc(brokerSummary())}), una orden bajo <b>${fmtCLP(D.montoMin)}</b> paga en la práctica más del ${(+BROKER.pct||0)}% pactado.`:""}</p>`
+      +(x.tengo?`<p style="margin:7px 0 0;font-size:11.5px"><b>Ya la tienes</b> en ${x.tengo.map(esc).join(", ")}: esto sería aumentar la posición, no abrirla — revisa la concentración antes de comprar.</p>`:"")
+      ;   // las alertas NO se repiten aquí: scoreWhy ya las imprime al cierre de su explicación
+    const sub=`${esc(f.rec&&_recL[f.rec]?_recL[f.rec]+" según analistas · ":"")}rentabilidad del último mes ${pct(x.mes)} · margen de seguridad ${pct(x.mos*100,1)} · ${x.aMercado?"comprar a mercado":"orden límite a $"+num(x.entrada,0)}`;
+    const _nm=nomDe(r);
+    return card(`${i+1}. ${esc(r.t)}${_nm?` · <span style="color:${r.c}">${esc(_nm)}</span>`:""}${flag(x)}`,sub,cuerpo);
+  };
+  const fichas=D.comprar.length?D.comprar.map(ficha).join("")
+    :`<div class="card"><div class="bd"><div class="note" style="margin:0">Hoy <b>ninguna acción reúne las dos condiciones</b> a la vez: puntaje ${CARTA_SCORE_MIN}+ en el Investor Score <b>y</b> margen de seguridad positivo con valorización triangulada. No hay recomendación de compra: esperar es una decisión válida. Las candidatas por puntaje están en la sección siguiente, con el precio al que sí valdría la pena entrar.</div></div></div>`;
+  // ── en observación ──
+  const obsRows=D.observar.map(x=>{
+    const motivo=(x.val==null)?"sin datos para valorizar (Yahoo no cubre sus fundamentos)"
+      :(x.r.ivN<2)?"una sola ancla de valorización: sin triangulación"
+      :(x.mos!=null&&x.mos<=0)?"cotiza sobre su valor estimado":"sin margen suficiente";
+    return `<tr><td><b style="color:${x.r.c}">${esc(x.r.t)}</b> <span style="color:var(--muted);font-size:10.5px">${esc(nomDe(x.r).slice(0,24))}</span></td>
+      <td class="r tnum" style="font-weight:800;color:${iscCol(x.r.score)}">${x.r.score}</td>
+      <td class="r tnum" style="color:${x.mes==null?muted:(x.mes>=0?green:red)}">${pct(x.mes)}</td>
+      <td class="r tnum">${x.px!=null?"$"+num(x.px,0):"—"}</td>
+      <td class="r tnum">${x.val!=null?"$"+num(x.val,0):"—"}</td>
+      <td class="r tnum" style="color:${x.mos==null?muted:(x.mos>0?green:red)}">${x.mos!=null?pct(x.mos*100,1):"—"}</td>
+      <td class="r tnum" style="font-weight:700;color:${indigo}">${x.limite!=null?"$"+num(x.limite,0):"—"}</td>
+      <td style="font-size:10.5px;color:var(--muted)">${motivo}</td></tr>`;}).join("");
+  const obsCard=D.observar.length
+    ?card("En observación · buen negocio, precio todavía no","Puntúan "+CARTA_SCORE_MIN+"+ en el Investor Score pero hoy no ofrecen el margen que esta carta exige. La columna <b>Comprar bajo</b> es el precio al que pasarían a recomendarse: úsala como orden límite o como alerta."+(D.obsCortadas>0?` · <b>se listan las ${D.observar.length} de mayor puntaje; quedan ${D.obsCortadas} más fuera de esta tabla</b>`:""),
+      `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">Último mes</th><th class="r">Cierre</th><th class="r">Valor</th><th class="r">Margen</th><th class="r">Comprar bajo</th><th>Por qué todavía no</th></tr></thead><tbody>${obsRows}</tbody></table></div>`)
+    :"";
+  // ── fuera de la selección ──
+  const evRows=D.evitar.map(x=>`<tr><td><b style="color:${x.r.c}">${esc(x.r.t)}</b> <span style="color:var(--muted);font-size:10.5px">${esc(nomDe(x.r).slice(0,24))}</span></td>
+    <td class="r tnum" style="font-weight:800;color:${iscCol(x.r.score)}">${x.r.score}</td>
+    <td class="r tnum">${x.r.rr}</td><td class="r tnum">${x.r.fund!=null?x.r.fund:"—"}</td><td class="r tnum">${x.r.tend!=null?x.r.tend:"—"}</td>
+    <td class="r tnum" style="color:${x.mes==null?muted:(x.mes>=0?green:red)}">${pct(x.mes)}</td>
+    <td class="r tnum" style="color:${x.mos==null?muted:(x.mos>0?green:red)}">${x.mos!=null?pct(x.mos*100,1):"—"}</td>
+    <td style="font-size:10.5px;color:var(--muted)">${x.r.alertas&&x.r.alertas.length?esc(x.r.alertas[0]):"sus métricas quedan bajo el resto del universo"}</td></tr>`).join("");
+  const evCard=card("Fuera de la selección hoy","Las cinco de menor puntaje del universo analizado. No es un juicio sobre la empresa: es que hoy, con estos datos, hay mejores alternativas.",
+    `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">R-Ret</th><th class="r">Fund</th><th class="r">Tend</th><th class="r">Último mes</th><th class="r">Margen</th><th>Motivo principal</th></tr></thead><tbody>${evRows}</tbody></table></div>`);
+  // ── metodología ──
+  const metCard=card("Cómo se construye esta carta","Todo lo anterior sale de datos reales: cierres de la base de precios y fundamentos publicados. Sin datos de ejemplo.",
+    `<p style="margin:0;font-size:11.5px;line-height:1.7"><b>1 · Selección.</b> Se parte del <b>Investor Score</b> (45% riesgo-retorno + 30% fundamentos + 25% tendencia, con candado de confianza) y se exige puntaje ≥ ${CARTA_SCORE_MIN}. <b>2 · Precio.</b> Sobre esa lista se exige <b>margen de seguridad positivo</b> con la valorización <b>triangulada</b> (≥2 anclas de las tres: DDM/Gordon con dividendos, múltiplo justo con el P/U de referencia del universo, precio objetivo de analistas). El valor central es la <b>mediana</b> de las anclas, robusta a que una se dispare. <b>3 · Orden.</b> Se compra a mercado solo si el cierre está al menos ${(CARTA_MOS_OBJ*100).toFixed(0)}% bajo ese valor; si no, la carta propone el <b>límite</b> al que sí lo estaría. <b>4 · Desempeño.</b> El "último mes" es la variación móvil de los últimos ~30 días desde los cierres reales (misma convención que el IPSA del Home), no lo que va del mes.</p>
+     <p style="margin:9px 0 0;font-size:11.5px;line-height:1.7"><b>Lo que esta carta NO hace.</b> No dice cuánto invertir ni cómo repartirlo; no es una cartera. No predice el precio: el margen de seguridad dice a qué <b>precio</b> conviene entrar, no <b>cuándo</b> va a subir. No reemplaza el juicio propio ni conoce tu situación tributaria, tu horizonte ni tu tolerancia al riesgo. Una valorización marcada <b style="color:${amber}">⚠</b> es una referencia gruesa: sus anclas no coinciden entre sí.</p>`);
+  // sin saltos de página forzados: las secciones de esta carta son tablas cortas, y obligarlas a empezar
+  // en hoja nueva dejaba cuatro hojas a medio llenar. Que fluyan es lo que la deja compacta.
+  const bodyHTML=repSec("1","Acciones recomendadas para comprar",D.comprar.length?(D.comprar.length+" de "+D.sc.n+" acciones cumplen puntaje y precio"):"ninguna cumple hoy las dos condiciones")+fichas
+    +(obsCard?repSec("2","En observación · esperar mejor precio","candidatas por puntaje, sin margen de seguridad hoy")+obsCard:"")
+    +repSec(obsCard?"3":"2","Fuera de la selección hoy","las de menor puntaje del universo")+evCard
+    +repSec(obsCard?"4":"3","Metodología y límites","cómo se eligieron y qué no dice esta carta")+metCard;
+  const _mej=D.comprar.length?D.comprar[0]:null;
+  const metaHTML=invReportMeta([
+    ["Dirigida a",userNombre()?esc(userNombre()):"Titular de la cuenta"],
+    ["Universo",D.sc.n+" acciones del IPSA"],
+    ["Cierres al",fD(lastBaseDate())],
+    ["Recomendadas",String(D.comprar.length)+" de "+D.sc.n],
+    ["Margen exigido",(CARTA_MOS_OBJ*100).toFixed(0)+"% bajo el valor estimado"],
+    ["Operador",esc(brokerSummary())]
+  ]);
+  const execHTML=D.comprar.length
+    ?`De las <b>${D.sc.n} acciones</b> del universo, <b>${D.comprar.length}</b> reúnen hoy las dos condiciones que esta carta exige para recomendar una compra: puntaje ≥ ${CARTA_SCORE_MIN} en el Investor Score <b>y</b> un precio bajo su valor estimado por fundamentos. La primera es <b>${esc(_mej.r.t)}</b> (score ${_mej.r.score}/100, margen de seguridad ${pct(_mej.mos*100,1)}, ${_mej.aMercado?"comprable a mercado en $"+num(_mej.px,0):"con orden límite en $"+num(_mej.entrada,0)}), que en el último mes rindió <b>${pct(_mej.mes)}</b>${_mej.ipsaMes!=null?` contra ${pct(_mej.ipsaMes)} del IPSA`:""}. ${D.observar.length?`Otras <b>${D.observar.length}</b> puntúan bien pero cotizan sin margen: quedan en observación con el precio al que sí valdría la pena entrar.`:""} Cada ficha detalla el desempeño reciente, los fundamentos, el valor intrínseco con su banda y el precio de compra propuesto.`
+    :`Hoy <b>ninguna</b> de las ${D.sc.n} acciones del universo reúne las dos condiciones que esta carta exige: puntaje ≥ ${CARTA_SCORE_MIN} en el Investor Score <b>y</b> precio bajo su valor estimado por fundamentos. Recomendar una compra sin margen de seguridad sería recomendar pagar de más, así que la carta no propone ninguna. ${D.observar.length?`Las <b>${D.observar.length}</b> candidatas por puntaje quedan en observación, cada una con el precio al que pasarían a recomendarse.`:""} No comprar también es una decisión.`;
+  const footHTML=`<b>Naturaleza de este documento.</b> Investor es una herramienta de análisis personal: esta carta es un <b>ejercicio metodológico sobre datos públicos</b> —cierres de la base de precios y fundamentos publicados— y <b>no constituye asesoría ni recomendación de inversión</b> en los términos de la Ley 18.045 ni de la normativa de la CMF. Quien decide es usted. Las valorizaciones son estimaciones con supuestos explícitos (CAPM con Rf ${num(typeof RF==="number"?RF:5.5,1)}% y prima ${num(typeof PRIMA==="number"?PRIMA:6,1)}%, crecimiento acotado, P/U de referencia del universo) y una banda, no un precio futuro; las marcadas <b>⚠</b> tienen fiabilidad baja. Rentabilidades pasadas no aseguran rentabilidades futuras. Los costos de transacción (${esc(brokerSummary())}) y los impuestos reducen el resultado y no están descontados en el margen de seguridad.`;
+  const sigHTML=`<div class="rp-sig"><div class="s1">Investor · análisis automatizado<br><span style="color:#9FB2CF">Generado el ${esc(fch)} con cierres al ${fD(lastBaseDate())}</span></div><div class="s1">Decisión del titular<br><span style="color:#9FB2CF">Nombre y firma</span></div></div>`;
+  const html=invReportShell({
+    docTitle:"Carta de recomendación de inversión · Investor",
+    title:"Carta de recomendación de inversión",
+    subtitle:D.sc.n+" acciones del IPSA evaluadas · puntaje y precio · cierres al "+fD(lastBaseDate())+" · emitida el "+esc(fch),
+    hero:{label:"Acciones recomendadas",value:String(D.comprar.length),sub:D.comprar.length?("de "+D.sc.n+" evaluadas"):"ninguna cumple hoy",subColor:D.comprar.length?"#9FE8C4":"#FFD9A6"},
+    metaHTML,execHTML,bodyHTML,footHTML,sigHTML,
+    folio:"INV-CARTA-"+localDay().replace(/-/g,""),fch
+  });
+  const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar la carta.");
+}
 function attachHome(){
   // el aviso de base rezagada lleva directo a donde se arregla: la fuente automática de cierres
   const _hf=document.getElementById("homeFuente");if(_hf)_hf.onclick=()=>{cfgTab="datos";cfgOpen();};
@@ -11621,6 +11811,7 @@ function attachHome(){
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
+  {const _cr=document.querySelector("[data-cartareco]");if(_cr)_cr.onclick=()=>{try{genCartaReco();}catch(e){try{console.error("genCartaReco:",e);}catch(_){}window.alert("No se pudo generar la carta: "+((e&&e.message)||e));}};}
   try{attachMultiHover("ipsahome");}catch(e){}
   try{attachMultiHover("homesolo");}catch(e){}   // fondo único: tooltip con la fecha y el valor de la cartera y del IPSA
   try{attachMultiHover("mgret");}catch(e){}   // rentabilidad neta en el tiempo: tooltip con fecha y % al pasar el mouse
