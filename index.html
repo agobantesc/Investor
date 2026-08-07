@@ -1395,30 +1395,75 @@
   .isc-carta{flex:0 0 auto;border:1px solid transparent;background:linear-gradient(135deg,var(--accent),#7C4DD8);color:#fff;font:800 11.5px var(--font);padding:.42rem .78rem;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s var(--ease);box-shadow:0 6px 16px -9px rgba(60,80,200,.75);}
   .isc-carta:hover{filter:brightness(1.07);box-shadow:0 8px 20px -8px rgba(60,80,200,.85);}
   @media(max-width:760px){.isc-head{flex-wrap:wrap}.isc-carta,.isc-all{font-size:11px;padding:.38rem .6rem}}
-  /* ── CARTA DE RECOMENDACIÓN: va para amigos, así que se lee como una carta y no como un informe ──
-     Título grande, cuatro números por acción y un párrafo en prosa. Las reglas con .rp-page suben el
-     tamaño del texto en el PDF, donde el informe normal lo achica para meter tablas densas: aquí no hay
-     tablas densas, hay tres frases que alguien va a leer en el sillón. */
-  .ct-card>.hd{align-items:center;padding-bottom:.5rem}
-  .ct-card>.hd .ct{font:900 17px var(--font);letter-spacing:-.2px}
-  .ct-tiles{grid-template-columns:repeat(4,1fr)!important}
-  .ct-txt{margin:12px 0 0;font-size:12.5px;line-height:1.8;color:var(--ink)}
-  .ct-badge{flex:0 0 auto;display:inline-block;font:800 11px var(--font);padding:.34rem .68rem;border-radius:999px;white-space:nowrap}
-  .ct-badge.ok{color:#0E7A50;background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.35)}
-  .ct-badge.lim{color:#8A5A00;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.38)}
-  /* en papel la carta se aprieta lo justo para que dos recomendaciones quepan en UNA hoja: con el interlineado
-     de pantalla se pasaba por ~35 px y arrastraba una segunda hoja para el pie */
-  .rp-page .ct-card>.hd{padding-bottom:.3rem}
-  .rp-page .ct-card>.bd{padding-top:.45rem}
-  .rp-page .ct-card>.hd .ct{font-size:15px}
-  .rp-page .ct-txt{font-size:11px;line-height:1.58;margin-top:8px}
-  .rp-page .ct-card{margin-bottom:7px}
-  .rp-page .ct-badge{font-size:10px;padding:.26rem .55rem}
-  .rp-page .ct-tiles .tile{padding:.42rem .55rem}
-  .rp-page .ct-tiles .tile .l{font-size:8.5px;margin-bottom:2px}
-  .rp-page .ct-tiles .tile .v{font-size:15.5px}
-  .rp-page .ct-tiles .tile .s{font-size:8.5px;line-height:1.3;margin-top:1px}
-  @media(max-width:760px){.ct-tiles{grid-template-columns:repeat(2,1fr)!important}}
+  /* ══ INFORME DE RECOMENDACIÓN ═══════════════════════════════════════════════════════════════════
+     Va a manos de un cliente, así que tiene identidad propia dentro del informe: paleta declarada en
+     variables del PROPIO documento (nunca las constantes JS, que llevan la paleta del tema en que esté
+     la app al generarlo — un informe hecho de noche salía con los grises del modo oscuro sobre papel
+     blanco), cabeceras de sección numeradas, tablas de banca con fila cebrada y cifras tabulares, y
+     tarjetas de veredicto que se leen de un vistazo. */
+  .rp-doc,.ct-panel,.ct-verdict,.ct-sec{
+    --ct-navy:#0B2545;--ct-navy2:#16386E;--ct-ink:#12253F;--ct-mute:#6B7E9B;--ct-line:#E3EBF6;
+    --ct-ok:#0B7A52;--ct-okbg:#EAF7F1;--ct-bad:#C4302B;--ct-warn:#A9720C;--ct-blue:#1E5FD1;--ct-zebra:#F7FAFE;}
+  /* cabecera de sección: número en cuadro navy + título + bajada, con filete inferior */
+  .ct-block{margin:20px 0 0;break-inside:avoid;page-break-inside:avoid;}
+  .ct-block:first-child{margin-top:4px}
+  .ct-block>.hd{display:flex;align-items:center;gap:11px;padding:0 0 7px;margin:0;border:0;border-bottom:2px solid var(--ct-navy);background:none;}
+  .ct-block>.bd{padding:9px 0 0;background:none;}
+  /* el flujo por costuras deja de ser exclusivo de las tarjetas: cualquier bloque .hd/.bd puede fluir */
+  .rp-page .rp-flow{break-inside:auto!important;page-break-inside:auto!important;}
+  .rp-page .rp-flow>.hd{break-after:avoid;page-break-after:avoid;}
+  .rp-page .rp-flow>.bd{break-before:avoid;page-break-before:avoid;}
+  .ct-secn{flex:0 0 auto;width:26px;height:26px;border-radius:7px;background:var(--ct-navy);color:#fff;font:900 13px var(--font);display:flex;align-items:center;justify-content:center;}
+  .ct-sech{flex:1 1 auto;min-width:0}
+  .ct-sect{font:900 15.5px var(--font);color:var(--ct-navy);letter-spacing:-.2px;line-height:1.15}
+  .ct-secs{font-size:10px;color:var(--ct-mute);font-weight:600;margin-top:1px}
+  /* panel y tabla */
+  .ct-panel{border:1px solid var(--ct-line);border-radius:10px;overflow:hidden;background:#fff;break-inside:avoid;page-break-inside:avoid;}
+  .ct-tab{width:100%;border-collapse:collapse;font-size:10.5px;color:var(--ct-ink);}
+  .ct-tab th{background:var(--ct-navy);color:#fff;font:800 8.8px var(--font);letter-spacing:.5px;text-transform:uppercase;padding:7px 8px;text-align:left;white-space:nowrap;}
+  .ct-tab th.r,.ct-tab td.r{text-align:right}
+  .ct-tab td{padding:6px 8px;border-top:1px solid var(--ct-line);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .ct-tab tbody tr:nth-child(even){background:var(--ct-zebra)}
+  .ct-tk{font-weight:800;color:var(--ct-navy)}
+  .ct-strong{font-weight:800}
+  .ct-rk{width:22px;padding-left:8px!important}
+  .ct-rk span{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:5px;color:#fff;font:800 9px var(--font)}
+  .ct-score{display:inline-block;min-width:26px;text-align:center;padding:2px 5px;border-radius:5px;color:#fff;font:800 10px var(--font)}
+  .ct-rec{display:inline-block;padding:1px 6px;border-radius:999px;border:1px solid var(--ct-line);background:#F2F6FC;color:var(--ct-navy2);font:700 9px var(--font);white-space:nowrap}
+  .ct-why{color:var(--ct-mute);white-space:normal}
+  /* barra proporcional del retorno del mes, dentro de la celda */
+  .ct-bar{display:inline-block;width:34px;height:4px;border-radius:2px;background:#E9EEF7;margin-left:6px;vertical-align:middle;overflow:hidden}
+  .ct-bar i{display:block;height:100%;border-radius:2px}
+  .ct-bar i.up{background:var(--ct-ok)} .ct-bar i.dn{background:var(--ct-bad)}
+  .ct-foot{padding:7px 10px;border-top:1px solid var(--ct-line);background:#FAFCFF;font-size:9.5px;color:var(--ct-mute);line-height:1.5}
+  /* veredicto */
+  .ct-vsum{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--ct-line);border-left:4px solid var(--ct-navy);border-radius:10px;background:linear-gradient(180deg,#F7FAFF,#FFF);font-size:11.5px;color:var(--ct-ink);line-height:1.5;break-inside:avoid}
+  .ct-vnum{flex:0 0 auto;font:900 30px var(--font);color:var(--ct-navy);line-height:1}
+  /* auto-fit, no tres columnas fijas: con dos recomendadas quedaba un hueco a la derecha que en un
+     informe para clientes se lee como que falta algo */
+  .ct-vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:10px;margin-top:11px}
+  .ct-v{border:1px solid var(--ct-line);border-top:3px solid var(--ct-ok);border-radius:10px;padding:10px 11px;background:linear-gradient(180deg,var(--ct-okbg),#FFF);break-inside:avoid;page-break-inside:avoid}
+  .ct-vh{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .ct-vtk{font:900 14px var(--font);color:var(--ct-navy);letter-spacing:-.2px}
+  .ct-vb{display:inline-block;padding:2px 8px;border-radius:999px;font:800 9px var(--font);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+  .ct-vb.ok{background:var(--ct-ok);color:#fff}
+  .ct-vb.no{background:#EDF1F7;color:var(--ct-mute);border:1px solid var(--ct-line)}
+  .ct-vp{margin-top:8px;padding-top:8px;border-top:1px dashed #CFE0D8}
+  .ct-vl{display:block;font:800 8.5px var(--font);letter-spacing:.6px;text-transform:uppercase;color:var(--ct-mute)}
+  .ct-vv{display:block;font:900 20px var(--font);color:var(--ct-ok);line-height:1.15;font-variant-numeric:tabular-nums}
+  .ct-vs{display:block;font-size:9px;color:var(--ct-mute);margin-top:1px}
+  .ct-vw{margin-top:8px;font-size:10px;line-height:1.55;color:var(--ct-ink)}
+  .ct-warn{color:var(--ct-warn)}
+  /* glosario: dos columnas, término y definición en una línea */
+  .ct-glo{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0}
+  .ct-g{padding:7px 11px;border-top:1px solid var(--ct-line);font-size:9.8px;line-height:1.5;color:var(--ct-ink)}
+  .ct-g:nth-child(-n+2){border-top:0}
+  .ct-g:nth-child(odd){border-right:1px solid var(--ct-line)}
+  /* solo el TÉRMINO va en bloque: un <b> dentro de la definición (p. ej. "P/U proy.") partía la línea */
+  .ct-g>b{display:block;color:var(--ct-navy);font-weight:800;font-size:10px;margin-bottom:1px}
+  .ct-g span b{color:var(--ct-navy);font-weight:800}
+  .ct-g span{color:var(--ct-mute)}
+  @media(max-width:900px){.ct-glo{grid-template-columns:1fr}.ct-g:nth-child(odd){border-right:0}.ct-g:nth-child(2){border-top:1px solid var(--ct-line)}}
   .isc-cols{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;}
   .isc-block{display:flex;flex-direction:column;}
   .isc-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line);background:transparent;padding:.5rem .4rem;cursor:pointer;border-radius:8px;transition:.12s var(--ease);}
@@ -11587,7 +11632,7 @@ function investorScoreCard(){
   const head=`<div class="isc-head">
       <div class="isc-badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 5.5L20 8.2l-4.2 3.9 1.1 5.7L12 15.6 7.1 17.8l1.1-5.7L4 8.2l5.6-.7z"/></svg></div>
       <div class="isc-h-txt"><div class="isc-title">Investor Score</div><div class="isc-sub">Las mejores alternativas del IPSA según Investor · ${sc.n} acciones · actualizado ${(""+sc.day).slice(8,10)}/${(""+sc.day).slice(5,7)}</div></div>
-      <button class="isc-carta" data-cartareco title="Genera un documento imprimible con las acciones recomendadas para comprar hoy: desempeño del último mes, fundamentos, valor intrínseco y el precio de compra propuesto">✉ Carta de recomendación</button>
+      <button class="isc-carta" data-cartareco title="Informe imprimible sobre las 10 mejor evaluadas: desempeño y riesgo, fundamentos, veredicto de invertir o no invertir con su precio de compra, y glosario">📄 Informe de recomendación</button>
       <button class="isc-all" data-scoreall>Ver las ${sc.n} →</button></div>`;
   const legend=`<div class="isc-legend"><span><i style="background:${green}"></i>≥70 fuerte</span><span><i style="background:${indigo}"></i>55–69 sólido</span><span><i style="background:${amber}"></i>40–54 neutro</span><span><i style="background:${red}"></i>&lt;40 evitar</span></div>`;
   const nota=`<div class="note" style="margin:10px 0 0;font-size:10.5px">Síntesis diaria: <b>45% riesgo-retorno</b> + 30% fundamentos (${_fc}/${sc.n} reales) + 25% tendencia, con candado de confianza. Todo el riesgo ya está descontado. <b>Léelo por tramos</b>: diferencias menores a ~5 puntos no son significativas. Clic en una acción para ver por qué. Educativo, no asesoría financiera.</div>`;
@@ -11657,8 +11702,7 @@ function scoreAllModal(){
    El margen exigido para comprar A MERCADO es del 15%; entre 0% y 15% la carta propone una orden LÍMITE. */
 const CARTA_SCORE_MIN=55;     // "sólido" o mejor, el mismo tramo de la leyenda del Investor Score
 const CARTA_MOS_OBJ=0.15;     // margen de seguridad exigido para comprar al precio de hoy
-const CARTA_MAX=6;            // una carta con veinte "recomendadas" no recomienda nada
-const CARTA_OBS_MAX=12;       // tope de la lista de observación (si se corta, la carta lo dice)
+const CARTA_TOP=10;           // el informe se construye sobre el TOP del Investor Score, y sobre ese top opina
 function cartaRecoData(){
   let sc=null;try{sc=investorScore();}catch(e){}
   if(!sc||!sc.rows||sc.rows.length<3)return null;
@@ -11684,111 +11728,170 @@ function cartaRecoData(){
     const entrada=(limite==null)?null:(aMercado?px:limite);
     // distancia del precio de hoy al límite (cuánto tendría que ceder para ser compra a mercado)
     const cede=(limite!=null&&px>0&&!aMercado)?((px-limite)/px*100):null;
-    return {r,f,px,val,mos,fiab,limite,aMercado,entrada,cede,
+    // VEREDICTO por acción, con la misma regla dura de siempre: se invierte cuando la empresa convence
+    // (puntaje) Y el precio acompaña (margen de seguridad positivo, con la valorización triangulada).
+    // El motivo del "no" nunca es un juicio vago: dice cuál de las dos condiciones falta.
+    const invertir=!!(r.score>=CARTA_SCORE_MIN&&r.ivN>=2&&mos!=null&&mos>0);
+    // Cuánto MÁS cuesta que lo estimado, sobre el VALOR: mos=(val−px)/val, así que px/val−1 = −mos y punto.
+    // Dividir por (1+mos) —el sobreprecio sobre el precio— reventaba cuando la acción cuesta más del doble
+    // de lo estimado: con mos −122,5% el denominador se hace negativo y salía "cuesta −544% más".
+    const _sobre=(mos!=null&&mos<0)?(-mos*100):null;
+    const motivo=invertir?null
+      :(val==null)?"sin fundamentos publicados para valorizarla"
+      :(r.ivN<2)?"una sola referencia de valor: no se puede triangular"
+      :(mos!=null&&mos<=0)?("cuesta "+(_sobre!=null?Math.round(_sobre)+"% ":"")+"más de lo que estimamos que vale")
+      :(r.score<CARTA_SCORE_MIN)?"sus números quedan bajo el resto del universo"
+      :"buen negocio, pero sin margen suficiente al precio de hoy";
+    return {r,f,px,val,mos,fiab,limite,aMercado,entrada,cede,invertir,motivo,
       mes:per?per.mes:null,semana:per?per.semana:null,dia:per?per.dia:null,fecha:per?per.lastDate:null,
       ipsaMes:ipsa?ipsa.mes:null,vsIpsa:(per&&per.mes!=null&&ipsa&&ipsa.mes!=null)?(per.mes-ipsa.mes):null,
       tengo:enCartera[r.t]||null};
   };
   const todas=sc.rows.map(arma);
-  // COMPRAR: puntaje sólido + margen de seguridad positivo y triangulado (≥2 anclas)
-  const comprar=todas.filter(x=>x.r.score>=CARTA_SCORE_MIN&&x.r.ivN>=2&&x.mos!=null&&x.mos>0).slice(0,CARTA_MAX);
-  const compradas={};comprar.forEach(x=>compradas[x.r.t]=1);
-  // EN OBSERVACIÓN: puntúan bien, pero hoy no hay precio (o la valorización no triangula)
-  const obsTodas=todas.filter(x=>x.r.score>=CARTA_SCORE_MIN&&!compradas[x.r.t]);
-  const observar=obsTodas.slice(0,CARTA_OBS_MAX);
-  const obsCortadas=obsTodas.length-observar.length;   // si la lista se corta, la carta lo dice (no hay topes callados)
-  // FUERA: las de peor puntaje del universo (lo que la carta NO propone, dicho de frente)
-  const evitar=todas.slice().sort((a,b)=>a.r.score-b.r.score).slice(0,5);
-  return {sc,comprar,observar,obsCortadas,evitar,todas,ipsa,
+  // El informe mira el TOP del Investor Score y opina sobre ESAS. No hay tope aparte para las
+  // recomendadas: si nueve de las diez merecen compra, la carta dice nueve. Recortar la lista para que
+  // "se vea seleccionada" sería esconderle al cliente parte del análisis.
+  const top=todas.slice(0,CARTA_TOP);
+  const comprar=top.filter(x=>x.invertir);
+  const noComprar=top.filter(x=>!x.invertir);
+  return {sc,top,comprar,noComprar,todas,ipsa,
     // monto por operación bajo el cual la comisión MÍNIMA del operador se come el margen: no es opinión,
     // es el punto en que el mínimo deja de ser el porcentaje pactado. Con BTG (0,4%+IVA, mín $1.000+IVA)
     // son $250.000: bajo eso pagas más del 0,4% aunque el contrato diga 0,4%.
     montoMin:(BROKER&&+BROKER.min>0&&+BROKER.pct>0)?Math.round((+BROKER.min)/((+BROKER.pct)/100)):null};
 }
+/* ══ EL DOCUMENTO ══════════════════════════════════════════════════════════════════════════════════
+   Va a manos de un cliente, así que se lee de arriba abajo y en cada sección hay UNA pregunta:
+     1 · Desempeño   — ¿cómo se han comportado? (rentabilidad, riesgo, sensibilidad al mercado)
+     2 · Fundamentos — ¿cómo son los negocios detrás?
+     3 · Veredicto   — ¿invertir o no, y a qué precio?
+     4 · Glosario    — qué significa cada término, para que nadie tenga que preguntar.
+   Todo se construye sobre el TOP del Investor Score. Números en tablas y una línea de texto por
+   veredicto: el cliente no viene a leer, viene a decidir. */
 function genCartaReco(){
   const D=cartaRecoData();
-  if(!D){window.alert("Aún no se puede armar la carta: el Investor Score necesita al menos 3 acciones con cierres suficientes y el IPSA en la base. Carga cierres en ⚙ Configuración → Datos y vuelve a intentarlo.");return;}
+  if(!D){window.alert("Aún no se puede armar el informe: el Investor Score necesita al menos 3 acciones con cierres suficientes y el IPSA en la base. Carga cierres en ⚙ Configuración → Datos y vuelve a intentarlo.");return;}
   const esc=s=>(""+(s==null?"":s)).replace(/</g,"&lt;");
   const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
-  // TODO número que se imprime pasa por aquí: coma decimal y punto de miles, como el resto de Investor.
-  // Un toFixed() suelto imprimía "10.5%" en un documento en español —y, peor, dejaba la carta y la pantalla
-  // mostrando el mismo número escrito de dos formas distintas.
   const nd=(v,d)=>(+v).toLocaleString("es-CL",{minimumFractionDigits:d,maximumFractionDigits:d});
   const pct=(v,d)=>v==null?"—":((v>=0?"+":"−")+nd(Math.abs(v),d==null?2:d)+"%");
   const num=(v,d)=>v==null?"—":(+v).toLocaleString("es-CL",{maximumFractionDigits:d==null?2:d});
+  const clp=v=>v==null?"—":"$"+num(v,0);
   const _recL={strong_buy:"Compra fuerte",buy:"Compra",overweight:"Sobreponderar",hold:"Mantener",neutral:"Neutral",underweight:"Subponderar",underperform:"Vender",sell:"Vender"};
-  // el "nombre" de muchas acciones en la base ES el ticker: imprimirlo dos veces ("ITAUCL · ITAUCL")
-  // se lee como un error del documento. Solo se muestra cuando aporta algo distinto.
-  const nomDe=r=>{const n=(""+(r.n==null?"":r.n)).trim();return (!n||n.toUpperCase()===(""+r.t).toUpperCase())?"":n;};
-  /* ── POR QUÉ, en castellano y en dos o tres frases ────────────────────────────────────────────────
-     Esta carta va para amigos, no para un comité de inversiones: nadie quiere leer "α confiable +22,2pp
-     sobre lo exigido" ni "dispersión 0,09". Se eligen los DOS O TRES rasgos más notables de la acción y
-     se dicen como se los dirías en una sobremesa. Los números siguen siendo los del motor: lo que cambia
-     es cómo se cuentan, no de dónde salen. Nada se afirma sin dato: si el dato no está, la frase no sale. */
-  const razones=x=>{
-    const f=x.f,r=x.r,R=[];
-    if(f.dy!=null&&f.dy>=3)R.push(`reparte <b>${nd(f.dy,1)}%</b> al año en dividendos`);
-    if(f.roe!=null&&f.roe>=12)R.push(`rinde <b>${nd(f.roe,0)}%</b> sobre el patrimonio de sus dueños`);
-    const _pe=(f.pe!=null&&f.pe>0)?f.pe:null;
-    // "barato" no se afirma a ojo: se compara con el P/U de referencia del universo (la mediana del IPSA).
-    let _med=null;try{_med=fairPE(true);}catch(e){}
-    if(_pe!=null&&_pe<=20)R.push(`se compra a <b>${nd(_pe,0)} veces</b> sus utilidades${(_med>0&&_pe<_med)?", menos que el promedio de la bolsa chilena":""}`);
-    if(f.nm!=null&&f.nm>=15)R.push(`de cada $100 que vende, le quedan <b>$${nd(f.nm,0)}</b> de utilidad`);
-    if(f.target!=null&&x.px>0&&f.target>x.px*1.05)R.push(`los analistas la ven en <b>$${num(f.target,0)}</b> (${pct((f.target/x.px-1)*100,0)} sobre el precio de hoy)`);
-    if(!R.length&&r.mom6m!=null&&r.mom6m>0)R.push(`viene subiendo <b>${pct(r.mom6m,0)}</b> en seis meses`);
-    if(!R.length)R.push(`sus números de riesgo y retorno están entre los mejores del IPSA`);
-    return R.slice(0,3);
-  };
-  // ── una ficha por acción recomendada: cuatro números y un párrafo ──
-  const ficha=(x,i)=>{
-    const r=x.r,_nm=nomDe(r);
-    const orden=x.aMercado
-      ?`<span class="ct-badge ok">Comprar al precio de hoy</span>`
-      :`<span class="ct-badge lim">Comprar solo bajo $${num(x.entrada,0)}</span>`;
-    // Los colores van como VARIABLES CSS, no como los `ink`/`green`/`amber` de JavaScript: esos guardan la
-    // paleta del tema en que esté la app en ese instante, y una carta generada de noche salía impresa con
-    // los colores del modo oscuro (gris claro sobre papel blanco). La variable la resuelve el documento.
-    const _cM=x.mes==null?"var(--muted)":(x.mes>=0?"var(--green)":"var(--red)");
-    const _cP=x.aMercado?"var(--green)":"var(--amber)";
-    const tiles=`<div class="tiles ct-tiles">`
-      +tile("Precio hoy","$"+num(x.px,0),"cierre del "+fD(x.fecha||lastBaseDate()),"var(--muted)","var(--ink)")
-      +tile("Lo que creo que vale","$"+num(x.val,0),"mi estimación por sus números","var(--accent)","var(--accent)")
-      +tile("Precio de compra","$"+num(x.entrada,0),x.aMercado?"hoy ya está barata":"si no llega, no compro",_cP,_cP)
-      +tile("Último mes",pct(x.mes),x.ipsaMes!=null?("la bolsa "+pct(x.ipsaMes)):"vs hace ~30 días",_cM,_cM)
-      +`</div>`;
-    const R=razones(x);
-    const cierre=x.aMercado
-      ?`Hoy cuesta <b>$${num(x.px,0)}</b>, un <b>${nd(x.mos*100,0)}%</b> menos de lo que creo que vale: se puede comprar al precio de hoy.`
-      :`Hoy cuesta <b>$${num(x.px,0)}</b> y a mí me convence desde <b>$${num(x.entrada,0)}</b> hacia abajo. Si no llega a ese precio, prefiero esperar.`;
-    const cuerpo=tiles+`<p class="ct-txt">${R.join("; ")}. ${cierre}${x.fiab==="baja"?` <b style="color:var(--amber)">Ojo: de esta acción hay menos información, tómenla con más cautela.</b>`:""}</p>`;
-    return card(`${i+1}. ${esc(r.t)}${_nm?` · <span style="color:${r.c}">${esc(_nm)}</span>`:""}`,"",cuerpo,orden,"ct-card");
-  };
-  const fichas=D.comprar.length?D.comprar.map(ficha).join("")
-    :`<div class="card"><div class="bd"><p class="ct-txt" style="margin:0">Esta vez <b>no les recomiendo ninguna</b>. Miré las ${D.sc.n} acciones del IPSA y las que tienen buenos números están hoy más caras de lo que valen. Prefiero decirles que esperen antes que sugerirles pagar de más — no comprar también es una decisión.</p></div></div>`;
-  // una sola línea con lo que quedó fuera: da contexto sin convertir la carta en un informe
-  const _obsN=D.observar.length,_obsT=D.observar.slice(0,6).map(z=>esc(z.r.t)).join(", ");
-  const restoCard=card("Cómo las elegí","",
-    `<p class="ct-txt" style="margin:0">Miré las <b>${D.sc.n} acciones del IPSA</b> y me quedo con las que tienen mejores números de negocio, riesgo y retorno; de esas, solo con las que además <b>cuestan menos de lo que valen</b>. Si una es buena empresa pero está cara, no entra: el precio de compra es parte de la recomendación.${_obsN?` Otras <b>${_obsN}</b> me gustan pero hoy están caras (${_obsT}${_obsN>6?", entre otras":""}): las dejo anotadas para cuando bajen.`:""}</p>`,"","ct-card");
-  const bodyHTML=fichas+restoCard;
-  const _mej=D.comprar.length?D.comprar[0]:null;
-  // sin barra de metadatos: repetía lo que ya dicen el encabezado ("cierres al …", "2 de 28 que miré") y el
-  // pie ("emitido el …"). Quitarla es lo que hace, además, que la carta quepa en UNA hoja.
+  const T=D.top,N=T.length;
+  // color por tramo, en variables del DOCUMENTO (no en las constantes JS, que llevan la paleta del tema
+  // en que esté la app al generar: un informe hecho de noche salía con los grises del modo oscuro)
+  const cS=v=>v>=70?"var(--ct-ok)":v>=55?"var(--ct-blue)":v>=40?"var(--ct-warn)":"var(--ct-bad)";
+  const cN=v=>v==null?"var(--ct-mute)":(v>=0?"var(--ct-ok)":"var(--ct-bad)");
+  /* Cada sección es UN bloque con .hd (cabecera) y .bd (cuerpo): así la paginación no puede dejar un
+     título solo al pie de una hoja. Con `flow`, además, el bloque se parte por las filas de su tabla en
+     vez de saltar entero a la hoja siguiente — que es lo que dejaba media hoja en blanco. */
+  const bloque=(n,t,s,html,flow)=>`<div class="ct-block${flow?" rp-flow":""}">
+      <div class="hd"><span class="ct-secn">${n}</span><div class="ct-sech"><div class="ct-sect">${t}</div><div class="ct-secs">${s}</div></div></div>
+      <div class="bd">${html}</div></div>`;
+
+  // ── 1 · DESEMPEÑO ───────────────────────────────────────────────────────────────────────────────
+  const _mx=Math.max(1,...T.map(x=>Math.abs(x.mes||0)));
+  const barra=v=>{if(v==null)return "";const w=Math.max(3,Math.round(Math.abs(v)/_mx*50));
+    return `<span class="ct-bar"><i class="${v>=0?"up":"dn"}" style="width:${w}%"></i></span>`;};
+  const desRows=T.map((x,i)=>{const r=x.r;return `<tr>
+    <td class="ct-rk"><span style="background:${cS(r.score)}">${i+1}</span></td>
+    <td class="ct-tk">${esc(r.t)}</td>
+    <td class="r ct-strong" style="color:${cN(x.mes)}">${pct(x.mes)}${barra(x.mes)}</td>
+    <td class="r" style="color:${cN(r.mom6m)}">${pct(r.mom6m,1)}</td>
+    <td class="r">${r.sig!=null?nd(r.sig,1)+"%":"—"}</td>
+    <td class="r">${r.beta!=null?nd(r.beta,2):"—"}</td>
+    <td class="r" style="color:${r.sharpe>=1?"var(--ct-ok)":r.sharpe>=0?"var(--ct-ink)":"var(--ct-bad)"}">${r.sharpe!=null?nd(r.sharpe,2):"—"}</td>
+    <td class="r" style="color:${r.maxDD>30?"var(--ct-warn)":"var(--ct-ink)"}">${r.maxDD!=null?"−"+nd(Math.abs(r.maxDD),1)+"%":"—"}</td>
+    <td class="r"><span class="ct-score" style="background:${cS(r.score)}">${r.score}</span></td></tr>`;}).join("");
+  const desHTML=`<div class="ct-panel"><table class="ct-tab"><thead><tr>
+      <th></th><th>Acción</th><th class="r">Último mes</th><th class="r">6 meses</th><th class="r">Volatilidad</th>
+      <th class="r">Beta</th><th class="r">Sharpe</th><th class="r">Máx. caída</th><th class="r">Score</th></tr></thead>
+    <tbody>${desRows}</tbody></table>
+    <div class="ct-foot">En el mismo período el IPSA rindió <b style="color:${cN(D.ipsa?D.ipsa.mes:null)}">${pct(D.ipsa?D.ipsa.mes:null)}</b> en el mes${D.ipsa&&D.ipsa.anio!=null?` y <b style="color:${cN(D.ipsa.anio)}">${pct(D.ipsa.anio)}</b> en doce meses`:""}. Cierres al ${fD(lastBaseDate())}.</div></div>`;
+
+  // ── 2 · FUNDAMENTOS ─────────────────────────────────────────────────────────────────────────────
+  const fRows=T.map(x=>{const f=x.f,r=x.r,up=(f.target!=null&&x.px>0)?((f.target/x.px-1)*100):null;
+    const rec=f.rec&&_recL[f.rec]?_recL[f.rec]:null;
+    return `<tr>
+      <td class="ct-tk">${esc(r.t)}</td>
+      <td class="r">${f.pe!=null?nd(f.pe,1):"—"}</td>
+      <td class="r">${f.fpe!=null?nd(f.fpe,1):"—"}</td>
+      <td class="r">${f.pb!=null?nd(f.pb,2):"—"}</td>
+      <td class="r" style="color:${f.dy>=4?"var(--ct-ok)":"var(--ct-ink)"}">${f.dy!=null?nd(f.dy,1)+"%":"—"}</td>
+      <td class="r" style="color:${f.roe>=15?"var(--ct-ok)":"var(--ct-ink)"}">${f.roe!=null?nd(f.roe,1)+"%":"—"}</td>
+      <td class="r">${f.nm!=null?nd(f.nm,1)+"%":"—"}</td>
+      <td class="r ct-strong">${clp(x.val)}</td>
+      <td class="r">${clp(f.target)}</td>
+      <td class="r ct-strong" style="color:${cN(up)}">${up!=null?pct(up,0):"—"}</td>
+      <td>${rec?`<span class="ct-rec">${rec}${f.nAn?" ("+f.nAn+")":""}</span>`:"—"}</td></tr>`;}).join("");
+  const fundHTML=`<div class="ct-panel"><table class="ct-tab"><thead><tr>
+      <th>Acción</th><th class="r">P/U</th><th class="r">P/U proy.</th><th class="r">P/B</th><th class="r">Dividendos</th>
+      <th class="r">ROE</th><th class="r">Margen neto</th><th class="r">Valor estimado</th><th class="r">Precio objetivo</th>
+      <th class="r">Potencial</th><th>Consenso</th></tr></thead><tbody>${fRows}</tbody></table>
+    <div class="ct-foot"><b>Valor estimado</b> es nuestro cálculo por fundamentos; <b>precio objetivo</b> y <b>consenso</b> son de los analistas que cubren cada acción. Fundamentos publicados${(typeof FDATA!=="undefined"&&FDATA&&FDATA.updatedAt)?" al "+fD((""+FDATA.updatedAt).slice(0,10)):""}.</div></div>`;
+
+  // ── 3 · VEREDICTO ───────────────────────────────────────────────────────────────────────────────
+  const vCard=x=>{const r=x.r;
+    return `<div class="ct-v ok">
+      <div class="ct-vh"><span class="ct-vtk">${esc(r.t)}</span><span class="ct-vb ok">Invertir</span></div>
+      <div class="ct-vp"><span class="ct-vl">Precio de compra</span><span class="ct-vv">${clp(x.entrada)}</span>
+        <span class="ct-vs">${x.aMercado?"a mercado · hoy "+clp(x.px):"orden límite · hoy "+clp(x.px)}</span></div>
+      <div class="ct-vw">Vale <b>${clp(x.val)}</b> y cuesta <b>${clp(x.px)}</b>: ${x.aMercado?`hay un <b>${nd(x.mos*100,0)}%</b> de margen a favor.`:`el margen llega comprando bajo <b>${clp(x.limite)}</b>.`}${x.fiab==="baja"?' <b class="ct-warn">Valorización de menor certeza.</b>':""}</div></div>`;};
+  const vNo=x=>`<tr><td class="ct-tk">${esc(x.r.t)}</td><td><span class="ct-vb no">No invertir</span></td>
+    <td class="ct-why">${esc(x.motivo)}</td>
+    <td class="r">${x.limite>0?("sería atractiva bajo <b>"+clp(x.limite)+"</b>"):"—"}</td></tr>`;
+  const verHTML=`<div class="ct-verdict">
+      <div class="ct-vsum"><span class="ct-vnum">${D.comprar.length}</span><span>de las ${N} analizadas reúnen las dos condiciones: <b>buen negocio</b> y <b>buen precio</b>.${D.comprar.length?"":" Ninguna hoy: recomendamos esperar."}</span></div>
+      ${D.comprar.length?`<div class="ct-vgrid">${D.comprar.map(vCard).join("")}</div>`:""}
+      ${D.noComprar.length?`<div class="ct-panel" style="margin-top:11px"><table class="ct-tab"><thead><tr><th>Acción</th><th>Veredicto</th><th>Motivo</th><th class="r">Cuándo revisarla</th></tr></thead><tbody>${D.noComprar.map(vNo).join("")}</tbody></table></div>`:""}
+    </div>`;
+
+  // ── 4 · GLOSARIO ────────────────────────────────────────────────────────────────────────────────
+  const G=[
+    ["Investor Score","Nota de 0 a 100 que resume riesgo-retorno, fundamentos y tendencia de cada acción. Sobre 70 es fuerte; bajo 40, se evita."],
+    ["Último mes / 6 meses","Cuánto subió o bajó el precio en los últimos ~30 y ~180 días corridos."],
+    ["Volatilidad","Cuánto oscila el precio en un año. Más alta, viaje más movido: no dice si sube o baja, dice cuánto se mueve."],
+    ["Beta (β)","Sensibilidad al mercado. β 1,0 se mueve como el IPSA; β 1,5 amplifica sus subidas y sus caídas; bajo 1,0 las amortigua."],
+    ["Sharpe","Cuánto retorno entrega por cada unidad de riesgo asumido. Sobre 1,0 es bueno; negativo, no compensó el riesgo."],
+    ["Máxima caída","La peor caída desde un máximo hasta el fondo en el último año. Es la pérdida que hubo que aguantar."],
+    ["P/U","Precio dividido por la utilidad anual por acción: cuántos años de utilidades cuesta la empresa. <b>P/U proy.</b> usa la utilidad que se espera."],
+    ["P/B","Precio sobre el valor contable del patrimonio. Bajo 1,0 se paga menos de lo que dicen los libros."],
+    ["Dividendos","Porcentaje del precio que la empresa reparte al año en efectivo."],
+    ["ROE","Rentabilidad sobre el patrimonio: cuánto gana la empresa con la plata de sus dueños."],
+    ["Margen neto","De cada $100 vendidos, cuánto queda de utilidad final."],
+    ["Valor estimado","Lo que creemos que vale la acción por sus números, triangulando dividendos, utilidades y precio objetivo de analistas."],
+    ["Precio objetivo / Potencial","Dónde ven el precio los analistas que cubren la acción, y cuánto es eso sobre el precio de hoy."],
+    ["Consenso","Qué recomiendan en promedio los analistas que siguen la acción. Entre paréntesis, cuántos son."],
+    ["Precio de compra","Hasta cuánto conviene pagar. <b>A mercado</b>: el precio de hoy ya sirve. <b>Orden límite</b>: solo comprar si baja a ese valor."],
+    ["Margen de seguridad","Distancia entre el valor estimado y el precio. Exigimos al menos "+(CARTA_MOS_OBJ*100).toFixed(0)+"% a favor antes de recomendar una compra."]
+  ];
+  const gloHTML=`<div class="ct-panel ct-glo">${G.map(g=>`<div class="ct-g"><b>${g[0]}</b><span>${g[1]}</span></div>`).join("")}</div>`;
+
+  const bodyHTML=bloque("1","Desempeño","cómo se han comportado en el último mes y en el año",desHTML,true)
+    +bloque("2","Fundamentos","los negocios detrás de cada acción",fundHTML,true)
+    +bloque("3","Veredicto","invertir o no invertir, y a qué precio",verHTML)
+    +bloque("4","Glosario","qué significa cada término de este informe",gloHTML);
+
   const _quien=userNombre()?esc(userNombre()):"";
-  const metaHTML="";
   const execHTML=D.comprar.length
-    ?`Estas son las <b>${D.comprar.length===1?"acción":D.comprar.length+" acciones"}</b> que hoy les recomendaría tener en cartera. De las ${D.sc.n} del IPSA son las únicas que juntan las dos cosas que me importan: <b>buena empresa</b> y, sobre todo, <b>buen precio</b>. Para cada una les dejo lo que cuesta hoy, lo que creo que vale y hasta cuánto pagaría por ella. Si el precio no está, mejor esperar.`
-    :`Esta vez no les recomiendo ninguna. De las ${D.sc.n} acciones del IPSA, las que tienen buenos números están hoy más caras de lo que valen, y prefiero decirles que esperen antes que sugerirles pagar de más.`;
-  const footHTML=`Esto es lo que <b>yo</b> haría con mi plata, calculado con datos públicos (precios de cierre y balances publicados). <b>No es asesoría de inversión</b>: no conozco la situación de cada uno y las acciones pueden bajar. Lo que valen es una estimación, no una promesa. Decidan ustedes, y si tienen dudas pregúntenme.`;
-  const sigHTML="";
+    ?`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} mejor evaluadas</b>. De ellas recomendamos invertir en <b>${D.comprar.length}</b>: son las únicas que reúnen buen negocio <b>y</b> precio bajo su valor estimado. Para cada una indicamos hasta cuánto conviene pagar.`
+    :`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} mejor evaluadas</b>. Hoy <b>ninguna</b> reúne las dos condiciones que exigimos —buen negocio y precio bajo su valor estimado—, de modo que recomendamos esperar. Para cada una indicamos a qué precio pasaría a ser atractiva.`;
+  const footHTML=`Elaborado con datos públicos: precios de cierre de la Bolsa de Santiago y estados financieros publicados. Las valorizaciones son estimaciones con supuestos explícitos (CAPM con tasa libre de riesgo ${nd(typeof RF==="number"?RF:5.5,1)}% y prima de mercado ${nd(typeof PRIMA==="number"?PRIMA:6,1)}%), no precios futuros. <b>Este documento es informativo y no constituye asesoría ni recomendación de inversión</b> en los términos de la Ley 18.045 ni de la normativa de la CMF; no considera la situación financiera, el horizonte ni la tolerancia al riesgo de cada inversionista. Rentabilidades pasadas no aseguran rentabilidades futuras. Los costos de transacción y los impuestos reducen el resultado y no están descontados.`;
   const html=invReportShell({
-    docTitle:"Acciones que les recomiendo · Investor",
-    title:"Acciones que les recomiendo",
-    subtitle:(_quien?("De "+_quien+" · "):"")+"mi selección del IPSA · qué comprar y hasta qué precio · precios al "+fD(lastBaseDate()),
-    hero:{label:D.comprar.length===1?"Acción recomendada":"Acciones recomendadas",value:String(D.comprar.length),sub:D.comprar.length?("de "+D.sc.n+" que miré"):"ninguna cumple hoy",subColor:D.comprar.length?"#9FE8C4":"#FFD9A6"},
-    metaHTML,execHTML,execLabel:"En dos líneas",bodyHTML,footHTML,sigHTML,
-    folio:"INV-CARTA-"+localDay().replace(/-/g,""),fch
+    docTitle:"Informe de recomendación de inversión · Investor",
+    title:"Informe de recomendación de inversión",
+    subtitle:"Las "+N+" mejores acciones del IPSA según Investor · desempeño, fundamentos y veredicto · precios al "+fD(lastBaseDate()),
+    hero:{label:D.comprar.length===1?"Acción recomendada":"Acciones recomendadas",value:String(D.comprar.length),sub:"de "+N+" analizadas",subColor:D.comprar.length?"#9FE8C4":"#FFD9A6"},
+    metaHTML:invReportMeta(([_quien?["Preparado por",_quien]:null,
+      ["Fecha",esc(fch)],["Universo",D.sc.n+" acciones del IPSA"],
+      ["En este informe",String(N)+" mejor evaluadas"],
+      ["Recomendadas",D.comprar.length+" de "+N]
+    ]).filter(Boolean)),
+    execHTML,execLabel:"Síntesis",bodyHTML,footHTML,sigHTML:"",
+    folio:"INV-REC-"+localDay().replace(/-/g,""),fch
   });
-  const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar la carta.");
+  const w=window.open("","_blank");if(w){w.document.write(html);w.document.close();}else window.alert("Habilita las ventanas emergentes para generar el informe.");
 }
 function attachHome(){
   // el aviso de base rezagada lleva directo a donde se arregla: la fuente automática de cierres
