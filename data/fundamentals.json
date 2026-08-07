@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-07T00:12:53.078Z",
+ "updatedAt": "2026-08-07T01:31:47.396Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -528,7 +528,7 @@
    "rec": "strong_buy",
    "nAn": 1,
    "peg": null,
-   "evEbitda": 15.6
+   "evEbitda": 15.5
   },
   "MALLPLAZA": {
    "name": "Plaza S.A.",
@@ -679,7 +679,7 @@
    "px": 5840,
    "pe": null,
    "fpe": 4.8,
-   "eps": -530.32,
+   "eps": -515.8,
    "pb": null,
    "dy": null,
    "dps": null,

@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-07T00:12:41.048Z",
+ "updatedAt": "2026-08-07T01:31:34.553Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -11,19 +11,19 @@
   "yahoo ^IPSA period: 0 día(s)"
  ],
  "ipsaSynth": [
-  "2026-07-21=10975.21 (27 acc, 0.80%)",
-  "2026-07-22=10891.73 (27 acc, -0.76%)",
-  "2026-07-23=10946.63 (28 acc, 0.50%)",
-  "2026-07-24=10899.69 (28 acc, -0.43%)",
-  "2026-07-27=11015.46 (28 acc, 1.06%)",
-  "2026-07-28=10946.34 (27 acc, -0.63%)",
-  "2026-07-29=11009.22 (27 acc, 0.57%)",
-  "2026-07-30=11104.72 (28 acc, 0.87%)",
-  "2026-07-31=11101.67 (28 acc, -0.03%)",
-  "2026-08-03=10916.83 (28 acc, -1.66%)",
-  "2026-08-04=11087.8 (28 acc, 1.57%)",
-  "2026-08-05=11244.84 (28 acc, 1.42%)",
-  "2026-08-06=11339.2 (28 acc, 0.84%)",
+  "2026-07-21=10974.35 (27 acc, 0.80%)",
+  "2026-07-22=10891.73 (27 acc, -0.75%)",
+  "2026-07-23=10946.8 (28 acc, 0.51%)",
+  "2026-07-24=10899.66 (28 acc, -0.43%)",
+  "2026-07-27=11014.66 (28 acc, 1.06%)",
+  "2026-07-28=10944.02 (27 acc, -0.64%)",
+  "2026-07-29=11007.82 (27 acc, 0.58%)",
+  "2026-07-30=11102.62 (28 acc, 0.86%)",
+  "2026-07-31=11099.13 (28 acc, -0.03%)",
+  "2026-08-03=10916.86 (28 acc, -1.64%)",
+  "2026-08-04=11085.61 (28 acc, 1.55%)",
+  "2026-08-05=11242.83 (28 acc, 1.42%)",
+  "2026-08-06=11339.01 (28 acc, 0.86%)",
   "492 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
@@ -71,7 +71,7 @@
     "ITAUCL": 10495,
     "CAP": 6128
    },
-   "ipsa": 6449.47,
+   "ipsa": 6441.78,
    "ipsaSynth": true
   },
   {
@@ -106,7 +106,7 @@
     "ITAUCL": 10550,
     "CAP": 6249
    },
-   "ipsa": 6452.18,
+   "ipsa": 6444.69,
    "ipsaSynth": true
   },
   {
@@ -141,7 +141,7 @@
     "ITAUCL": 10628,
     "CAP": 6125
    },
-   "ipsa": 6415.43,
+   "ipsa": 6407.3,
    "ipsaSynth": true
   },
   {
@@ -176,7 +176,7 @@
     "ITAUCL": 10700,
     "CAP": 6137
    },
-   "ipsa": 6449.43,
+   "ipsa": 6441.34,
    "ipsaSynth": true
   },
   {
@@ -211,7 +211,7 @@
     "ITAUCL": 10670,
     "CAP": 6090
    },
-   "ipsa": 6413.85,
+   "ipsa": 6405.12,
    "ipsaSynth": true
   },
   {
@@ -246,7 +246,7 @@
     "ITAUCL": 10640,
     "CAP": 5996
    },
-   "ipsa": 6406.61,
+   "ipsa": 6397.96,
    "ipsaSynth": true
   },
   {
@@ -281,7 +281,7 @@
     "ITAUCL": 10700,
     "CAP": 5996
    },
-   "ipsa": 6479.94,
+   "ipsa": 6471.56,
    "ipsaSynth": true
   },
   {
@@ -316,7 +316,7 @@
     "ITAUCL": 10629,
     "CAP": 5881
    },
-   "ipsa": 6497.13,
+   "ipsa": 6488.87,
    "ipsaSynth": true
   },
   {
@@ -351,7 +351,7 @@
     "ITAUCL": 10640,
     "CAP": 5936.5
    },
-   "ipsa": 6521.65,
+   "ipsa": 6512.83,
    "ipsaSynth": true
   },
   {
@@ -386,7 +386,7 @@
     "ITAUCL": 10600,
     "CAP": 5849.9
    },
-   "ipsa": 6534.68,
+   "ipsa": 6525.74,
    "ipsaSynth": true
   },
   {
@@ -421,7 +421,7 @@
     "ITAUCL": 10898,
     "CAP": 5799
    },
-   "ipsa": 6563.59,
+   "ipsa": 6554.37,
    "ipsaSynth": true
   },
   {
@@ -456,7 +456,7 @@
     "ITAUCL": 10770,
     "CAP": 5833.4
    },
-   "ipsa": 6542.17,
+   "ipsa": 6533,
    "ipsaSynth": true
   },
   {
@@ -491,7 +491,7 @@
     "ITAUCL": 10898,
     "CAP": 5750
    },
-   "ipsa": 6581.17,
+   "ipsa": 6571.64,
    "ipsaSynth": true
   },
   {
@@ -526,7 +526,7 @@
     "ITAUCL": 10759,
     "CAP": 5580
    },
-   "ipsa": 6545.54,
+   "ipsa": 6535.74,
    "ipsaSynth": true
   },
   {
@@ -561,7 +561,7 @@
     "ITAUCL": 10737,
     "CAP": 5500
    },
-   "ipsa": 6506.34,
+   "ipsa": 6496.59,
    "ipsaSynth": true
   },
   {
@@ -596,7 +596,7 @@
     "ITAUCL": 10523,
     "CAP": 5300
    },
-   "ipsa": 6421.45,
+   "ipsa": 6412.43,
    "ipsaSynth": true
   },
   {
@@ -631,7 +631,7 @@
     "ITAUCL": 10496,
     "CAP": 5471.6
    },
-   "ipsa": 6407.35,
+   "ipsa": 6399.01,
    "ipsaSynth": true
   },
   {
@@ -666,7 +666,7 @@
     "ITAUCL": 10550,
     "CAP": 5499
    },
-   "ipsa": 6462.58,
+   "ipsa": 6453.85,
    "ipsaSynth": true
   },
   {
@@ -701,7 +701,7 @@
     "ITAUCL": 10554,
     "CAP": 5300
    },
-   "ipsa": 6444.56,
+   "ipsa": 6435.57,
    "ipsaSynth": true
   },
   {
@@ -736,7 +736,7 @@
     "ITAUCL": 10511,
     "CAP": 5310
    },
-   "ipsa": 6424.99,
+   "ipsa": 6416.09,
    "ipsaSynth": true
   },
   {
@@ -771,7 +771,7 @@
     "ITAUCL": 10460,
     "CAP": 5250
    },
-   "ipsa": 6411.97,
+   "ipsa": 6402.76,
    "ipsaSynth": true
   },
   {
@@ -806,7 +806,7 @@
     "ITAUCL": 10350,
     "CAP": 5197
    },
-   "ipsa": 6306.58,
+   "ipsa": 6297.3,
    "ipsaSynth": true
   },
   {
@@ -841,7 +841,7 @@
     "ITAUCL": 10028,
     "CAP": 5135.7
    },
-   "ipsa": 6098.36,
+   "ipsa": 6089.1,
    "ipsaSynth": true
   },
   {
@@ -876,7 +876,7 @@
     "ITAUCL": 10046,
     "CAP": 5211.3
    },
-   "ipsa": 6176.83,
+   "ipsa": 6167.56,
    "ipsaSynth": true
   },
   {
@@ -911,7 +911,7 @@
     "ITAUCL": 10249,
     "CAP": 5464.6
    },
-   "ipsa": 6191.1,
+   "ipsa": 6182.39,
    "ipsaSynth": true
   },
   {
@@ -946,7 +946,7 @@
     "ITAUCL": 10300,
     "CAP": 5410
    },
-   "ipsa": 6286.3,
+   "ipsa": 6277.72,
    "ipsaSynth": true
   },
   {
@@ -981,7 +981,7 @@
     "ITAUCL": 10250,
     "CAP": 5329
    },
-   "ipsa": 6318.48,
+   "ipsa": 6309.96,
    "ipsaSynth": true
   },
   {
@@ -1016,7 +1016,7 @@
     "ITAUCL": 10250,
     "CAP": 5234
    },
-   "ipsa": 6339.73,
+   "ipsa": 6330.27,
    "ipsaSynth": true
   },
   {
@@ -1051,7 +1051,7 @@
     "ITAUCL": 10201,
     "CAP": 5228
    },
-   "ipsa": 6382.61,
+   "ipsa": 6373.65,
    "ipsaSynth": true
   },
   {
@@ -1086,7 +1086,7 @@
     "ITAUCL": 10262,
     "CAP": 5271.7
    },
-   "ipsa": 6419.52,
+   "ipsa": 6410.51,
    "ipsaSynth": true
   },
   {
@@ -1121,7 +1121,7 @@
     "ITAUCL": 10289,
     "CAP": 5321.1
    },
-   "ipsa": 6470.18,
+   "ipsa": 6461.37,
    "ipsaSynth": true
   },
   {
@@ -1156,7 +1156,7 @@
     "ITAUCL": 10330,
     "CAP": 5485
    },
-   "ipsa": 6461.29,
+   "ipsa": 6452.54,
    "ipsaSynth": true
   },
   {
@@ -1191,7 +1191,7 @@
     "ITAUCL": 10360,
     "CAP": 5573
    },
-   "ipsa": 6493.87,
+   "ipsa": 6484.97,
    "ipsaSynth": true
   },
   {
@@ -1226,7 +1226,7 @@
     "ITAUCL": 10229,
     "CAP": 5799.9
    },
-   "ipsa": 6491.76,
+   "ipsa": 6483.42,
    "ipsaSynth": true
   },
   {
@@ -1261,7 +1261,7 @@
     "ITAUCL": 10400,
     "CAP": 5748
    },
-   "ipsa": 6480.57,
+   "ipsa": 6472.13,
    "ipsaSynth": true
   },
   {
@@ -1296,7 +1296,7 @@
     "ITAUCL": 10500,
     "CAP": 5700
    },
-   "ipsa": 6478.58,
+   "ipsa": 6470.29,
    "ipsaSynth": true
   },
   {
@@ -1331,7 +1331,7 @@
     "ITAUCL": 10430,
     "CAP": 5773
    },
-   "ipsa": 6459.87,
+   "ipsa": 6451.42,
    "ipsaSynth": true
   },
   {
@@ -1366,7 +1366,7 @@
     "ITAUCL": 10258,
     "CAP": 5750.2
    },
-   "ipsa": 6401.38,
+   "ipsa": 6392.87,
    "ipsaSynth": true
   },
   {
@@ -1401,7 +1401,7 @@
     "ITAUCL": 10207,
     "CAP": 5686
    },
-   "ipsa": 6403.89,
+   "ipsa": 6395.2,
    "ipsaSynth": true
   },
   {
@@ -1436,7 +1436,7 @@
     "ITAUCL": 10381,
     "CAP": 5675
    },
-   "ipsa": 6468.53,
+   "ipsa": 6460.55,
    "ipsaSynth": true
   },
   {
@@ -1471,7 +1471,7 @@
     "ITAUCL": 10700,
     "CAP": 5600
    },
-   "ipsa": 6479.09,
+   "ipsa": 6471.36,
    "ipsaSynth": true
   },
   {
@@ -1506,7 +1506,7 @@
     "ITAUCL": 10645,
     "CAP": 5475.9
    },
-   "ipsa": 6483.61,
+   "ipsa": 6475.44,
    "ipsaSynth": true
   },
   {
@@ -1541,7 +1541,7 @@
     "ITAUCL": 10600,
     "CAP": 5317.8
    },
-   "ipsa": 6424.27,
+   "ipsa": 6415.82,
    "ipsaSynth": true
   },
   {
@@ -1576,7 +1576,7 @@
     "ITAUCL": 10450,
     "CAP": 5205.5
    },
-   "ipsa": 6415.94,
+   "ipsa": 6407.84,
    "ipsaSynth": true
   },
   {
@@ -1611,7 +1611,7 @@
     "ITAUCL": 10318,
     "CAP": 5205
    },
-   "ipsa": 6394.32,
+   "ipsa": 6386.36,
    "ipsaSynth": true
   },
   {
@@ -1646,7 +1646,7 @@
     "ITAUCL": 10220,
     "CAP": 5185.1
    },
-   "ipsa": 6271.82,
+   "ipsa": 6263.61,
    "ipsaSynth": true
   },
   {
@@ -1681,7 +1681,7 @@
     "ITAUCL": 10249,
     "CAP": 5207.1
    },
-   "ipsa": 6263.43,
+   "ipsa": 6255.48,
    "ipsaSynth": true
   },
   {
@@ -1716,7 +1716,7 @@
     "ITAUCL": 10250,
     "CAP": 5113
    },
-   "ipsa": 6238.26,
+   "ipsa": 6230.22,
    "ipsaSynth": true
   },
   {
@@ -1751,7 +1751,7 @@
     "ITAUCL": 10379,
     "CAP": 5220
    },
-   "ipsa": 6314.8,
+   "ipsa": 6308.3,
    "ipsaSynth": true
   },
   {
@@ -1786,7 +1786,7 @@
     "ITAUCL": 10251,
     "CAP": 5300
    },
-   "ipsa": 6362.98,
+   "ipsa": 6356.14,
    "ipsaSynth": true
   },
   {
@@ -1821,7 +1821,7 @@
     "ITAUCL": 10293,
     "CAP": 5200
    },
-   "ipsa": 6384.47,
+   "ipsa": 6377.46,
    "ipsaSynth": true
   },
   {
@@ -1856,7 +1856,7 @@
     "ITAUCL": 10314,
     "CAP": 5195
    },
-   "ipsa": 6389.38,
+   "ipsa": 6382.05,
    "ipsaSynth": true
   },
   {
@@ -1891,7 +1891,7 @@
     "ITAUCL": 10370,
     "CAP": 5097
    },
-   "ipsa": 6378.07,
+   "ipsa": 6371.12,
    "ipsaSynth": true
   },
   {
@@ -1926,7 +1926,7 @@
     "ITAUCL": 10350,
     "CAP": 5059
    },
-   "ipsa": 6428.22,
+   "ipsa": 6420.67,
    "ipsaSynth": true
   },
   {
@@ -1961,7 +1961,7 @@
     "ITAUCL": 10399,
     "CAP": 5510
    },
-   "ipsa": 6488.44,
+   "ipsa": 6481.12,
    "ipsaSynth": true
   },
   {
@@ -1996,7 +1996,7 @@
     "ITAUCL": 10400,
     "CAP": 5659.9
    },
-   "ipsa": 6481.3,
+   "ipsa": 6473.68,
    "ipsaSynth": true
   },
   {
@@ -2031,7 +2031,7 @@
     "ITAUCL": 10599,
     "CAP": 5999
    },
-   "ipsa": 6574.94,
+   "ipsa": 6567.68,
    "ipsaSynth": true
   },
   {
@@ -2066,7 +2066,7 @@
     "ITAUCL": 10530,
     "CAP": 6000
    },
-   "ipsa": 6573.1,
+   "ipsa": 6566.34,
    "ipsaSynth": true
   },
   {
@@ -2101,7 +2101,7 @@
     "ITAUCL": 10448,
     "CAP": 6030
    },
-   "ipsa": 6513.46,
+   "ipsa": 6506.92,
    "ipsaSynth": true
   },
   {
@@ -2136,7 +2136,7 @@
     "ITAUCL": 10411,
     "CAP": 5990
    },
-   "ipsa": 6479.38,
+   "ipsa": 6472.8,
    "ipsaSynth": true
   },
   {
@@ -2171,7 +2171,7 @@
     "ITAUCL": 10364,
     "CAP": 5979
    },
-   "ipsa": 6418.02,
+   "ipsa": 6411.87,
    "ipsaSynth": true
   },
   {
@@ -2206,7 +2206,7 @@
     "ITAUCL": 10257,
     "CAP": 5900
    },
-   "ipsa": 6414.06,
+   "ipsa": 6407.93,
    "ipsaSynth": true
   },
   {
@@ -2241,7 +2241,7 @@
     "ITAUCL": 10279,
     "CAP": 5950
    },
-   "ipsa": 6512.23,
+   "ipsa": 6506.11,
    "ipsaSynth": true
   },
   {
@@ -2276,7 +2276,7 @@
     "ITAUCL": 10397,
     "CAP": 6120
    },
-   "ipsa": 6494.05,
+   "ipsa": 6488.35,
    "ipsaSynth": true
   },
   {
@@ -2311,7 +2311,7 @@
     "ITAUCL": 10430,
     "CAP": 6000
    },
-   "ipsa": 6513.51,
+   "ipsa": 6507.84,
    "ipsaSynth": true
   },
   {
@@ -2346,7 +2346,7 @@
     "ITAUCL": 10412,
     "CAP": 6097
    },
-   "ipsa": 6553.46,
+   "ipsa": 6548.4,
    "ipsaSynth": true
   },
   {
@@ -2381,7 +2381,7 @@
     "ITAUCL": 10500,
     "CAP": 6080
    },
-   "ipsa": 6597.64,
+   "ipsa": 6592.55,
    "ipsaSynth": true
   },
   {
@@ -2416,7 +2416,7 @@
     "ITAUCL": 10514,
     "CAP": 6098.9
    },
-   "ipsa": 6609.52,
+   "ipsa": 6603.34,
    "ipsaSynth": true
   },
   {
@@ -2451,7 +2451,7 @@
     "ITAUCL": 10389,
     "CAP": 5829
    },
-   "ipsa": 6631.12,
+   "ipsa": 6623.59,
    "ipsaSynth": true
   },
   {
@@ -2486,7 +2486,7 @@
     "ITAUCL": 10492,
     "CAP": 5893.8
    },
-   "ipsa": 6706.05,
+   "ipsa": 6698.79,
    "ipsaSynth": true
   },
   {
@@ -2521,7 +2521,7 @@
     "ITAUCL": 10430,
     "CAP": 6000
    },
-   "ipsa": 6734.99,
+   "ipsa": 6727.51,
    "ipsaSynth": true
   },
   {
@@ -2556,7 +2556,7 @@
     "ITAUCL": 10445,
     "CAP": 5956.3
    },
-   "ipsa": 6731.6,
+   "ipsa": 6724.64,
    "ipsaSynth": true
   },
   {
@@ -2591,7 +2591,7 @@
     "ITAUCL": 10502,
     "CAP": 5875
    },
-   "ipsa": 6741.64,
+   "ipsa": 6734.3,
    "ipsaSynth": true
   },
   {
@@ -2626,7 +2626,7 @@
     "ITAUCL": 10566,
     "CAP": 5860
    },
-   "ipsa": 6776,
+   "ipsa": 6768.73,
    "ipsaSynth": true
   },
   {
@@ -2661,7 +2661,7 @@
     "ITAUCL": 10557,
     "CAP": 5960
    },
-   "ipsa": 6808.34,
+   "ipsa": 6801.26,
    "ipsaSynth": true
   },
   {
@@ -2696,7 +2696,7 @@
     "ITAUCL": 10524,
     "CAP": 5900
    },
-   "ipsa": 6782.36,
+   "ipsa": 6775.9,
    "ipsaSynth": true
   },
   {
@@ -2731,7 +2731,7 @@
     "ITAUCL": 10487,
     "CAP": 5900
    },
-   "ipsa": 6726.12,
+   "ipsa": 6719.5,
    "ipsaSynth": true
   },
   {
@@ -2766,7 +2766,7 @@
     "ITAUCL": 10400,
     "CAP": 5770
    },
-   "ipsa": 6610.19,
+   "ipsa": 6603.21,
    "ipsaSynth": true
   },
   {
@@ -2801,7 +2801,7 @@
     "ITAUCL": 10400,
     "CAP": 5829.3
    },
-   "ipsa": 6694.86,
+   "ipsa": 6687.86,
    "ipsaSynth": true
   },
   {
@@ -2836,7 +2836,7 @@
     "ITAUCL": 10310,
     "CAP": 5700
    },
-   "ipsa": 6587.07,
+   "ipsa": 6580.16,
    "ipsaSynth": true
   },
   {
@@ -2871,7 +2871,7 @@
     "ITAUCL": 10395,
     "CAP": 5790
    },
-   "ipsa": 6654.9,
+   "ipsa": 6647.31,
    "ipsaSynth": true
   },
   {
@@ -2906,7 +2906,7 @@
     "ITAUCL": 10361,
     "CAP": 5998
    },
-   "ipsa": 6628.75,
+   "ipsa": 6620.67,
    "ipsaSynth": true
   },
   {
@@ -2941,7 +2941,7 @@
     "ITAUCL": 10400,
     "CAP": 5840
    },
-   "ipsa": 6592.35,
+   "ipsa": 6583.96,
    "ipsaSynth": true
   },
   {
@@ -2976,7 +2976,7 @@
     "ITAUCL": 10429,
     "CAP": 5681
    },
-   "ipsa": 6600.42,
+   "ipsa": 6593.06,
    "ipsaSynth": true
   },
   {
@@ -3011,7 +3011,7 @@
     "ITAUCL": 10302,
     "CAP": 5560
    },
-   "ipsa": 6572.57,
+   "ipsa": 6565.12,
    "ipsaSynth": true
   },
   {
@@ -3046,7 +3046,7 @@
     "ITAUCL": 10280,
     "CAP": 5535.2
    },
-   "ipsa": 6620.91,
+   "ipsa": 6614.02,
    "ipsaSynth": true
   },
   {
@@ -3081,7 +3081,7 @@
     "ITAUCL": 10202,
     "CAP": 5500
    },
-   "ipsa": 6549.19,
+   "ipsa": 6541.86,
    "ipsaSynth": true
   },
   {
@@ -3116,7 +3116,7 @@
     "ITAUCL": 10123,
     "CAP": 5390
    },
-   "ipsa": 6603.32,
+   "ipsa": 6595.84,
    "ipsaSynth": true
   },
   {
@@ -3151,7 +3151,7 @@
     "ITAUCL": 10190,
     "CAP": 5460.1
    },
-   "ipsa": 6605.82,
+   "ipsa": 6598.75,
    "ipsaSynth": true
   },
   {
@@ -3186,7 +3186,7 @@
     "ITAUCL": 10312,
     "CAP": 5488
    },
-   "ipsa": 6610.85,
+   "ipsa": 6603.64,
    "ipsaSynth": true
   },
   {
@@ -3221,7 +3221,7 @@
     "ITAUCL": 10350,
     "CAP": 5510.9
    },
-   "ipsa": 6642.67,
+   "ipsa": 6635.2,
    "ipsaSynth": true
   },
   {
@@ -3256,7 +3256,7 @@
     "ITAUCL": 10299,
     "CAP": 5475
    },
-   "ipsa": 6653.59,
+   "ipsa": 6646.62,
    "ipsaSynth": true
   },
   {
@@ -3291,7 +3291,7 @@
     "ITAUCL": 10235,
     "CAP": 5480
    },
-   "ipsa": 6617.51,
+   "ipsa": 6610.57,
    "ipsaSynth": true
   },
   {
@@ -3326,7 +3326,7 @@
     "ITAUCL": 10170,
     "CAP": 5370
    },
-   "ipsa": 6606.24,
+   "ipsa": 6599.38,
    "ipsaSynth": true
   },
   {
@@ -3361,7 +3361,7 @@
     "ITAUCL": 10244,
     "CAP": 5399
    },
-   "ipsa": 6618.86,
+   "ipsa": 6611.6,
    "ipsaSynth": true
   },
   {
@@ -3396,7 +3396,7 @@
     "ITAUCL": 10280,
     "CAP": 5365
    },
-   "ipsa": 6645.07,
+   "ipsa": 6637.66,
    "ipsaSynth": true
   },
   {
@@ -3431,7 +3431,7 @@
     "ITAUCL": 10375,
     "CAP": 5350
    },
-   "ipsa": 6648.96,
+   "ipsa": 6641.65,
    "ipsaSynth": true
   },
   {
@@ -3466,7 +3466,7 @@
     "ITAUCL": 10375,
     "CAP": 5335
    },
-   "ipsa": 6637.12,
+   "ipsa": 6629.75,
    "ipsaSynth": true
   },
   {
@@ -3501,7 +3501,7 @@
     "ITAUCL": 10315,
     "CAP": 5385
    },
-   "ipsa": 6694.25,
+   "ipsa": 6687.2,
    "ipsaSynth": true
   },
   {
@@ -3536,7 +3536,7 @@
     "ITAUCL": 10250,
     "CAP": 5376
    },
-   "ipsa": 6680.73,
+   "ipsa": 6673.71,
    "ipsaSynth": true
   },
   {
@@ -3571,7 +3571,7 @@
     "ITAUCL": 10255,
     "CAP": 5390.5
    },
-   "ipsa": 6693.62,
+   "ipsa": 6686.09,
    "ipsaSynth": true
   },
   {
@@ -3606,7 +3606,7 @@
     "ITAUCL": 10250,
     "CAP": 5340
    },
-   "ipsa": 6717.03,
+   "ipsa": 6709.36,
    "ipsaSynth": true
   },
   {
@@ -3641,7 +3641,7 @@
     "ITAUCL": 10268,
     "CAP": 5328.4
    },
-   "ipsa": 6709.21,
+   "ipsa": 6701.61,
    "ipsaSynth": true
   },
   {
@@ -3676,7 +3676,7 @@
     "ITAUCL": 10248,
     "CAP": 5500
    },
-   "ipsa": 6758.66,
+   "ipsa": 6751.96,
    "ipsaSynth": true
   },
   {
@@ -3711,7 +3711,7 @@
     "ITAUCL": 10350,
     "CAP": 5539
    },
-   "ipsa": 6764.28,
+   "ipsa": 6757.53,
    "ipsaSynth": true
   },
   {
@@ -3746,7 +3746,7 @@
     "ITAUCL": 10420,
     "CAP": 5470
    },
-   "ipsa": 6776,
+   "ipsa": 6769.15,
    "ipsaSynth": true
   },
   {
@@ -3781,7 +3781,7 @@
     "ITAUCL": 10443,
     "CAP": 5400
    },
-   "ipsa": 6832.84,
+   "ipsa": 6825.43,
    "ipsaSynth": true
   },
   {
@@ -3816,7 +3816,7 @@
     "ITAUCL": 10485,
     "CAP": 5302
    },
-   "ipsa": 6818.8,
+   "ipsa": 6811.1,
    "ipsaSynth": true
   },
   {
@@ -3851,7 +3851,7 @@
     "ITAUCL": 10495,
     "CAP": 5280
    },
-   "ipsa": 6842.95,
+   "ipsa": 6835.14,
    "ipsaSynth": true
   },
   {
@@ -3886,7 +3886,7 @@
     "ITAUCL": 10418,
     "CAP": 5200
    },
-   "ipsa": 6773.68,
+   "ipsa": 6766.02,
    "ipsaSynth": true
   },
   {
@@ -3921,7 +3921,7 @@
     "ITAUCL": 10345,
     "CAP": 5251
    },
-   "ipsa": 6767.18,
+   "ipsa": 6759.88,
    "ipsaSynth": true
   },
   {
@@ -3956,7 +3956,7 @@
     "ITAUCL": 10169,
     "CAP": 5233.1
    },
-   "ipsa": 6740.95,
+   "ipsa": 6733.53,
    "ipsaSynth": true
   },
   {
@@ -3991,7 +3991,7 @@
     "ITAUCL": 10149,
     "CAP": 5160.8
    },
-   "ipsa": 6743.26,
+   "ipsa": 6735.87,
    "ipsaSynth": true
   },
   {
@@ -4026,7 +4026,7 @@
     "ITAUCL": 10048,
     "CAP": 5161
    },
-   "ipsa": 6706.34,
+   "ipsa": 6698.75,
    "ipsaSynth": true
   },
   {
@@ -4061,7 +4061,7 @@
     "ITAUCL": 10080,
     "CAP": 5142.2
    },
-   "ipsa": 6720.9,
+   "ipsa": 6713.17,
    "ipsaSynth": true
   },
   {
@@ -4096,7 +4096,7 @@
     "ITAUCL": 10131,
     "CAP": 5200
    },
-   "ipsa": 6729.39,
+   "ipsa": 6721.62,
    "ipsaSynth": true
   },
   {
@@ -4131,7 +4131,7 @@
     "ITAUCL": 10170,
     "CAP": 5266.1
    },
-   "ipsa": 6737.06,
+   "ipsa": 6729.2,
    "ipsaSynth": true
   },
   {
@@ -4166,7 +4166,7 @@
     "ITAUCL": 10165,
     "CAP": 5260
    },
-   "ipsa": 6745.25,
+   "ipsa": 6737.18,
    "ipsaSynth": true
   },
   {
@@ -4201,7 +4201,7 @@
     "ITAUCL": 10130,
     "CAP": 5160.1
    },
-   "ipsa": 6722.41,
+   "ipsa": 6714.2,
    "ipsaSynth": true
   },
   {
@@ -4236,7 +4236,7 @@
     "ITAUCL": 10179,
     "CAP": 5156.2
    },
-   "ipsa": 6727.4,
+   "ipsa": 6719.51,
    "ipsaSynth": true
   },
   {
@@ -4271,7 +4271,7 @@
     "ITAUCL": 10200,
     "CAP": 5153.7
    },
-   "ipsa": 6786.1,
+   "ipsa": 6778.83,
    "ipsaSynth": true
   },
   {
@@ -4306,7 +4306,7 @@
     "ITAUCL": 10200,
     "CAP": 5140
    },
-   "ipsa": 6812.28,
+   "ipsa": 6805.28,
    "ipsaSynth": true
   },
   {
@@ -4341,7 +4341,7 @@
     "ITAUCL": 10199,
     "CAP": 5098.3
    },
-   "ipsa": 6787.93,
+   "ipsa": 6781.16,
    "ipsaSynth": true
   },
   {
@@ -4376,7 +4376,7 @@
     "ITAUCL": 10155,
     "CAP": 5115
    },
-   "ipsa": 6807.79,
+   "ipsa": 6800.52,
    "ipsaSynth": true
   },
   {
@@ -4411,7 +4411,7 @@
     "ITAUCL": 10101,
     "CAP": 5142.4
    },
-   "ipsa": 6822.59,
+   "ipsa": 6815.35,
    "ipsaSynth": true
   },
   {
@@ -4446,7 +4446,7 @@
     "ITAUCL": 10151,
     "CAP": 5142
    },
-   "ipsa": 6749.45,
+   "ipsa": 6742.46,
    "ipsaSynth": true
   },
   {
@@ -4481,7 +4481,7 @@
     "ITAUCL": 10239,
     "CAP": 5202
    },
-   "ipsa": 6814.83,
+   "ipsa": 6807.99,
    "ipsaSynth": true
   },
   {
@@ -4516,7 +4516,7 @@
     "ITAUCL": 10310,
     "CAP": 5260
    },
-   "ipsa": 6886.03,
+   "ipsa": 6879.03,
    "ipsaSynth": true
   },
   {
@@ -4551,7 +4551,7 @@
     "ITAUCL": 10388,
     "CAP": 5360
    },
-   "ipsa": 6941.98,
+   "ipsa": 6934.62,
    "ipsaSynth": true
   },
   {
@@ -4586,7 +4586,7 @@
     "ITAUCL": 10417,
     "CAP": 5395
    },
-   "ipsa": 6942.63,
+   "ipsa": 6935.19,
    "ipsaSynth": true
   },
   {
@@ -4621,7 +4621,7 @@
     "ITAUCL": 10413,
     "CAP": 5390
    },
-   "ipsa": 6992.62,
+   "ipsa": 6985.12,
    "ipsaSynth": true
   },
   {
@@ -4656,7 +4656,7 @@
     "ITAUCL": 10420,
     "CAP": 5346.6
    },
-   "ipsa": 7027.74,
+   "ipsa": 7020.49,
    "ipsaSynth": true
   },
   {
@@ -4691,7 +4691,7 @@
     "ITAUCL": 10435,
     "CAP": 5336
    },
-   "ipsa": 7013.15,
+   "ipsa": 7005.28,
    "ipsaSynth": true
   },
   {
@@ -4726,7 +4726,7 @@
     "ITAUCL": 10400,
     "CAP": 5326.6
    },
-   "ipsa": 7039.37,
+   "ipsa": 7031.2,
    "ipsaSynth": true
   },
   {
@@ -4761,7 +4761,7 @@
     "ITAUCL": 10470,
     "CAP": 5374
    },
-   "ipsa": 7072.38,
+   "ipsa": 7064,
    "ipsaSynth": true
   },
   {
@@ -4796,7 +4796,7 @@
     "ITAUCL": 10535,
     "CAP": 5340
    },
-   "ipsa": 7015.65,
+   "ipsa": 7007.28,
    "ipsaSynth": true
   },
   {
@@ -4831,7 +4831,7 @@
     "ITAUCL": 10494,
     "CAP": 5397.9
    },
-   "ipsa": 7026,
+   "ipsa": 7017.75,
    "ipsaSynth": true
   },
   {
@@ -4866,7 +4866,7 @@
     "ITAUCL": 10600,
     "CAP": 5400
    },
-   "ipsa": 7087.96,
+   "ipsa": 7080.08,
    "ipsaSynth": true
   },
   {
@@ -4901,7 +4901,7 @@
     "ITAUCL": 10875,
     "CAP": 5450
    },
-   "ipsa": 7223.29,
+   "ipsa": 7215.42,
    "ipsaSynth": true
   },
   {
@@ -4936,7 +4936,7 @@
     "ITAUCL": 11020,
     "CAP": 5439
    },
-   "ipsa": 7209.55,
+   "ipsa": 7200.87,
    "ipsaSynth": true
   },
   {
@@ -4971,7 +4971,7 @@
     "ITAUCL": 11100,
     "CAP": 5365.2
    },
-   "ipsa": 7216.14,
+   "ipsa": 7207.2,
    "ipsaSynth": true
   },
   {
@@ -5006,7 +5006,7 @@
     "ITAUCL": 11250,
     "CAP": 5300
    },
-   "ipsa": 7282.26,
+   "ipsa": 7273.29,
    "ipsaSynth": true
   },
   {
@@ -5041,7 +5041,7 @@
     "ITAUCL": 11295,
     "CAP": 5199.9
    },
-   "ipsa": 7310.19,
+   "ipsa": 7300.48,
    "ipsaSynth": true
   },
   {
@@ -5076,7 +5076,7 @@
     "ITAUCL": 11080,
     "CAP": 5260
    },
-   "ipsa": 7331.99,
+   "ipsa": 7321.86,
    "ipsaSynth": true
   },
   {
@@ -5111,7 +5111,7 @@
     "ITAUCL": 11250,
     "CAP": 5300
    },
-   "ipsa": 7312.74,
+   "ipsa": 7302.88,
    "ipsaSynth": true
   },
   {
@@ -5146,7 +5146,7 @@
     "ITAUCL": 11400,
     "CAP": 5190
    },
-   "ipsa": 7322.54,
+   "ipsa": 7312.51,
    "ipsaSynth": true
   },
   {
@@ -5181,7 +5181,7 @@
     "ITAUCL": 11500,
     "CAP": 5100
    },
-   "ipsa": 7304.94,
+   "ipsa": 7294.54,
    "ipsaSynth": true
   },
   {
@@ -5216,7 +5216,7 @@
     "ITAUCL": 11363,
     "CAP": 5075
    },
-   "ipsa": 7309.18,
+   "ipsa": 7298.13,
    "ipsaSynth": true
   },
   {
@@ -5251,7 +5251,7 @@
     "ITAUCL": 11430,
     "CAP": 5150
    },
-   "ipsa": 7356.55,
+   "ipsa": 7346.07,
    "ipsaSynth": true
   },
   {
@@ -5286,7 +5286,7 @@
     "ITAUCL": 11398,
     "CAP": 5178
    },
-   "ipsa": 7403.12,
+   "ipsa": 7392.18,
    "ipsaSynth": true
   },
   {
@@ -5321,7 +5321,7 @@
     "ITAUCL": 11301,
     "CAP": 5150.4
    },
-   "ipsa": 7348.8,
+   "ipsa": 7337.57,
    "ipsaSynth": true
   },
   {
@@ -5356,7 +5356,7 @@
     "ITAUCL": 11250,
     "CAP": 5160
    },
-   "ipsa": 7343.79,
+   "ipsa": 7333.24,
    "ipsaSynth": true
   },
   {
@@ -5391,7 +5391,7 @@
     "ITAUCL": 11151,
     "CAP": 5156.4
    },
-   "ipsa": 7320.65,
+   "ipsa": 7309.98,
    "ipsaSynth": true
   },
   {
@@ -5426,7 +5426,7 @@
     "ITAUCL": 11300,
     "CAP": 5194.9
    },
-   "ipsa": 7365.06,
+   "ipsa": 7354.69,
    "ipsaSynth": true
   },
   {
@@ -5461,7 +5461,7 @@
     "ITAUCL": 11319,
     "CAP": 5170.4
    },
-   "ipsa": 7365.65,
+   "ipsa": 7355.08,
    "ipsaSynth": true
   },
   {
@@ -5496,7 +5496,7 @@
     "ITAUCL": 11390,
     "CAP": 5148.9
    },
-   "ipsa": 7357.89,
+   "ipsa": 7347.6,
    "ipsaSynth": true
   },
   {
@@ -5531,7 +5531,7 @@
     "ITAUCL": 11400,
     "CAP": 5161.4
    },
-   "ipsa": 7353.2,
+   "ipsa": 7343.07,
    "ipsaSynth": true
   },
   {
@@ -5566,7 +5566,7 @@
     "ITAUCL": 11445,
     "CAP": 5270
    },
-   "ipsa": 7387.37,
+   "ipsa": 7377.18,
    "ipsaSynth": true
   },
   {
@@ -5601,7 +5601,7 @@
     "ITAUCL": 11500,
     "CAP": 5317.8
    },
-   "ipsa": 7431.36,
+   "ipsa": 7421.17,
    "ipsaSynth": true
   },
   {
@@ -5636,7 +5636,7 @@
     "ITAUCL": 11400,
     "CAP": 5325
    },
-   "ipsa": 7378.37,
+   "ipsa": 7367.45,
    "ipsaSynth": true
   },
   {
@@ -5671,7 +5671,7 @@
     "ITAUCL": 11500,
     "CAP": 5287.5
    },
-   "ipsa": 7383.77,
+   "ipsa": 7372.81,
    "ipsaSynth": true
   },
   {
@@ -5706,7 +5706,7 @@
     "ITAUCL": 11450,
     "CAP": 5200
    },
-   "ipsa": 7349.49,
+   "ipsa": 7338.63,
    "ipsaSynth": true
   },
   {
@@ -5741,7 +5741,7 @@
     "ITAUCL": 11483,
     "CAP": 5210
    },
-   "ipsa": 7383.59,
+   "ipsa": 7372.79,
    "ipsaSynth": true
   },
   {
@@ -5776,7 +5776,7 @@
     "ITAUCL": 11500,
     "CAP": 5249
    },
-   "ipsa": 7423.76,
+   "ipsa": 7413.32,
    "ipsaSynth": true
   },
   {
@@ -5811,7 +5811,7 @@
     "ITAUCL": 11548,
     "CAP": 5250
    },
-   "ipsa": 7433.18,
+   "ipsa": 7423.42,
    "ipsaSynth": true
   },
   {
@@ -5846,7 +5846,7 @@
     "ITAUCL": 11350,
     "CAP": 5120
    },
-   "ipsa": 7417.25,
+   "ipsa": 7407.65,
    "ipsaSynth": true
   },
   {
@@ -5881,7 +5881,7 @@
     "ITAUCL": 11270,
     "CAP": 5160
    },
-   "ipsa": 7413.49,
+   "ipsa": 7404.41,
    "ipsaSynth": true
   },
   {
@@ -5916,7 +5916,7 @@
     "ITAUCL": 11350,
     "CAP": 5171.3
    },
-   "ipsa": 7446.27,
+   "ipsa": 7436.6,
    "ipsaSynth": true
   },
   {
@@ -5951,7 +5951,7 @@
     "ITAUCL": 11403,
     "CAP": 5314.9
    },
-   "ipsa": 7500.34,
+   "ipsa": 7490.06,
    "ipsaSynth": true
   },
   {
@@ -5986,7 +5986,7 @@
     "ITAUCL": 11700,
     "CAP": 5415
    },
-   "ipsa": 7555.51,
+   "ipsa": 7545.68,
    "ipsaSynth": true
   },
   {
@@ -6021,7 +6021,7 @@
     "ITAUCL": 11900,
     "CAP": 5405.3
    },
-   "ipsa": 7641.25,
+   "ipsa": 7632.23,
    "ipsaSynth": true
   },
   {
@@ -6056,7 +6056,7 @@
     "ITAUCL": 11768,
     "CAP": 5360
    },
-   "ipsa": 7620.54,
+   "ipsa": 7611.5,
    "ipsaSynth": true
   },
   {
@@ -6091,7 +6091,7 @@
     "ITAUCL": 11940,
     "CAP": 5300
    },
-   "ipsa": 7630.49,
+   "ipsa": 7621.8,
    "ipsaSynth": true
   },
   {
@@ -6126,7 +6126,7 @@
     "ITAUCL": 11865,
     "CAP": 5250
    },
-   "ipsa": 7609.59,
+   "ipsa": 7600.99,
    "ipsaSynth": true
   },
   {
@@ -6161,7 +6161,7 @@
     "ITAUCL": 11748,
     "CAP": 5250
    },
-   "ipsa": 7610.78,
+   "ipsa": 7601.59,
    "ipsaSynth": true
   },
   {
@@ -6196,7 +6196,7 @@
     "ITAUCL": 12200,
     "CAP": 5275
    },
-   "ipsa": 7595.41,
+   "ipsa": 7586.13,
    "ipsaSynth": true
   },
   {
@@ -6231,7 +6231,7 @@
     "ITAUCL": 12100,
     "CAP": 5208.3
    },
-   "ipsa": 7582.32,
+   "ipsa": 7572.37,
    "ipsaSynth": true
   },
   {
@@ -6266,7 +6266,7 @@
     "ITAUCL": 12330,
     "CAP": 5100
    },
-   "ipsa": 7572.96,
+   "ipsa": 7562.9,
    "ipsaSynth": true
   },
   {
@@ -6301,7 +6301,7 @@
     "ITAUCL": 12650,
     "CAP": 5137
    },
-   "ipsa": 7637.13,
+   "ipsa": 7626.74,
    "ipsaSynth": true
   },
   {
@@ -6336,7 +6336,7 @@
     "ITAUCL": 12800,
     "CAP": 5179
    },
-   "ipsa": 7678.25,
+   "ipsa": 7667.79,
    "ipsaSynth": true
   },
   {
@@ -6371,7 +6371,7 @@
     "ITAUCL": 12899,
     "CAP": 5150
    },
-   "ipsa": 7629.34,
+   "ipsa": 7619.03,
    "ipsaSynth": true
   },
   {
@@ -6406,7 +6406,7 @@
     "ITAUCL": 13003,
     "CAP": 5184.5
    },
-   "ipsa": 7680.29,
+   "ipsa": 7669.86,
    "ipsaSynth": true
   },
   {
@@ -6441,7 +6441,7 @@
     "ITAUCL": 12979,
     "CAP": 5154.8
    },
-   "ipsa": 7686.72,
+   "ipsa": 7676.44,
    "ipsaSynth": true
   },
   {
@@ -6476,7 +6476,7 @@
     "ITAUCL": 13026,
     "CAP": 5140
    },
-   "ipsa": 7715.23,
+   "ipsa": 7704.56,
    "ipsaSynth": true
   },
   {
@@ -6511,7 +6511,7 @@
     "ITAUCL": 12564,
     "CAP": 5017.3
    },
-   "ipsa": 7477.51,
+   "ipsa": 7466.99,
    "ipsaSynth": true
   },
   {
@@ -6546,7 +6546,7 @@
     "ITAUCL": 12110,
     "CAP": 4862
    },
-   "ipsa": 7223.71,
+   "ipsa": 7213.51,
    "ipsaSynth": true
   },
   {
@@ -6581,7 +6581,7 @@
     "ITAUCL": 12090,
     "CAP": 4480
    },
-   "ipsa": 7146.85,
+   "ipsa": 7135.32,
    "ipsaSynth": true
   },
   {
@@ -6616,7 +6616,7 @@
     "ITAUCL": 12599,
     "CAP": 4598
    },
-   "ipsa": 7466.01,
+   "ipsa": 7455.38,
    "ipsaSynth": true
   },
   {
@@ -6651,7 +6651,7 @@
     "ITAUCL": 12590,
     "CAP": 4428
    },
-   "ipsa": 7363.41,
+   "ipsa": 7352.05,
    "ipsaSynth": true
   },
   {
@@ -6686,7 +6686,7 @@
     "ITAUCL": 12400,
     "CAP": 4504.5
    },
-   "ipsa": 7419.13,
+   "ipsa": 7408,
    "ipsaSynth": true
   },
   {
@@ -6721,7 +6721,7 @@
     "ITAUCL": 12501,
     "CAP": 4503.3
    },
-   "ipsa": 7562.31,
+   "ipsa": 7551.06,
    "ipsaSynth": true
   },
   {
@@ -6756,7 +6756,7 @@
     "ITAUCL": 13100,
     "CAP": 4554.5
    },
-   "ipsa": 7669.24,
+   "ipsa": 7657.23,
    "ipsaSynth": true
   },
   {
@@ -6791,7 +6791,7 @@
     "ITAUCL": 13000,
     "CAP": 4558
    },
-   "ipsa": 7686.62,
+   "ipsa": 7674.31,
    "ipsaSynth": true
   },
   {
@@ -6826,7 +6826,7 @@
     "ITAUCL": 13250,
     "CAP": 4689.7
    },
-   "ipsa": 7776.73,
+   "ipsa": 7764.48,
    "ipsaSynth": true
   },
   {
@@ -6861,7 +6861,7 @@
     "ITAUCL": 13050,
     "CAP": 4798.5
    },
-   "ipsa": 7720.39,
+   "ipsa": 7707.64,
    "ipsaSynth": true
   },
   {
@@ -6896,7 +6896,7 @@
     "ITAUCL": 13005,
     "CAP": 4735
    },
-   "ipsa": 7780.1,
+   "ipsa": 7767.64,
    "ipsaSynth": true
   },
   {
@@ -6931,7 +6931,7 @@
     "ITAUCL": 13260,
     "CAP": 4809.9
    },
-   "ipsa": 7879.05,
+   "ipsa": 7865.81,
    "ipsaSynth": true
   },
   {
@@ -6966,7 +6966,7 @@
     "ITAUCL": 13600,
     "CAP": 4849.9
    },
-   "ipsa": 7921.43,
+   "ipsa": 7908.15,
    "ipsaSynth": true
   },
   {
@@ -7001,7 +7001,7 @@
     "ITAUCL": 13566,
     "CAP": 4831.9
    },
-   "ipsa": 7921.91,
+   "ipsa": 7908.45,
    "ipsaSynth": true
   },
   {
@@ -7036,7 +7036,7 @@
     "ITAUCL": 13750,
     "CAP": 4889
    },
-   "ipsa": 7912.7,
+   "ipsa": 7898.67,
    "ipsaSynth": true
   },
   {
@@ -7071,7 +7071,7 @@
     "ITAUCL": 13856,
     "CAP": 4923.6
    },
-   "ipsa": 7972.28,
+   "ipsa": 7958.24,
    "ipsaSynth": true
   },
   {
@@ -7106,7 +7106,7 @@
     "ITAUCL": 13799,
     "CAP": 4870
    },
-   "ipsa": 7966.27,
+   "ipsa": 7951.87,
    "ipsaSynth": true
   },
   {
@@ -7141,7 +7141,7 @@
     "ITAUCL": 13501,
     "CAP": 4949.8
    },
-   "ipsa": 7970.53,
+   "ipsa": 7955.98,
    "ipsaSynth": true
   },
   {
@@ -7176,7 +7176,7 @@
     "ITAUCL": 13520,
     "CAP": 4967.5
    },
-   "ipsa": 7944.56,
+   "ipsa": 7929.74,
    "ipsaSynth": true
   },
   {
@@ -7211,7 +7211,7 @@
     "ITAUCL": 13479,
     "CAP": 4930
    },
-   "ipsa": 7961.02,
+   "ipsa": 7945.95,
    "ipsaSynth": true
   },
   {
@@ -7246,7 +7246,7 @@
     "ITAUCL": 13566,
     "CAP": 4925
    },
-   "ipsa": 8066.89,
+   "ipsa": 8051.33,
    "ipsaSynth": true
   },
   {
@@ -7281,7 +7281,7 @@
     "ITAUCL": 13400,
     "CAP": 4846.9
    },
-   "ipsa": 8076.01,
+   "ipsa": 8060.92,
    "ipsaSynth": true
   },
   {
@@ -7316,7 +7316,7 @@
     "ITAUCL": 13500,
     "CAP": 4840
    },
-   "ipsa": 8149.38,
+   "ipsa": 8134.4,
    "ipsaSynth": true
   },
   {
@@ -7351,7 +7351,7 @@
     "ITAUCL": 13400,
     "CAP": 4900
    },
-   "ipsa": 8244.53,
+   "ipsa": 8230.2,
    "ipsaSynth": true
   },
   {
@@ -7386,7 +7386,7 @@
     "ITAUCL": 13225,
     "CAP": 4944.9
    },
-   "ipsa": 8282.44,
+   "ipsa": 8267.42,
    "ipsaSynth": true
   },
   {
@@ -7421,7 +7421,7 @@
     "ITAUCL": 13050,
     "CAP": 5075.1
    },
-   "ipsa": 8394.14,
+   "ipsa": 8377.86,
    "ipsaSynth": true
   },
   {
@@ -7456,7 +7456,7 @@
     "ITAUCL": 13030,
     "CAP": 5108.1
    },
-   "ipsa": 8338.22,
+   "ipsa": 8321.58,
    "ipsaSynth": true
   },
   {
@@ -7491,7 +7491,7 @@
     "ITAUCL": 12999,
     "CAP": 5110.5
    },
-   "ipsa": 8311.99,
+   "ipsa": 8295.1,
    "ipsaSynth": true
   },
   {
@@ -7526,7 +7526,7 @@
     "ITAUCL": 12975,
     "CAP": 5120
    },
-   "ipsa": 8277.33,
+   "ipsa": 8260.76,
    "ipsaSynth": true
   },
   {
@@ -7561,7 +7561,7 @@
     "ITAUCL": 13000,
     "CAP": 5125
    },
-   "ipsa": 8315.12,
+   "ipsa": 8298.18,
    "ipsaSynth": true
   },
   {
@@ -7596,7 +7596,7 @@
     "ITAUCL": 12940,
     "CAP": 5143.9
    },
-   "ipsa": 8260.16,
+   "ipsa": 8242.89,
    "ipsaSynth": true
   },
   {
@@ -7631,7 +7631,7 @@
     "ITAUCL": 12922,
     "CAP": 5167.1
    },
-   "ipsa": 8290.23,
+   "ipsa": 8272.18,
    "ipsaSynth": true
   },
   {
@@ -7666,7 +7666,7 @@
     "ITAUCL": 12965,
     "CAP": 5215.5
    },
-   "ipsa": 8259.52,
+   "ipsa": 8241.64,
    "ipsaSynth": true
   },
   {
@@ -7701,7 +7701,7 @@
     "ITAUCL": 13000,
     "CAP": 5214
    },
-   "ipsa": 8210.3,
+   "ipsa": 8192.39,
    "ipsaSynth": true
   },
   {
@@ -7736,7 +7736,7 @@
     "ITAUCL": 12800,
     "CAP": 5169.8
    },
-   "ipsa": 8092,
+   "ipsa": 8073.78,
    "ipsaSynth": true
   },
   {
@@ -7771,7 +7771,7 @@
     "ITAUCL": 12720,
     "CAP": 5208
    },
-   "ipsa": 8034.67,
+   "ipsa": 8016.78,
    "ipsaSynth": true
   },
   {
@@ -7806,7 +7806,7 @@
     "ITAUCL": 12799,
     "CAP": 5050
    },
-   "ipsa": 7880.99,
+   "ipsa": 7862.9,
    "ipsaSynth": true
   },
   {
@@ -7841,7 +7841,7 @@
     "ITAUCL": 12800,
     "CAP": 5029
    },
-   "ipsa": 7892.2,
+   "ipsa": 7874.29,
    "ipsaSynth": true
   },
   {
@@ -7876,7 +7876,7 @@
     "ITAUCL": 12800,
     "CAP": 5014.1
    },
-   "ipsa": 7976.06,
+   "ipsa": 7958.49,
    "ipsaSynth": true
   },
   {
@@ -7911,7 +7911,7 @@
     "ITAUCL": 12869,
     "CAP": 5193
    },
-   "ipsa": 8036.14,
+   "ipsa": 8019.31,
    "ipsaSynth": true
   },
   {
@@ -7946,7 +7946,7 @@
     "ITAUCL": 12850,
     "CAP": 5244
    },
-   "ipsa": 8028.64,
+   "ipsa": 8011.61,
    "ipsaSynth": true
   },
   {
@@ -7981,7 +7981,7 @@
     "ITAUCL": 12855,
     "CAP": 5231
    },
-   "ipsa": 8059.41,
+   "ipsa": 8042.68,
    "ipsaSynth": true
   },
   {
@@ -8016,7 +8016,7 @@
     "ITAUCL": 12801,
     "CAP": 5202.1
    },
-   "ipsa": 8067.63,
+   "ipsa": 8051.58,
    "ipsaSynth": true
   },
   {
@@ -8051,7 +8051,7 @@
     "ITAUCL": 12800,
     "CAP": 5187.3
    },
-   "ipsa": 8137.11,
+   "ipsa": 8121.05,
    "ipsaSynth": true
   },
   {
@@ -8086,7 +8086,7 @@
     "ITAUCL": 13048,
     "CAP": 5080
    },
-   "ipsa": 8225.62,
+   "ipsa": 8209.14,
    "ipsaSynth": true
   },
   {
@@ -8121,7 +8121,7 @@
     "ITAUCL": 13016,
     "CAP": 5015.6
    },
-   "ipsa": 8168.62,
+   "ipsa": 8151.92,
    "ipsaSynth": true
   },
   {
@@ -8156,7 +8156,7 @@
     "ITAUCL": 12750,
     "CAP": 4956.8
    },
-   "ipsa": 8108.27,
+   "ipsa": 8091.43,
    "ipsaSynth": true
   },
   {
@@ -8191,7 +8191,7 @@
     "ITAUCL": 12650,
     "CAP": 4984.5
    },
-   "ipsa": 8070.5,
+   "ipsa": 8054.09,
    "ipsaSynth": true
   },
   {
@@ -8226,7 +8226,7 @@
     "ITAUCL": 12400,
     "CAP": 4926.2
    },
-   "ipsa": 7995.15,
+   "ipsa": 7979.05,
    "ipsaSynth": true
   },
   {
@@ -8261,7 +8261,7 @@
     "ITAUCL": 12350,
     "CAP": 4929.5
    },
-   "ipsa": 8010.35,
+   "ipsa": 7994.76,
    "ipsaSynth": true
   },
   {
@@ -8296,7 +8296,7 @@
     "ITAUCL": 12360,
     "CAP": 4737.5
    },
-   "ipsa": 7995.99,
+   "ipsa": 7980.49,
    "ipsaSynth": true
   },
   {
@@ -8331,7 +8331,7 @@
     "ITAUCL": 12370,
     "CAP": 4639.9
    },
-   "ipsa": 7956.79,
+   "ipsa": 7941.68,
    "ipsaSynth": true
   },
   {
@@ -8366,7 +8366,7 @@
     "ITAUCL": 12599,
     "CAP": 4740
    },
-   "ipsa": 8072.46,
+   "ipsa": 8056.9,
    "ipsaSynth": true
   },
   {
@@ -8401,7 +8401,7 @@
     "ITAUCL": 12600,
     "CAP": 4740
    },
-   "ipsa": 8063.68,
+   "ipsa": 8048.49,
    "ipsaSynth": true
   },
   {
@@ -8436,7 +8436,7 @@
     "ITAUCL": 12660,
     "CAP": 4811.3
    },
-   "ipsa": 8097.94,
+   "ipsa": 8083.09,
    "ipsaSynth": true
   },
   {
@@ -8471,7 +8471,7 @@
     "ITAUCL": 12517,
     "CAP": 4780
    },
-   "ipsa": 8139.56,
+   "ipsa": 8124.48,
    "ipsaSynth": true
   },
   {
@@ -8506,7 +8506,7 @@
     "ITAUCL": 12900,
     "CAP": 4798.5
    },
-   "ipsa": 8194.77,
+   "ipsa": 8179.82,
    "ipsaSynth": true
   },
   {
@@ -8541,7 +8541,7 @@
     "ITAUCL": 12842,
     "CAP": 4785.1
    },
-   "ipsa": 8142.74,
+   "ipsa": 8127.6,
    "ipsaSynth": true
   },
   {
@@ -8576,7 +8576,7 @@
     "ITAUCL": 12772,
     "CAP": 4895
    },
-   "ipsa": 8208.95,
+   "ipsa": 8194.78,
    "ipsaSynth": true
   },
   {
@@ -8611,7 +8611,7 @@
     "ITAUCL": 12796,
     "CAP": 4924.9
    },
-   "ipsa": 8231.4,
+   "ipsa": 8217.22,
    "ipsaSynth": true
   },
   {
@@ -8646,7 +8646,7 @@
     "ITAUCL": 12754,
     "CAP": 4951.3
    },
-   "ipsa": 8231.96,
+   "ipsa": 8217.56,
    "ipsaSynth": true
   },
   {
@@ -8681,7 +8681,7 @@
     "ITAUCL": 12670,
     "CAP": 4840.9
    },
-   "ipsa": 8208.14,
+   "ipsa": 8193.41,
    "ipsaSynth": true
   },
   {
@@ -8716,7 +8716,7 @@
     "ITAUCL": 12700,
     "CAP": 4837.4
    },
-   "ipsa": 8273.96,
+   "ipsa": 8259.95,
    "ipsaSynth": true
   },
   {
@@ -8751,7 +8751,7 @@
     "ITAUCL": 12674,
     "CAP": 4700
    },
-   "ipsa": 8286.81,
+   "ipsa": 8273.42,
    "ipsaSynth": true
   },
   {
@@ -8786,7 +8786,7 @@
     "ITAUCL": 12660,
     "CAP": 4781.9
    },
-   "ipsa": 8320.1,
+   "ipsa": 8307.42,
    "ipsaSynth": true
   },
   {
@@ -8821,7 +8821,7 @@
     "ITAUCL": 12550,
     "CAP": 4763.8
    },
-   "ipsa": 8220.72,
+   "ipsa": 8207.65,
    "ipsaSynth": true
   },
   {
@@ -8856,7 +8856,7 @@
     "ITAUCL": 12410,
     "CAP": 4760
    },
-   "ipsa": 8220.76,
+   "ipsa": 8207.98,
    "ipsaSynth": true
   },
   {
@@ -8891,7 +8891,7 @@
     "ITAUCL": 12300,
     "CAP": 4701
    },
-   "ipsa": 8147.21,
+   "ipsa": 8133.74,
    "ipsaSynth": true
   },
   {
@@ -8926,7 +8926,7 @@
     "ITAUCL": 12497,
     "CAP": 4750
    },
-   "ipsa": 8206.71,
+   "ipsa": 8194.42,
    "ipsaSynth": true
   },
   {
@@ -8961,7 +8961,7 @@
     "ITAUCL": 12467,
     "CAP": 4765
    },
-   "ipsa": 8179.53,
+   "ipsa": 8167.55,
    "ipsaSynth": true
   },
   {
@@ -8996,7 +8996,7 @@
     "ITAUCL": 12600,
     "CAP": 4750
    },
-   "ipsa": 8129.65,
+   "ipsa": 8117.57,
    "ipsaSynth": true
   },
   {
@@ -9031,7 +9031,7 @@
     "ITAUCL": 12655,
     "CAP": 4749.9
    },
-   "ipsa": 8126.3,
+   "ipsa": 8115.86,
    "ipsaSynth": true
   },
   {
@@ -9066,7 +9066,7 @@
     "ITAUCL": 12740,
     "CAP": 4715
    },
-   "ipsa": 8156.91,
+   "ipsa": 8145.48,
    "ipsaSynth": true
   },
   {
@@ -9101,7 +9101,7 @@
     "ITAUCL": 12750,
     "CAP": 4751.2
    },
-   "ipsa": 8148.31,
+   "ipsa": 8137.8,
    "ipsaSynth": true
   },
   {
@@ -9136,7 +9136,7 @@
     "ITAUCL": 12950,
     "CAP": 4770.6
    },
-   "ipsa": 8225.41,
+   "ipsa": 8214.88,
    "ipsaSynth": true
   },
   {
@@ -9171,7 +9171,7 @@
     "ITAUCL": 12750,
     "CAP": 4666.3
    },
-   "ipsa": 8083.15,
+   "ipsa": 8071.68,
    "ipsaSynth": true
   },
   {
@@ -9206,7 +9206,7 @@
     "ITAUCL": 12650,
     "CAP": 4670
    },
-   "ipsa": 8127.86,
+   "ipsa": 8115.97,
    "ipsaSynth": true
   },
   {
@@ -9241,7 +9241,7 @@
     "ITAUCL": 12752,
     "CAP": 4618
    },
-   "ipsa": 8135.13,
+   "ipsa": 8122.27,
    "ipsaSynth": true
   },
   {
@@ -9276,7 +9276,7 @@
     "ITAUCL": 12852,
     "CAP": 4630
    },
-   "ipsa": 8214.87,
+   "ipsa": 8200.95,
    "ipsaSynth": true
   },
   {
@@ -9311,7 +9311,7 @@
     "ITAUCL": 12998,
     "CAP": 4679
    },
-   "ipsa": 8189.5,
+   "ipsa": 8175.3,
    "ipsaSynth": true
   },
   {
@@ -9346,7 +9346,7 @@
     "ITAUCL": 12813,
     "CAP": 4692.8
    },
-   "ipsa": 8234.43,
+   "ipsa": 8220.28,
    "ipsaSynth": true
   },
   {
@@ -9381,7 +9381,7 @@
     "ITAUCL": 12800,
     "CAP": 4694.5
    },
-   "ipsa": 8221.12,
+   "ipsa": 8207.02,
    "ipsaSynth": true
   },
   {
@@ -9416,7 +9416,7 @@
     "ITAUCL": 12985,
     "CAP": 4719.5
    },
-   "ipsa": 8260.01,
+   "ipsa": 8246.04,
    "ipsaSynth": true
   },
   {
@@ -9451,7 +9451,7 @@
     "ITAUCL": 12999,
     "CAP": 4720
    },
-   "ipsa": 8376.77,
+   "ipsa": 8363.62,
    "ipsaSynth": true
   },
   {
@@ -9486,7 +9486,7 @@
     "ITAUCL": 13150,
     "CAP": 4719
    },
-   "ipsa": 8542.1,
+   "ipsa": 8530.69,
    "ipsaSynth": true
   },
   {
@@ -9521,7 +9521,7 @@
     "ITAUCL": 13424,
     "CAP": 4779
    },
-   "ipsa": 8633.34,
+   "ipsa": 8624.56,
    "ipsaSynth": true
   },
   {
@@ -9556,7 +9556,7 @@
     "ITAUCL": 13400,
     "CAP": 4800
    },
-   "ipsa": 8610.93,
+   "ipsa": 8601.47,
    "ipsaSynth": true
   },
   {
@@ -9591,7 +9591,7 @@
     "ITAUCL": 13850,
     "CAP": 4805
    },
-   "ipsa": 8769.99,
+   "ipsa": 8759.88,
    "ipsaSynth": true
   },
   {
@@ -9626,7 +9626,7 @@
     "ITAUCL": 13800,
     "CAP": 4816
    },
-   "ipsa": 8786.51,
+   "ipsa": 8776.14,
    "ipsaSynth": true
   },
   {
@@ -9661,7 +9661,7 @@
     "ITAUCL": 13798,
     "CAP": 4821
    },
-   "ipsa": 8848.71,
+   "ipsa": 8838.4,
    "ipsaSynth": true
   },
   {
@@ -9696,7 +9696,7 @@
     "ITAUCL": 13650,
     "CAP": 4802
    },
-   "ipsa": 8759.65,
+   "ipsa": 8748.82,
    "ipsaSynth": true
   },
   {
@@ -9731,7 +9731,7 @@
     "ITAUCL": 13481,
     "CAP": 4814
    },
-   "ipsa": 8702.03,
+   "ipsa": 8690.39,
    "ipsaSynth": true
   },
   {
@@ -9766,7 +9766,7 @@
     "ITAUCL": 13450,
     "CAP": 4794.1
    },
-   "ipsa": 8753.1,
+   "ipsa": 8742.33,
    "ipsaSynth": true
   },
   {
@@ -9801,7 +9801,7 @@
     "ITAUCL": 13570,
     "CAP": 4859
    },
-   "ipsa": 8870.48,
+   "ipsa": 8859.17,
    "ipsaSynth": true
   },
   {
@@ -9836,7 +9836,7 @@
     "ITAUCL": 13551,
     "CAP": 4950
    },
-   "ipsa": 8906.45,
+   "ipsa": 8895.31,
    "ipsaSynth": true
   },
   {
@@ -9871,7 +9871,7 @@
     "ITAUCL": 13675,
     "CAP": 4945
    },
-   "ipsa": 8858.72,
+   "ipsa": 8847.28,
    "ipsaSynth": true
   },
   {
@@ -9906,7 +9906,7 @@
     "ITAUCL": 13804,
     "CAP": 4987
    },
-   "ipsa": 8913.55,
+   "ipsa": 8902.78,
    "ipsaSynth": true
   },
   {
@@ -9941,7 +9941,7 @@
     "ITAUCL": 13898,
     "CAP": 5159
    },
-   "ipsa": 8955.91,
+   "ipsa": 8944.15,
    "ipsaSynth": true
   },
   {
@@ -9976,7 +9976,7 @@
     "ITAUCL": 13801,
     "CAP": 5198
    },
-   "ipsa": 8934.91,
+   "ipsa": 8923.2,
    "ipsaSynth": true
   },
   {
@@ -10011,7 +10011,7 @@
     "ITAUCL": 13900,
     "CAP": 5201.3
    },
-   "ipsa": 8972.55,
+   "ipsa": 8960.29,
    "ipsaSynth": true
   },
   {
@@ -10046,7 +10046,7 @@
     "ITAUCL": 13913,
     "CAP": 5269
    },
-   "ipsa": 9020.77,
+   "ipsa": 9007.23,
    "ipsaSynth": true
   },
   {
@@ -10081,7 +10081,7 @@
     "ITAUCL": 14299,
     "CAP": 5359
    },
-   "ipsa": 9124.4,
+   "ipsa": 9110.62,
    "ipsaSynth": true
   },
   {
@@ -10116,7 +10116,7 @@
     "ITAUCL": 14368,
     "CAP": 5350
    },
-   "ipsa": 9261.85,
+   "ipsa": 9247.67,
    "ipsaSynth": true
   },
   {
@@ -10151,7 +10151,7 @@
     "ITAUCL": 14499,
     "CAP": 5360
    },
-   "ipsa": 9301.68,
+   "ipsa": 9288.46,
    "ipsaSynth": true
   },
   {
@@ -10186,7 +10186,7 @@
     "ITAUCL": 14480,
     "CAP": 5301
    },
-   "ipsa": 9206.19,
+   "ipsa": 9192.77,
    "ipsaSynth": true
   },
   {
@@ -10221,7 +10221,7 @@
     "ITAUCL": 14439,
     "CAP": 5270
    },
-   "ipsa": 9113.76,
+   "ipsa": 9098.74,
    "ipsaSynth": true
   },
   {
@@ -10256,7 +10256,7 @@
     "ITAUCL": 14550,
     "CAP": 5300
    },
-   "ipsa": 9095.29,
+   "ipsa": 9080.27,
    "ipsaSynth": true
   },
   {
@@ -10291,7 +10291,7 @@
     "ITAUCL": 14900,
     "CAP": 5399
    },
-   "ipsa": 9265.18,
+   "ipsa": 9249.72,
    "ipsaSynth": true
   },
   {
@@ -10326,7 +10326,7 @@
     "ITAUCL": 14777,
     "CAP": 5400
    },
-   "ipsa": 9114.19,
+   "ipsa": 9098.98,
    "ipsaSynth": true
   },
   {
@@ -10361,7 +10361,7 @@
     "ITAUCL": 14895,
     "CAP": 5433.9
    },
-   "ipsa": 9231.49,
+   "ipsa": 9216.83,
    "ipsaSynth": true
   },
   {
@@ -10396,7 +10396,7 @@
     "ITAUCL": 14850,
     "CAP": 5398
    },
-   "ipsa": 9214.14,
+   "ipsa": 9199.3,
    "ipsaSynth": true
   },
   {
@@ -10431,7 +10431,7 @@
     "ITAUCL": 14640,
     "CAP": 5400
    },
-   "ipsa": 9151.01,
+   "ipsa": 9136.92,
    "ipsaSynth": true
   },
   {
@@ -10466,7 +10466,7 @@
     "ITAUCL": 14990,
     "CAP": 5399.9
    },
-   "ipsa": 9281.46,
+   "ipsa": 9267.33,
    "ipsaSynth": true
   },
   {
@@ -10501,7 +10501,7 @@
     "ITAUCL": 14900,
     "CAP": 5435
    },
-   "ipsa": 9300.09,
+   "ipsa": 9285.55,
    "ipsaSynth": true
   },
   {
@@ -10536,7 +10536,7 @@
     "ITAUCL": 15100,
     "CAP": 5421.4
    },
-   "ipsa": 9270.47,
+   "ipsa": 9256.71,
    "ipsaSynth": true
   },
   {
@@ -10571,7 +10571,7 @@
     "ITAUCL": 14950,
     "CAP": 5300
    },
-   "ipsa": 9191.91,
+   "ipsa": 9179.28,
    "ipsaSynth": true
   },
   {
@@ -10606,7 +10606,7 @@
     "ITAUCL": 14880,
     "CAP": 5315.1
    },
-   "ipsa": 9178.63,
+   "ipsa": 9165.92,
    "ipsaSynth": true
   },
   {
@@ -10641,7 +10641,7 @@
     "ITAUCL": 14625,
     "CAP": 5210.9
    },
-   "ipsa": 9155.48,
+   "ipsa": 9142.62,
    "ipsaSynth": true
   },
   {
@@ -10676,7 +10676,7 @@
     "ITAUCL": 14800,
     "CAP": 5244.8
    },
-   "ipsa": 9139.46,
+   "ipsa": 9126.09,
    "ipsaSynth": true
   },
   {
@@ -10711,7 +10711,7 @@
     "ITAUCL": 15150,
     "CAP": 5208
    },
-   "ipsa": 9096.2,
+   "ipsa": 9083.68,
    "ipsaSynth": true
   },
   {
@@ -10746,7 +10746,7 @@
     "ITAUCL": 15088,
     "CAP": 5188
    },
-   "ipsa": 9067.27,
+   "ipsa": 9055.81,
    "ipsaSynth": true
   },
   {
@@ -10781,7 +10781,7 @@
     "ITAUCL": 15520,
     "CAP": 5197.1
    },
-   "ipsa": 9058.14,
+   "ipsa": 9046.26,
    "ipsaSynth": true
   },
   {
@@ -10816,7 +10816,7 @@
     "ITAUCL": 15211,
     "CAP": 5200.7
    },
-   "ipsa": 8999.13,
+   "ipsa": 8987.96,
    "ipsaSynth": true
   },
   {
@@ -10851,7 +10851,7 @@
     "ITAUCL": 15290,
     "CAP": 5300
    },
-   "ipsa": 9001.81,
+   "ipsa": 8990.53,
    "ipsaSynth": true
   },
   {
@@ -10886,7 +10886,7 @@
     "ITAUCL": 15300,
     "CAP": 5380
    },
-   "ipsa": 9092.15,
+   "ipsa": 9080.95,
    "ipsaSynth": true
   },
   {
@@ -10921,7 +10921,7 @@
     "ITAUCL": 15349,
     "CAP": 5350
    },
-   "ipsa": 8994.25,
+   "ipsa": 8983.14,
    "ipsaSynth": true
   },
   {
@@ -10956,7 +10956,7 @@
     "ITAUCL": 15200,
     "CAP": 5290
    },
-   "ipsa": 8853.16,
+   "ipsa": 8840.99,
    "ipsaSynth": true
   },
   {
@@ -10991,7 +10991,7 @@
     "ITAUCL": 15325,
     "CAP": 5329.9
    },
-   "ipsa": 8982.64,
+   "ipsa": 8971.16,
    "ipsaSynth": true
   },
   {
@@ -11026,7 +11026,7 @@
     "ITAUCL": 15795,
     "CAP": 5353.7
    },
-   "ipsa": 9200.89,
+   "ipsa": 9189.59,
    "ipsaSynth": true
   },
   {
@@ -11061,7 +11061,7 @@
     "ITAUCL": 16415,
     "CAP": 5449
    },
-   "ipsa": 9300.35,
+   "ipsa": 9289.21,
    "ipsaSynth": true
   },
   {
@@ -11096,7 +11096,7 @@
     "ITAUCL": 16340,
     "CAP": 5629.9
    },
-   "ipsa": 9303.59,
+   "ipsa": 9292.04,
    "ipsaSynth": true
   },
   {
@@ -11131,7 +11131,7 @@
     "ITAUCL": 16600,
     "CAP": 5620
    },
-   "ipsa": 9319.55,
+   "ipsa": 9307.14,
    "ipsaSynth": true
   },
   {
@@ -11166,7 +11166,7 @@
     "ITAUCL": 16780,
     "CAP": 5614.8
    },
-   "ipsa": 9348.53,
+   "ipsa": 9336.5,
    "ipsaSynth": true
   },
   {
@@ -11201,7 +11201,7 @@
     "ITAUCL": 16650,
     "CAP": 5635
    },
-   "ipsa": 9306.87,
+   "ipsa": 9294.07,
    "ipsaSynth": true
   },
   {
@@ -11236,7 +11236,7 @@
     "ITAUCL": 16500,
     "CAP": 5761.1
    },
-   "ipsa": 9222.84,
+   "ipsa": 9210.16,
    "ipsaSynth": true
   },
   {
@@ -11271,7 +11271,7 @@
     "ITAUCL": 16800,
     "CAP": 5893.9
    },
-   "ipsa": 9323.41,
+   "ipsa": 9311.47,
    "ipsaSynth": true
   },
   {
@@ -11306,7 +11306,7 @@
     "ITAUCL": 16720,
     "CAP": 6019
    },
-   "ipsa": 9363.14,
+   "ipsa": 9352.17,
    "ipsaSynth": true
   },
   {
@@ -11341,7 +11341,7 @@
     "ITAUCL": 16500,
     "CAP": 5910
    },
-   "ipsa": 9369.88,
+   "ipsa": 9358.06,
    "ipsaSynth": true
   },
   {
@@ -11376,7 +11376,7 @@
     "ITAUCL": 16542,
     "CAP": 6077
    },
-   "ipsa": 9379.63,
+   "ipsa": 9367.87,
    "ipsaSynth": true
   },
   {
@@ -11411,7 +11411,7 @@
     "ITAUCL": 16700,
     "CAP": 6200.7
    },
-   "ipsa": 9479.75,
+   "ipsa": 9468.91,
    "ipsaSynth": true
   },
   {
@@ -11446,7 +11446,7 @@
     "ITAUCL": 17124,
     "CAP": 6300
    },
-   "ipsa": 9576.19,
+   "ipsa": 9565.87,
    "ipsaSynth": true
   },
   {
@@ -11481,7 +11481,7 @@
     "ITAUCL": 17300,
     "CAP": 6349
    },
-   "ipsa": 9669.18,
+   "ipsa": 9658.84,
    "ipsaSynth": true
   },
   {
@@ -11516,7 +11516,7 @@
     "ITAUCL": 17000,
     "CAP": 6225
    },
-   "ipsa": 9484.13,
+   "ipsa": 9472.7,
    "ipsaSynth": true
   },
   {
@@ -11551,7 +11551,7 @@
     "ITAUCL": 17060,
     "CAP": 6250
    },
-   "ipsa": 9599.21,
+   "ipsa": 9588.46,
    "ipsaSynth": true
   },
   {
@@ -11586,7 +11586,7 @@
     "ITAUCL": 17098,
     "CAP": 6264
    },
-   "ipsa": 9637.71,
+   "ipsa": 9626.73,
    "ipsaSynth": true
   },
   {
@@ -11621,7 +11621,7 @@
     "ITAUCL": 17449,
     "CAP": 6328
    },
-   "ipsa": 9784.59,
+   "ipsa": 9774.09,
    "ipsaSynth": true
   },
   {
@@ -11656,7 +11656,7 @@
     "ITAUCL": 17533,
     "CAP": 6274.3
    },
-   "ipsa": 9836.46,
+   "ipsa": 9828,
    "ipsaSynth": true
   },
   {
@@ -11691,7 +11691,7 @@
     "ITAUCL": 17305,
     "CAP": 6329
    },
-   "ipsa": 9879.36,
+   "ipsa": 9870.48,
    "ipsaSynth": true
   },
   {
@@ -11726,7 +11726,7 @@
     "ITAUCL": 17990,
     "CAP": 6351
    },
-   "ipsa": 10071.09,
+   "ipsa": 10062.59,
    "ipsaSynth": true
   },
   {
@@ -11761,7 +11761,7 @@
     "ITAUCL": 17500,
     "CAP": 6444
    },
-   "ipsa": 9874.44,
+   "ipsa": 9866.5,
    "ipsaSynth": true
   },
   {
@@ -11796,7 +11796,7 @@
     "ITAUCL": 17489,
     "CAP": 6360
    },
-   "ipsa": 9780.1,
+   "ipsa": 9773.24,
    "ipsaSynth": true
   },
   {
@@ -11831,7 +11831,7 @@
     "ITAUCL": 17600,
     "CAP": 6429.8
    },
-   "ipsa": 10069.95,
+   "ipsa": 10065.91,
    "ipsaSynth": true
   },
   {
@@ -11866,7 +11866,7 @@
     "ITAUCL": 17450,
     "CAP": 6330
    },
-   "ipsa": 9977.24,
+   "ipsa": 9972.81,
    "ipsaSynth": true
   },
   {
@@ -11901,7 +11901,7 @@
     "ITAUCL": 17700,
     "CAP": 6300
    },
-   "ipsa": 10040.17,
+   "ipsa": 10036.43,
    "ipsaSynth": true
   },
   {
@@ -11936,7 +11936,7 @@
     "ITAUCL": 17322,
     "CAP": 6287.9
    },
-   "ipsa": 9974.15,
+   "ipsa": 9969.8,
    "ipsaSynth": true
   },
   {
@@ -11971,7 +11971,7 @@
     "ITAUCL": 17300,
     "CAP": 6269
    },
-   "ipsa": 10014.16,
+   "ipsa": 10009.46,
    "ipsaSynth": true
   },
   {
@@ -12006,7 +12006,7 @@
     "ITAUCL": 17554,
     "CAP": 6200
    },
-   "ipsa": 9987.47,
+   "ipsa": 9981.84,
    "ipsaSynth": true
   },
   {
@@ -12041,7 +12041,7 @@
     "ITAUCL": 17998,
     "CAP": 6289
    },
-   "ipsa": 10119.95,
+   "ipsa": 10115.99,
    "ipsaSynth": true
   },
   {
@@ -12076,7 +12076,7 @@
     "ITAUCL": 18000,
     "CAP": 6354.9
    },
-   "ipsa": 10164.95,
+   "ipsa": 10160.86,
    "ipsaSynth": true
   },
   {
@@ -12111,7 +12111,7 @@
     "ITAUCL": 17929,
     "CAP": 6428.4
    },
-   "ipsa": 10240.54,
+   "ipsa": 10236.62,
    "ipsaSynth": true
   },
   {
@@ -12146,7 +12146,7 @@
     "ITAUCL": 17900,
     "CAP": 6468
    },
-   "ipsa": 10296.14,
+   "ipsa": 10292.71,
    "ipsaSynth": true
   },
   {
@@ -12181,7 +12181,7 @@
     "ITAUCL": 17870,
     "CAP": 6490
    },
-   "ipsa": 10315.05,
+   "ipsa": 10311.16,
    "ipsaSynth": true
   },
   {
@@ -12216,7 +12216,7 @@
     "ITAUCL": 17750,
     "CAP": 6640
    },
-   "ipsa": 10308.1,
+   "ipsa": 10304.07,
    "ipsaSynth": true
   },
   {
@@ -12251,7 +12251,7 @@
     "ITAUCL": 17853,
     "CAP": 6970
    },
-   "ipsa": 10359.79,
+   "ipsa": 10354.49,
    "ipsaSynth": true
   },
   {
@@ -12286,7 +12286,7 @@
     "ITAUCL": 18000,
     "CAP": 6975
    },
-   "ipsa": 10367.54,
+   "ipsa": 10360.59,
    "ipsaSynth": true
   },
   {
@@ -12321,7 +12321,7 @@
     "ITAUCL": 18020,
     "CAP": 6979
    },
-   "ipsa": 10404.11,
+   "ipsa": 10397.98,
    "ipsaSynth": true
   },
   {
@@ -12356,7 +12356,7 @@
     "ITAUCL": 17999,
     "CAP": 6951
    },
-   "ipsa": 10350.23,
+   "ipsa": 10344.88,
    "ipsaSynth": true
   },
   {
@@ -12391,7 +12391,7 @@
     "ITAUCL": 17932,
     "CAP": 7013
    },
-   "ipsa": 10344.35,
+   "ipsa": 10338.63,
    "ipsaSynth": true
   },
   {
@@ -12426,7 +12426,7 @@
     "ITAUCL": 18150,
     "CAP": 7048.5
    },
-   "ipsa": 10535.32,
+   "ipsa": 10529.68,
    "ipsaSynth": true
   },
   {
@@ -12461,7 +12461,7 @@
     "ITAUCL": 18370,
     "CAP": 7070
    },
-   "ipsa": 10577.23,
+   "ipsa": 10571.11,
    "ipsaSynth": true
   },
   {
@@ -12496,7 +12496,7 @@
     "ITAUCL": 18339,
     "CAP": 7000
    },
-   "ipsa": 10466.13,
+   "ipsa": 10460.27,
    "ipsaSynth": true
   },
   {
@@ -12531,7 +12531,7 @@
     "ITAUCL": 18400,
     "CAP": 6990
    },
-   "ipsa": 10345.53,
+   "ipsa": 10340.05,
    "ipsaSynth": true
   },
   {
@@ -12566,7 +12566,7 @@
     "ITAUCL": 17900,
     "CAP": 6850
    },
-   "ipsa": 10271.24,
+   "ipsa": 10267.42,
    "ipsaSynth": true
   },
   {
@@ -12601,7 +12601,7 @@
     "ITAUCL": 17950,
     "CAP": 7009.9
    },
-   "ipsa": 10302.16,
+   "ipsa": 10298.31,
    "ipsaSynth": true
   },
   {
@@ -12636,7 +12636,7 @@
     "ITAUCL": 18750,
     "CAP": 7086
    },
-   "ipsa": 10407.84,
+   "ipsa": 10404.38,
    "ipsaSynth": true
   },
   {
@@ -12671,7 +12671,7 @@
     "ITAUCL": 19000,
     "CAP": 7300
    },
-   "ipsa": 10490.6,
+   "ipsa": 10487.76,
    "ipsaSynth": true
   },
   {
@@ -12706,7 +12706,7 @@
     "ITAUCL": 19600,
     "CAP": 7425
    },
-   "ipsa": 10507.06,
+   "ipsa": 10504.74,
    "ipsaSynth": true
   },
   {
@@ -12741,7 +12741,7 @@
     "ITAUCL": 19750,
     "CAP": 7456
    },
-   "ipsa": 10494.81,
+   "ipsa": 10492.2,
    "ipsaSynth": true
   },
   {
@@ -12776,7 +12776,7 @@
     "ITAUCL": 19961,
     "CAP": 7420.4
    },
-   "ipsa": 10584.19,
+   "ipsa": 10582.05,
    "ipsaSynth": true
   },
   {
@@ -12811,7 +12811,7 @@
     "ITAUCL": 19970,
     "CAP": 7400
    },
-   "ipsa": 10627.63,
+   "ipsa": 10625.09,
    "ipsaSynth": true
   },
   {
@@ -12846,7 +12846,7 @@
     "ITAUCL": 19950,
     "CAP": 7420
    },
-   "ipsa": 10598.05,
+   "ipsa": 10595.17,
    "ipsaSynth": true
   },
   {
@@ -12881,7 +12881,7 @@
     "ITAUCL": 19990,
     "CAP": 7495
    },
-   "ipsa": 10544.04,
+   "ipsa": 10540.49,
    "ipsaSynth": true
   },
   {
@@ -12916,7 +12916,7 @@
     "ITAUCL": 20700,
     "CAP": 7630
    },
-   "ipsa": 10798.89,
+   "ipsa": 10795.59,
    "ipsaSynth": true
   },
   {
@@ -12951,7 +12951,7 @@
     "ITAUCL": 21249,
     "CAP": 7790
    },
-   "ipsa": 11010.64,
+   "ipsa": 11007.9,
    "ipsaSynth": true
   },
   {
@@ -12986,7 +12986,7 @@
     "ITAUCL": 21460,
     "CAP": 7952.3
    },
-   "ipsa": 10957.84,
+   "ipsa": 10955.83,
    "ipsaSynth": true
   },
   {
@@ -13021,7 +13021,7 @@
     "ITAUCL": 21202,
     "CAP": 8128
    },
-   "ipsa": 11006.92,
+   "ipsa": 11004.14,
    "ipsaSynth": true
   },
   {
@@ -13056,7 +13056,7 @@
     "ITAUCL": 21500,
     "CAP": 8145
    },
-   "ipsa": 11044.02,
+   "ipsa": 11040.9,
    "ipsaSynth": true
   },
   {
@@ -13091,7 +13091,7 @@
     "ITAUCL": 21480,
     "CAP": 8224.9
    },
-   "ipsa": 11158.75,
+   "ipsa": 11156.58,
    "ipsaSynth": true
   },
   {
@@ -13126,7 +13126,7 @@
     "ITAUCL": 21450,
     "CAP": 8339
    },
-   "ipsa": 11324.87,
+   "ipsa": 11323.7,
    "ipsaSynth": true
   },
   {
@@ -13161,7 +13161,7 @@
     "ITAUCL": 22102,
     "CAP": 8398.8
    },
-   "ipsa": 11290.08,
+   "ipsa": 11290.03,
    "ipsaSynth": true
   },
   {
@@ -13196,7 +13196,7 @@
     "ITAUCL": 22499,
     "CAP": 8560
    },
-   "ipsa": 11167.08,
+   "ipsa": 11165.86,
    "ipsaSynth": true
   },
   {
@@ -13231,7 +13231,7 @@
     "ITAUCL": 23633,
     "CAP": 8600
    },
-   "ipsa": 11259.55,
+   "ipsa": 11257.44,
    "ipsaSynth": true
   },
   {
@@ -13266,7 +13266,7 @@
     "ITAUCL": 23490,
     "CAP": 8564.5
    },
-   "ipsa": 11232.46,
+   "ipsa": 11230.04,
    "ipsaSynth": true
   },
   {
@@ -13301,7 +13301,7 @@
     "ITAUCL": 23050,
     "CAP": 8450
    },
-   "ipsa": 11224.73,
+   "ipsa": 11222.97,
    "ipsaSynth": true
   },
   {
@@ -13336,7 +13336,7 @@
     "ITAUCL": 23150,
     "CAP": 8279
    },
-   "ipsa": 11334.45,
+   "ipsa": 11332.95,
    "ipsaSynth": true
   },
   {
@@ -13371,7 +13371,7 @@
     "ITAUCL": 23400,
     "CAP": 8300
    },
-   "ipsa": 11590.22,
+   "ipsa": 11588.78,
    "ipsaSynth": true
   },
   {
@@ -13406,7 +13406,7 @@
     "ITAUCL": 23450,
     "CAP": 8120
    },
-   "ipsa": 11598.81,
+   "ipsa": 11597.68,
    "ipsaSynth": true
   },
   {
@@ -13441,7 +13441,7 @@
     "ITAUCL": 23761,
     "CAP": 8250
    },
-   "ipsa": 11609.76,
+   "ipsa": 11609.12,
    "ipsaSynth": true
   },
   {
@@ -13476,7 +13476,7 @@
     "ITAUCL": 23780,
     "CAP": 8220
    },
-   "ipsa": 11725.07,
+   "ipsa": 11723.89,
    "ipsaSynth": true
   },
   {
@@ -13511,7 +13511,7 @@
     "ITAUCL": 23979,
     "CAP": 8000
    },
-   "ipsa": 11708.77,
+   "ipsa": 11707.23,
    "ipsaSynth": true
   },
   {
@@ -13546,7 +13546,7 @@
     "ITAUCL": 24099,
     "CAP": 8190
    },
-   "ipsa": 11613.06,
+   "ipsa": 11610.91,
    "ipsaSynth": true
   },
   {
@@ -13581,7 +13581,7 @@
     "ITAUCL": 23800,
     "CAP": 8250
    },
-   "ipsa": 11542.65,
+   "ipsa": 11539.17,
    "ipsaSynth": true
   },
   {
@@ -13616,7 +13616,7 @@
     "ITAUCL": 24000,
     "CAP": 8450
    },
-   "ipsa": 11566.48,
+   "ipsa": 11561.92,
    "ipsaSynth": true
   },
   {
@@ -13651,7 +13651,7 @@
     "ITAUCL": 24913,
     "CAP": 8328.9
    },
-   "ipsa": 11697.66,
+   "ipsa": 11694.02,
    "ipsaSynth": true
   },
   {
@@ -13686,7 +13686,7 @@
     "ITAUCL": 24999,
     "CAP": 8025.1
    },
-   "ipsa": 11526.7,
+   "ipsa": 11521.82,
    "ipsaSynth": true
   },
   {
@@ -13721,7 +13721,7 @@
     "ITAUCL": 23650,
     "CAP": 7950
    },
-   "ipsa": 11408.07,
+   "ipsa": 11402.65,
    "ipsaSynth": true
   },
   {
@@ -13756,7 +13756,7 @@
     "ITAUCL": 23510,
     "CAP": 7800
    },
-   "ipsa": 11320.26,
+   "ipsa": 11314.5,
    "ipsaSynth": true
   },
   {
@@ -13791,7 +13791,7 @@
     "ITAUCL": 23850,
     "CAP": 7991
    },
-   "ipsa": 11370.56,
+   "ipsa": 11364.31,
    "ipsaSynth": true
   },
   {
@@ -13826,7 +13826,7 @@
     "ITAUCL": 23150,
     "CAP": 7640
    },
-   "ipsa": 11159.75,
+   "ipsa": 11153.18,
    "ipsaSynth": true
   },
   {
@@ -13861,7 +13861,7 @@
     "ITAUCL": 23900,
     "CAP": 7479.9
    },
-   "ipsa": 11329.5,
+   "ipsa": 11325.01,
    "ipsaSynth": true
   },
   {
@@ -13896,7 +13896,7 @@
     "ITAUCL": 23335,
     "CAP": 7152.1
    },
-   "ipsa": 11084.65,
+   "ipsa": 11079.32,
    "ipsaSynth": true
   },
   {
@@ -13931,7 +13931,7 @@
     "ITAUCL": 22800,
     "CAP": 7000
    },
-   "ipsa": 11014.17,
+   "ipsa": 11009.38,
    "ipsaSynth": true
   },
   {
@@ -13966,7 +13966,7 @@
     "ITAUCL": 22799,
     "CAP": 6973
    },
-   "ipsa": 11037.29,
+   "ipsa": 11032.2,
    "ipsaSynth": true
   },
   {
@@ -14001,7 +14001,7 @@
     "ITAUCL": 22899,
     "CAP": 7100
    },
-   "ipsa": 10996.45,
+   "ipsa": 10992.09,
    "ipsaSynth": true
   },
   {
@@ -14036,7 +14036,7 @@
     "ITAUCL": 22899,
     "CAP": 7050
    },
-   "ipsa": 11000.42,
+   "ipsa": 10996.25,
    "ipsaSynth": true
   },
   {
@@ -14071,7 +14071,7 @@
     "ITAUCL": 22600,
     "CAP": 6810
    },
-   "ipsa": 10931.24,
+   "ipsa": 10927.12,
    "ipsaSynth": true
   },
   {
@@ -14106,7 +14106,7 @@
     "ITAUCL": 22700,
     "CAP": 7100
    },
-   "ipsa": 10972.71,
+   "ipsa": 10969.12,
    "ipsaSynth": true
   },
   {
@@ -14141,7 +14141,7 @@
     "ITAUCL": 22487,
     "CAP": 7000
    },
-   "ipsa": 11039.91,
+   "ipsa": 11036.67,
    "ipsaSynth": true
   },
   {
@@ -14176,7 +14176,7 @@
     "ITAUCL": 22393,
     "CAP": 6909.7
    },
-   "ipsa": 11115.61,
+   "ipsa": 11112.95,
    "ipsaSynth": true
   },
   {
@@ -14211,7 +14211,7 @@
     "ITAUCL": 22339,
     "CAP": 7068
    },
-   "ipsa": 11220.28,
+   "ipsa": 11218.85,
    "ipsaSynth": true
   },
   {
@@ -14246,7 +14246,7 @@
     "ITAUCL": 21900,
     "CAP": 6980
    },
-   "ipsa": 11145.75,
+   "ipsa": 11144.63,
    "ipsaSynth": true
   },
   {
@@ -14281,7 +14281,7 @@
     "ITAUCL": 20900,
     "CAP": 7107
    },
-   "ipsa": 11006.62,
+   "ipsa": 11004.91,
    "ipsaSynth": true
   },
   {
@@ -14316,7 +14316,7 @@
     "ITAUCL": 20101,
     "CAP": 6883
    },
-   "ipsa": 10674.48,
+   "ipsa": 10673.9,
    "ipsaSynth": true
   },
   {
@@ -14351,7 +14351,7 @@
     "ITAUCL": 19701,
     "CAP": 6750
    },
-   "ipsa": 10368,
+   "ipsa": 10366.69,
    "ipsaSynth": true
   },
   {
@@ -14386,7 +14386,7 @@
     "ITAUCL": 20500,
     "CAP": 6599.9
    },
-   "ipsa": 10619.97,
+   "ipsa": 10618.43,
    "ipsaSynth": true
   },
   {
@@ -14421,7 +14421,7 @@
     "ITAUCL": 20250,
     "CAP": 6395
    },
-   "ipsa": 10426.53,
+   "ipsa": 10425.86,
    "ipsaSynth": true
   },
   {
@@ -14456,7 +14456,7 @@
     "ITAUCL": 20423,
     "CAP": 6402
    },
-   "ipsa": 10499.66,
+   "ipsa": 10499.24,
    "ipsaSynth": true
   },
   {
@@ -14491,7 +14491,7 @@
     "ITAUCL": 20160,
     "CAP": 6580
    },
-   "ipsa": 10576.84,
+   "ipsa": 10576.78,
    "ipsaSynth": true
   },
   {
@@ -14526,7 +14526,7 @@
     "ITAUCL": 20585,
     "CAP": 6736
    },
-   "ipsa": 10714.83,
+   "ipsa": 10715.39,
    "ipsaSynth": true
   },
   {
@@ -14561,7 +14561,7 @@
     "ITAUCL": 20400,
     "CAP": 6650
    },
-   "ipsa": 10618.69,
+   "ipsa": 10619.74,
    "ipsaSynth": true
   },
   {
@@ -14596,7 +14596,7 @@
     "ITAUCL": 19317,
     "CAP": 6791.1
    },
-   "ipsa": 10496.69,
+   "ipsa": 10498.79,
    "ipsaSynth": true
   },
   {
@@ -14631,7 +14631,7 @@
     "ITAUCL": 19790,
     "CAP": 6761.4
    },
-   "ipsa": 10593.88,
+   "ipsa": 10594.74,
    "ipsaSynth": true
   },
   {
@@ -14666,7 +14666,7 @@
     "ITAUCL": 19750,
     "CAP": 6871.1
    },
-   "ipsa": 10727.96,
+   "ipsa": 10728.79,
    "ipsaSynth": true
   },
   {
@@ -14701,7 +14701,7 @@
     "ITAUCL": 19639,
     "CAP": 6834.4
    },
-   "ipsa": 10767.94,
+   "ipsa": 10769.09,
    "ipsaSynth": true
   },
   {
@@ -14736,7 +14736,7 @@
     "ITAUCL": 19600,
     "CAP": 6900
    },
-   "ipsa": 10772.01,
+   "ipsa": 10772.4,
    "ipsaSynth": true
   },
   {
@@ -14771,7 +14771,7 @@
     "ITAUCL": 19503,
     "CAP": 6715
    },
-   "ipsa": 10651.48,
+   "ipsa": 10650.77,
    "ipsaSynth": true
   },
   {
@@ -14806,7 +14806,7 @@
     "ITAUCL": 18601,
     "CAP": 6400
    },
-   "ipsa": 10480.2,
+   "ipsa": 10478.57,
    "ipsaSynth": true
   },
   {
@@ -14841,7 +14841,7 @@
     "ITAUCL": 18500,
     "CAP": 6275
    },
-   "ipsa": 10407.63,
+   "ipsa": 10408.42,
    "ipsaSynth": true
   },
   {
@@ -14876,7 +14876,7 @@
     "ITAUCL": 18800,
     "CAP": 6361
    },
-   "ipsa": 10306.94,
+   "ipsa": 10307.9,
    "ipsaSynth": true
   },
   {
@@ -14911,7 +14911,7 @@
     "ITAUCL": 19012,
     "CAP": 6460
    },
-   "ipsa": 10487.35,
+   "ipsa": 10489.8,
    "ipsaSynth": true
   },
   {
@@ -14946,7 +14946,7 @@
     "ITAUCL": 19000,
     "CAP": 6650
    },
-   "ipsa": 10481.51,
+   "ipsa": 10483.82,
    "ipsaSynth": true
   },
   {
@@ -14981,7 +14981,7 @@
     "ITAUCL": 19000,
     "CAP": 6771.4
    },
-   "ipsa": 10460.2,
+   "ipsa": 10464.53,
    "ipsaSynth": true
   },
   {
@@ -15016,7 +15016,7 @@
     "ITAUCL": 19001,
     "CAP": 6701.5
    },
-   "ipsa": 10448.54,
+   "ipsa": 10452.89,
    "ipsaSynth": true
   },
   {
@@ -15051,7 +15051,7 @@
     "ITAUCL": 19250,
     "CAP": 6940
    },
-   "ipsa": 10675.95,
+   "ipsa": 10679.75,
    "ipsaSynth": true
   },
   {
@@ -15086,7 +15086,7 @@
     "ITAUCL": 19729,
     "CAP": 7115
    },
-   "ipsa": 10921.58,
+   "ipsa": 10924.48,
    "ipsaSynth": true
   },
   {
@@ -15121,7 +15121,7 @@
     "ITAUCL": 20200,
     "CAP": 7059.1
    },
-   "ipsa": 10780.88,
+   "ipsa": 10784.42,
    "ipsaSynth": true
   },
   {
@@ -15156,7 +15156,7 @@
     "ITAUCL": 20600,
     "CAP": 7067.4
    },
-   "ipsa": 10742.16,
+   "ipsa": 10745.12,
    "ipsaSynth": true
   },
   {
@@ -15191,7 +15191,7 @@
     "ITAUCL": 20431,
     "CAP": 6921.9
    },
-   "ipsa": 10568.62,
+   "ipsa": 10571.64,
    "ipsaSynth": true
   },
   {
@@ -15226,7 +15226,7 @@
     "ITAUCL": 20800,
     "CAP": 6970
    },
-   "ipsa": 10913.84,
+   "ipsa": 10917,
    "ipsaSynth": true
   },
   {
@@ -15261,7 +15261,7 @@
     "ITAUCL": 20950,
     "CAP": 6835.4
    },
-   "ipsa": 11010.93,
+   "ipsa": 11013.44,
    "ipsaSynth": true
   },
   {
@@ -15296,7 +15296,7 @@
     "ITAUCL": 21389,
     "CAP": 6810
    },
-   "ipsa": 11146.53,
+   "ipsa": 11148.73,
    "ipsaSynth": true
   },
   {
@@ -15331,7 +15331,7 @@
     "ITAUCL": 20851,
     "CAP": 6945
    },
-   "ipsa": 11174.94,
+   "ipsa": 11178.82,
    "ipsaSynth": true
   },
   {
@@ -15366,7 +15366,7 @@
     "ITAUCL": 21300,
     "CAP": 6910
    },
-   "ipsa": 11365.41,
+   "ipsa": 11369.29,
    "ipsaSynth": true
   },
   {
@@ -15401,7 +15401,7 @@
     "ITAUCL": 20000,
     "CAP": 6950
    },
-   "ipsa": 11329.48,
+   "ipsa": 11332.5,
    "ipsaSynth": true
   },
   {
@@ -15436,7 +15436,7 @@
     "ITAUCL": 19969,
     "CAP": 6890
    },
-   "ipsa": 11452.2,
+   "ipsa": 11458.14,
    "ipsaSynth": true
   },
   {
@@ -15471,7 +15471,7 @@
     "ITAUCL": 20600,
     "CAP": 6880
    },
-   "ipsa": 11459.11,
+   "ipsa": 11462.49,
    "ipsaSynth": true
   },
   {
@@ -15506,7 +15506,7 @@
     "ITAUCL": 20399,
     "CAP": 6840.6
    },
-   "ipsa": 11359.94,
+   "ipsa": 11363.2,
    "ipsaSynth": true
   },
   {
@@ -15541,7 +15541,7 @@
     "ITAUCL": 19950,
     "CAP": 6810.7
    },
-   "ipsa": 11136,
+   "ipsa": 11139.45,
    "ipsaSynth": true
   },
   {
@@ -15576,7 +15576,7 @@
     "ITAUCL": 19351,
     "CAP": 6850
    },
-   "ipsa": 11008.94,
+   "ipsa": 11012.87,
    "ipsaSynth": true
   },
   {
@@ -15611,7 +15611,7 @@
     "ITAUCL": 19400,
     "CAP": 6899.8
    },
-   "ipsa": 11001.88,
+   "ipsa": 11005.43,
    "ipsaSynth": true
   },
   {
@@ -15646,7 +15646,7 @@
     "ITAUCL": 19800,
     "CAP": 7050
    },
-   "ipsa": 11161.26,
+   "ipsa": 11165.81,
    "ipsaSynth": true
   },
   {
@@ -15681,7 +15681,7 @@
     "ITAUCL": 19350,
     "CAP": 7065.9
    },
-   "ipsa": 11097.86,
+   "ipsa": 11103.57,
    "ipsaSynth": true
   },
   {
@@ -15716,7 +15716,7 @@
     "ITAUCL": 19000,
     "CAP": 7034.8
    },
-   "ipsa": 10884.34,
+   "ipsa": 10889.63,
    "ipsaSynth": true
   },
   {
@@ -15751,7 +15751,7 @@
     "ITAUCL": 18520,
     "CAP": 6988
    },
-   "ipsa": 10789.12,
+   "ipsa": 10796.1,
    "ipsaSynth": true
   },
   {
@@ -15786,7 +15786,7 @@
     "ITAUCL": 18400,
     "CAP": 7015
    },
-   "ipsa": 10807.24,
+   "ipsa": 10814.12,
    "ipsaSynth": true
   },
   {
@@ -15821,7 +15821,7 @@
     "ITAUCL": 17700,
     "CAP": 7045.2
    },
-   "ipsa": 10622.7,
+   "ipsa": 10629.48,
    "ipsaSynth": true
   },
   {
@@ -15856,7 +15856,7 @@
     "ITAUCL": 17550,
     "CAP": 7081
    },
-   "ipsa": 10570.61,
+   "ipsa": 10578.18,
    "ipsaSynth": true
   },
   {
@@ -15891,7 +15891,7 @@
     "ITAUCL": 18302,
     "CAP": 7119.5
    },
-   "ipsa": 10855.44,
+   "ipsa": 10861.87,
    "ipsaSynth": true
   },
   {
@@ -15926,7 +15926,7 @@
     "ITAUCL": 18668,
     "CAP": 7300
    },
-   "ipsa": 10830.18,
+   "ipsa": 10835.76,
    "ipsaSynth": true
   },
   {
@@ -15961,7 +15961,7 @@
     "ITAUCL": 18365,
     "CAP": 7330
    },
-   "ipsa": 10699.88,
+   "ipsa": 10706.03,
    "ipsaSynth": true
   },
   {
@@ -15996,7 +15996,7 @@
     "ITAUCL": 17972,
     "CAP": 7170
    },
-   "ipsa": 10537.63,
+   "ipsa": 10545.1,
    "ipsaSynth": true
   },
   {
@@ -16031,7 +16031,7 @@
     "ITAUCL": 17650,
     "CAP": 7005.6
    },
-   "ipsa": 10471.42,
+   "ipsa": 10479.45,
    "ipsaSynth": true
   },
   {
@@ -16066,7 +16066,7 @@
     "ITAUCL": 17122,
     "CAP": 6730
    },
-   "ipsa": 10280.46,
+   "ipsa": 10287.68,
    "ipsaSynth": true
   },
   {
@@ -16101,7 +16101,7 @@
     "ITAUCL": 17089,
     "CAP": 6700
    },
-   "ipsa": 10373.23,
+   "ipsa": 10378.81,
    "ipsaSynth": true
   },
   {
@@ -16136,7 +16136,7 @@
     "ITAUCL": 16940,
     "CAP": 6607.5
    },
-   "ipsa": 10298.06,
+   "ipsa": 10302.94,
    "ipsaSynth": true
   },
   {
@@ -16171,7 +16171,7 @@
     "ITAUCL": 16900,
     "CAP": 6550
    },
-   "ipsa": 10370.17,
+   "ipsa": 10374.04,
    "ipsaSynth": true
   },
   {
@@ -16206,7 +16206,7 @@
     "ITAUCL": 16800,
     "CAP": 6531.3
    },
-   "ipsa": 10249.44,
+   "ipsa": 10253.04,
    "ipsaSynth": true
   },
   {
@@ -16241,7 +16241,7 @@
     "ITAUCL": 16950,
     "CAP": 6700
    },
-   "ipsa": 10490.45,
+   "ipsa": 10493.27,
    "ipsaSynth": true
   },
   {
@@ -16276,7 +16276,7 @@
     "ITAUCL": 16699,
     "CAP": 6940
    },
-   "ipsa": 10460.94,
+   "ipsa": 10463.62,
    "ipsaSynth": true
   },
   {
@@ -16311,7 +16311,7 @@
     "ITAUCL": 16850,
     "CAP": 6902
    },
-   "ipsa": 10721.15,
+   "ipsa": 10723.62,
    "ipsaSynth": true
   },
   {
@@ -16346,7 +16346,7 @@
     "ITAUCL": 16950,
     "CAP": 6766.4
    },
-   "ipsa": 10649.39,
+   "ipsa": 10651.66,
    "ipsaSynth": true
   },
   {
@@ -16381,7 +16381,7 @@
     "ITAUCL": 17386,
     "CAP": 6820
    },
-   "ipsa": 10731.65,
+   "ipsa": 10735.04,
    "ipsaSynth": true
   },
   {
@@ -16416,7 +16416,7 @@
     "ITAUCL": 17650,
     "CAP": 6809
    },
-   "ipsa": 10774.3,
+   "ipsa": 10777.33,
    "ipsaSynth": true
   },
   {
@@ -16451,7 +16451,7 @@
     "ITAUCL": 18000,
     "CAP": 6849
    },
-   "ipsa": 10640.68,
+   "ipsa": 10644.6,
    "ipsaSynth": true
   },
   {
@@ -16486,7 +16486,7 @@
     "ITAUCL": 18000,
     "CAP": 6600
    },
-   "ipsa": 10498.49,
+   "ipsa": 10502.36,
    "ipsaSynth": true
   },
   {
@@ -16521,7 +16521,7 @@
     "ITAUCL": 17898,
     "CAP": 6490
    },
-   "ipsa": 10356.54,
+   "ipsa": 10360.26,
    "ipsaSynth": true
   },
   {
@@ -16556,7 +16556,7 @@
     "ITAUCL": 17701,
     "CAP": 6766.8
    },
-   "ipsa": 10242.15,
+   "ipsa": 10245.57,
    "ipsaSynth": true
   },
   {
@@ -16591,7 +16591,7 @@
     "ITAUCL": 17850,
     "CAP": 6765.3
    },
-   "ipsa": 10196.66,
+   "ipsa": 10199.78,
    "ipsaSynth": true
   },
   {
@@ -16626,7 +16626,7 @@
     "ITAUCL": 17700,
     "CAP": 6570
    },
-   "ipsa": 10166.6,
+   "ipsa": 10169.49,
    "ipsaSynth": true
   },
   {
@@ -16661,7 +16661,7 @@
     "ITAUCL": 17300,
     "CAP": 6470
    },
-   "ipsa": 10081.96,
+   "ipsa": 10084.17,
    "ipsaSynth": true
   },
   {
@@ -16696,7 +16696,7 @@
     "ITAUCL": 18300,
     "CAP": 6768.6
    },
-   "ipsa": 10425.1,
+   "ipsa": 10427.37,
    "ipsaSynth": true
   },
   {
@@ -16731,7 +16731,7 @@
     "ITAUCL": 17995,
     "CAP": 6514
    },
-   "ipsa": 10394.18,
+   "ipsa": 10395.99,
    "ipsaSynth": true
   },
   {
@@ -16766,7 +16766,7 @@
     "ITAUCL": 18152,
     "CAP": 6500
    },
-   "ipsa": 10646.49,
+   "ipsa": 10649.71,
    "ipsaSynth": true
   },
   {
@@ -16801,7 +16801,7 @@
     "ITAUCL": 18349,
     "CAP": 6485
    },
-   "ipsa": 10811.64,
+   "ipsa": 10815.91,
    "ipsaSynth": true
   },
   {
@@ -16836,7 +16836,7 @@
     "ITAUCL": 18151,
     "CAP": 6500
    },
-   "ipsa": 10778.38,
+   "ipsa": 10782.11,
    "ipsaSynth": true
   },
   {
@@ -16871,7 +16871,7 @@
     "ITAUCL": 18000,
     "CAP": 6569.2
    },
-   "ipsa": 10808.34,
+   "ipsa": 10811.88,
    "ipsaSynth": true
   },
   {
@@ -16906,7 +16906,7 @@
     "ITAUCL": 17780,
     "CAP": 6541.4
    },
-   "ipsa": 10708.97,
+   "ipsa": 10712.73,
    "ipsaSynth": true
   },
   {
@@ -16941,7 +16941,7 @@
     "ITAUCL": 17700,
     "CAP": 6450
    },
-   "ipsa": 10739.28,
+   "ipsa": 10742.22,
    "ipsaSynth": true
   },
   {
@@ -16976,7 +16976,7 @@
     "ITAUCL": 17670,
     "CAP": 6533.3
    },
-   "ipsa": 10809.86,
+   "ipsa": 10813.13,
    "ipsaSynth": true
   },
   {
@@ -17011,7 +17011,7 @@
     "ITAUCL": 18000,
     "CAP": 6611.7
    },
-   "ipsa": 10826.24,
+   "ipsa": 10828.46,
    "ipsaSynth": true
   },
   {
@@ -17046,7 +17046,7 @@
     "ITAUCL": 17900,
     "CAP": 6507.7
    },
-   "ipsa": 10712.22,
+   "ipsa": 10713.88,
    "ipsaSynth": true
   },
   {
@@ -17081,7 +17081,7 @@
     "ITAUCL": 18000,
     "CAP": 6540
    },
-   "ipsa": 10612.24,
+   "ipsa": 10613.74,
    "ipsaSynth": true
   },
   {
@@ -17116,7 +17116,7 @@
     "ITAUCL": 18400,
     "CAP": 6560
    },
-   "ipsa": 10677.91,
+   "ipsa": 10678.5,
    "ipsaSynth": true
   },
   {
@@ -17151,7 +17151,7 @@
     "ITAUCL": 18209,
     "CAP": 6590
    },
-   "ipsa": 10756.7,
+   "ipsa": 10756.19,
    "ipsaSynth": true
   },
   {
@@ -17186,7 +17186,7 @@
     "ITAUCL": 18798,
     "CAP": 6500
    },
-   "ipsa": 10809.01,
+   "ipsa": 10809.89,
    "ipsaSynth": true
   },
   {
@@ -17221,7 +17221,7 @@
     "ITAUCL": 19350,
     "CAP": 6430
    },
-   "ipsa": 10793.14,
+   "ipsa": 10794.09,
    "ipsaSynth": true
   },
   {
@@ -17256,7 +17256,7 @@
     "ITAUCL": 19380,
     "CAP": 6420
    },
-   "ipsa": 10789.24,
+   "ipsa": 10789.55,
    "ipsaSynth": true
   },
   {
@@ -17630,7 +17630,7 @@
     "ITAUCL": 21301,
     "CAP": 6247.7
    },
-   "ipsa": 10975.21,
+   "ipsa": 10974.35,
    "ipsaSynth": true
   },
   {
@@ -17700,7 +17700,7 @@
     "ITAUCL": 21300,
     "CAP": 6130
    },
-   "ipsa": 10946.63,
+   "ipsa": 10946.8,
    "ipsaSynth": true
   },
   {
@@ -17735,7 +17735,7 @@
     "ITAUCL": 20678,
     "CAP": 6313.3
    },
-   "ipsa": 10899.69,
+   "ipsa": 10899.66,
    "ipsaSynth": true
   },
   {
@@ -17770,7 +17770,7 @@
     "ITAUCL": 21379,
     "CAP": 6060
    },
-   "ipsa": 11015.46,
+   "ipsa": 11014.66,
    "ipsaSynth": true
   },
   {
@@ -17804,7 +17804,7 @@
     "ITAUCL": 21100,
     "CAP": 6000
    },
-   "ipsa": 10946.34,
+   "ipsa": 10944.02,
    "ipsaSynth": true
   },
   {
@@ -17839,7 +17839,7 @@
     "ITAUCL": 20899,
     "CAP": 6000
    },
-   "ipsa": 11009.22,
+   "ipsa": 11007.82,
    "ipsaSynth": true
   },
   {
@@ -17874,7 +17874,7 @@
     "ITAUCL": 21050,
     "CAP": 5975
    },
-   "ipsa": 11104.72,
+   "ipsa": 11102.62,
    "ipsaSynth": true
   },
   {
@@ -17909,7 +17909,7 @@
     "CAP": 5929,
     "SONDA": 301.81
    },
-   "ipsa": 11101.67,
+   "ipsa": 11099.13,
    "ipsaSynth": true
   },
   {
@@ -17944,7 +17944,7 @@
     "ITAUCL": 20678,
     "CAP": 6313.3
    },
-   "ipsa": 10916.83,
+   "ipsa": 10916.86,
    "ipsaSynth": true
   },
   {
@@ -17979,7 +17979,7 @@
     "ITAUCL": 21450,
     "CAP": 5771
    },
-   "ipsa": 11087.8,
+   "ipsa": 11085.61,
    "ipsaSynth": true
   },
   {
@@ -18014,7 +18014,7 @@
     "ITAUCL": 21609,
     "CAP": 5802.9
    },
-   "ipsa": 11244.84,
+   "ipsa": 11242.83,
    "ipsaSynth": true
   },
   {
@@ -18049,7 +18049,7 @@
     "ITAUCL": 22000,
     "CAP": 5840
    },
-   "ipsa": 11339.2,
+   "ipsa": 11339.01,
    "ipsaSynth": true
   }
  ]
