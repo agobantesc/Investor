@@ -1391,6 +1391,12 @@
   .isc-sub{font-size:11px;color:var(--muted);font-weight:600;margin-top:2px;}
   .isc-all{flex:0 0 auto;border:1px solid var(--accent);background:transparent;color:var(--accent);font:800 11.5px var(--font);padding:.42rem .7rem;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s var(--ease);}
   .isc-all:hover{background:var(--accent);color:#fff;box-shadow:0 6px 16px -8px rgba(30,95,209,.7);}
+  /* tabla de riesgo: dos mitades (lo esperado y lo ocurrido) separadas por una cabecera agrupadora */
+  .rk-tab th.c{text-align:center}
+  .rk-tab th.rk-grp{border-bottom:2px solid var(--line2);font-size:10px;letter-spacing:.4px}
+  .rk-tab th.rk-grp+th.rk-grp{border-left:1px solid var(--line2)}
+  .rk-tab td:nth-child(4),.rk-tab th:nth-child(4){border-left:1px solid var(--line2)}
+  .rk-sub{font-size:9.5px;color:var(--faint);font-weight:600;margin-top:1px;line-height:1.25}
   /* la carta de recomendación es la ACCIÓN principal de la tarjeta: va en sólido, "ver todas" queda de apoyo */
   .isc-carta{flex:0 0 auto;border:1px solid transparent;background:linear-gradient(135deg,var(--accent),#7C4DD8);color:#fff;font:800 11.5px var(--font);padding:.42rem .78rem;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s var(--ease);box-shadow:0 6px 16px -9px rgba(60,80,200,.75);}
   .isc-carta:hover{filter:brightness(1.07);box-shadow:0 8px 20px -8px rgba(60,80,200,.85);}
@@ -1904,8 +1910,13 @@ function refreshPalette(){var r=readVar;ink=r('--ink')||ink;muted=r('--muted')||
    toca. Esta función solo traduce al presentarla. Si el valor ya viene en otro formato (los proyectos
    antiguos guardaron su fecha con toLocaleDateString, que en es-CL ya es dd-mm-aaaa) se devuelve tal cual. */
 function fD(v){if(v==null||v==="")return "";const s=""+v;const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);return m?(m[3]+"-"+m[2]+"-"+m[1]):s;}
-const pc=(n,d=2)=>(n>=0?"+":"")+(+n).toFixed(d)+"%";
-const p0=(n,d=1)=>(+n).toFixed(d)+"%";
+/* Porcentajes con COMA decimal, como el resto de Investor y como se escribe en Chile. Antes salían de un
+   toFixed() crudo ("-4.48%") y convivían en la misma pantalla con los montos ya localizados ("−$174.689"):
+   el mismo número escrito de dos formas dentro de una tarjeta. El signo negativo va como − (U+2212), que
+   es el que usa fmtCLP, no el guion del teclado. */
+const _pcN=(n,d)=>(+n).toLocaleString("es-CL",{minimumFractionDigits:d,maximumFractionDigits:d});
+const pc=(n,d=2)=>(n>=0?"+":"−")+_pcN(Math.abs(+n),d)+"%";
+const p0=(n,d=1)=>(n<0?"−":"")+_pcN(Math.abs(+n),d)+"%";
 const col=n=>n>=0.005?green:n<=-0.005?red:muted;
 const colbg=n=>n>=0.005?greenbg:n<=-0.005?redbg:"transparent";
 const stk=t=>STOCKS.find(s=>s.t===t);
@@ -3355,6 +3366,7 @@ function invMetrics(){
   // ancla de MEDICIÓN, aparte de la de rentabilidad: apunta al último registro valorizado a mercado.
   let obsVal=null,obsIpsa=null,obsIpsaOK=false,obsOK=false,obsD=null,obsFlow=0;
   const puenteados=[];   // fechas que no cierran tramo (sin cierres de la cartera): se saltan sin cortar la serie
+  const obsPts=[];       // serie MEDIDA: un punto por día con cierre real, con el flujo desde el punto anterior
   /* AJUSTE DE VALORIZACIÓN DEL DÍA DE LA OPERACIÓN.
      Compras hoy y el cierre de hoy todavía no existe: el registro valoriza tus acciones al último cierre
      conocido (el de ayer), pero el aporte entra al precio REAL al que compraste. Esa diferencia se convertía
@@ -3426,10 +3438,14 @@ function invMetrics(){
         if(obsVal!=null&&obsVal>0&&obsOK){const r=(val-obsFlow)/obsVal-1;
           pr.push(r);prCLP.push((val-obsFlow)-obsVal);prD.push(w.date);prBase.push(obsVal);prFrom.push(obsD);
           mr.push(obsIpsa>0?(w.ipsa/obsIpsa-1):0);mrOK.push(!!(obsIpsa>0&&obsIpsaOK&&_ipReal));prOK.push(true);}   // prD/prFrom/prBase: cada retorno lleva su fecha, la fecha BASE del tramo y el PATRIMONIO sobre el que se midió
+        // La SERIE MEDIDA: solo los días con cierre real de toda la cartera, cada uno con el flujo acumulado
+        // desde el punto medido anterior. Es la base honesta para las peores pérdidas por ventana — recorrer
+        // `series` cruda mete pasos hacia días de precios ARRASTRADOS, que no son movimientos de mercado.
+        obsPts.push({date:w.date,val:val,flow:obsFlow});
         obsVal=val;obsIpsa=w.ipsa;obsIpsaOK=_ipReal;obsOK=true;obsD=w.date;obsFlow=0;
       }else{
         puenteados.push(w.date);
-        if(obsVal==null){obsVal=val;obsIpsa=w.ipsa;obsIpsaOK=_ipReal;obsOK=false;obsD=w.date;obsFlow=0;}
+        if(obsVal==null){obsPts.push({date:w.date,val:val,flow:obsFlow});obsVal=val;obsIpsa=w.ipsa;obsIpsaOK=_ipReal;obsOK=false;obsD=w.date;obsFlow=0;}
       }
       prevVal=val;prevIpsa=w.ipsa;prevIpsaOK=_ipReal;dayFlow=0;_prevD=w.date;
     }
@@ -3627,7 +3643,32 @@ function invMetrics(){
   let _ix=1,peakIx=1,peakK=-1,maxDD=0,maxDDCLP=0,maxDDDate=null,maxDDFrom=null;
   for(let k=0;k<pr.length;k++){_ix*=(1+pr[k]);if(_ix>peakIx){peakIx=_ix;peakK=k;}
     const dd=_ix/peakIx-1;if(dd<maxDD){maxDD=dd;maxDDCLP=cumCLP[k]-(peakK>=0?cumCLP[peakK]:0);maxDDDate=prD[k];maxDDFrom=peakK>=0?prD[peakK]:(prFrom[0]||null);}}
-  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,betaObs,betaTop,betaFuera,nret:pr.length,nretIdx,worstRet,bestRet,maxDD,maxDDCLP,maxDDDate,maxDDFrom,worstLossCLP,worstRetDate,worstBaseVal,worstStep,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays};
+  /* PEOR PÉRDIDA REAL en una ventana de N días calendario, sobre la SERIE MEDIDA. Devuelve el tramo con la
+     mayor caída en pesos, con su % sobre el patrimonio que había al INICIO del tramo — que es el patrimonio
+     del momento de la pérdida, no el de hoy — y las fechas del tramo. Todos los flujos intermedios se netean:
+     un aporte dentro de la ventana no maquilla la caída y una venta no la inventa. */
+  const peorVentana=dias=>{
+    const n=obsPts.length;if(n<2)return null;
+    /* El % del tramo es el retorno ENCADENADO de sus pasos (TWR), no la pérdida en pesos dividida por el
+       patrimonio inicial. Con un aporte a mitad de camino esa división miente: medido con precios que caen
+       de 1.000 a 800 (−20% de mercado), un aporte intermedio de $500.000 la convertía en −25,56%, porque el
+       capital nuevo también perdió pero el denominador seguía siendo el patrimonio de antes de que entrara.
+       Encadenando, el aporte deja de contaminar y el tramo mide lo que hizo el MERCADO — la misma vara TWR
+       que usa el resto de Investor. Los pesos sí crecen con el aporte, y deben: más capital expuesto es más
+       plata perdida. El peor tramo se elige por el %, que es lo comparable con el VaR. */
+    const r=[];for(let k=1;k<n;k++){const b=obsPts[k-1].val;r[k]=(b>0)?((obsPts[k].val-(obsPts[k].flow||0))/b-1):0;}
+    const cum=[];let acc=0;for(let k=0;k<n;k++){acc+=obsPts[k].flow||0;cum[k]=acc;}
+    let best=null;
+    for(let i=0;i<n;i++){const t0=new Date(obsPts[i].date+"T00:00:00").getTime();let tw=1;
+      for(let j=i+1;j<n;j++){
+        if(new Date(obsPts[j].date+"T00:00:00").getTime()-t0>dias*864e5+36e5)break;   // +1h por el cambio de hora chileno
+        tw*=(1+r[j]);
+        const pct=tw-1,clp=(obsPts[j].val-(cum[j]-cum[i]))-obsPts[i].val;
+        if(pct<0&&(!best||pct<best.pct))best={pct,clp,from:obsPts[i].date,to:obsPts[j].date,base:obsPts[i].val,
+          dias:Math.round((new Date(obsPts[j].date+"T00:00:00").getTime()-t0)/864e5)};}}
+    return best;
+  };
+  return {shares:sh,curShares:sh,cost,aport,series,stockSeries,perStock,last,betaR,corrR,betaObs,betaTop,betaFuera,nret:pr.length,nretIdx,worstRet,bestRet,maxDD,maxDDCLP,maxDDDate,maxDDFrom,worstLossCLP,worstRetDate,worstBaseVal,worstStep,realizedVol,dayAbs,dayPct,prevDate,dayTo,cagr,sharpeR,trackingError,infoRatio,winRate,elapsedYrs,elapsedDays,obsPts,peorVentana};
 }
 
 const FREQ={diario:{u:"día",uc:"Día",us:"días",adj:"diario",cap:"Diario",det:"el día",per:"del día",pf:"D"},semanal:{u:"semana",uc:"Semana",us:"semanas",adj:"semanal",cap:"Semanal",det:"la semana",per:"de la semana",pf:"S"},mensual:{u:"mes",uc:"Mes",us:"meses",adj:"mensual",cap:"Mensual",det:"el mes",per:"del mes",pf:"M"}};
@@ -4013,42 +4054,11 @@ function viewInvActive(){
      Aquí están las dos mitades. Arriba, cuántas fechas MIDEN y cuántas quedaron fuera y por qué. Abajo, las
      fechas que más MUEVEN la β: para cada una, cuánto valdría sin ella. Si quitar una sola fecha mueve la β
      medio punto, la β todavía no habla del activo — habla de esa fecha. */
-  const betaAudit=(function(){
-    if(IM.betaR==null){
-      const n=IM.nretIdx||0,fuera=(IM.betaFuera||[]).length;
-      return card("De dónde sale tu <span class=\"gl\">β</span> realizada",
-        "Aún no hay observaciones suficientes para una regresión",
-        `<div class="note" style="margin:0">Van <b>${n}</b> fecha(s) con cierre real de tu cartera Y del IPSA; hacen falta <b>4</b>.${fuera?` Otras <b>${fuera}</b> quedaron fuera por falta de cierres.`:""} Con cada día de seguimiento la cifra gana sentido.</div>`,"","rp-omit");
-    }
-    const top=(IM.betaTop||[]).slice(0,5);
-    const n=IM.nretIdx;
-    const _p2=v=>(v>=0?"+":"−")+Math.abs(v*100).toFixed(2)+"%";
-    const filas=top.map(x=>{
-      const mueve=Math.abs(x.dbeta);
-      const c=mueve>=0.30?red:mueve>=0.15?amber:muted;
-      return `<tr><td>${fD(x.d)}${x.desde&&x.desde!==x.d?`<div class="t-sub">desde ${fD(x.desde)}</div>`:""}</td>
-        <td class="r" style="color:${col(x.rp*100)};font-weight:800">${_p2(x.rp)}</td>
-        <td class="r" style="color:${col(x.rm*100)};font-weight:800">${_p2(x.rm)}</td>
-        <td class="r">${x.sin!=null?x.sin.toFixed(2):"—"}</td>
-        <td class="r" style="color:${c};font-weight:800">${(x.dbeta>=0?"+":"−")+mueve.toFixed(2)}</td></tr>`;}).join("");
-    const mayor=top.length?Math.abs(top[0].dbeta):0;
-    const veredicto=mayor>=0.30
-      ? `<b style="color:${red}">Una sola fecha manda.</b> Quitar el <b>${fD(top[0].d)}</b> dejaría la β en <b>${top[0].sin.toFixed(2)}</b> en vez de ${IM.betaR.toFixed(2)}. Con ${n} observaciones eso no es un error de cálculo: es que la muestra todavía es corta y un día fuerte la define. Gana estabilidad con semanas de seguimiento.`
-      : mayor>=0.15
-      ? `<b style="color:${amber}">Sensible a fechas puntuales.</b> La de más peso (${fD(top[0].d)}) mueve la β en <b>${mayor.toFixed(2)}</b>. Léela como una referencia, no como un número fino.`
-      : `<b style="color:${green}">Sin fechas dominantes.</b> Ninguna observación mueve la β más de <b>${mayor.toFixed(2)}</b>: con ${n} observaciones la cifra ya es estable.`;
-    const fuera=IM.betaFuera||[];
-    const porMotivo={};fuera.forEach(x=>{porMotivo[x.motivo]=(porMotivo[x.motivo]||0)+1;});
-    const fueraTxt=fuera.length
-      ? `<div class="note" style="margin-top:11px;font-size:10.5px">Quedaron <b>fuera de la medición</b> ${fuera.length} tramo(s): ${Object.keys(porMotivo).map(m=>`${porMotivo[m]} por <b>${m}</b>`).join(", ")}. Un día sin cierres no se mide contra el mercado —sería un 0% que no ocurrió— pero <b>tampoco corta la serie</b>: el siguiente día con cierre se compara contra el último día medido, sobre el mismo tramo del índice.</div>`
-      : `<div class="note" style="margin-top:11px;font-size:10.5px">Las <b>${n}</b> observaciones tienen cierre real de tu cartera y del IPSA: nada quedó fuera.</div>`;
-    return card("De dónde sale tu <span class=\"gl\">β</span> realizada",
-      `β <b>${IM.betaR.toFixed(2)}</b> sobre <b>${n}</b> observaciones${IM.corrR!=null?` · r² <b>${(IM.corrR*IM.corrR*100).toFixed(0)}%</b>`:""} · las fechas que más la mueven`,
-      {html:`<div class="tw tbl-compact"><table>
-        <thead><tr><th>Fecha</th><th class="r">Tu cartera</th><th class="r">IPSA</th><th class="r" title="Cuánto valdría la β si esta fecha no existiera"><span class="gl">β</span> sin ella</th><th class="r" title="Cuánto mueve esta sola fecha a la β">Mueve</th></tr></thead>
-        <tbody>${filas}</tbody></table></div>
-        <div class="note" style="margin-top:11px">${veredicto}</div>${fueraTxt}`,flush:true},"","rp-omit");
-  })();
+  /* La tarjeta «De dónde sale tu β realizada» se quitó del Seguimiento: nació para una auditoría puntual
+     —por qué la β se movió tanto en un día— y una vez estable (con decenas de observaciones ninguna fecha
+     la mueve más de 0,09) su tabla solo ocupaba espacio en la vista. El diagnóstico que la sostenía sigue
+     vivo en el motor: invMetrics expone betaObs, betaTop y betaFuera para el agente y para volver a
+     construirla si hiciera falta. */
   const capmNote=notecard(`<b>Análisis CAPM de tu inversión.</b> El retorno <b>exigido</b> es lo que el modelo pide por el riesgo sistemático de tu cartera (β ${PF.bp.toFixed(2)}), prorrateado a los ${days} días transcurridos. El <b>alpha realizado</b> (${pc(alphaReal*100)}) = retorno real − exigido: ${alphaReal>=0?"<b style='color:"+green+"'>positivo</b>, tu cartera rinde por encima de lo exigido por su riesgo.":"<b style='color:"+red+"'>negativo</b>, aún rinde bajo lo exigido por su riesgo."} ${IM.betaR!=null?("El <b>β realizado</b> ("+IM.betaR.toFixed(2)+") se estima por regresión de tus retornos vs el IPSA sobre las <b>"+(IM.nretIdx!=null?IM.nretIdx:IM.nret)+" fechas medidas de verdad</b> —cierre real del índice Y de todas tus acciones—"+((IM.nretIdx!=null&&IM.nret>IM.nretIdx)?(" (de "+IM.nret+" registros: "+(IM.nret-IM.nretIdx)+" quedan fuera. Un día sin el cierre del índice, o con tus precios arrastrados —el caso típico: operaste antes de que salieran los cierres— daría un 0% que nunca ocurrió y aplanaría la β)"):"")+"; compáralo con el β esperado ("+PF.bp.toFixed(2)+")."):("Con <b>5+ fechas con cierre real del IPSA y de tus acciones</b> calcularé el β realizado por regresión de tus retornos vs el índice.")}${_shortWin?` <b style="color:${amber}">⚠ Muestra corta (${days} días, ${IM.nret} retorno${IM.nret===1?"":"s"}):</b> el alpha realizado en tan pocos días es <b>ruido</b>, no una lectura estable de desempeño — no lo anualices ni lo leas como "supera por mucho" al CAPM; gana sentido con semanas/meses de seguimiento. El β y el exigido ya reflejan tu cartera ACTUAL (incluye las compras recientes).`:""} <b>Dos vistas:</b> <b>Rentabilidad %</b> (por defecto) compara TWR vs exigido sin el efecto del calendario de aportes — la brecha entre las curvas es exactamente el alpha; <b>Patrimonio $</b> muestra la trayectoria de tu plata con aportes — como el CAPM es una expectativa de <b>largo plazo</b>, esa curva se lee a meses/años (en semanas puede ir "abajo" con la estrategia igual ganándole a su exigencia). No es recomendación de inversión.`);
   // HISTORIAL AGRUPADO POR FECHA: varias operaciones el mismo día son varios registros internos (así lo exige
   // el libro y la edición individual), pero el historial muestra UNA fila por día — con la rentabilidad diaria
@@ -4090,29 +4100,44 @@ function viewInvActive(){
       +(_ini.length>1?`<tr style="background:var(--soft)"><td style="border-left:3px solid #7C3AED55"></td><td colspan="7" style="font-size:11px;color:var(--faint);font-weight:700">Total de la compra inicial · ${_ini.length} acciones · ${fmtCLP(Math.round(_iniTot))}</td><td></td></tr>`:"");
     return main+iniSubs+subs;}).join("");
   const tbl=card("Historial de seguimiento",_grp.length+" día"+(_grp.length>1?"s":"")+" · las operaciones del día van como sub-filas (✎ individual) · la Δ del día ya netea los aportes · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
-  const vaRf=(pY)=>{const sp=(PF.sig/100)/Math.sqrt(pY),mp=Math.pow(1+PF.erCapm/100,1/pY)-1,v=mp-1.645*sp;return {pct:v,loss:L.val*Math.max(0,-v)};};
+  // σ y E(R) son los de la COMPOSICIÓN vigente de la cartera (projSyncReal los recalcula desde los pesos
+  // reales con el análisis del sistema): cambiar de acciones cambia el VaR, no solo el patrimonio.
+  const _z=RISK_Z[riskConf]||1.6449;
+  const vaRf=(pY)=>{const sp=(PF.sig/100)/Math.sqrt(pY),mp=Math.pow(1+PF.erCapm/100,1/pY)-1,v=mp-_z*sp;return {pct:v,loss:L.val*Math.max(0,-v)};};
   const vD=vaRf(252),vW=vaRf(52),vM=vaRf(12),vP=PF.freq==="semanal"?vW:PF.freq==="mensual"?vM:vD;
   const worst=IM.worstRet,breach=worst!=null&&worst<vP.pct;
-  const riskKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("VaR 95% ("+fr.u+")",pc(vP.pct*100),"pérdida máx esperada / "+fr.u,indigo,red)}${tile("Peor "+fr.u+" real",worst!=null?pc(worst*100):"—",worst!=null?((IM.worstRetDate?("el "+fD(IM.worstRetDate)+" · "):"")+(breach?"excedió el VaR":"dentro del VaR")):"sin datos",indigo,worst!=null?col(worst*100):muted)}${tile("Pérdida ese "+fr.u+" (CLP)",IM.worstLossCLP!=null?fmtCLP(IM.worstLossCLP):"—",IM.worstBaseVal!=null?("sobre un patrimonio de "+fmtCLP(IM.worstBaseVal)):("VaR "+fr.u+": "+fmtCLP(-vP.loss)),indigo,IM.worstLossCLP!=null?red:muted)}${tile("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):pc(IM.maxDD*100),pc(IM.maxDD*100)+" desde un máximo"+(IM.maxDDFrom&&IM.maxDDDate?(" · "+fD(IM.maxDDFrom)+" → "+fD(IM.maxDDDate)):(IM.maxDDDate?(" · "+fD(IM.maxDDDate)):"")),indigo,col(IM.maxDD*100))}${tile("Volatilidad realizada",IM.realizedVol!=null?p0(IM.realizedVol):"—",IM.realizedVol!=null?("esperada σ "+p0(PF.sig)):"≥3 registros",indigo,accentT)}</div>`;
-  // peor caída REAL por horizonte, con ventana de días CALENDARIO (no por nº fijo de registros: con ~1 mes de
-  // seguimiento el conteo fijo de 21 registros dejaba el "peor mensual" en "—" aunque el mes ya se cumplió)
-  const stepLoss=()=>{const v=IM.series;let mn=Infinity;for(let i=1;i<v.length;i++){const d=(v[i].val-(v[i].inflow||0))-v[i-1].val;if(d<mn)mn=d;}return mn===Infinity?null:Math.min(mn,0);};
-  const realLossDays=days=>{const v=IM.series;let mn=Infinity;
-    // flujos acumulados: TODOS los aportes/ventas dentro de la ventana se netean, no solo el del último
-    // registro — un aporte intermedio maquillaba la pérdida real y una venta intermedia inventaba una
-    const cum=[];let acc=0;for(let k=0;k<v.length;k++){acc+=(v[k].inflow||0);cum[k]=acc;}
-    for(let i=0;i<v.length;i++){const t0=new Date(v[i].date+"T00:00:00").getTime();
-      for(let j=i+1;j<v.length;j++){if(new Date(v[j].date+"T00:00:00").getTime()-t0>days*864e5+36e5)break;const d=(v[j].val-(cum[j]-cum[i]))-v[i].val;if(d<mn)mn=d;}}   // +1h de tolerancia por el cambio de hora chileno
-    return mn===Infinity?null:Math.min(mn,0);};
-  const hzD=[["Diario",vD,PF.freq==="diario"?stepLoss():null],["Semanal",vW,realLossDays(7)],["Mensual",vM,realLossDays(31)]];
-  const varRows=hzD.map(a=>`<tr><td><b>${a[0]}</b></td><td class="r">${pc(a[1].pct*100)}</td><td class="r" style="color:${red};font-weight:700">${fmtCLP(-a[1].loss)}</td><td class="r" style="font-weight:700;color:${a[2]!=null&&a[2]<0?red:muted}">${a[2]!=null?fmtCLP(a[2]):"—"}</td></tr>`).join("");
-  const varTbl=`<div class="tw" style="margin-top:6px"><table><thead><tr><th>Horizonte</th><th class="r">VaR 95%</th><th class="r">Pérdida máx (VaR)</th><th class="r">Peor real (CLP)</th></tr></thead><tbody>${varRows}</tbody></table></div>`;
-  const riskNote=`<div class="note" style="margin-top:11px">El <b>VaR 95%</b> es la pérdida máxima esperada en un período normal (salvo 1 de cada 20). ${worst!=null?("Tu peor "+fr.u+" real fue "+pc(worst*100)+" ("+fmtCLP(IM.worstLossCLP)+")"+(IM.worstRetDate?(" el <b>"+fD(IM.worstRetDate)+"</b>"):"")+(IM.worstBaseVal!=null?(", medido sobre el <b>patrimonio total de ese momento</b> ("+fmtCLP(IM.worstBaseVal)+", con los aportes del día neteados)"):"")+" → "+(breach?"<b style=\"color:"+red+"\">excedió el VaR "+fr.u+"</b>, un evento de cola":"<b style=\"color:"+green+"\">dentro del VaR</b>")+". "):""}${IM.worstStep?("Además, entre el <b>"+fD(IM.worstStep.from)+"</b> y el <b>"+fD(IM.worstStep.to)+"</b> ("+IM.worstStep.days+" días sin registros intermedios) la cartera varió "+pc(IM.worstStep.ret*100)+" ("+fmtCLP(IM.worstStep.clp)+" sobre "+fmtCLP(IM.worstStep.base)+"): es un <b>tramo acumulado</b>, no un día — por eso no aparece como «peor "+fr.u+"». "):""}El <b>máximo drawdown</b> (${pc(IM.maxDD*100)}${IM.maxDDCLP?", "+fmtCLP(IM.maxDDCLP):""}${IM.maxDDFrom&&IM.maxDDDate?(", del "+fD(IM.maxDDFrom)+" al "+fD(IM.maxDDDate)):""}) es la peor caída acumulada desde un máximo de la <b>rentabilidad</b>: los aportes y retiros se netean (un retiro no es pérdida ni un aporte recuperación) y el CLP suma lo que el mercado le quitó al capital <b>que había en cada momento</b> del retroceso. El VaR paramétrico asume normalidad y subestima los extremos.</div>`;
+  const _cf=(""+riskConf).replace(".",",");
+  const riskKp=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("VaR "+_cf+"% ("+fr.u+")",pc(vP.pct*100),"pérdida máx esperada / "+fr.u,indigo,red)}${tile("Peor "+fr.u+" real",worst!=null?pc(worst*100):"—",worst!=null?((IM.worstRetDate?("el "+fD(IM.worstRetDate)+" · "):"")+(breach?"excedió el VaR":"dentro del VaR")):"sin datos",indigo,worst!=null?col(worst*100):muted)}${tile("Pérdida ese "+fr.u+" (CLP)",IM.worstLossCLP!=null?fmtCLP(IM.worstLossCLP):"—",IM.worstBaseVal!=null?("sobre un patrimonio de "+fmtCLP(IM.worstBaseVal)):("VaR "+fr.u+": "+fmtCLP(-vP.loss)),indigo,IM.worstLossCLP!=null?red:muted)}${tile("Máximo drawdown",IM.maxDDCLP?fmtCLP(IM.maxDDCLP):pc(IM.maxDD*100),pc(IM.maxDD*100)+" desde un máximo"+(IM.maxDDFrom&&IM.maxDDDate?(" · "+fD(IM.maxDDFrom)+" → "+fD(IM.maxDDDate)):(IM.maxDDDate?(" · "+fD(IM.maxDDDate)):"")),indigo,col(IM.maxDD*100))}${tile("Volatilidad realizada",IM.realizedVol!=null?p0(IM.realizedVol):"—",IM.realizedVol!=null?("esperada σ "+p0(PF.sig)):"≥3 registros",indigo,accentT)}</div>`;
+  /* PEOR PÉRDIDA REAL por horizonte, sobre la SERIE MEDIDA (solo días con cierre real de la cartera).
+     Antes se recorría `series` cruda, que incluye los días de precios ARRASTRADOS: la fila "Diario" podía
+     mostrar una caída que ni ocurrió en un día ni era movimiento de mercado, y contradecía al «peor día» que
+     la misma tarjeta declaraba abajo. La fila diaria reusa EL MISMO peor día del resto de la app. */
+  const _peorDia=(IM.worstLossCLP!=null&&IM.worstRet!=null)
+    ?{clp:IM.worstLossCLP,pct:IM.worstRet,from:null,to:IM.worstRetDate,base:IM.worstBaseVal,dias:1}:null;
+  const hzD=[["Diario",vD,_peorDia,1],["Semanal",vW,IM.peorVentana(7),7],["Mensual",vM,IM.peorVentana(31),31]];
+  const _exc=(v,r)=>r&&r.pct!=null&&r.pct<v.pct;   // el peor real excedió el VaR: evento de cola
+  const varRows=hzD.map(a=>{const v=a[1],r=a[2],ex=_exc(v,r);
+    const cuando=!r?"—":(r.to?(r.from&&r.from!==r.to?(fD(r.from)+" → "+fD(r.to)):fD(r.to)):"—");
+    return `<tr>
+      <td><b>${a[0]}</b><div class="rk-sub">${a[3]===1?"un día de mercado":"ventana de "+a[3]+" días"}</div></td>
+      <td class="r" style="font-weight:700">${pc(v.pct*100)}</td>
+      <td class="r" style="color:${red}">${fmtCLP(-v.loss)}</td>
+      <td class="r" style="font-weight:700;color:${r&&r.pct!=null?col(r.pct*100):muted}">${r&&r.pct!=null?pc(r.pct*100):"—"}</td>
+      <td class="r" style="color:${r?red:muted}">${r?fmtCLP(r.clp):"—"}</td>
+      <td class="r" style="color:var(--muted);font-size:11px;white-space:nowrap">${cuando}${r&&r.base?`<div class="rk-sub">sobre ${fmtCLP(r.base)}</div>`:""}</td>
+      <td class="r">${!r?'<span style="color:'+faint+'">—</span>':(ex?`<span class="badge neg" title="La pérdida real superó el VaR ${_cf}%: es un evento de cola, de los que el modelo normal subestima">excedió</span>`:`<span class="badge pos" title="La pérdida real se mantuvo dentro de lo que el VaR ${_cf}% anticipaba">dentro</span>`)}</td></tr>`;}).join("");
+  const varTbl=`<div class="tw" style="margin-top:6px"><table class="rk-tab"><thead>
+      <tr><th rowspan="2" style="vertical-align:bottom">Horizonte</th><th colspan="2" class="c rk-grp">VaR ${_cf}% · esperado</th><th colspan="3" class="c rk-grp">Pérdida real · ocurrida</th><th rowspan="2" class="r" style="vertical-align:bottom">Veredicto</th></tr>
+      <tr><th class="r">%</th><th class="r">sobre hoy</th><th class="r">%</th><th class="r">en pesos</th><th class="r">cuándo</th></tr></thead>
+    <tbody>${varRows}</tbody></table></div>`;
+  const confSeg=`<div class="home-seg" role="group" aria-label="Nivel de confianza del VaR">${[90,95,97.5,99].map(c=>`<button data-riskconf="${c}" class="${riskConf===c?"on":""}" title="${c===90?"Deja fuera 1 de cada 10 períodos: el más laxo":c===95?"Deja fuera 1 de cada 20 períodos: la convención de la industria":c===97.5?"Deja fuera 1 de cada 40 períodos":"Deja fuera 1 de cada 100 períodos: el más exigente"}">${(""+c).replace(".",",")}%</button>`).join("")}</div>`;
+  const riskCtrl=`<div class="home-hdacts" style="display:flex;align-items:center;gap:8px"><span class="genl" style="margin:0">Confianza</span>${confSeg}</div>`;
+  const riskNote=`<div class="note" style="margin-top:11px">Las dos mitades de la tabla no son la misma cosa. El <b>VaR ${_cf}%</b> es lo que el modelo <b>espera</b>: una pérdida que solo debería superarse ${riskConf===90?"1 de cada 10":riskConf===95?"1 de cada 20":riskConf===97.5?"1 de cada 40":"1 de cada 100"} períodos, calculada con la volatilidad (σ ${p0(PF.sig)}) y el retorno exigido (${p0(PF.erCapm)}) de <b>tu composición actual</b> y aplicada al patrimonio de <b>hoy</b> (${fmtCLP(L.val)}) — cambia si cambias de acciones, no solo si cambia el monto. La <b>pérdida real</b> es lo que <b>ocurrió</b>: su % va sobre el patrimonio que había <b>en ese momento</b>, y los pesos son los de entonces, con todos los aportes y ventas del tramo neteados. Por eso el % es lo comparable entre ambas mitades; los pesos, no. ${worst!=null?`Tu peor ${fr.u} fue <b>${pc(worst*100)}</b>${IM.worstRetDate?` el <b>${fD(IM.worstRetDate)}</b>`:""}${IM.worstBaseVal!=null?` sobre ${fmtCLP(IM.worstBaseVal)}`:""} → ${breach?`<b style="color:${red}">excedió el VaR</b>, un evento de cola.`:`<b style="color:${green}">dentro del VaR</b>.`} `:""}${IM.worstStep?`Aparte, entre el <b>${fD(IM.worstStep.from)}</b> y el <b>${fD(IM.worstStep.to)}</b> (${IM.worstStep.days} días sin registros intermedios) la cartera varió ${pc(IM.worstStep.ret*100)} (${fmtCLP(IM.worstStep.clp)}): es un <b>tramo acumulado</b>, no un día. `:""}El <b>máximo drawdown</b> (${pc(IM.maxDD*100)}${IM.maxDDCLP?", "+fmtCLP(IM.maxDDCLP):""}${IM.maxDDFrom&&IM.maxDDDate?`, del ${fD(IM.maxDDFrom)} al ${fD(IM.maxDDDate)}`:""}) es la peor caída acumulada desde un máximo de la <b>rentabilidad</b>: aportes y retiros se netean. Solo entran los días con <b>cierre real</b> de toda la cartera; los de precios arrastrados no generan pérdidas falsas. El VaR paramétrico asume normalidad y <b>subestima los extremos</b>.</div>`;
   const cagrReady=IM.cagr!=null&&days>=60;
   const qTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${tile("Retorno anualizado (CAGR)",cagrReady?pc(IM.cagr*100):"—",cagrReady?"ritmo anualizado":"≥60 días para un valor realista",indigo,cagrReady?col(IM.cagr*100):muted)}${tile("Sharpe realizado",IM.sharpeR!=null?IM.sharpeR.toFixed(2):"—","retorno por unidad de riesgo",indigo,IM.sharpeR!=null?(IM.sharpeR>=0?green:red):muted)}${tile("Tracking error",IM.trackingError!=null?p0(IM.trackingError):"—","desvío anual vs IPSA",indigo,accentT)}${tile("Information ratio",IM.infoRatio!=null?IM.infoRatio.toFixed(2):"—","retorno activo / TE",indigo,IM.infoRatio!=null?col(IM.infoRatio*100):muted)}${tile("Aciertos vs IPSA",IM.winRate!=null?p0(IM.winRate):"—","% de "+fr.us+" sobre el mercado",indigo,accentT)}${tile("Mejor / peor "+fr.u,(IM.bestRet!=null?`<span style="color:${col(IM.bestRet*100)}">${pc(IM.bestRet*100)}</span>`:"—")+` <span style="color:${faint};font-weight:600">/</span> `+(IM.worstRet!=null?`<span style="color:${col(IM.worstRet*100)}">${pc(IM.worstRet*100)}</span>`:"—"),"rango por período",indigo,ink)}</div>`;
   const qNote=`<div class="note" style="margin-top:11px"><b>Calidad del desempeño.</b> El <b>Sharpe realizado</b> mide tu retorno ajustado por la volatilidad efectiva; el <b>information ratio</b> es el retorno extra sobre el IPSA por unidad de riesgo activo (sobre 0,5 es bueno); <b>aciertos vs IPSA</b> es el % de ${fr.us} en que superaste al mercado. El <b>Sharpe, el tracking error y el information ratio</b> se muestran desde los <b>30 días</b> de seguimiento y ≥8 retornos: con menos, anualizar una racha corta (media × ${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}, volatilidad × √${PF.freq==="semanal"?"52":PF.freq==="mensual"?"12":"252"}) dispara el ratio y produce un Sharpe irreal.${days<60?` El <b>CAGR</b> se muestra solo a partir de los 60 días, porque anualizar un período tan corto produce valores irreales.`:""}</div>`;
   const qualityCard=nd>=2?card("Calidad y desempeño del seguimiento","Métricas ajustadas por riesgo y desempeño relativo al IPSA",qTiles+qNote):"";
-  const riskCard=card("Riesgo: VaR vs pérdida real","VaR diario / semanal / mensual y pérdida real, en % y en pesos",riskKp+varTbl+riskNote);
+  const riskCard=card("Riesgo: lo que el modelo espera vs lo que ocurrió","Pérdida máxima esperada por horizonte contra la peor pérdida real de tu cartera · elige el nivel de confianza",riskKp+varTbl+riskNote,riskCtrl);
   const _pv=p=>p.sh*p.cur;
   const _pTot=IM.perStock.reduce((a,p)=>a+_pv(p),0)||L.val;
   // CARTERA CERRADA (todo vendido): el patrimonio es $0 y no hay pesos que repartir. Sin este freno cada
@@ -4147,7 +4172,7 @@ function viewInvActive(){
       `<div style="display:flex;gap:9px;flex-wrap:wrap"><button class="btn btn-pri" data-invtab="operar">⇄ Operar (comprar / vender)</button><button class="btn" data-gomod="proyectos">📁 Proyectos (crear nueva inversión)</button></div>`);
     return projbar+summary+invDetailCard()+opHint;
   }
-  return projbar+invTools+hero+summary+evoChart+valChart+psTbl+allocCard+stkChart+ipsaTiles+verdict+capmKp+capmChart+smlCard+capmNote+betaAudit+riskCard+qualityCard;
+  return projbar+invTools+hero+summary+evoChart+valChart+psTbl+allocCard+stkChart+ipsaTiles+verdict+capmKp+capmChart+smlCard+capmNote+riskCard+qualityCard;
 }
 
 function compraPreview(){
@@ -4527,6 +4552,11 @@ function genInvReport(){
 }
 function attachInv(){
   if(modulo!=="inv")return;
+  // nivel de confianza del VaR: conserva el scroll para que la tabla no se escape de la vista al cambiarlo
+  document.querySelectorAll("[data-riskconf]").forEach(b=>b.onclick=()=>{
+    const m=document.getElementById("main"),st=m?m.scrollTop:0;
+    riskConf=+b.dataset.riskconf;try{localStorage.setItem("inv_risk_conf",String(riskConf));}catch(e){}
+    render();const m2=document.getElementById("main");if(m2)m2.scrollTop=st;});
   document.querySelectorAll("[data-stksel]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invStkSel=b.dataset.stksel||null;render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
   document.querySelectorAll("[data-capmmode]").forEach(b=>b.onclick=()=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;invCapmMode=b.dataset.capmmode==="clp"?"clp":"pct";render();const _mn2=document.getElementById("main");if(_mn2)_mn2.scrollTop=_st;});
   // rango de fechas del gráfico "Valor de la inversión en el tiempo" (conserva el scroll al aplicar)
@@ -11938,6 +11968,10 @@ function renderClientBar(){
   const cb=document.getElementById("clientBtn");if(cb&&!cb._b){cb._b=1;cb.onclick=e=>{e.stopPropagation();const m=document.getElementById("clientMenu");if(m)m.classList.toggle("open");};}
 }
 
+/* NIVEL DE CONFIANZA del VaR, elegible en la tarjeta de riesgo. z de la normal estándar de una cola:
+   al 95% se deja fuera 1 de cada 20 períodos; al 99%, 1 de cada 100 (más exigente, pérdida mayor). */
+const RISK_Z={90:1.2816,95:1.6449,97.5:1.9600,99:2.3263};
+let riskConf=(function(){try{const v=+localStorage.getItem("inv_risk_conf");return RISK_Z[v]?v:95;}catch(e){return 95;}})();
 let uiScale=(parseFloat(localStorage.getItem("inv_ui_scale"))||0.8);
 function applyScale(s){uiScale=s;const app=document.getElementById("app");if(app){if(s&&Math.abs(s-1)>0.001){app.style.zoom=s;app.style.height=(100/s)+"vh";}else{app.style.zoom="";app.style.height="";}}try{localStorage.setItem("inv_ui_scale",s);}catch(e){}}
 applyScale(uiScale);
