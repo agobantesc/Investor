@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-07T14:13:07.977Z",
+ "updatedAt": "2026-08-07T21:11:12.213Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -7,23 +7,21 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 500 | codetabs=HTTP 521 | cor",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 521 | cor",
   "yahoo ^IPSA period: 0 día(s)"
  ],
  "ipsaSynth": [
   "2026-07-21=10974.35 (27 acc, 0.80%)",
-  "2026-07-22=10891.73 (27 acc, -0.75%)",
-  "2026-07-23=10946.8 (28 acc, 0.51%)",
-  "2026-07-24=10899.66 (28 acc, -0.43%)",
-  "2026-07-27=11014.66 (28 acc, 1.06%)",
-  "2026-07-28=10944.02 (27 acc, -0.64%)",
-  "2026-07-29=11007.82 (27 acc, 0.58%)",
-  "2026-07-30=11102.62 (28 acc, 0.86%)",
-  "2026-07-31=11099.13 (28 acc, -0.03%)",
-  "2026-08-03=10916.86 (28 acc, -1.64%)",
-  "2026-08-04=11085.61 (28 acc, 1.55%)",
-  "2026-08-05=11242.83 (28 acc, 1.42%)",
-  "2026-08-06=11339.01 (28 acc, 0.86%)",
+  "2026-07-23=10942.44 (27 acc, -0.29%)",
+  "2026-07-27=11002.31 (28 acc, 0.55%)",
+  "2026-07-28=10931.75 (27 acc, -0.64%)",
+  "2026-07-29=10995.48 (27 acc, 0.58%)",
+  "2026-07-30=11090.18 (28 acc, 0.86%)",
+  "2026-07-31=11086.69 (28 acc, -0.03%)",
+  "2026-08-04=11059.92 (28 acc, -0.24%)",
+  "2026-08-05=11216.78 (28 acc, 1.42%)",
+  "2026-08-06=10906.22 (28 acc, -2.77%)",
+  "2026-08-07=11301.96 (28 acc, 3.63%)",
   "492 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
@@ -36,7 +34,7 @@
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 500 | codetabs=HTTP 521 | cor · yahoo ^IPSA period: 0 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 521 | cor · yahoo ^IPSA period: 0 día(s)"
  ],
  "days": [
   {
@@ -17665,7 +17663,7 @@
     "ITAUCL": 21300,
     "CAP": 6130
    },
-   "ipsa": 10946.8,
+   "ipsa": 10942.44,
    "ipsaSynth": true
   },
   {
@@ -17706,7 +17704,7 @@
     "ITAUCL": 21379,
     "CAP": 6060
    },
-   "ipsa": 11014.66,
+   "ipsa": 11002.31,
    "ipsaSynth": true
   },
   {
@@ -17740,7 +17738,7 @@
     "ITAUCL": 21100,
     "CAP": 6000
    },
-   "ipsa": 10944.02,
+   "ipsa": 10931.75,
    "ipsaSynth": true
   },
   {
@@ -17775,7 +17773,7 @@
     "ITAUCL": 20899,
     "CAP": 6000
    },
-   "ipsa": 11007.82,
+   "ipsa": 10995.48,
    "ipsaSynth": true
   },
   {
@@ -17810,7 +17808,7 @@
     "ITAUCL": 21050,
     "CAP": 5975
    },
-   "ipsa": 11102.62,
+   "ipsa": 11090.18,
    "ipsaSynth": true
   },
   {
@@ -17845,7 +17843,7 @@
     "CAP": 5929,
     "SONDA": 301.81
    },
-   "ipsa": 11099.13,
+   "ipsa": 11086.69,
    "ipsaSynth": true
   },
   {
@@ -17886,7 +17884,7 @@
     "ITAUCL": 21450,
     "CAP": 5771
    },
-   "ipsa": 11085.61,
+   "ipsa": 11059.92,
    "ipsaSynth": true
   },
   {
@@ -17921,42 +17919,77 @@
     "ITAUCL": 21609,
     "CAP": 5802.9
    },
-   "ipsa": 11242.83,
+   "ipsa": 11216.78,
    "ipsaSynth": true
   },
   {
    "date": "2026-08-06",
    "prices": {
-    "CHILE": 191.7,
-    "SANTANDER": 81.06,
-    "BCI": 66000,
-    "ENELCHILE": 82.01,
-    "COLBUN": 146.56,
-    "FALABELLA": 6400,
-    "CENCOSUD": 2060,
-    "COPEC": 6200,
-    "CMPC": 1030,
-    "SQM-B": 66300,
-    "CCU": 5401,
-    "ENTEL": 3940,
-    "LATAM": 26.35,
-    "PARAUCO": 3998,
-    "AGUAS-A": 341.48,
-    "IAM": 967.75,
-    "ENELAM": 87.61,
-    "ECL": 1966.5,
-    "ANDINA-B": 4818.9,
-    "CONCHATORO": 860,
-    "QUINENCO": 4570,
-    "MALLPLAZA": 3940,
-    "VAPORES": 46.71,
-    "RIPLEY": 395.85,
-    "SMU": 128.49,
-    "SONDA": 303.99,
-    "ITAUCL": 22000,
-    "CAP": 5840
+    "CHILE": 188.5,
+    "SANTANDER": 77,
+    "BCI": 62502,
+    "ENELCHILE": 81.01,
+    "COLBUN": 135.29,
+    "FALABELLA": 5835,
+    "CENCOSUD": 1995,
+    "COPEC": 6249.6,
+    "CMPC": 1070,
+    "SQM-B": 65450,
+    "CCU": 5218,
+    "ENTEL": 3643,
+    "LATAM": 24.69,
+    "PARAUCO": 4039.9,
+    "AGUAS-A": 332.4,
+    "IAM": 921.89,
+    "ENELAM": 84.04,
+    "ECL": 1807,
+    "ANDINA-B": 4699.9,
+    "CONCHATORO": 852.33,
+    "QUINENCO": 4279,
+    "MALLPLAZA": 3950,
+    "VAPORES": 46.51,
+    "RIPLEY": 382.96,
+    "SMU": 127.9,
+    "SONDA": 301.81,
+    "ITAUCL": 20678,
+    "CAP": 6313.3
    },
-   "ipsa": 11339.01,
+   "ipsa": 10906.22,
+   "ipsaSynth": true
+  },
+  {
+   "date": "2026-08-07",
+   "prices": {
+    "CHILE": 188.65,
+    "SANTANDER": 80.16,
+    "BCI": 67001,
+    "ENELCHILE": 82.8,
+    "COLBUN": 145,
+    "FALABELLA": 6469.7,
+    "CENCOSUD": 2050,
+    "COPEC": 6115,
+    "CMPC": 1030,
+    "SQM-B": 65789,
+    "CCU": 5510,
+    "ENTEL": 3955,
+    "LATAM": 25.8,
+    "PARAUCO": 4050,
+    "AGUAS-A": 340,
+    "IAM": 960,
+    "ENELAM": 87.4,
+    "ECL": 1950,
+    "ANDINA-B": 4848,
+    "CONCHATORO": 860,
+    "QUINENCO": 4500,
+    "MALLPLAZA": 4072.7,
+    "VAPORES": 47.5,
+    "RIPLEY": 398.8,
+    "SMU": 128.9,
+    "SONDA": 305,
+    "ITAUCL": 22130,
+    "CAP": 5745.1
+   },
+   "ipsa": 11301.96,
    "ipsaSynth": true
   }
  ]
