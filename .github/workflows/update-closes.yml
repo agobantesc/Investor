@@ -9,6 +9,13 @@ name: Actualizar cierres IPSA
 on:
   schedule:
     - cron: "5 22 * * 1-5"   # 22:05 UTC ≈ 18:05/19:05 Chile (después del cierre ~16:00)
+    # RED DE SEGURIDAD. Las corridas programadas de GitHub son "best-effort": normalmente salen con ~1 hora
+    # de atraso (medido: 23:03–23:12 UTC en las últimas 14) y a veces la flota está cargada y NO SALEN. Pasó
+    # el 2026-08-06: cero ejecuciones creadas ese día, con el workflow activo, y el cierre se perdió hasta
+    # que se disparó a mano. Esta segunda hora recupera el día sola. Martes a SÁBADO porque las 00:30 UTC
+    # del sábado son el viernes por la tarde en Chile. Si la primera sí corrió, esta no encuentra nada nuevo
+    # y termina en "Sin cambios" sin hacer commit: repetirla no cuesta ni ensucia.
+    - cron: "30 0 * * 2-6"   # 00:30 UTC ≈ 20:30/21:30 Chile del día hábil anterior
     - cron: "0 12 * * 6"     # sábado 12:00 UTC: backfill semanal de 2 años (re-afirma el histórico)
   workflow_dispatch:          # ejecución manual desde la pestaña Actions
     inputs:
@@ -23,6 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # historia completa: con la profundidad 1 por defecto, el rebase de más abajo no tiene sobre qué rebasar
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -37,10 +46,36 @@ jobs:
         continue-on-error: true
       - name: Commit del JSON
         run: |
+          set -u
           git config user.name "closes-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/
-          git diff --cached --quiet && echo "Sin cambios" || git commit -m "cierres: $(date -u +%F) (${RANGE:-10d})"
-          git push
+          if git diff --cached --quiet; then
+            echo "Sin cambios: la base ya estaba al día, no hay nada que publicar."
+            exit 0
+          fi
+          git commit -m "cierres: $(date -u +%F) (${RANGE:-10d})"
+          # LA RAMA PUEDE HABERSE MOVIDO mientras el bot bajaba los precios. Un `git push` pelado rebotaba
+          # con non-fast-forward, el job fallaba entero y los cierres del día se perdían EN SILENCIO hasta
+          # la corrida siguiente. Se reintenta rebasando sobre lo nuevo: este commit solo toca data/, así
+          # que rebasarlo no puede chocar con cambios de la aplicación.
+          for i in 1 2 3 4 5; do
+            # push EXPLÍCITO a la rama: en CI no hay que depender de que el clon tenga configurado el
+            # upstream (con otro nombre de rama por defecto, `git push` a secas aborta con un error que
+            # ningún rebase arregla, y el reintento se quema en vano).
+            if git push origin HEAD:"${GITHUB_REF_NAME}"; then
+              echo "Publicado en el intento $i."
+              exit 0
+            fi
+            echo "Push rechazado (intento $i): la rama se movió. Rebaso sobre lo nuevo y reintento."
+            sleep $(( i * 10 ))
+            if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+              echo "El rebase falló (conflicto real en data/). Se aborta sin publicar."
+              git rebase --abort || true
+              exit 1
+            fi
+          done
+          echo "No se pudo publicar tras 5 intentos."
+          exit 1
         env:
           RANGE: ${{ github.event.schedule == '0 12 * * 6' && '2y' || github.event.inputs.range || '10d' }}
