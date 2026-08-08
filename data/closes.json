@@ -1,14 +1,14 @@
 {
- "updatedAt": "2026-08-08T02:27:50.277Z",
+ "updatedAt": "2026-08-08T13:04:53.583Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
-  "yahoo ^IPSA hoy: 0 día(s)",
+  "yahoo ^IPSA hoy: 1 día(s)",
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 522 | codetabs=HTTP 521 | cor",
-  "yahoo ^IPSA period: 0 día(s)"
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=allorigins/get: respuesta inespera",
+  "yahoo ^IPSA period: 1 día(s)"
  ],
  "ipsaSynth": [
   "2026-07-21=10974.8 (27 acc, 0.80%)",
@@ -20,8 +20,7 @@
   "2026-07-31=11086.75 (28 acc, -0.02%)",
   "2026-08-04=11060.11 (28 acc, -0.24%)",
   "2026-08-05=11216.54 (28 acc, 1.41%)",
-  "2026-08-06=10906.18 (28 acc, -2.77%)",
-  "2026-08-07=11303.65 (28 acc, 3.64%)",
+  "2026-08-07=11291.85 (28 acc, 0.67%)",
   "492 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
@@ -34,7 +33,7 @@
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 522 | codetabs=HTTP 521 | cor · yahoo ^IPSA period: 0 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=allorigins/get: respuesta inespera · yahoo ^IPSA period: 1 día(s)"
  ],
  "days": [
   {
@@ -17925,37 +17924,8 @@
   {
    "date": "2026-08-06",
    "prices": {
-    "CHILE": 188.5,
-    "SANTANDER": 77,
-    "BCI": 62502,
-    "ENELCHILE": 81.01,
-    "COLBUN": 135.29,
-    "FALABELLA": 5835,
-    "CENCOSUD": 1995,
-    "COPEC": 6249.6,
-    "CMPC": 1070,
-    "SQM-B": 65450,
-    "CCU": 5218,
-    "ENTEL": 3643,
-    "LATAM": 24.69,
-    "PARAUCO": 4039.9,
-    "AGUAS-A": 332.4,
-    "IAM": 921.89,
-    "ENELAM": 84.04,
-    "ECL": 1807,
-    "ANDINA-B": 4699.9,
-    "CONCHATORO": 852.33,
-    "QUINENCO": 4279,
-    "MALLPLAZA": 3950,
-    "VAPORES": 46.51,
-    "RIPLEY": 382.96,
-    "SMU": 127.9,
-    "SONDA": 301.81,
-    "ITAUCL": 20678,
-    "CAP": 6313.3
-   },
-   "ipsa": 10906.18,
-   "ipsaSynth": true
+    "SONDA": 301.81
+   }
   },
   {
    "date": "2026-08-07",
@@ -17989,7 +17959,7 @@
     "ITAUCL": 22130,
     "CAP": 5745.1
    },
-   "ipsa": 11303.65,
+   "ipsa": 11291.85,
    "ipsaSynth": true
   }
  ]
