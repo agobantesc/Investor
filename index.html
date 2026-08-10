@@ -793,6 +793,13 @@
   .net-it.big b{font-size:21px;}
   .net-it.big span{color:var(--accent);}
   .net-op{font:800 18px var(--font);color:var(--faint);padding:0 2px;align-self:flex-end;line-height:1.8;}
+  /* la RENTABILIDAD REAL, el número que resume la vista: celda propia, grande y con marco de su color */
+  .net-pct{margin-left:auto;display:flex;flex-direction:column;gap:1px;padding:.55rem .95rem;border-radius:12px;
+    border:1px solid color-mix(in srgb,var(--pc) 32%,transparent);background:color-mix(in srgb,var(--pc) 8%,transparent);}
+  .net-pct span{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--pc);}
+  .net-pct b{font:900 26px var(--font);color:var(--pc);line-height:1.1;font-variant-numeric:tabular-nums;}
+  .net-pct i{font-style:normal;font-size:9.5px;color:var(--mut);font-weight:600;}
+  @media(max-width:900px){.net-pct{margin-left:0;flex-basis:100%;}}
   .cfg-k{font-size:12.5px;color:var(--ink);font-weight:600;}
   .cfg-k b{color:var(--navy);} .cfg-sub{font-size:10.5px;color:var(--faint);margin-top:2px;}
   .cfg-seg{display:inline-flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden;background:var(--card2);}
@@ -2023,7 +2030,7 @@ function svgBars(o){
   const Y=v=>H-m.b-(v-bd.min)/(bd.max-bd.min)*(H-m.t-m.b);
   let g="";
   for(let i=0;i<=4;i++){const v=bd.min+(bd.max-bd.min)*i/4,yy=Y(v);
-    g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"/><text x="${m.l-8}" y="${yy+3}" text-anchor="end" font-size="11.5" fill="${faint}">${v.toFixed(0)}%</text>`;}
+    g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"/><text x="${m.l-8}" y="${yy+3}" text-anchor="end" font-size="11.5" fill="${faint}">${v.toFixed(0).replace(".",",").replace("-","−")}%</text>`;}
   const z=Y(0);g+=`<line x1="${m.l}" y1="${z}" x2="${W-m.r}" y2="${z}" stroke="${ZC}" stroke-width="1.5"/>`;
   o.vals.forEach((v,i)=>{const cx=m.l+step*i+step/2,yv=Y(v),top=Math.min(yv,z),hh=Math.max(1.5,Math.abs(yv-z));
     g+=`<rect x="${cx-bw/2}" y="${top}" width="${bw}" height="${hh}" rx="2.5" fill="${v>=0?green:red}" opacity="0.92"/>`;
@@ -2198,7 +2205,7 @@ function svgLine(o){
   const X=i=>m.l+step*i,Y=v=>H-m.b-(v-bd.min)/(bd.max-bd.min)*(H-m.t-m.b);
   let g="";
   for(let i=0;i<=4;i++){const v=bd.min+(bd.max-bd.min)*i/4,yy=Y(v);
-    g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"/><text x="${m.l-8}" y="${yy+3}" text-anchor="end" font-size="11.5" fill="${faint}">${v.toFixed(0)}%</text>`;}
+    g+=`<line x1="${m.l}" y1="${yy}" x2="${W-m.r}" y2="${yy}" stroke="${GC}"/><text x="${m.l-8}" y="${yy+3}" text-anchor="end" font-size="11.5" fill="${faint}">${v.toFixed(0).replace(".",",").replace("-","−")}%</text>`;}
   const z=Y(0);g+=`<line x1="${m.l}" y1="${z}" x2="${W-m.r}" y2="${z}" stroke="${ZC}" stroke-width="1.3"/>`;
   if(o.cmp){const Pc=o.cmp.map((v,i)=>[X(i),Y(v)]);const dlc=Pc.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
     g+=`<path d="${dlc}" fill="none" stroke="${o.cmpC||'#8DA1C2'}" stroke-width="2.2" stroke-dasharray="2 5" stroke-linecap="round" opacity="0.78"/>`;}
@@ -2221,8 +2228,8 @@ function attachLineHover(){
     const hv=document.getElementById("dlinehover");if(hv)hv.innerHTML=`<line x1="${hx}" y1="${g.mt}" x2="${hx}" y2="${g.H-g.mb}" stroke="${g.c}" stroke-width="1" stroke-dasharray="3 3"/><circle cx="${hx}" cy="${hy}" r="5" fill="${g.c}" stroke="#fff" stroke-width="2"/>`;
     let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
     const pr=g.prices[bi]!=null?`<span class="ttr">Precio: $${g.prices[bi].toLocaleString("es-CL")}</span>`:"";
-    const ip=g.cmp&&g.cmp[bi]!=null?`<span class="ttr" style="color:${muted}">IPSA: ${(g.cmp[bi]>=0?"+":"")+g.cmp[bi].toFixed(2)}%</span>`:"";
-    tt.innerHTML=`<b>${g.labels[bi]}</b>Retorno ${(g.vals[bi]>=0?"+":"")+g.vals[bi].toFixed(2)}%${pr}${ip}`;
+    const ip=g.cmp&&g.cmp[bi]!=null?`<span class="ttr" style="color:${muted}">IPSA: ${(g.cmp[bi]>=0?"+":"")+g.cmp[bi].toFixed(2).replace(".",",").replace("-","−")}%</span>`:"";
+    tt.innerHTML=`<b>${g.labels[bi]}</b>Retorno ${(g.vals[bi]>=0?"+":"")+g.vals[bi].toFixed(2).replace(".",",").replace("-","−")}%${pr}${ip}`;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById("dlinehover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
@@ -2272,7 +2279,7 @@ function viewComparativa(){
   pts.push({x:MKT.sig,y:mktRet,c:indigo,label:"IPSA",shape:"diamond",r:8});
   pts.push({x:0,y:rfY,c:muted,label:"Rf",shape:"tri"});
   const leg=`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>IPSA (mercado)</span><span><span class="lgdot" style="background:${muted}"></span>Rf</span></div>`;
-  const scatter=card("Mapa Riesgo–Retorno",(W?("Volatilidad anual (X) vs retorno de la ventana (Y) · "):"Volatilidad anual (X) vs retorno anual (Y) · ")+winLong(),svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:W?("Retorno "+winShort()+" (%)"):"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:420}),leg);
+  const scatter=card("Mapa Riesgo–Retorno",(W?("Volatilidad anual (X) vs retorno de la ventana (Y) · "):"Volatilidad anual (X) vs retorno anual (Y) · ")+winLong(),svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:W?("Retorno "+winShort()+" (%)"):"Retorno (% anual)",fx:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",h:420}),leg);
   const byS=[...STOCKS].sort((a,b)=>b.a24.sharpe-a.a24.sharpe);
   // MARGEN DE SEGURIDAD por acción: valor intrínseco vs último cierre. Verde = cotiza BAJO su valor (hay margen).
   const mosCell=s=>{let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(s.t,{beta:s.b}):null;}catch(e){}
@@ -2281,9 +2288,9 @@ function viewComparativa(){
     // fiabilidad visible aquí también: 1 sola ancla o anclas que discrepan mucho = referencia gruesa (⚠).
     // El % se ACOTA en pantalla a ≤−100% (el exacto va en el tooltip): "−349%" aparenta precisión que no existe.
     const lowFiab=(iv.n<2)||(iv.disp>0.6);
-    const shown=iv.mos<-1?"≤−100%":((iv.mos>=0?"+":"")+(iv.mos*100).toFixed(0)+"%");
+    const shown=iv.mos<-1?"≤−100%":((iv.mos>=0?"+":"")+(iv.mos*100).toFixed(0).replace(".",",").replace("-","−")+"%");
     const fiabTxt=iv.n<2?"fiabilidad BAJA (una sola ancla)":iv.disp>0.6?"fiabilidad BAJA (las anclas discrepan)":iv.disp>0.35?"fiabilidad media":"fiabilidad alta";
-    return `<td class="tnum num" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(iv.value).toLocaleString("es-CL")} · banda $${Math.round(iv.lo).toLocaleString("es-CL")}–$${Math.round(iv.hi).toLocaleString("es-CL")} · margen exacto ${(iv.mos*100).toFixed(0)}% · ${ml.txt} · ${fiabTxt}">${shown}${lowFiab?' <span style="color:'+amber+'">⚠</span>':""}</td>`;};
+    return `<td class="tnum num" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(iv.value).toLocaleString("es-CL")} · banda $${Math.round(iv.lo).toLocaleString("es-CL")}–$${Math.round(iv.hi).toLocaleString("es-CL")} · margen exacto ${(iv.mos*100).toFixed(0).replace(".",",").replace("-","−")}% · ${ml.txt} · ${fiabTxt}">${shown}${lowFiab?' <span style="color:'+amber+'">⚠</span>':""}</td>`;};
   const rows=byS.map(s=>{const a=s.a24;return `<tr><td>${tk(s)}</td><td>${badge(s.s,s.c)}</td>
     <td class="tnum num" style="color:${accentT};font-weight:700">${s.b.toFixed(2)}</td><td class="num">${chip(retOf(s))}</td>
     <td class="tnum num">${p0(a.sig)}</td><td class="tnum num" style="font-weight:800;color:${a.sharpe>=0?green:red}">${a.sharpe.toFixed(2)}</td>
@@ -2311,7 +2318,7 @@ function viewDetalle(){
   const sg=_alfa>_thr?"SUBVALORADA":_alfa<-_thr?"SOBREVALORADA":"EQUILIBRIO",sgc=_alfa>_thr?green:_alfa<-_thr?red:muted;
   const tiles=`<div class="tiles">
     ${tile("<span class=\"gl\">β</span> regresión",s.b.toFixed(2),s.b<0.8?"defensiva":s.b<1?"moderada":"agresiva",s.c,accentT)}
-    ${tile("R²",a.r2.toFixed(2),"sistemático "+(a.r2*100).toFixed(0)+"%",s.c)}
+    ${tile("R²",a.r2.toFixed(2),"sistemático "+(a.r2*100).toFixed(0).replace(".",",").replace("-","−")+"%",s.c)}
     ${_W?tile("Retorno "+winShort(),pc(a.tot),"anualizado (proyección) "+pc(a.ret),s.c,col(a.tot)):tile("Retorno anual",pc(a.ret),"total "+winShort()+" "+pc(a.tot),s.c,col(a.ret))}
     ${tile("Volatilidad <span class=\"gl\">σ</span>",p0(a.sig),(a.sig/MKT.sig).toFixed(1)+"× IPSA",s.c)}
     ${tile("Sharpe",a.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),s.c,a.sharpe>=0?green:red)}
@@ -2332,13 +2339,13 @@ function viewDetalle(){
     ${tile("P/B",_f.pb!=null?_f.pb.toLocaleString("es-CL",{maximumFractionDigits:2}):"—","precio / valor libro",s.c,_f.pb!=null&&_f.pb<1?green:ink)}
     ${tile("Yield dividendos",_f.dy!=null?_f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—",_f.dps!=null?("$"+_f.dps.toLocaleString("es-CL")+" por acción (12m)"):"últimos 12 meses",s.c,_f.dy>=5?green:ink)}
     ${tile("Capitalización",fundFmtCap(_f.mcap),"valor bolsa",s.c,ink)}
-    ${tile("Rango 52 semanas",_fpos!=null?(_fpos*100).toFixed(0)+"%":"—",_fpos!=null?("del mínimo ("+(_f.lo52||0).toLocaleString("es-CL")+") al máximo ("+(_f.hi52||0).toLocaleString("es-CL")+")"):"sin datos",s.c,_fpos!=null?(_fpos>=0.5?green:amber):ink)}
+    ${tile("Rango 52 semanas",_fpos!=null?(_fpos*100).toFixed(0).replace(".",",").replace("-","−")+"%":"—",_fpos!=null?("del mínimo ("+(_f.lo52||0).toLocaleString("es-CL")+") al máximo ("+(_f.hi52||0).toLocaleString("es-CL")+")"):"sin datos",s.c,_fpos!=null?(_fpos>=0.5?green:amber):ink)}
     ${_f.roe!=null?tile("ROE",_f.roe.toLocaleString("es-CL",{maximumFractionDigits:1})+"%",(_f.nm!=null?("margen neto "+_f.nm.toLocaleString("es-CL",{maximumFractionDigits:1})+"%"):"rentabilidad del patrimonio"),s.c,_f.roe>=15?green:ink):""}
-    ${(_f.target!=null&&_f.px>0)?tile("Precio objetivo",_f.target.toLocaleString("es-CL",{maximumFractionDigits:0}),"upside "+((_f.target/_f.px-1)*100>=0?"+":"")+((_f.target/_f.px-1)*100).toFixed(1)+"%"+(_f.nAn?(" · "+_f.nAn+" analistas"):""),s.c,(_f.target/_f.px-1)>=0.1?green:(_f.target/_f.px-1)>=0?ink:red):""}</div>`:"";
+    ${(_f.target!=null&&_f.px>0)?tile("Precio objetivo",_f.target.toLocaleString("es-CL",{maximumFractionDigits:0}),"upside "+((_f.target/_f.px-1)*100>=0?"+":"")+((_f.target/_f.px-1)*100).toFixed(1).replace(".",",").replace("-","−")+"%"+(_f.nAn?(" · "+_f.nAn+" analistas"):""),s.c,(_f.target/_f.px-1)>=0.1?green:(_f.target/_f.px-1)>=0?ink:red):""}</div>`:"";
   const xb=niceBounds(MKT.rets,0.1),yb=niceBounds(s.rets,0.1),am=a.alphaR/(DATA.perYear||12);
   const pts=s.rets.map((y,k)=>({x:MKT.rets[k],y:y,c:s.c+"d0",r:5}));
   const line=[{x1:xb.min,y1:am+s.b*xb.min,x2:xb.max,y2:am+s.b*xb.max,c:s.c}];
-  const scl=card("Recta Característica (SCL)",`Retorno ${perAdj} de ${s.t} (Y) vs IPSA (X) · pendiente = β ${s.b.toFixed(2)}`,svgScatter({pts,lines:line,xmin:xb.min,xmax:xb.max,ymin:yb.min,ymax:yb.max,xlab:"IPSA (% "+perAdj+")",ylab:s.t+" (% "+perAdj+")",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",h:300}));
+  const scl=card("Recta Característica (SCL)",`Retorno ${perAdj} de ${s.t} (Y) vs IPSA (X) · pendiente = β ${s.b.toFixed(2)}`,svgScatter({pts,lines:line,xmin:xb.min,xmax:xb.max,ymin:yb.min,ymax:yb.max,xlab:"IPSA (% "+perAdj+")",ylab:s.t+" (% "+perAdj+")",fx:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",h:300}));
   const i=TICK.indexOf(s.t);
   // COMPACTO e independiente del nº de acciones del análisis: con 28 acciones la lista completa se hacía
   // interminable y desordenaba la vista — se muestran los EXTREMOS útiles para decidir (con quién diversificar
@@ -2356,7 +2363,7 @@ function viewDetalle(){
   const plab=(/^[a-z]{3}-\d{2}$/i.test(""+DATA.labels[0]))?[prevMonth(DATA.labels[0]),...DATA.labels]:["inicio",...DATA.labels];   // solo el demo usa etiquetas mes-año; en un análisis del usuario son fechas
   const ph=card("Historia del precio",`${s.t} · precio de cierre ${perAdj} · ${s.prices.length} puntos`,svgPrice({prices:s.prices,labels:plab,c:s.c,t:s.t,h:215}));
   const _lowR2=a.r2<0.10;   // r² muy bajo: el mercado casi no explica a la acción → β/α poco confiables (mucho riesgo idiosincrático)
-  const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0)}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.${_lowR2?` <br><b style="color:${amber}">⚠ R² muy bajo (${(a.r2*100).toFixed(0)}%):</b> el IPSA casi no explica el movimiento de ${s.t} (se mueve por factores propios). Con eso su <b>β y su α son estadísticamente poco confiables</b> — no es un error del cálculo, es una acción de baja correlación con el mercado. El Investor Score lo sabe: amortigua su α para no premiar lo que en el fondo es ruido idiosincrático.`:""}`);
+  const interp=notecard(`<b>${s.n}</b> (${s.s}). β ${s.b.toFixed(2)} → ${s.b<0.8?"defensiva, amortigua el mercado":s.b<1?"moderada":"agresiva, amplifica el mercado"}. R² ${a.r2.toFixed(2)}: <b>${(a.r2*100).toFixed(0).replace(".",",").replace("-","−")}%</b> de su riesgo es sistemático, el resto es propio (diversificable). ${_W?("Retorno de la ventana ("+winShort()+") "+pc(a.tot)+" (anualizado referencial "+pc(a.ret)+")"):("Retorno anual "+pc(a.ret))} con σ ${p0(a.sig)} → Sharpe ${a.sharpe.toFixed(2)} (IPSA ${MKT.sharpe.toFixed(2)}). ${_W?("α de la ventana "+pc(_alfa)):("α de Jensen "+pc(a.jensen))} → <b>${_alfa>=0?"rindió sobre":"rindió bajo"}</b> lo exigido por su β${_W?" en ese lapso":""}. Señal de valoración: <b style="color:${sgc}">${sg}</b>${_W?" (ventana corta: tómala como indicio, no como veredicto)":""}.${_lowR2?` <br><b style="color:${amber}">⚠ R² muy bajo (${(a.r2*100).toFixed(0).replace(".",",").replace("-","−")}%):</b> el IPSA casi no explica el movimiento de ${s.t} (se mueve por factores propios). Con eso su <b>β y su α son estadísticamente poco confiables</b> — no es un error del cálculo, es una acción de baja correlación con el mercado. El Investor Score lo sabe: amortigua su α para no premiar lo que en el fondo es ruido idiosincrático.`:""}`);
   // VALOR INTRÍNSECO Y MARGEN DE SEGURIDAD — ¿hay espacio para ganar antes de comprar? Usa la β de la regresión
   // para el retorno exigido. Si no hay datos suficientes (sin dividendos/utilidad/target), no se muestra (no inventa).
   const _iv=(typeof intrinsicValue==="function")?intrinsicValue(sel,{beta:s.b}):null;
@@ -2375,11 +2382,11 @@ function viewDetalle(){
       <div style="position:absolute;top:46px;left:${pxX.toFixed(1)}%;transform:translateX(-50%);font:800 10px var(--font);color:${mc};white-space:nowrap">precio $${fmt(_iv.px)}</div></div>`;
     const ivTiles=`<div class="tiles">
       ${tile("Valor intrínseco","$"+fmt(_iv.value),"banda $"+fmt(_iv.lo)+" – $"+fmt(_iv.hi),s.c,ink)}
-      ${tile("Margen de seguridad",(mosPct>=0?"+":"")+mosPct.toFixed(1)+"%",ml.txt+" · precio $"+fmt(_iv.px),s.c,mc)}
-      ${tile("Retorno exigido r",(_iv.r*100).toFixed(1)+"%","CAPM · Rf "+(+RF).toFixed(1)+"% + β "+_iv.beta.toFixed(2)+"·"+(+PRIMA).toFixed(1)+"%"+(_iv.g!=null?(" · g "+(_iv.g*100).toFixed(1)+"%"):""),s.c,indigo)}</div>`;
+      ${tile("Margen de seguridad",(mosPct>=0?"+":"")+mosPct.toFixed(1).replace(".",",").replace("-","−")+"%",ml.txt+" · precio $"+fmt(_iv.px),s.c,mc)}
+      ${tile("Retorno exigido r",(_iv.r*100).toFixed(1).replace(".",",").replace("-","−")+"%","CAPM · Rf "+(+RF).toFixed(1).replace(".",",").replace("-","−")+"% + β "+_iv.beta.toFixed(2).replace(".",",").replace("-","−")+"·"+(+PRIMA).toFixed(1).replace(".",",").replace("-","−")+"%"+(_iv.g!=null?(" · g "+(_iv.g*100).toFixed(1).replace(".",",").replace("-","−")+"%"):""),s.c,indigo)}</div>`;
     const met=_iv.methods.map(m=>m.name+" $"+fmt(m.val)).join(" · ");
     const _disp=_iv.disp||0;
-    const _fiab=(_iv.n<2)?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> hay UNA sola ancla (${_iv.methods[0].name}) — sin triangulación entre métodos. Tómalo como referencia gruesa, no un número fino.`:(_disp>0.6?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> las anclas cercanas al valor central discrepan entre sí (dispersión robusta ${( _disp*100).toFixed(0)}%). Tómalo como una referencia gruesa, no un número fino.`:((_iv.dispFull||0)>0.6?`<br><b style="color:${green}">✓ Valor corroborado:</b> aunque la banda completa es ancha, ${_iv.n>=3?"dos de las anclas coinciden cerca del valor central":"las anclas se acompañan"} — el método divergente queda visible en la banda, no arrastra el valor (mediana).`:""));
+    const _fiab=(_iv.n<2)?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> hay UNA sola ancla (${_iv.methods[0].name}) — sin triangulación entre métodos. Tómalo como referencia gruesa, no un número fino.`:(_disp>0.6?`<br><b style="color:${amber}">⚠ Fiabilidad baja:</b> las anclas cercanas al valor central discrepan entre sí (dispersión robusta ${( _disp*100).toFixed(0).replace(".",",").replace("-","−")}%). Tómalo como una referencia gruesa, no un número fino.`:((_iv.dispFull||0)>0.6?`<br><b style="color:${green}">✓ Valor corroborado:</b> aunque la banda completa es ancha, ${_iv.n>=3?"dos de las anclas coinciden cerca del valor central":"las anclas se acompañan"} — el método divergente queda visible en la banda, no arrastra el valor (mediana).`:""));
     const _skip=(_iv.skipped&&_iv.skipped.length)?`<br><span style="color:${muted}">Anclas no disponibles: ${_iv.skipped.join(" · ")}.</span>`:"";
     const ivNote=notecard(`Valor central = <b>mediana</b> de las anclas (robusta a un método extremo). Triangulado con <b>${_iv.n} método${_iv.n!==1?"s":""}</b>: ${met}. El <b>margen de seguridad</b> es el colchón entre lo que la acción <b>vale</b> por fundamentos y lo que <b>cuesta</b>: positivo = hay espacio para ganar comprando bajo su valor; negativo = pagas de más. La <b>fiabilidad</b> se mide con la dispersión <b>robusta</b> de las anclas (coherente con la mediana): si dos de tres coinciden, el valor está corroborado aunque la tercera diverja. Es valorización (¿a qué precio entrar?), <b>no</b> una señal de <i>timing</i>. Complementa al Investor Score con el ángulo de precio; no lo reemplaza.${_fiab}${_skip}`);
     ivCard=card("Valor intrínseco y margen de seguridad","¿Hay espacio para ganar? Compara lo que "+s.t+" vale (dividendos, múltiplos y target de analistas) con su último cierre de la base",bar+ivTiles+ivNote);
@@ -2404,7 +2411,7 @@ function viewCAPM(){
   const pts=STOCKS.map(s=>({x:s.b,y:retOf(s),c:s.c,label:s.t}));
   const line=[{x1:0,y1:rf0,x2:bmax,y2:rf0+bmax*prima0,c:indigo,dash:true}].concat(showR?[{x1:0,y1:rf0,x2:bmax,y2:rf0+bmax*primaR,c:muted,dash:true}]:[]);
   const smlLeg=showR?`<div class="legend"><span><span class="lgdot" style="background:${indigo}"></span>SML ex-ante (prima ${p0(prima0,W?2:1)})</span><span><span class="lgdot" style="background:${muted}"></span>SML realizada (prima ${p0(primaR,W?2:1)})</span></div>`:"";
-  const chart=card("Security Market Line (SML)",(W?("En términos de la VENTANA de "+winLong()+" · "):"")+"Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:W?("Retorno real "+winShort()+" (%)"):"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",h:330}),smlLeg);
+  const chart=card("Security Market Line (SML)",(W?("En términos de la VENTANA de "+winLong()+" · "):"")+"Línea = retorno exigido por β · puntos sobre la línea batieron al CAPM (α+)",svgScatter({pts,lines:line,xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:W?("Retorno real "+winShort()+" (%)"):"Retorno real anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",h:330}),smlLeg);
   const byJ=[...STOCKS].sort((a,b)=>alfaOf(b)-alfaOf(a));
   const aThr=W?Math.max(0.3,winYears()):1;   // mismo prorrateo del umbral ±1pp anual que en Detalle
   const rows=byJ.map(s=>{const al=alfaOf(s);const sg=al>aThr?"SUBVALORADA":al<-aThr?"SOBREVALORADA":"EQUILIBRIO",sc=al>aThr?green:al<-aThr?red:muted;
@@ -2831,7 +2838,7 @@ function viewComparador(){
     SCEN.length?`<div class="genrow" style="align-items:center"><div class="genhint" style="margin:0">${SCEN.length} escenario(s) guardado(s). Compara métricas, riesgo-retorno y el retorno exigido (CAPM) a 12 meses.</div><button class="btn" id="clrscen">Limpiar todo</button></div>`
     :`<div class="note">Aún no has guardado escenarios. Ve al <b>Constructor de portafolio</b>, arma una alternativa y pulsa <b>Guardar escenario</b>. Luego vuelve aquí para compararlas lado a lado.</div>`);
   if(!SCEN.length)return intro;
-  const rows=SCEN.map((s,i)=>{const comp=s.comp.map(c=>`<span class="tag" style="border-color:${c.c}55;color:${c.c}">${c.t} ${c.w}%</span>`).join(" ");
+  const rows=SCEN.map((s,i)=>{const comp=s.comp.map(c=>`<span class="tag" style="border-color:${c.c}55;color:${c.c}">${c.t} ${(+c.w).toLocaleString("es-CL",{maximumFractionDigits:1})}%</span>`).join(" ");
     const isAuto=/^sim_/.test(String(s.id));
     return `<tr><td><span class="lgdot" style="background:${SCPAL[i%SCPAL.length]}"></span> <b>${s.name}</b>${isAuto?' <span class="badge" style="font-size:8.5px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33" title="Escenario AUTOMÁTICO: refleja tu cartera real y se actualiza solo con cada operación. Puedes quitarlo con ✕ (no vuelve a crearse).">auto · cartera real</span>':""}</td>
     <td style="max-width:260px;white-space:normal">${comp}</td>
@@ -2848,11 +2855,11 @@ function viewComparador(){
   const sy=niceBounds([RF,...SCEN.map(s=>s.m.retH),MKT.ret],0.16);
   const pts=SCEN.map((s,i)=>({x:s.m.sig,y:s.m.retH,c:SCPAL[i%SCPAL.length],label:s.name,r:9}));
   pts.push({x:MKT.sig,y:MKT.ret,c:muted,label:"IPSA",shape:"diamond",r:7});
-  const scat=card("Riesgo–Retorno de los escenarios","Cada punto es un escenario (σ vs retorno histórico) · arriba-izquierda es mejor",svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",w:820,h:320}));
+  const scat=card("Riesgo–Retorno de los escenarios","Cada punto es un escenario (σ vs retorno histórico) · arriba-izquierda es mejor",svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",w:820,h:320}));
   const bmax=Math.max(...SCEN.map(s=>s.m.bp),1)*1.18;
   const yb=niceBounds([RF,...SCEN.map(s=>s.m.retH)],0.16);
   const lpts=SCEN.map((s,i)=>({x:s.m.bp,y:s.m.retH,c:SCPAL[i%SCPAL.length],label:s.name,r:9}));
-  const scatSML=card("SML de los escenarios","β del portafolio vs retorno histórico · la recta es el retorno exigido por CAPM (Rf + β·prima); por encima = batió a su riesgo sistemático",svgScatter({pts:lpts,lines:[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:indigo,dash:true}],xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",w:820,h:320}));
+  const scatSML=card("SML de los escenarios","β del portafolio vs retorno histórico · la recta es el retorno exigido por CAPM (Rf + β·prima); por encima = batió a su riesgo sistemático",svgScatter({pts:lpts,lines:[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:indigo,dash:true}],xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",w:820,h:320}));
   const N=12,labels=Array.from({length:N+1},(_,i)=>String(i));
   const series=SCEN.map((s,i)=>{const erM=Math.pow(1+s.m.erCapm/100,1/12)-1;return {label:s.name,c:SCPAL[i%SCPAL.length],vals:Array.from({length:N+1},(_,k)=>+(s.amount*Math.pow(1+erM,k)).toFixed(0))};});
   const leg=`<div class="legend">`+SCEN.map((s,i)=>`<span><span class="lgdot" style="background:${SCPAL[i%SCPAL.length]}"></span>${s.name}</span>`).join("")+`</div>`;
@@ -2935,7 +2942,7 @@ function viewSim(){
       <td><div class="cons-name"><span class="dot" style="background:${s.c}"></span><b style="color:${s.c}">${s.t}</b></div><div class="cons-sec">${s.s}</div></td>
       <td class="r"><span class="cons-beta" style="color:${bcol}">${s.b.toFixed(2)}</span></td>
       <td class="r" style="color:${col(a.ret)};font-weight:700">${pc(a.ret)}</td>
-      <td class="r" style="color:var(--muted)">${a.sig.toFixed(1)}%</td>
+      <td class="r" style="color:var(--muted)">${a.sig.toFixed(1).replace(".",",").replace("-","−")}%</td>
       <td class="r"><div class="cons-shwrap"><div class="cons-bar"><i style="width:${shPct}%;background:${a.sharpe>=0?green:red}"></i></div><span style="color:${a.sharpe>=0?green:red};font-weight:800">${a.sharpe.toFixed(2)}</span></div></td>
       <td class="r" style="color:${col(a.jensen)};font-weight:700">${(a.jensen>=0?"+":"")+a.jensen.toFixed(1)}</td>
       <td class="r"><span class="cons-comp ${cClass}">${comp>=0?"+":""}${comp.toFixed(2)}</span><div class="cons-style">${cpStyleOf(s.t)}</div></td>
@@ -2943,7 +2950,7 @@ function viewSim(){
     </tr>`;}).join("");
   const sc=Math.abs(sum-100)<0.5?green:amber;
   const controls=card("Selección y pesos","Marca las acciones (✓) y define su % · métricas CAPM + multifactor con color para decidir de un vistazo",
-    `<div class="simhead"><div class="simamt"><span class="l">Monto a invertir (CLP)</span><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="amtinp" value="${simState.amount?simState.amount.toLocaleString('es-CL'):''}" placeholder="Ej: 1.000.000"/></div></div><button class="btn" id="eqw">Equiponderar</button></div><div class="tw cons-tw" style="margin-top:13px"><table class="cons-tbl">${head}<tbody>${rows}</tbody></table></div><div class="simsum">Suma de pesos: <b id="sumv" style="color:${sc}">${sum.toFixed(1)}%</b>${winMode()?` <span style="color:var(--muted)">· *retorno anualizado desde una ventana ${winShort()} (&lt;1 año): referencial</span>`:""}</div>`);
+    `<div class="simhead"><div class="simamt"><span class="l">Monto a invertir (CLP)</span><div class="amtwrap"><span>$</span><input type="text" inputmode="numeric" id="amtinp" value="${simState.amount?simState.amount.toLocaleString('es-CL'):''}" placeholder="Ej: 1.000.000"/></div></div><button class="btn" id="eqw">Equiponderar</button></div><div class="tw cons-tw" style="margin-top:13px"><table class="cons-tbl">${head}<tbody>${rows}</tbody></table></div><div class="simsum">Suma de pesos: <b id="sumv" style="color:${sc}">${sum.toFixed(1).replace(".",",").replace("-","−")}%</b>${winMode()?` <span style="color:var(--muted)">· *retorno anualizado desde una ventana ${winShort()} (&lt;1 año): referencial</span>`:""}</div>`);
   const edSc=scenEditId!=null?SCEN.find(s=>s.id===scenEditId):null;
   const scenBtns=edSc?`<span class="genl" style="margin:0;color:var(--indigo)">✎ Editando escenario: <b>${edSc.name}</b></span><button class="btn" id="cancelscen">Cancelar</button><button class="btn" id="savescen">Guardar como nuevo</button><button class="btn btn-pri" id="updscen">💾 Actualizar escenario</button>`:`<button class="btn" id="savescen">💾 Guardar escenario</button>`;
   // ── Optimizador de pesos (OPCIONAL): sugiere, nunca aplica solo ──
@@ -2952,7 +2959,7 @@ function viewSim(){
   let optRes="";
   if(optState.res){
     const Mo=pMetrics(optState.res.sel),Mc=pMetrics(simState.sel);
-    const chips=Object.keys(optState.res.sel).map(t=>{const st=STOCKS.find(x=>x.t===t)||{c:"#1E5FD1"};return `<span class="altchip" style="border-color:${st.c};color:${st.c};background:${st.c}12">${t} ${optState.res.sel[t]}%</span>`;}).join(" ");
+    const chips=Object.keys(optState.res.sel).map(t=>{const st=STOCKS.find(x=>x.t===t)||{c:"#1E5FD1"};return `<span class="altchip" style="border-color:${st.c};color:${st.c};background:${st.c}12">${t} ${(+optState.res.sel[t]).toLocaleString("es-CL",{maximumFractionDigits:1})}%</span>`;}).join(" ");
     const cmp=[["Retorno hist.",Mc.retH,Mo.retH,v=>pc(v),1],["σ (riesgo)",Mc.sig,Mo.sig,v=>p0(v),-1],["Sharpe",Mc.sharpe,Mo.sharpe,v=>v.toFixed(2),1],["β",Mc.bp,Mo.bp,v=>v.toFixed(2),0]];
     const cmpRows=cmp.map(([l,a,b,f,dir])=>{const better=dir===0?muted:(dir*(b-a)>1e-9?green:dir*(b-a)<-1e-9?red:muted);return `<tr><td><b>${l}</b></td><td class="r tnum">${f(a)}</td><td class="r tnum" style="font-weight:800;color:${better}">${f(b)}</td></tr>`;}).join("");
     optRes=`<div style="margin-top:13px">${chips}</div>
@@ -2979,7 +2986,7 @@ function simResults(){
     tile("Retorno histórico",pc(M.retH),(winMode()?"anualizado (referencial: ventana "+winShort()+" <1 año)":"anual · "+winShort()),indigo,col(M.retH))+
     tile("Riesgo <span class=\"gl\">σ</span>",p0(M.sig),"prom. pond. "+p0(M.wavgSig),indigo,ink)+
     tile("Sharpe",M.sharpe.toFixed(2),"IPSA "+MKT.sharpe.toFixed(2),indigo,M.sharpe>=0?green:red)+tile("Correlación portafolio",M.corrAvg.toFixed(2),"media entre acciones",indigo,ink)+`</div>`;
-  const arows=M.ws.map(x=>`<tr><td>${tk(x.s)}</td><td>${badge(x.s.s,x.s.c)}</td><td class="tnum">${(x.w*100).toFixed(1)}%</td><td class="tnum" style="font-weight:700">${fmtCLP(simState.amount*x.w)}</td><td class="tnum" style="color:${accentT};font-weight:700">${x.s.b.toFixed(2)}</td></tr>`).join("");
+  const arows=M.ws.map(x=>`<tr><td>${tk(x.s)}</td><td>${badge(x.s.s,x.s.c)}</td><td class="tnum">${(x.w*100).toFixed(1).replace(".",",").replace("-","−")}%</td><td class="tnum" style="font-weight:700">${fmtCLP(simState.amount*x.w)}</td><td class="tnum" style="color:${accentT};font-weight:700">${x.s.b.toFixed(2)}</td></tr>`).join("");
   const foot=`<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td class="tnum">100%</td><td class="tnum">${fmtCLP(simState.amount)}</td><td class="tnum" style="color:${accentT}">${M.bp.toFixed(2)}</td></tr>`;
   const tbl=card("Asignación del portafolio","Monto por acción y contribución al β",{html:`<div class="tw"><table><thead><tr>${["Acción","Sector","Peso","Monto","β"].map(z=>`<th>${z}</th>`).join("")}</tr></thead><tbody>${arows}${foot}</tbody></table></div>`,flush:true});
   // riesgo-retorno
@@ -2988,13 +2995,13 @@ function simResults(){
   const pts=M.ws.map(x=>({x:x.s.a24.sig,y:x.s.a24.ret,c:x.s.c+"99",r:6,label:x.s.t}));
   pts.push({x:MKT.sig,y:MKT.ret,c:muted,label:"IPSA",shape:"diamond",r:7});
   pts.push({x:M.sig,y:M.retH,c:indigo,label:"PORTAFOLIO",r:10});
-  const scat=card("Riesgo–Retorno: portafolio vs componentes","El punto azul es el portafolio · la diversificación reduce su σ",svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",w:820,h:320}));
+  const scat=card("Riesgo–Retorno: portafolio vs componentes","El punto azul es el portafolio · la diversificación reduce su σ",svgScatter({pts,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",w:820,h:320}));
   // SML
   const bmax=Math.max(...M.ws.map(x=>x.s.b),M.bp)*1.18;
   const yb=niceBounds([RF,...M.ws.map(x=>x.s.a24.ret),M.retH],0.14);
   const lpts=M.ws.map(x=>({x:x.s.b,y:x.s.a24.ret,c:x.s.c+"99",r:6,label:x.s.t}));
   lpts.push({x:M.bp,y:M.retH,c:indigo,label:"PORTAFOLIO",r:10});
-  const sml=card("Security Market Line (portafolio)","Línea = retorno exigido por β (Rf + β·prima) · el portafolio en (β, retorno)",svgScatter({pts:lpts,lines:[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:indigo,dash:true}],xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",w:820,h:320}));
+  const sml=card("Security Market Line (portafolio)","Línea = retorno exigido por β (Rf + β·prima) · el portafolio en (β, retorno)",svgScatter({pts:lpts,lines:[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:indigo,dash:true}],xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",w:820,h:320}));
   const red0=M.wavgSig-M.sig;
   const note=notecard(`<b>Diversificación:</b> σ del portafolio ${p0(M.sig)} ${red0>0.05?("es <b>menor en "+p0(red0)+"</b> que"):"≈"} el promedio ponderado (${p0(M.wavgSig)}). CAPM: anual ${p0(M.erCapm)} · mensual ${p0(M.erM,2)} · semanal ${p0(M.erW,2)}. Retorno histórico 24m ${pc(M.retH)} · Sharpe ${M.sharpe.toFixed(2)}. Coeficiente de correlación del portafolio (media entre acciones): <b>${M.corrAvg.toFixed(2)}</b> (menor = mejor diversificada). No es recomendación de inversión.`);
   const cum=arr=>{let c=100;return arr.map(r=>{c*=(1+r/100);return +c.toFixed(2);});};
@@ -3014,7 +3021,7 @@ function simResults(){
   const ctrl=`<div class="projctrl"><div><div class="genl">Escala</div><div class="pbtns">${projBtns}</div></div><div><div class="genl">Horizonte (${HZNUNIT[proj]})</div><div class="pbtns">${hznBtns}</div></div></div>`;
   const projLeg=`<div class="legend" style="margin:2px 0 4px"><span><span class="lgdot" style="background:${indigo}"></span>CAPM (retorno exigido)</span></div>`;
   const fvb=baseVals[steps];
-  const projBody=ctrl+projLeg+svgProj({labels:plabels,base:baseVals,unit:unitS})+`<div class="note" style="margin-top:11px">Horizonte <b>${hzn} ${HZNUNIT[proj]}</b> · monto inicial ${fmtCLP(simState.amount)}. <b style="color:${indigo}">CAPM</b> (recta, retorno exigido ${M.erCapm.toFixed(2)}% anual) → ${fmtCLP(fvb)}. Es el crecimiento AL RETORNO EXIGIDO por el modelo — una vara de comparación, no una proyección de rentabilidad esperada; para proyectar escenarios usa <b>Montecarlo</b> (barra superior).</div>`;
+  const projBody=ctrl+projLeg+svgProj({labels:plabels,base:baseVals,unit:unitS})+`<div class="note" style="margin-top:11px">Horizonte <b>${hzn} ${HZNUNIT[proj]}</b> · monto inicial ${fmtCLP(simState.amount)}. <b style="color:${indigo}">CAPM</b> (recta, retorno exigido ${M.erCapm.toFixed(2).replace(".",",").replace("-","−")}% anual) → ${fmtCLP(fvb)}. Es el crecimiento AL RETORNO EXIGIDO por el modelo — una vara de comparación, no una proyección de rentabilidad esperada; para proyectar escenarios usa <b>Montecarlo</b> (barra superior).</div>`;
   const projCard=card("Retorno exigido (CAPM) en el tiempo","Cómo crecería el monto si rindiera exactamente el retorno que el CAPM exige por su riesgo",projBody);
   const varData=[["Semanal",M.erW,52],["Mensual",M.erM,12],["Anual",M.erCapm,1]].map(a=>{const s=M.sig/Math.sqrt(a[2]);const v=a[1]-1.645*s;return {l:a[0],mu:a[1],s,v,loss:simState.amount*Math.max(0,-v)/100};});
   const varRows=varData.map(d=>`<tr><td style="font-weight:700">${d.l}</td><td class="tnum" style="color:${col(d.mu)}">${pc(d.mu,2)}</td><td class="tnum">${p0(d.s,2)}</td><td class="tnum" style="font-weight:800;color:${d.v<0?red:green}">${pc(d.v,2)}</td><td class="tnum" style="font-weight:700;color:${d.loss>0?red:muted}">${d.loss>0?"−"+fmtCLP(d.loss):"—"}</td></tr>`).join("");
@@ -3043,7 +3050,7 @@ function attachSim(){
   const oc=document.getElementById("optClear");if(oc)oc.onclick=()=>{optState.res=null;render();};
 }
 function updSimRes(){const el=document.getElementById("simres");if(el){el.innerHTML=simResults();attachProj();attachProjHover();try{attachTableSort();}catch(e){}}}
-function updSum(){const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState.sel[t]||0),0);const el=document.getElementById("sumv");if(el){el.textContent=sum.toFixed(1)+"%";el.style.color=Math.abs(sum-100)<0.5?green:amber;}}
+function updSum(){const sum=Object.keys(simState.sel).reduce((a,t)=>a+(+simState.sel[t]||0),0);const el=document.getElementById("sumv");if(el){el.textContent=sum.toFixed(1).replace(".",",").replace("-","−")+"%";el.style.color=Math.abs(sum-100)<0.5?green:amber;}}
 
 let simAlts=[];
 function efficientStocks(){return STOCKS.filter(s=>s.a24.jensen>=0);}
@@ -3113,8 +3120,8 @@ function viewAsistente(){
   const pill=(txt,bg)=>`<span style="display:inline-block;margin-left:7px;padding:.12rem .52rem;border-radius:999px;background:${bg};color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.4px;vertical-align:middle">${txt}</span>`;
   const cards=altData.map(({alt,M},idx)=>{
     const th=TH[idx%TH.length];
-    const chips=M.ws.map(x=>`<span class="altchip" style="border-color:${x.s.c};color:${x.s.c};background:${x.s.c}12">${x.s.t} ${(x.w*100).toFixed(0)}%</span>`).join(" ");
-    const bar=`<div style="display:flex;height:14px;border-radius:8px;overflow:hidden;margin:0 0 14px;border:1px solid var(--line)">${M.ws.map(x=>`<div style="width:${(x.w*100).toFixed(2)}%;background:${x.s.c}" title="${x.s.t} ${(x.w*100).toFixed(0)}%"></div>`).join("")}</div>`;
+    const chips=M.ws.map(x=>`<span class="altchip" style="border-color:${x.s.c};color:${x.s.c};background:${x.s.c}12">${x.s.t} ${(x.w*100).toFixed(0).replace(".",",").replace("-","−")}%</span>`).join(" ");
+    const bar=`<div style="display:flex;height:14px;border-radius:8px;overflow:hidden;margin:0 0 14px;border:1px solid var(--line)">${M.ws.map(x=>`<div style="width:${(x.w*100).toFixed(2)}%;background:${x.s.c}" title="${x.s.t} ${(x.w*100).toFixed(0).replace(".",",").replace("-","−")}%"></div>`).join("")}</div>`;
     const alphaP=alphaOf(M);
     const mets=[["β",M.bp.toFixed(2),ink],["α Jensen",pc(alphaP),col(alphaP)],["E(R) CAPM",p0(M.erCapm),indigo],["Retorno ventana",pc(M.retH),col(M.retH)],["σ",p0(M.sig),ink],["ρ portafolio",M.corrAvg.toFixed(2),ink],["Sharpe",M.sharpe.toFixed(2),BC.sharpe]];
     const mh=mets.map(m=>`<div class="altm" style="border-top:2.5px solid ${m[2]}33"><div class="altml">${m[0]}</div><div class="altmv tnum" style="color:${m[2]}">${m[1]}</div></div>`).join("");
@@ -3158,7 +3165,7 @@ function genPDF(){
   const expv=Array.from({length:hzn+1},(_,i)=>simState.amount*Math.pow(1+rate,i));
   const fvv=expv[expv.length-1],fecha=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"}),uni=HZNUNIT[proj];
   const donut=svgDonut(M.ws.map(x=>({value:x.w,color:x.s.c})));
-  const dleg=M.ws.map(x=>`<div class="lg"><span class="d" style="background:${x.s.c}"></span><b>${x.s.t}</b> ${(x.w*100).toFixed(1)}%</div>`).join("");
+  const dleg=M.ws.map(x=>`<div class="lg"><span class="d" style="background:${x.s.c}"></span><b>${x.s.t}</b> ${(x.w*100).toFixed(1).replace(".",",").replace("-","−")}%</div>`).join("");
   const cum=arr=>{let c=100;return arr.map(r=>{c*=(1+r/100);return +c.toFixed(2);});};
   const series=M.ws.map(x=>({label:x.s.t,c:x.s.c,vals:cum(x.s.rets)}));
   series.push({label:"IPSA",c:"#52668A",vals:cum(MKT.rets),dash:true});
@@ -3169,15 +3176,15 @@ function genPDF(){
   const rrp=M.ws.map(x=>({x:x.s.a24.sig,y:x.s.a24.ret,c:x.s.c+"99",r:6,label:x.s.t}));
   rrp.push({x:MKT.sig,y:MKT.ret,c:"#52668A",label:"IPSA",shape:"diamond",r:7});
   rrp.push({x:M.sig,y:M.retH,c:"#1E5FD1",label:"PORT.",r:9});
-  const rr=svgScatter({pts:rrp,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0)+"%",fy:v=>v.toFixed(0)+"%",w:820,h:330});
+  const rr=svgScatter({pts:rrp,xmin:sx.min,xmax:sx.max,ymin:sy.min,ymax:sy.max,xlab:"Riesgo σ (% anual)",ylab:"Retorno (% anual)",fx:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",w:820,h:330});
   const bmax=Math.max(...M.ws.map(x=>x.s.b),M.bp)*1.18,yb=niceBounds([RF,...M.ws.map(x=>x.s.a24.ret),M.retH],0.14);
   const lpts=M.ws.map(x=>({x:x.s.b,y:x.s.a24.ret,c:x.s.c+"99",r:6,label:x.s.t}));
   lpts.push({x:M.bp,y:M.retH,c:"#1E5FD1",label:"PORT.",r:9});
-  const sml=svgScatter({pts:lpts,lines:[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:"#1E5FD1",dash:true}],xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0)+"%",w:820,h:330});
+  const sml=svgScatter({pts:lpts,lines:[{x1:0,y1:RF,x2:bmax,y2:RF+bmax*PRIMA,c:"#1E5FD1",dash:true}],xmin:0,xmax:bmax,ymin:yb.min,ymax:yb.max,xlab:"β (riesgo sistemático)",ylab:"Retorno anual (%)",fx:v=>v.toFixed(2),fy:v=>v.toFixed(0).replace(".",",").replace("-","−")+"%",w:820,h:330});
   const projChart=svgRLine(expv,expv.map((_,i)=>String(i)),"#1E5FD1");
-  const comp=M.ws.map(x=>`<tr><td><b style="color:${x.s.c}">${x.s.t}</b></td><td>${x.s.n}</td><td>${x.s.s}</td><td class="r">${(x.w*100).toFixed(1)}%</td><td class="r">${fmtCLP(simState.amount*x.w)}</td><td class="r">${x.s.b.toFixed(2)}</td><td class="r">${x.s.a24.sig.toFixed(1)}%</td><td class="r">${x.s.a24.sharpe.toFixed(2)}</td><td class="r">${(x.s.a24.ret>=0?"+":"")+x.s.a24.ret.toFixed(1)}%</td></tr>`).join("");
-  const varRows=[["Semanal",M.erW,52],["Mensual",M.erM,12],["Anual",M.erCapm,1]].map(a=>{const s=M.sig/Math.sqrt(a[2]);const v=a[1]-1.645*s;return `<tr><td>${a[0]}</td><td class="r">${a[1].toFixed(2)}%</td><td class="r">${s.toFixed(2)}%</td><td class="r" style="color:${v<0?'var(--red)':'var(--green)'};font-weight:bold">${v.toFixed(2)}%</td><td class="r">${v<0?fmtCLP(simState.amount*-v/100):"—"}</td></tr>`;}).join("");
-  const ms=[0,0.25,0.5,0.75,1].map(fr=>Math.round(hzn*fr)).filter((v,i,a)=>a.indexOf(v)===i).map(i=>`<tr><td>${i} ${uni}</td><td class="r">${fmtCLP(expv[i])}</td><td class="r">${((expv[i]/simState.amount-1)*100).toFixed(1)}%</td></tr>`).join("");
+  const comp=M.ws.map(x=>`<tr><td><b style="color:${x.s.c}">${x.s.t}</b></td><td>${x.s.n}</td><td>${x.s.s}</td><td class="r">${(x.w*100).toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r">${fmtCLP(simState.amount*x.w)}</td><td class="r">${x.s.b.toFixed(2)}</td><td class="r">${x.s.a24.sig.toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r">${x.s.a24.sharpe.toFixed(2)}</td><td class="r">${(x.s.a24.ret>=0?"+":"")+x.s.a24.ret.toFixed(1).replace(".",",").replace("-","−")}%</td></tr>`).join("");
+  const varRows=[["Semanal",M.erW,52],["Mensual",M.erM,12],["Anual",M.erCapm,1]].map(a=>{const s=M.sig/Math.sqrt(a[2]);const v=a[1]-1.645*s;return `<tr><td>${a[0]}</td><td class="r">${a[1].toFixed(2).replace(".",",").replace("-","−")}%</td><td class="r">${s.toFixed(2).replace(".",",").replace("-","−")}%</td><td class="r" style="color:${v<0?'var(--red)':'var(--green)'};font-weight:bold">${v.toFixed(2).replace(".",",").replace("-","−")}%</td><td class="r">${v<0?fmtCLP(simState.amount*-v/100):"—"}</td></tr>`;}).join("");
+  const ms=[0,0.25,0.5,0.75,1].map(fr=>Math.round(hzn*fr)).filter((v,i,a)=>a.indexOf(v)===i).map(i=>`<tr><td>${i} ${uni}</td><td class="r">${fmtCLP(expv[i])}</td><td class="r">${((expv[i]/simState.amount-1)*100).toFixed(1).replace(".",",").replace("-","−")}%</td></tr>`).join("");
   const cidx=M.ws.map(x=>TICK.indexOf(x.s.t));
   let heatHtml=`<table style="width:auto;border-collapse:separate;border-spacing:3px;margin:8px auto"><tr><td></td>`+M.ws.map(x=>`<td style="font-size:9px;font-weight:800;color:${x.s.c};text-align:center;padding:2px 6px">${x.s.t}</td>`).join("")+`</tr>`;
   for(let i=0;i<M.ws.length;i++){heatHtml+=`<tr><td style="font-size:9px;font-weight:800;color:${M.ws[i].s.c};padding:2px 9px;text-align:right;white-space:nowrap">${M.ws[i].s.t}</td>`;for(let j=0;j<M.ws.length;j++){const v=CORR[cidx[i]][cidx[j]];const bg=i===j?"#10306A":heat(v);const cl=i===j?"#fff":(Math.abs(v)>0.5?"#fff":"#0F1D35");heatHtml+=`<td style="background:${bg};color:${cl};font-size:11px;font-weight:700;text-align:center;width:50px;height:30px;border-radius:5px">${v.toFixed(2)}</td>`;}heatHtml+=`</tr>`;}
@@ -3218,20 +3225,20 @@ function genPDF(){
     ${sh(1,"Resumen ejecutivo")}
     <div class="row"><div class="kgrid">
       ${kpi("Monto a invertir",fmtCLP(simState.amount))}${kpi("β del portafolio",M.bp.toFixed(2))}
-      ${kpi("Retorno esperado (CAPM anual)",M.erCapm.toFixed(2)+"%")}${kpi("Retorno histórico 24m",(M.retH>=0?"+":"")+M.retH.toFixed(1)+"%")}
-      ${kpi("Riesgo (σ anual)",M.sig.toFixed(1)+"%")}${kpi("Ratio de Sharpe",M.sharpe.toFixed(2))}
+      ${kpi("Retorno esperado (CAPM anual)",M.erCapm.toFixed(2).replace(".",",").replace("-","−")+"%")}${kpi("Retorno histórico 24m",(M.retH>=0?"+":"")+M.retH.toFixed(1).replace(".",",").replace("-","−")+"%")}
+      ${kpi("Riesgo (σ anual)",M.sig.toFixed(1).replace(".",",").replace("-","−")+"%")}${kpi("Ratio de Sharpe",M.sharpe.toFixed(2))}
       ${kpi("Correlación interna",M.corrAvg.toFixed(2))}${kpi("Nº de acciones",M.ws.length)}
     </div><div class="donutbox"><div class="cap">Composición</div>${donut}<div style="margin-top:10px">${dleg}</div></div></div>
     ${sh(2,"Composición detallada")}
     <table><thead><tr><th>Acción</th><th>Empresa</th><th>Sector</th><th class="r">Peso</th><th class="r">Monto</th><th class="r"><span class="gl">β</span></th><th class="r"><span class="gl">σ</span></th><th class="r">Sharpe</th><th class="r">Ret. 24m</th></tr></thead><tbody>${comp}
-      <tr class="tot"><td>TOTAL</td><td></td><td></td><td class="r">100%</td><td class="r">${fmtCLP(simState.amount)}</td><td class="r">${M.bp.toFixed(2)}</td><td class="r">${M.sig.toFixed(1)}%</td><td class="r">${M.sharpe.toFixed(2)}</td><td class="r">${(M.retH>=0?"+":"")+M.retH.toFixed(1)}%</td></tr></tbody></table>
+      <tr class="tot"><td>TOTAL</td><td></td><td></td><td class="r">100%</td><td class="r">${fmtCLP(simState.amount)}</td><td class="r">${M.bp.toFixed(2)}</td><td class="r">${M.sig.toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r">${M.sharpe.toFixed(2)}</td><td class="r">${(M.retH>=0?"+":"")+M.retH.toFixed(1).replace(".",",").replace("-","−")}%</td></tr></tbody></table>
     ${sh(3,"Comportamiento histórico · "+winLong())}
     <div class="lgrow">${bleg}</div>${behav}
     <div class="note" style="margin-top:8px">Retorno acumulado (base 100) de cada acción del portafolio frente al IPSA en la ventana de análisis. Permite comparar la trayectoria relativa de las posiciones.</div>
     ${sh(4,"Riesgo, retorno y valoración (SML)","pb")}
     <div class="ccap">Mapa riesgo–retorno: portafolio vs componentes</div>${rr}
     <div class="ccap" style="margin-top:16px">Security Market Line (SML)</div>${sml}
-    <div class="note">El <b style="color:#1E5FD1">PORTAFOLIO</b> (azul) combina las posiciones; por diversificación (correlación interna ${M.corrAvg.toFixed(2)}) su riesgo σ ${M.sig.toFixed(1)}% es menor que el promedio ponderado individual (${M.wavgSig.toFixed(1)}%). En la SML, los puntos sobre la línea rinden más de lo que su β exige (α positivo). β del portafolio = ${M.bp.toFixed(2)}, retorno exigido por CAPM = ${M.erCapm.toFixed(2)}%.</div>
+    <div class="note">El <b style="color:#1E5FD1">PORTAFOLIO</b> (azul) combina las posiciones; por diversificación (correlación interna ${M.corrAvg.toFixed(2)}) su riesgo σ ${M.sig.toFixed(1).replace(".",",").replace("-","−")}% es menor que el promedio ponderado individual (${M.wavgSig.toFixed(1).replace(".",",").replace("-","−")}%). En la SML, los puntos sobre la línea rinden más de lo que su β exige (α positivo). β del portafolio = ${M.bp.toFixed(2)}, retorno exigido por CAPM = ${M.erCapm.toFixed(2).replace(".",",").replace("-","−")}%.</div>
     ${sh(5,"Matriz de correlación del portafolio")}
     ${heatHtml}
     <div class="note">Correlación de los retornos mensuales entre las acciones del portafolio (verde = baja, mejor diversificación; rojo = alta). Correlación media interna <b>${M.corrAvg.toFixed(2)}</b>. Par más diversificador: <b>${cbest[1]} + ${cbest[2]} = ${cbest[0].toFixed(2)}</b>; par más correlacionado: <b>${cworst[1]} + ${cworst[2]} = ${cworst[0].toFixed(2)}</b>. Cuanto menor la correlación, mayor la reducción de riesgo al combinar las posiciones.</div>
@@ -3239,14 +3246,14 @@ function genPDF(){
     <table><thead><tr><th>Escala</th><th class="r">Retorno esperado <span class="gl">μ</span></th><th class="r">Riesgo <span class="gl">σ</span></th><th class="r">VaR 95%</th><th class="r">Pérdida máx. (CLP)</th></tr></thead><tbody>${varRows}</tbody></table>
     <div class="note">El VaR 95% indica que, con 95% de confianza, la pérdida del portafolio no debería superar ese porcentaje (ni ese monto) en el período correspondiente, bajo el supuesto de distribución normal de retornos.</div>
     ${sh(7,"Retorno exigido (CAPM) en el tiempo","pb")}
-    <div class="note" style="margin-bottom:10px">Crecimiento del capital AL RETORNO EXIGIDO por CAPM (${M.erCapm.toFixed(2)}% anual) — una vara de comparación, no una proyección de rentabilidad — en escala <b>${proj}</b> y horizonte de <b>${hzn} ${uni}</b>. Valor al final si rinde exactamente lo exigido: <b>${fmtCLP(fvv)}</b> (${((fvv/simState.amount-1)*100).toFixed(1)}%).</div>
+    <div class="note" style="margin-bottom:10px">Crecimiento del capital AL RETORNO EXIGIDO por CAPM (${M.erCapm.toFixed(2).replace(".",",").replace("-","−")}% anual) — una vara de comparación, no una proyección de rentabilidad — en escala <b>${proj}</b> y horizonte de <b>${hzn} ${uni}</b>. Valor al final si rinde exactamente lo exigido: <b>${fmtCLP(fvv)}</b> (${((fvv/simState.amount-1)*100).toFixed(1).replace(".",",").replace("-","−")}%).</div>
     ${projChart}
     <table style="max-width:520px;margin:12px auto 0"><thead><tr><th>Hito</th><th class="r">Valor estimado</th><th class="r">Variación</th></tr></thead><tbody>${ms}</tbody></table>
     ${sh(8,"Metodología y supuestos")}
     <div class="note">
       • <b>Datos:</b> precios mensuales ajustados (fuente Investing.com), ventana ${DATA.window} (${DATA.n} retornos).<br>
       • <b>β:</b> regresión OLS de los retornos de cada acción contra el IPSA.<br>
-      • <b>CAPM:</b> E(R) = Rf + β · prima. Rf = ${RF}% (bono soberano 10 años), prima = ${PRIMA}%, E(Rm) = ${ERM}%.<br>
+      • <b>CAPM:</b> E(R) = Rf + β · prima. Rf = ${(""+RF).replace(".",",")}% (bono soberano 10 años), prima = ${(""+PRIMA).replace(".",",")}%, E(Rm) = ${(""+ERM).replace(".",",")}%.<br>
       • <b>Riesgo del portafolio:</b> σ = √(w′Σw), con volatilidades individuales y matriz de correlación.<br>
       • <b>VaR:</b> paramétrico, μ − 1,645·σ, con σ escalada por √tiempo.
     </div>
@@ -3697,9 +3704,9 @@ function invDetailCard(){
   });
   const tot=rows.reduce((a,r)=>a+r.monto,0)||1;
   const body=`<div class="tw"><table><thead><tr><th>Acción</th><th>Sector</th><th class="r ntr">β</th>${hasQty?'<th class="r">Acciones en cartera</th><th class="r">Precio prom. compra</th>':''}<th class="r">Monto invertido</th><th class="r">Peso</th></tr></thead><tbody>`+
-    rows.map(r=>`<tr><td><b style="color:${r.hd.c}">${r.hd.t}</b> <span style="color:var(--muted);font-size:11px">${(""+(r.hd.n||r.hd.t)).replace(/</g,"&lt;")}</span></td><td>${r.hd.s||"—"}</td><td class="r">${r.hd.b!=null?r.hd.b.toFixed(2):"—"}</td>${hasQty?`<td class="r">${r.q!=null?r.q.toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td><td class="r">${r.pc!=null?fmtP(r.pc):"—"}</td>`:''}<td class="r" style="font-weight:700">${fmtCLP(r.monto)}</td><td class="r">${(r.monto/tot*100).toFixed(1)}%</td></tr>`).join("")+
+    rows.map(r=>`<tr><td><b style="color:${r.hd.c}">${r.hd.t}</b> <span style="color:var(--muted);font-size:11px">${(""+(r.hd.n||r.hd.t)).replace(/</g,"&lt;")}</span></td><td>${r.hd.s||"—"}</td><td class="r">${r.hd.b!=null?r.hd.b.toFixed(2):"—"}</td>${hasQty?`<td class="r">${r.q!=null?r.q.toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td><td class="r">${r.pc!=null?fmtP(r.pc):"—"}</td>`:''}<td class="r" style="font-weight:700">${fmtCLP(r.monto)}</td><td class="r">${(r.monto/tot*100).toFixed(1).replace(".",",").replace("-","−")}%</td></tr>`).join("")+
     `<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td></td>${hasQty?'<td></td><td></td>':''}<td class="r">${fmtCLP(tot)}</td><td class="r">100%</td></tr></tbody></table></div>`;
-  return card("Detalle de la inversión",`Composición de <b>${(""+PF.name).replace(/</g,"&lt;")}</b> · aplicada el ${fD(PF.date)} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}% · acciones y costo promedio ACTUALES (incluye compras/ventas posteriores)`,{html:body,flush:true});
+  return card("Detalle de la inversión",`Composición de <b>${(""+PF.name).replace(/</g,"&lt;")}</b> · aplicada el ${fD(PF.date)} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2).replace(".",",").replace("-","−")}% · σ ${(PF.sig||0).toFixed(1).replace(".",",").replace("-","−")}% · acciones y costo promedio ACTUALES (incluye compras/ventas posteriores)`,{html:body,flush:true});
 }
 /* formulario de inversión directa: elige acciones + monto y crea el proyecto (sin construir en Simulación) */
 function invNewForm(){
@@ -3714,7 +3721,7 @@ function invNewForm(){
     <div class="ca-stk"><div class="ca-stk-h"><b>Acciones de la inversión</b><span>${nsel} seleccionada(s) · <a data-invall>todas</a> · <a data-invnone>ninguna</a></span></div>
       <div class="ca-grid">${chips||'<div class="note" style="margin:0">No hay acciones en el universo activo. Carga datos o un análisis primero.</div>'}</div></div>
     <div class="ca-foot"><button class="btn btn-pri" id="invNewCreate">Crear inversión y registrar compra</button> <button class="btn" id="invNewCancel">Cancelar</button>
-      <span class="note" style="margin:0">${nsel<1?"Elige al menos 1 acción":!(S.amount>0)?"Define el monto a invertir":(nsel+" acción(es) · "+fmtCLP(S.amount)+" · ~"+(100/nsel).toFixed(1)+"% c/u")}</span></div>`);
+      <span class="note" style="margin:0">${nsel<1?"Elige al menos 1 acción":!(S.amount>0)?"Define el monto a invertir":(nsel+" acción(es) · "+fmtCLP(S.amount)+" · ~"+(100/nsel).toFixed(1).replace(".",",").replace("-","−")+"% c/u")}</span></div>`);
 }
 /* pasos guiados para un proyecto VACÍO (recién creado): análisis → simulación → invertir */
 function projGuidedSteps(p){
@@ -3787,8 +3794,8 @@ function viewInvActive(){
   // _real.tot = capital de la COMPRA INICIAL (weeks[0].qty) — se mantiene como referencia "capital real vs objetivo"
   // (PF.amount = plan). β/E(R)/σ, en cambio, se leen de PF.* (tenencias ACTUALES), coherente con opDo y el agente.
   const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;return {per,tot};})():null;
-  const chips=(_real?_real.per.filter(x=>x.m>1e-9).map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0)}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
-  const _sub=_real?`Aplicada el ${fD(PF.date)} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`:`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2)}% · σ ${(PF.sig||0).toFixed(1)}%`;
+  const chips=(_real?_real.per.filter(x=>x.m>1e-9).map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0).replace(".",",").replace("-","−")}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0).replace(".",",").replace("-","−")}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
+  const _sub=_real?`Aplicada el ${fD(PF.date)} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2).replace(".",",").replace("-","−")}% · σ ${(PF.sig||0).toFixed(1).replace(".",",").replace("-","−")}%`:`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2).replace(".",",").replace("-","−")}% · σ ${(PF.sig||0).toFixed(1).replace(".",",").replace("-","−")}%`;
   const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="archpf" title="Archivar: lo apaga sin perder ni un dato">🗄 Archivar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   if(editIdx!=null&&!WEEKS[editIdx])editIdx=null;   // el índice en edición puede quedar de otro proyecto: nunca editar un registro inexistente
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
@@ -3850,7 +3857,7 @@ function viewInvActive(){
       ${tile("vs IPSA",pc(L.diff*100),L.diff>=0?"superando al mercado":"bajo el mercado",indigo,col(L.diff*100))}
       ${(()=>{const _ri=_real?_real.tot:(realCap()||PF.amount);return tile("Capital aportado",fmtCLP(IM.aport),IM.aport>_ri+1?("inicial "+fmtCLP(_ri)+" + aportes"):"capital realmente invertido",indigo,ink);})()}
     </div></div></div>`;
-  const ret100=v=>((v>=100?"+":"")+(v-100).toFixed(2)+"%");
+  const ret100=v=>((v>=100?"+":"")+(v-100).toFixed(2).replace(".",",").replace("-","−")+"%");
   // COLAPSO VISUAL POR FECHA: varias operaciones el mismo día son varios REGISTROS (así lo exige el libro y la
   // contabilidad), pero los GRÁFICOS muestran UN solo punto por fecha — el último del día, con los aportes del
   // día SUMADOS en el desglose del tooltip. Sin esto, una gran compra repartida en varias órdenes estiraba el
@@ -3894,7 +3901,7 @@ function viewInvActive(){
     const d=p.betaExp!=null?(p.betaR-p.betaExp):null;
     const weak=(p.r2!=null&&p.r2<0.10);
     const c=d==null?ink:(Math.abs(d)<0.15?muted:(d>0?amber:accentT));
-    return `<span style="font-weight:800;color:${c}" title="Regresión de los retornos de ${p.hd.t} vs el IPSA sobre ${p.nBeta} período(s) con cierre real de ambos. r² ${p.r2!=null?(p.r2*100).toFixed(0)+"%":"—"}${d!=null?(" · "+(d>=0?"+":"")+d.toFixed(2)+" vs su β esperado"):""}.${weak?" ⚠ r² bajo: el IPSA explica poco su movimiento, la β es poco confiable.":""}">${p.betaR.toFixed(2)}${weak?' <span style="color:var(--amber);font-weight:700">⚠</span>':""}</span>`;
+    return `<span style="font-weight:800;color:${c}" title="Regresión de los retornos de ${p.hd.t} vs el IPSA sobre ${p.nBeta} período(s) con cierre real de ambos. r² ${p.r2!=null?(p.r2*100).toFixed(0).replace(".",",").replace("-","−")+"%":"—"}${d!=null?(" · "+(d>=0?"+":"")+d.toFixed(2)+" vs su β esperado"):""}.${weak?" ⚠ r² bajo: el IPSA explica poco su movimiento, la β es poco confiable.":""}">${p.betaR.toFixed(2)}${weak?' <span style="color:var(--amber);font-weight:700">⚠</span>':""}</span>`;
   };
   const psRows=psSorted.map(p=>`<tr><td>${tk(p.hd)}${p.openedLast?_todayBadge:""}</td><td class="r" title="Acciones que tienes de este papel a hoy">${p.sh>0?p.sh.toLocaleString("es-CL",{maximumFractionDigits:2}):'<span style="color:var(--faint)">—</span>'}</td><td class="r" title="Precio promedio de compra registrado (costo ÷ acciones). Compáralo con el «P. Compra» de tu corredora: si difiere, corrige el tramo mal ingresado en Historial ✎.">${(p.sh>0&&p.buy>0)?fmtP(p.buy):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${fmtP(p.cur)}</td><td class="r">${p.dayRet!=null?`<span title="entre sus dos últimos cierres reales: ${fD(p.dayFrom)} → ${fD(p.dayTo)}">${chip(p.dayRet*100)}</span>`:'<span style="color:var(--faint)" title="Esta acción aún no tiene DOS cierres reales vigentes (recién comprada, o su cierre aún no llega): no se calcula un Δ para no mostrar un dato falso.">—</span>'}</td><td class="r" title="β del análisis del sistema: la sensibilidad al IPSA que se le estima a la acción por su historia larga.">${p.betaExp!=null?p.betaExp.toFixed(2):'<span style="color:var(--faint)">—</span>'}</td><td class="r">${_bCell(p)}</td><td class="r" style="font-weight:700">${fmtCLP(p.val)}</td><td class="r" style="color:${col(p.gain)};font-weight:600">${(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain))}</td><td class="r">${chip(p.ret*100)}</td><td class="r" style="font-weight:800;color:${col(p.contribCum*100)}">${pc(p.contribCum*100)}</td></tr>`).join("");
   const bestS=psSorted[0],worstS=psSorted[psSorted.length-1];
@@ -3956,8 +3963,8 @@ function viewInvActive(){
   const capmRangeUI=_dateRangeUI("invCapm",invCapmFrom,invCapmTo,_crOn);
   const capmSeg=`<div class="home-seg" role="group" aria-label="Ver rentabilidad o patrimonio"><button data-capmmode="pct" class="${_cm==="pct"?"on":""}" title="Rentabilidad TWR vs la exigida por CAPM, ambas time-weighted (sin el efecto del calendario de aportes). La brecha entre las curvas ES el alpha realizado — la vara de DESEMPEÑO.">Rentabilidad %</button><button data-capmmode="clp" class="${_cm==="clp"?"on":""}" title="Tu patrimonio vs el capital creciendo a la tasa exigida (incluye los aportes). El CAPM es una expectativa de LARGO plazo: léela a meses/años, no como veredicto de semanas.">Patrimonio $</button></div>`;
   const _capmSub=_cm==="pct"
-    ? "Rentabilidad TWR real vs la <b>exigida</b> por el CAPM para el riesgo de tu cartera ("+PF.erCapm.toFixed(2)+"% anual, compuesta al período)"+(_crOn?` · <b>rango: ${fD(cDates[0])||"—"} → ${fD(cDates[cDates.length-1])||"—"}</b>`:"")+" · ambas time-weighted (el calendario de tus aportes no distorsiona) · la <b>brecha entre las curvas es el alpha realizado</b>"
-    : "Trayectoria de tu patrimonio vs el capital creciendo a la tasa exigida ("+PF.erCapm.toFixed(2)+"% anual)"+(_crOn?` · <b>rango: ${fD(cDates[0])||"—"} → ${fD(cDates[cDates.length-1])||"—"}</b>`:"")+" · la curva exigida <b>incluye tus aportes</b> y se recalcula desde cada operación · lectura de <b>largo plazo</b>: en semanas la brecha es más mercado que gestión";
+    ? "Rentabilidad TWR real vs la <b>exigida</b> por el CAPM para el riesgo de tu cartera ("+PF.erCapm.toFixed(2).replace(".",",").replace("-","−")+"% anual, compuesta al período)"+(_crOn?` · <b>rango: ${fD(cDates[0])||"—"} → ${fD(cDates[cDates.length-1])||"—"}</b>`:"")+" · ambas time-weighted (el calendario de tus aportes no distorsiona) · la <b>brecha entre las curvas es el alpha realizado</b>"
+    : "Trayectoria de tu patrimonio vs el capital creciendo a la tasa exigida ("+PF.erCapm.toFixed(2).replace(".",",").replace("-","−")+"% anual)"+(_crOn?` · <b>rango: ${fD(cDates[0])||"—"} → ${fD(cDates[cDates.length-1])||"—"}</b>`:"")+" · la curva exigida <b>incluye tus aportes</b> y se recalcula desde cada operación · lectura de <b>largo plazo</b>: en semanas la brecha es más mercado que gestión";
   const _capmSvg=_cm==="pct"
     ? svgMulti({series:cseriesR,labels:cDates,h:310,id:"invcapm",unit:"",signBase:0,yfmt:v=>p0(v,1),ttfmt:v=>pc(v,2)})
     : svgMulti({series:cseriesR,labels:cDates,h:310,yfmt:fmtK,id:"invcapm",unit:"",flows:cFlows});
@@ -4006,8 +4013,8 @@ function viewInvActive(){
       {pts:[[0,req(0)],[bmax,req(bmax)],[bmax,ymax+pad+1],[0,ymax+pad+1]],c:green,op:0.075},
       {pts:[[0,req(0)],[bmax,req(bmax)],[bmax,ymin-pad-1],[0,ymin-pad-1]],c:red,op:0.065}
     ];
-    const svg=svgScatter({id:"invsml",pts,lines,areas,xmin:0,xmax:bmax,ymin:ymin-pad,ymax:ymax+pad,xlab:"β (riesgo sistemático)",ylab:"Retorno del período (%)",fx:v=>v.toFixed(1),fy:v=>v.toFixed(1)+"%",w:820,h:365});
-    const leg=`<div class="legend" style="margin-top:8px"><span><span class="lgdot" style="background:${indigo}"></span>SML exigida (Rf ${RF.toFixed(1)}% + β·prima ${PRIMA.toFixed(1)}%, compuesta al período)</span><span><span class="lgdot" style="background:${indigo}"></span>◆ Portafolio</span><span><span class="lgdot" style="background:#475569"></span>▲ IPSA real</span>${stkPts.length?`<span><span class="lgdot" style="background:#64748B"></span>● Acciones del portafolio</span>`:""}<span><span class="lgdot" style="background:${green};opacity:.5"></span>zona α+</span><span><span class="lgdot" style="background:${red};opacity:.5"></span>zona α−</span></div>`;
+    const svg=svgScatter({id:"invsml",pts,lines,areas,xmin:0,xmax:bmax,ymin:ymin-pad,ymax:ymax+pad,xlab:"β (riesgo sistemático)",ylab:"Retorno del período (%)",fx:v=>v.toFixed(1),fy:v=>v.toFixed(1).replace(".",",").replace("-","−")+"%",w:820,h:365});
+    const leg=`<div class="legend" style="margin-top:8px"><span><span class="lgdot" style="background:${indigo}"></span>SML exigida (Rf ${RF.toFixed(1).replace(".",",").replace("-","−")}% + β·prima ${PRIMA.toFixed(1).replace(".",",").replace("-","−")}%, compuesta al período)</span><span><span class="lgdot" style="background:${indigo}"></span>◆ Portafolio</span><span><span class="lgdot" style="background:#475569"></span>▲ IPSA real</span>${stkPts.length?`<span><span class="lgdot" style="background:#64748B"></span>● Acciones del portafolio</span>`:""}<span><span class="lgdot" style="background:${green};opacity:.5"></span>zona α+</span><span><span class="lgdot" style="background:${red};opacity:.5"></span>zona α−</span></div>`;
     // ── TABLA DE DETALLE: el gráfico dice "arriba o abajo de la línea"; la tabla dice CUÁNTO y por qué.
     //    Cada acción con su β, lo que rindió su precio en el período, lo que el CAPM le exigía por ese β y la
     //    diferencia — que es exactamente el α de Jensen. Las dos últimas filas (portafolio e IPSA) son la
@@ -4153,12 +4160,12 @@ function viewInvActive(){
   // CARTERA CERRADA (todo vendido): el patrimonio es $0 y no hay pesos que repartir. Sin este freno cada
   // división 0/0 llegaba a pantalla como "NaN%" y "NaN pp" en la composición y en el drift.
   const _hayCart=_pTot>0;
-  const _pctPeso=p=>_hayCart?((_pv(p)/_pTot)*100).toFixed(1)+"%":"—";
+  const _pctPeso=p=>_hayCart?((_pv(p)/_pTot)*100).toFixed(1).replace(".",",").replace("-","−")+"%":"—";
   const _driftPts=p=>_hayCart?((_pv(p)/_pTot-p.hd.w)*100):null;
   const allocItems=IM.perStock.map(p=>({value:_pv(p),color:p.hd.c}));
   const allocLeg=IM.perStock.map(p=>`<span><span class="lgdot" style="background:${p.hd.c}"></span>${p.hd.t} ${_pctPeso(p)}</span>`).join("");
   let mxd=0,mxs=null;if(_hayCart)IM.perStock.forEach(p=>{const d=Math.abs(_pv(p)/_pTot-p.hd.w);if(d>mxd){mxd=d;mxs=p;}});
-  const driftRows=IM.perStock.map(p=>{const dr=_driftPts(p);return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1)}%</td><td class="r" style="font-weight:700">${_pctPeso(p)}</td><td class="r" style="color:${dr==null?muted:(Math.abs(dr)<0.05?muted:(dr>=0?green:red))};font-weight:700">${dr==null?"—":((dr>=0?"+":"")+dr.toFixed(1)+" pp")}</td><td class="r">${fmtCLP(_pv(p))}</td></tr>`;}).join("");
+  const driftRows=IM.perStock.map(p=>{const dr=_driftPts(p);return `<tr><td>${tk(p.hd)}${_rmBtn(p.hd)}</td><td class="r">${(p.hd.w*100).toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r" style="font-weight:700">${_pctPeso(p)}</td><td class="r" style="color:${dr==null?muted:(Math.abs(dr)<0.05?muted:(dr>=0?green:red))};font-weight:700">${dr==null?"—":((dr>=0?"+":"")+dr.toFixed(1)+" pp")}</td><td class="r">${fmtCLP(_pv(p))}</td></tr>`;}).join("");
   const allocBody=`<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center"><div style="text-align:center;flex-shrink:0">${svgDonut(allocItems)}<div class="legend" style="justify-content:center;max-width:210px;margin:8px auto 0">${allocLeg}</div></div><div style="flex:1;min-width:300px"><div class="tw"><table><thead><tr><th>Acción</th><th class="r">Objetivo</th><th class="r">Actual</th><th class="r">Drift</th><th class="r">Valor</th></tr></thead><tbody>${driftRows}</tbody></table></div></div></div><div class="note" style="margin-top:12px">El <b>drift</b> es cuánto se desvió el peso actual de cada acción respecto a su objetivo de compra (por subir o bajar de precio). ${mxs?("La de mayor desviación es <b style='color:"+mxs.hd.c+"'>"+mxs.hd.t+"</b> ("+((_pv(mxs)/_pTot-mxs.hd.w)*100>=0?"+":"")+((_pv(mxs)/_pTot-mxs.hd.w)*100).toFixed(1)+" pp). "):""}Si el drift crece mucho, considera rebalancear para volver a tu asignación objetivo.</div>`;
   const drifts=IM.perStock.map(p=>({p,dr:(L.val>0?(p.val/L.val-p.hd.w)*100:0)}));   // cartera cerrada: no hay desvío que corregir
   const breaches=drifts.filter(d=>Math.abs(d.dr)>5);
@@ -4166,7 +4173,7 @@ function viewInvActive(){
   // EDITOR DE PESOS OBJETIVO: los objetivos (hd.w) son editables desde aquí — al guardar se normalizan a 100%
   // y el drift, las alertas de rebalanceo y Operar pasan a medir contra los nuevos objetivos
   const objEditor=(typeof objEditOn!=="undefined"&&objEditOn)?(()=>{
-    const rows=IM.perStock.map(p=>{const cw=(p.val/L.val)*100;return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${p.hd.c}"></span><b style="color:${p.hd.c}">${p.hd.t}</b><span class="simsec">actual ${cw.toFixed(1)}%</span></div><div class="simw"><input type="number" step="any" min="0" max="100" class="objinp" data-obj="${p.hd.t}" data-cur="${cw.toFixed(1)}" value="${(p.hd.w*100).toFixed(1)}" style="width:88px"><span style="color:${muted}">%</span></div></div>`;}).join("");
+    const rows=IM.perStock.map(p=>{const cw=(p.val/L.val)*100;return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${p.hd.c}"></span><b style="color:${p.hd.c}">${p.hd.t}</b><span class="simsec">actual ${cw.toFixed(1).replace(".",",").replace("-","−")}%</span></div><div class="simw"><input type="number" step="any" min="0" max="100" class="objinp" data-obj="${p.hd.t}" data-cur="${cw.toFixed(1)}" value="${(p.hd.w*100).toFixed(1)}" style="width:88px"><span style="color:${muted}">%</span></div></div>`;}).join("");
     return `<div class="note" style="margin-top:12px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">Editando los <b>pesos objetivo</b>. Al guardar se <b>normalizan a 100%</b> (se reparten proporcionalmente si la suma difiere). El drift y las alertas de rebalanceo pasan a medirse contra estos objetivos.</div>
       <div class="simlist" style="margin-top:10px">${rows}</div>
       <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:12px"><button class="btn btn-pri" id="objSave">✓ Guardar objetivos</button><button class="btn" id="objUseActual" title="Copia los pesos actuales de la cartera como nuevo objetivo (drift queda en 0)">Usar pesos actuales</button><button class="btn" id="objEqual" title="Reparte el objetivo en partes iguales">Partes iguales</button><button class="btn" id="objCancel">✕ Cancelar</button><span class="genl" style="margin:0" id="objSum"></span></div>`;
@@ -4174,7 +4181,7 @@ function viewInvActive(){
   const allocCard=card("Composición actual vs objetivo","Cómo se desviaron los pesos desde la compra · base para rebalancear · los objetivos son editables",(objEditOn?objEditor:allocBody+driftAlert),`<button class="btn" id="objEditBtn">${objEditOn?"✕ Cerrar editor":"✎ Editar objetivos"}</button>`);
   const invTools=`<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" id="geninforme">📄 Generar informe</button><button class="btn" id="genxls">📊 Generar Excel</button></div>`;
   const b0q=WEEKS[0];
-  const deltaCard=b0q.qty?card("Inversión inicial: real vs objetivo","Acciones compradas y monto real por acción frente al objetivo de la simulación",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">Objetivo</th><th class="r">Real</th><th class="r">Δ</th></tr></thead><tbody>`+PF.holdings.map(hd=>{const q=b0q.qty[hd.t]||0,p=b0q.prices[hd.t]||0,real=q*p,obj=PF.amount*hd.w,d=real-obj;return `<tr><td>${tk(hd)}</td><td class="r">${q.toLocaleString("es-CL")}</td><td class="r">${fmtP(p)}</td><td class="r">${fmtCLP(obj)}</td><td class="r" style="font-weight:700">${fmtCLP(real)}</td><td class="r" style="color:${Math.abs(d)<1?muted:(d>=0?green:red)}">${(d>=0?"+":"−")+fmtCLP(Math.abs(d))}</td></tr>`;}).join("")+`<tr style="background:var(--soft);font-weight:800"><td>Total invertido</td><td></td><td></td><td class="r">${fmtCLP(PF.amount)}</td><td class="r">${fmtCLP(IM.series[0].val)}</td><td class="r" style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</td></tr></tbody></table><div class="note" style="margin-top:11px">Por el precio entero de las acciones, invertiste <b>${fmtCLP(IM.series[0].val)}</b> vs el objetivo de <b>${fmtCLP(PF.amount)}</b> → delta <b style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</b> (${((IM.series[0].val-PF.amount)/PF.amount*100).toFixed(1)}%). El seguimiento usa las acciones y montos realmente comprados.</div></div>`,flush:true}):"";
+  const deltaCard=b0q.qty?card("Inversión inicial: real vs objetivo","Acciones compradas y monto real por acción frente al objetivo de la simulación",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">Objetivo</th><th class="r">Real</th><th class="r">Δ</th></tr></thead><tbody>`+PF.holdings.map(hd=>{const q=b0q.qty[hd.t]||0,p=b0q.prices[hd.t]||0,real=q*p,obj=PF.amount*hd.w,d=real-obj;return `<tr><td>${tk(hd)}</td><td class="r">${q.toLocaleString("es-CL")}</td><td class="r">${fmtP(p)}</td><td class="r">${fmtCLP(obj)}</td><td class="r" style="font-weight:700">${fmtCLP(real)}</td><td class="r" style="color:${Math.abs(d)<1?muted:(d>=0?green:red)}">${(d>=0?"+":"−")+fmtCLP(Math.abs(d))}</td></tr>`;}).join("")+`<tr style="background:var(--soft);font-weight:800"><td>Total invertido</td><td></td><td></td><td class="r">${fmtCLP(PF.amount)}</td><td class="r">${fmtCLP(IM.series[0].val)}</td><td class="r" style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</td></tr></tbody></table><div class="note" style="margin-top:11px">Por el precio entero de las acciones, invertiste <b>${fmtCLP(IM.series[0].val)}</b> vs el objetivo de <b>${fmtCLP(PF.amount)}</b> → delta <b style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</b> (${((IM.series[0].val-PF.amount)/PF.amount*100).toFixed(1).replace(".",",").replace("-","−")}%). El seguimiento usa las acciones y montos realmente comprados.</div></div>`,flush:true}):"";
   if(histPg) return projbar+summary+invTools+tbl;
   if(!seg){
     if(isFirst||editing) return projbar+summary+freqBar+form;
@@ -4197,7 +4204,7 @@ function compraPreview(){
   const valCell=r=>{if(!r.iv)return `<td class="r" style="color:${muted}">—</td>`;
     if(!(r.p>0))return `<td class="r" style="color:${muted}" title="valor intrínseco (banda $${Math.round(r.iv.lo).toLocaleString("es-CL")}–$${Math.round(r.iv.hi).toLocaleString("es-CL")})">$${Math.round(r.iv.value).toLocaleString("es-CL")}</td>`;
     const mos=(r.iv.value-r.p)/r.iv.value,ml=mosLabel(mos),mc=({green,red,amber,ink})[ml.cls]||ink;
-    return `<td class="r" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(r.iv.value).toLocaleString("es-CL")} · banda $${Math.round(r.iv.lo).toLocaleString("es-CL")}–$${Math.round(r.iv.hi).toLocaleString("es-CL")} · ${ml.txt}">${(mos>=0?"+":"")+(mos*100).toFixed(0)+"%"}</td>`;};
+    return `<td class="r" style="font-weight:800;color:${mc}" title="valor intrínseco $${Math.round(r.iv.value).toLocaleString("es-CL")} · banda $${Math.round(r.iv.lo).toLocaleString("es-CL")}–$${Math.round(r.iv.hi).toLocaleString("es-CL")} · ${ml.txt}">${(mos>=0?"+":"")+(mos*100).toFixed(0).replace(".",",").replace("-","−")+"%"}</td>`;};
   const rws=rows.map(r=>`<tr><td>${tk(r.hd)}</td><td class="r">${r.q?r.q.toLocaleString("es-CL"):"—"}</td><td class="r" style="color:${muted}">${r.p?fmtP(r.p):"—"}</td>${valCell(r)}<td class="r" style="font-weight:700">${r.m?fmtCLP(r.m):"—"}</td><td class="r">${fmtCLP(r.obj)}</td><td class="r" style="color:${!r.m?muted:(Math.abs(r.d)<1?muted:(r.d>=0?green:red))}">${r.m?((r.d>=0?"+":"−")+fmtCLP(Math.abs(r.d))):""}</td></tr>`).join("");
   return `<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio (derivado)</th><th class="r">vs valor</th><th class="r">Monto invertido</th><th class="r">Objetivo</th><th class="r">Δ</th></tr></thead><tbody>${rws}<tr style="background:var(--soft);font-weight:800"><td>Total</td><td></td><td></td><td></td><td class="r">${tot?fmtCLP(tot):"—"}</td><td class="r">${fmtCLP(PF.amount)}</td><td class="r" style="color:${!tot?muted:(Math.abs(dT)<1?muted:(dT>=0?green:red))}">${tot?((dT>=0?"+":"−")+fmtCLP(Math.abs(dT))):""}</td></tr></tbody></table></div>`;
 }
@@ -4215,7 +4222,7 @@ function opValHTML(t,price){
   if(!(P>0))return `<div class="op-val-in">${base} · ingresa el precio para ver si compras sobre o bajo el valor.</div>`;
   const mos=(iv.value-P)/iv.value,ml=mosLabel(mos),mc=({green,red,amber,ink})[ml.cls]||ink;
   const verb=mos>=0?"BAJO":"SOBRE",pct=Math.abs(mos*100).toFixed(1);
-  return `<div class="op-val-in">${base}<br><span style="color:${mc};font-weight:800">A $${fmt(P)} compras un ${pct}% ${verb} el valor intrínseco</span> <span style="color:var(--muted)">(${ml.txt})</span></div>`;
+  return `<div class="op-val-in">${base}<br><span style="color:${mc};font-weight:800">A $${fmt(P)} compras un ${(""+pct).replace(".",",")}% ${verb} el valor intrínseco</span> <span style="color:var(--muted)">(${ml.txt})</span></div>`;
 }
 function viewOperar(){
   syncProj();
@@ -4225,13 +4232,13 @@ function viewOperar(){
   try{if(projFixTargets(PF)){saveProjects();}}catch(e){}   // repara objetivo de acciones incorporadas después (0%) — mismo criterio que el seguimiento
   const fr=FREQ[PF.freq||"diario"];
   const projbar=card("Proyectos de inversión","Cada proyecto guarda su cartera y su seguimiento · crea nuevos en el módulo Proyectos",`<div class="pbtns" style="flex-wrap:wrap;gap:7px">`+projVivos().map(p=>`<button class="pbtn ${p.id===activeId?'on':''}" data-projsel="${p.id}">${p.name} <span style="opacity:.7;font-weight:600">· ${p.holdings.length} acc · ${p.weeks.length} reg</span></button>`).join("")+`</div>`,`<button class="btn" id="bkpexport">💾 Respaldar datos</button> <button class="btn" id="bkpimport">📥 Restaurar</button><input type="file" id="bkpfile" accept="application/json,.json" style="display:none">`);
-  const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
+  const chips=PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0).replace(".",",").replace("-","−")}% · ${fmtCLP(hd.monto)}</span>`).join(" ");
   const summary=card(PF.name,`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${PF.bp.toFixed(2)}`,`<div class="altchips">${chips}</div>`,`<button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="archpf" title="Archivar: lo apaga sin perder ni un dato">🗄 Archivar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   const IM=invMetrics();
   if(!IM)return projbar+summary+notecard("Primero registra la <b>compra inicial</b> en la pestaña <b>Ingresar datos</b>. Luego podrás comprar y vender aquí.");
   const L=IM.last,V=L.val,lastW=WEEKS[WEEKS.length-1];
   if(opState.pid!==activeId)opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",monto:"",date:""};
-  const posRows=IM.perStock.map(p=>{const aw=V>0?p.val/V*100:0,tw=p.hd.w*100,dr=aw-tw,drc=Math.abs(dr)<1.5?muted:(dr>0?red:green);return `<tr><td>${tk(p.hd)}</td><td class="r">${p.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(p.cur)}</td><td class="r">${fmtCLP(p.val)}</td><td class="r">${aw.toFixed(1)}%</td><td class="r" style="color:${muted}">${tw.toFixed(1)}%</td><td class="r" style="color:${drc};font-weight:700">${(dr>=0?"+":"")}${dr.toFixed(1)} pts</td></tr>`;}).join("");
+  const posRows=IM.perStock.map(p=>{const aw=V>0?p.val/V*100:0,tw=p.hd.w*100,dr=aw-tw,drc=Math.abs(dr)<1.5?muted:(dr>0?red:green);return `<tr><td>${tk(p.hd)}</td><td class="r">${p.sh.toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${fmtCLP(p.cur)}</td><td class="r">${fmtCLP(p.val)}</td><td class="r">${aw.toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r" style="color:${muted}">${tw.toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r" style="color:${drc};font-weight:700">${(dr>=0?"+":"")}${dr.toFixed(1)} pts</td></tr>`;}).join("");
   const posTable=`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio últ.</th><th class="r">Valor</th><th class="r">Peso actual</th><th class="r">Objetivo</th><th class="r">Drift</th></tr></thead><tbody>${posRows}</tbody></table></div>`;
   const UNI=operarUniverse();   // universo libre: IPSA completo + holdings (independiente del análisis)
   const sellOpts=IM.perStock.filter(p=>p.sh>1e-4).map(p=>p.hd.t);
@@ -4537,7 +4544,7 @@ function genInvReport(){
   const fch=new Date().toLocaleDateString("es-CL",{year:"numeric",month:"long",day:"numeric"});
   const days=IM.elapsedDays!=null?IM.elapsedDays:Math.round(L.yrs*365.25);
   const gain=L.val-IM.aport;
-  const sg=v=>(v>=0?"+":"")+(+v).toFixed(2)+"%";
+  const sg=v=>(v>=0?"+":"")+(+v).toFixed(2).replace(".",",").replace("-","−")+"%";
   const sgnC=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
   const folio="INV-SEG-"+localDay().replace(/-/g,"");
   const metaHTML=invReportMeta([
@@ -4549,7 +4556,7 @@ function genInvReport(){
     ["Registros",String(WEEKS.length)]
   ]);
   const _execVs=L.diff!=null?(L.diff>=0?`superando al IPSA por <b>${(L.diff*100).toFixed(2)} pts</b>`:`bajo el IPSA por <b>${Math.abs(L.diff*100).toFixed(2)} pts</b>`):"";
-  const execHTML=`El portafolio <b>${(""+PF.name).replace(/</g,"&lt;")}</b> vale hoy <b>${fmtCLP(L.val)}</b> sobre <b>${fmtCLP(IM.aport)}</b> aportados netos: una ganancia de <b>${sgnC(gain)}</b> (TWR <b>${sg(L.ret*100)}</b> en ${days} días${_execVs?", "+_execVs:""}). ${IM.betaR!=null?`El β realizado es <b>${IM.betaR.toFixed(2)}</b> (esperado ${(+PF.bp).toFixed(2)})`:`β esperado <b>${(+PF.bp).toFixed(2)}</b>`}${IM.realizedVol!=null?`, con volatilidad realizada de <b>${IM.realizedVol.toFixed(1)}%</b>`:""}. ${IM.worstRet!=null?`La peor caída diaria fue <b>${sg(IM.worstRet*100)}</b>${IM.worstRetDate?` (${fD(IM.worstRetDate)}${IM.worstBaseVal!=null?`, sobre ${fmtCLP(IM.worstBaseVal)}`:""})`:""} y el drawdown máximo <b>${sg(IM.maxDD*100)}</b>.`:`El drawdown máximo fue <b>${sg(IM.maxDD*100)}</b>.`} Las secciones siguientes son la copia fiel de los módulos Seguimiento e Historial.`;
+  const execHTML=`El portafolio <b>${(""+PF.name).replace(/</g,"&lt;")}</b> vale hoy <b>${fmtCLP(L.val)}</b> sobre <b>${fmtCLP(IM.aport)}</b> aportados netos: una ganancia de <b>${sgnC(gain)}</b> (TWR <b>${sg(L.ret*100)}</b> en ${days} días${_execVs?", "+_execVs:""}). ${IM.betaR!=null?`El β realizado es <b>${IM.betaR.toFixed(2)}</b> (esperado ${(+PF.bp).toFixed(2)})`:`β esperado <b>${(+PF.bp).toFixed(2)}</b>`}${IM.realizedVol!=null?`, con volatilidad realizada de <b>${IM.realizedVol.toFixed(1).replace(".",",").replace("-","−")}%</b>`:""}. ${IM.worstRet!=null?`La peor caída diaria fue <b>${sg(IM.worstRet*100)}</b>${IM.worstRetDate?` (${fD(IM.worstRetDate)}${IM.worstBaseVal!=null?`, sobre ${fmtCLP(IM.worstBaseVal)}`:""})`:""} y el drawdown máximo <b>${sg(IM.maxDD*100)}</b>.`:`El drawdown máximo fue <b>${sg(IM.maxDD*100)}</b>.`} Las secciones siguientes son la copia fiel de los módulos Seguimiento e Historial.`;
   // captura de las vistas reales (Seguimiento e Historial), sin controles
   const _m=modulo,_p=page;modulo="inv";
   const _vistas=new Set();
@@ -4592,7 +4599,7 @@ function attachInv(){
     const _keepScroll=fn=>{const _mn=document.getElementById("main"),_st=_mn?_mn.scrollTop:0;fn();const _m2=document.getElementById("main");if(_m2)_m2.scrollTop=_st;};
     const eb=document.getElementById("objEditBtn");if(eb)eb.onclick=()=>_keepScroll(()=>{objEditOn=!objEditOn;render();});
     const cancel=document.getElementById("objCancel");if(cancel)cancel.onclick=()=>_keepScroll(()=>{objEditOn=false;render();});
-    const _sumUpd=()=>{const el=document.getElementById("objSum");if(!el)return;let s=0;document.querySelectorAll(".objinp").forEach(i=>{const v=parseFloat(i.value);if(v>0)s+=v;});el.textContent="suma: "+s.toFixed(1)+"%"+(Math.abs(s-100)>0.5?" · se normalizará a 100%":"");};
+    const _sumUpd=()=>{const el=document.getElementById("objSum");if(!el)return;let s=0;document.querySelectorAll(".objinp").forEach(i=>{const v=parseFloat(i.value);if(v>0)s+=v;});el.textContent="suma: "+s.toFixed(1).replace(".",",").replace("-","−")+"%"+(Math.abs(s-100)>0.5?" · se normalizará a 100%":"");};
     document.querySelectorAll(".objinp").forEach(i=>i.oninput=_sumUpd);_sumUpd();
     const ua=document.getElementById("objUseActual");if(ua)ua.onclick=()=>{document.querySelectorAll(".objinp").forEach(i=>{i.value=i.dataset.cur||"0";});_sumUpd();};
     const eq=document.getElementById("objEqual");if(eq)eq.onclick=()=>{const ins=document.querySelectorAll(".objinp");const w=(100/ins.length).toFixed(1);ins.forEach(i=>{i.value=w;});_sumUpd();};
@@ -6334,9 +6341,12 @@ function pricedbSanitize(){
   //   Se busca el MEJOR calce entre los últimos 10 días hábiles REALES anteriores.
   let nDup=0;
   (function(){const px=PRICEDB.px||{},tks=Object.keys(px);if(tks.length<5)return;
-    const dates=pricedbAllDates();const reales=[dates[0]],ATRAS=10;
-    for(let i=1;i<dates.length;i++){const d=dates[i];let mejor=null;
-      for(let k=reales.length-1;k>=0&&reales.length-k<=ATRAS;k--){const p=reales[k];let n=0,eq=0;
+    // ventana por DÍAS CALENDARIO (45): con el conteo de 10 días reales, el día de ORIGEN de un arrastre
+    // largo se salía de la ventana en cuanto los días intermedios se saneaban, y la copia entraba como real
+    const dates=pricedbAllDates();const reales=[dates[0]],ATRAS_DIAS=45;
+    for(let i=1;i<dates.length;i++){const d=dates[i];let mejor=null;const _td=new Date(d+"T00:00:00").getTime();
+      for(let k=reales.length-1;k>=0;k--){const p=reales[k];
+        if(_td-new Date(p+"T00:00:00").getTime()>ATRAS_DIAS*864e5)break;let n=0,eq=0;
         tks.forEach(t=>{const m=px[t];if(m&&m[d]!=null&&m[p]!=null){n++;if(m[d]===m[p])eq++;}});
         if(n>=5&&(!mejor||eq/n>mejor.r))mejor={p,r:eq/n};}
       if(mejor&&mejor.r>=0.85){const prev=mejor.p;
@@ -7087,7 +7097,7 @@ function pricedbCheckAnalysis(freq,opts){
   // ventana efectiva del análisis (la misma que usará pricedbToIMP) para revisar el benchmark
   let run=core.common;if(opts.lastN&&opts.lastN>0&&run.length>opts.lastN+1)run=run.slice(run.length-(opts.lastN+1));
   const jump=pricedbBenchJump(core,freq,run);
-  if(jump)return {ok:false,unit,jump,reason:"El "+(core.benchName||"IPSA")+" salta "+(jump.ret>=0?"+":"")+jump.ret.toFixed(0)+"% entre el "+jump.from+" ("+jump.v0.toLocaleString("es-CL")+") y el "+jump.to+" ("+jump.v1.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados en la base. Con eso las β saldrían ≈0. Elimina esos datos (Datos → Quitar este día) o limpia y recarga el índice de una sola fuente."};
+  if(jump)return {ok:false,unit,jump,reason:"El "+(core.benchName||"IPSA")+" salta "+(jump.ret>=0?"+":"")+jump.ret.toFixed(0).replace(".",",").replace("-","−")+"% entre el "+jump.from+" ("+jump.v0.toLocaleString("es-CL")+") y el "+jump.to+" ("+jump.v1.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados en la base. Con eso las β saldrían ≈0. Elimina esos datos (Datos → Quitar este día) o limpia y recarga el índice de una sola fuente."};
   const limiting=core.tickers.filter(t=>core.perTicker[t]<needPts).map(t=>({t,n:Math.max(0,core.perTicker[t]-1)})).sort((a,b)=>a.n-b.n);
   // rezagadas: acciones cuyo último período es ANTERIOR al más reciente del grupo (no tienen el período más nuevo → recortan la ventana común)
   const lagging=core.tickers.filter(t=>core.tickLast[t]&&core.groupLatest&&core.tickLast[t]<core.groupLatest).map(t=>({t,last:core.tickLast[t]})).sort((a,b)=>a.last<b.last?-1:1);
@@ -7278,7 +7288,7 @@ function detectInconsistencies(){
     const TH=[["mensual",0.40],["semanal",0.25],["diario",0.15]];
     for(const [f,th] of TH){const rs=resampleMap(IPSA,f);
       for(let i=1;i<rs.length;i++){if(f!=="mensual"&&!gapOK(rs[i-1].d,rs[i].d,f))continue;const r=rs[i].v/rs[i-1].v-1;
-        if(Math.abs(r)>th){issues.push({level:"warn",msg:"El IPSA salta "+(r>=0?"+":"")+(r*100).toFixed(0)+"% ("+f+") entre el "+rs[i-1].d+" ("+rs[i-1].v.toLocaleString("es-CL")+") y el "+rs[i].d+" ("+rs[i].v.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados. Elimina esos días (Quitar este día) o limpia y recarga el índice de una sola fuente — si no, las β de los análisis salen ≈0."});return;}}}
+        if(Math.abs(r)>th){issues.push({level:"warn",msg:"El IPSA salta "+(r>=0?"+":"")+(r*100).toFixed(0).replace(".",",").replace("-","−")+"% ("+f+") entre el "+rs[i-1].d+" ("+rs[i-1].v.toLocaleString("es-CL")+") y el "+rs[i].d+" ("+rs[i].v.toLocaleString("es-CL")+"): hay valores de DOS escalas/fuentes mezclados. Elimina esos días (Quitar este día) o limpia y recarga el índice de una sola fuente — si no, las β de los análisis salen ≈0."});return;}}}
   })();
   return issues;
 }
@@ -7528,7 +7538,7 @@ function viewFundamentos(){
     if(pos!=null&&pos<=0.15)sig.push(["cerca de mín 52s",amber]);
     if(pos!=null&&pos>=0.92)sig.push(["en máximos 52s",ink]);
     const chips=sig.map(([l,c])=>`<span class="badge" style="color:${c};background:${c}14;border:1px solid ${c}33;font-size:9.5px">${l}</span>`).join(" ")||`<span style="color:${faint}">—</span>`;
-    const bar=pos!=null?`<div style="display:flex;align-items:center;gap:7px"><div class="cons-bar" style="width:56px;flex:0 0 auto"><i style="width:${(pos*100).toFixed(0)}%;background:${pos>=0.5?green:amber}"></i></div><span class="tnum" style="font-size:11px;color:${muted}">${(pos*100).toFixed(0)}%</span></div>`:`<span style="color:${faint}">—</span>`;
+    const bar=pos!=null?`<div style="display:flex;align-items:center;gap:7px"><div class="cons-bar" style="width:56px;flex:0 0 auto"><i style="width:${(pos*100).toFixed(0)}%;background:${pos>=0.5?green:amber}"></i></div><span class="tnum" style="font-size:11px;color:${muted}">${(pos*100).toFixed(0).replace(".",",").replace("-","−")}%</span></div>`:`<span style="color:${faint}">—</span>`;
     const nm=`<b style="color:${st.c||"#1E5FD1"}">${t}</b> <span style="color:${muted};font-size:10.5px">${esc(f.name).slice(0,26)}</span>`;
     const fv=(v,d,suf)=>v!=null?`${v.toLocaleString("es-CL",{maximumFractionDigits:d})}${suf||""}`:"—";
     return `<tr><td>${nm}</td><td class="r tnum">${fv(f.px,2)}</td><td class="r tnum" style="font-weight:700;color:${f.pe==null?faint:peMed&&f.pe<peMed?green:ink}">${fv(f.pe,1)}</td><td class="r tnum" style="color:${muted}">${fv(f.fpe,1)}</td><td class="r tnum">${fv(f.pb,2)}</td><td class="r tnum" style="font-weight:700;color:${f.dy>=5?green:f.dy!=null?ink:faint}">${f.dy!=null?f.dy.toLocaleString("es-CL",{maximumFractionDigits:1})+"%":"—"}</td><td class="r tnum" style="color:${muted}">${fv(f.eps,1)}</td><td class="r tnum">${fundFmtCap(f.mcap)}</td><td>${bar}</td><td>${chips}</td></tr>`;
@@ -7550,7 +7560,7 @@ function viewFundamentos(){
       const nm=`<b style="color:${st.c||"#1E5FD1"}">${t}</b>`;
       const up=v.up;
       const rec=f.rec&&_recL[f.rec]?_recL[f.rec]:null;
-      return `<tr><td>${nm}</td><td class="r tnum" style="font-weight:700;color:${f.roe==null?faint:f.roe>=15?green:ink}">${fvq(f.roe,1,"%")}</td><td class="r tnum">${fvq(f.nm,1,"%")}</td><td class="r tnum" style="color:${f.eg==null?faint:f.eg>=0?green:red}">${f.eg!=null?((f.eg>=0?"+":"")+f.eg.toLocaleString("es-CL",{maximumFractionDigits:1})+"%"):"—"}</td><td class="r tnum" style="color:${f.de==null?faint:f.de>2?amber:ink}">${fvq(f.de,2,"×")}</td><td class="r tnum">${fvq(f.peg,2)}</td><td class="r tnum">${fvq(f.evEbitda,1)}</td><td class="r tnum">${fvq(f.target,0)}</td><td class="r tnum" style="font-weight:800;color:${up==null?faint:up>=10?green:up>=0?ink:red}">${up!=null?((up>=0?"+":"")+up.toFixed(1)+"%"):"—"}</td><td>${rec?`<span class="badge" style="color:${rec[1]};background:${rec[1]}14;border:1px solid ${rec[1]}33;font-size:9.5px">${rec[0]}${f.nAn?" ("+f.nAn+")":""}</span>`:`<span style="color:${faint}">—</span>`}</td></tr>`;
+      return `<tr><td>${nm}</td><td class="r tnum" style="font-weight:700;color:${f.roe==null?faint:f.roe>=15?green:ink}">${fvq(f.roe,1,"%")}</td><td class="r tnum">${fvq(f.nm,1,"%")}</td><td class="r tnum" style="color:${f.eg==null?faint:f.eg>=0?green:red}">${f.eg!=null?((f.eg>=0?"+":"")+f.eg.toLocaleString("es-CL",{maximumFractionDigits:1})+"%"):"—"}</td><td class="r tnum" style="color:${f.de==null?faint:f.de>2?amber:ink}">${fvq(f.de,2,"×")}</td><td class="r tnum">${fvq(f.peg,2)}</td><td class="r tnum">${fvq(f.evEbitda,1)}</td><td class="r tnum">${fvq(f.target,0)}</td><td class="r tnum" style="font-weight:800;color:${up==null?faint:up>=10?green:up>=0?ink:red}">${up!=null?((up>=0?"+":"")+up.toFixed(1).replace(".",",").replace("-","−")+"%"):"—"}</td><td>${rec?`<span class="badge" style="color:${rec[1]};background:${rec[1]}14;border:1px solid ${rec[1]}33;font-size:9.5px">${rec[0]}${f.nAn?" ("+f.nAn+")":""}</span>`:`<span style="color:${faint}">—</span>`}</td></tr>`;
     }).join("");
     const th2=(k,l,cls)=>`<th class="${cls||""}" data-fsort2="${k}" title="Ordenar por ${l}">${l}${arrow(fundSort2,k)}</th>`;
     qCard=card("Calidad, crecimiento y consenso","ROE, margen neto, crecimiento de utilidades, deuda, PEG, EV/EBITDA y precio objetivo del consenso de analistas · clic en un encabezado para ordenar",
@@ -8489,13 +8499,18 @@ function viewContab(){
   const totGain=T.real+T.unreal+T.div,netInv=T.buy-T.sell-T.div,totPct=netInv>0?totGain/netInv*100:0;
   const netGain=totGain-T.fees,netPct=T.buy>0?netGain/T.buy*100:0;
   const sgM=v=>(v>=0?"+":"−")+fmtCLP(Math.abs(v));
+  // EL % REAL con su propia celda grande, separada de la ecuación: antes iba entre paréntesis, chico y al
+  // 70% de opacidad — el número más importante de la vista era el más difícil de leer. La tarjeta
+  // "Rentabilidad total" (bruta, sin comisiones) se quitó: convivían un +3,99% bruto y un +3,51% real en la
+  // misma pantalla sin que nada explicara la diferencia, y el que manda es el real.
   const netCard=card("Resultado real (neto de comisiones e IVA)","Tu ganancia después de descontar las comisiones del operador (IVA incluido) · "+brokerSummary(),
     `<div class="net-strip">
       <div class="net-it"><span>Ganancia bruta${T.div?" (incl. dividendos)":""}</span><b style="color:${totGain>=0?green:red}">${sgM(totGain)}</b></div>
       <div class="net-op">−</div>
       <div class="net-it"><span>Comisiones (IVA incl.)</span><b style="color:${red}">${T.fees>0?fmtCLP(T.fees):"$0"}</b></div>
       <div class="net-op">=</div>
-      <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)}&nbsp;&nbsp;<span style="font-weight:700;opacity:.7">(${(netPct>=0?"+":"")+netPct.toFixed(2)}%)</span></b></div>
+      <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)}</b></div>
+      <div class="net-pct" style="--pc:${netPct>=0?green:red}"><span>Rentabilidad real</span><b>${pc(netPct,2)}</b><i>ganancia real ÷ capital comprado</i></div>
     </div>
     <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary()})${T.feesIva>0?`, de las cuales <b>${fmtCLP(T.feesIva)}</b> corresponden a <b>IVA</b>`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy${T.div?`; los <b>dividendos</b> (${fmtCLP(T.div)}) son ganancia cobrada en efectivo, sin comisión`:""}.</div>`);
   // Resultado realizado por venta — lo más importante para la declaración de renta
@@ -8516,10 +8531,9 @@ function viewContab(){
     ${tile("Comisiones pagadas",T.fees?fmtCLP(T.fees):"$0",T.feesIva>0?("incluye IVA "+fmtCLP(T.feesIva)):"sin IVA",indigo,red)}
     ${tile("Ganancia realizada",(T.real>=0?"+":"")+fmtCLP(T.real),"por ventas (costo prom.)",indigo,T.real>=0?green:red)}
     ${tile("Dividendos recibidos",T.div?("+"+fmtCLP(T.div)):"—","ganancia cobrada en efectivo",indigo,T.div?green:muted)}
-    ${tile("Ganancia no realizada",(T.unreal>=0?"+":"")+fmtCLP(T.unreal),"posiciones abiertas",indigo,T.unreal>=0?green:red)}
-    ${tile("Rentabilidad total",(totPct>=0?"+":"")+totPct.toFixed(2)+"%",(totGain>=0?"+":"")+fmtCLP(totGain),indigo,totGain>=0?green:red)}</div>`;
+    ${tile("Ganancia no realizada",(T.unreal>=0?"+":"")+fmtCLP(T.unreal),"posiciones abiertas",indigo,T.unreal>=0?green:red)}</div>`;
   const projRows=per.map(({p,A})=>{const s=projSummary(p);const arch=projArchivado(p),act=!arch&&p.id===activeId;
-    return `<tr><td class="cut" title="${(""+p.name).replace(/</g,"&lt;")}"><b style="color:var(--navy)">${(""+p.name).replace(/</g,"&lt;")}</b>${act?' <span class="badge pos" style="font-size:8.5px">ACTIVO</span>':""}${arch?' <span class="badge neu" style="font-size:8.5px" title="Archivado: fuera de la operativa, pero su contabilidad sigue contando aquí">ARCHIVADO</span>':""}</td><td>${fD(p.date)||"—"}</td><td class="r">${fmtCLP(s.invested)}</td><td class="r">${s.hasData?fmtCLP(s.value):"—"}</td><td class="r" style="color:${s.gain>=0?green:red};font-weight:700">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</td><td class="r" style="color:${s.gainPct>=0?green:red};font-weight:700">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</td><td class="r" style="color:var(--muted)">${A?A.L.tx.length:0}</td></tr>`;}).join("");
+    return `<tr><td class="cut" title="${(""+p.name).replace(/</g,"&lt;")}"><b style="color:var(--navy)">${(""+p.name).replace(/</g,"&lt;")}</b>${act?' <span class="badge pos" style="font-size:8.5px">ACTIVO</span>':""}${arch?' <span class="badge neu" style="font-size:8.5px" title="Archivado: fuera de la operativa, pero su contabilidad sigue contando aquí">ARCHIVADO</span>':""}</td><td>${fD(p.date)||"—"}</td><td class="r">${fmtCLP(s.invested)}</td><td class="r">${s.hasData?fmtCLP(s.value):"—"}</td><td class="r" style="color:${s.gain>=0?green:red};font-weight:700">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</td><td class="r" style="color:${s.gainPct>=0?green:red};font-weight:700">${s.hasData?pc(s.gainPct,2):"—"}</td><td class="r" style="color:var(--muted)">${A?A.L.tx.length:0}</td></tr>`;}).join("");
   const projCard=card("Por proyecto","Capital invertido, valor actual y rentabilidad de cada proyecto"+(projArchivados().length?" · los proyectos archivados siguen incluidos: su historia no se borra al apagarlos":""),
     `<div class="tw tbl-compact"><table><thead><tr><th>Proyecto</th><th>Creado</th><th class="r">Invertido</th><th class="r">Valor actual</th><th class="r">Ganancia $</th><th class="r">Rentab. %</th><th class="r">Ops.</th></tr></thead><tbody>${projRows}</tbody></table></div>`);
   const allTx=[];withOps.forEach(({p,A})=>A.L.tx.forEach(x=>allTx.push(Object.assign({proj:p.name,projId:p.id},x))));
@@ -8566,7 +8580,7 @@ function genContabReport(){
     ["Operador y costos",brokerSummary().replace(/</g,"&lt;")],
     ["Método de costeo","Costo promedio por acción"]
   ]);
-  const execHTML=`Durante el período se invirtieron <b>${clp(T.buy)}</b> en ${nBuyOps} compra(s)${T.sell?`, se rescataron <b>${clp(T.sell)}</b> en ${nSellOps} venta(s)`:""}${T.div?` y se percibieron <b>${clp(T.div)}</b> en dividendos`:""}. Las posiciones abiertas valen hoy <b>${clp(T.val)}</b>. La ganancia bruta asciende a <b>${sgn(totGain)}</b> (${sgn(T.real)} realizada por ventas${T.div?`, +${clp(T.div)} en dividendos`:""} y ${sgn(T.unreal)} no realizada) y, descontadas comisiones por <b>${clp(T.fees)}</b> (IVA incluido), la <b>ganancia real neta es ${sgn(netGain)}</b> (${(netPct>=0?"+":"")+netPct.toFixed(2)}% sobre lo comprado). Lo que sigue es la copia fiel del módulo Contabilidad — mismas tarjetas, mismas tablas y mismos totales que la pantalla — con el libro de operaciones consolidado.`;
+  const execHTML=`Durante el período se invirtieron <b>${clp(T.buy)}</b> en ${nBuyOps} compra(s)${T.sell?`, se rescataron <b>${clp(T.sell)}</b> en ${nSellOps} venta(s)`:""}${T.div?` y se percibieron <b>${clp(T.div)}</b> en dividendos`:""}. Las posiciones abiertas valen hoy <b>${clp(T.val)}</b>. La ganancia bruta asciende a <b>${sgn(totGain)}</b> (${sgn(T.real)} realizada por ventas${T.div?`, +${clp(T.div)} en dividendos`:""} y ${sgn(T.unreal)} no realizada) y, descontadas comisiones por <b>${clp(T.fees)}</b> (IVA incluido), la <b>ganancia real neta es ${sgn(netGain)}</b> (${(netPct>=0?"+":"")+netPct.toFixed(2).replace(".",",").replace("-","−")}% sobre lo comprado). Lo que sigue es la copia fiel del módulo Contabilidad — mismas tarjetas, mismas tablas y mismos totales que la pantalla — con el libro de operaciones consolidado.`;
   // captura de la vista real, con el libro en la pestaña "Todos" (consolidado) y sin controles
   const _tab=contabTxTab;contabTxTab="all";
   const bodyHTML=reportCapture(viewContab);
@@ -8727,7 +8741,7 @@ function viewCambios(){
     +notecard("Esta cartera aún no tiene una compra registrada con la que calcular sus parámetros. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>.");
   const A=R.MA,B=R.MB;
   const f2=v=>(v==null?"—":(+v).toFixed(2));
-  const p2=v=>(v==null?"—":(+v).toFixed(2)+"%");
+  const p2=v=>(v==null?"—":(+v).toFixed(2).replace(".",",").replace("-","−")+"%");
   const dChip=(a,b,dec,unit,bueno)=>{
     if(a==null||b==null)return `<span style="color:var(--faint)">—</span>`;
     const d=b-a;if(Math.abs(d)<Math.pow(10,-(dec+1)))return `<span style="color:var(--faint)">sin cambio</span>`;
@@ -8814,7 +8828,7 @@ function viewCambios(){
       ${tile("Efecto en caja",(R.caja>=0?"+":"−")+fmtCLP(Math.abs(Math.round(R.caja))),R.caja>=0?"quedaría efectivo disponible":"necesitarías aportar capital",indigo,R.caja>=0?green:amber)}
       ${tile("Comprado",R.comprado?fmtCLP(Math.round(R.comprado)):"—","en las compras simuladas",indigo,ink)}
       ${tile("Vendido",R.vendido?fmtCLP(Math.round(R.vendido)):"—","en las ventas simuladas",indigo,ink)}
-      ${tile("Comisiones",R.fees?("−"+fmtCLP(R.fees)):"$0",R.comprado+R.vendido>0?("costo real "+((R.fees/(R.comprado+R.vendido))*100).toFixed(2)+"% de lo movido"):"con IVA incluido",indigo,red)}</div>
+      ${tile("Comisiones",R.fees?("−"+fmtCLP(R.fees)):"$0",R.comprado+R.vendido>0?("costo real "+((R.fees/(R.comprado+R.vendido))*100).toFixed(2).replace(".",",").replace("-","−")+"% de lo movido"):"con IVA incluido",indigo,red)}</div>
      <div class="note" style="margin-top:11px">Las comisiones ya incluyen el <b>mínimo del operador</b> cuando la operación es chica. ${(function(){const mn=(typeof actMontoMinimo==="function")?actMontoMinimo():null;const chicas=R.aplicadas.filter(a=>mn&&a.monto<mn).length;
        return chicas?`<b style="color:var(--amber)">${chicas} de estas operaciones queda bajo ${fmtCLP(mn)}</b> y paga la comisión mínima: en esas el costo porcentual se dispara. Agruparlas en menos operaciones dejaría el mismo cambio de cartera más barato.`:"Ninguna de estas operaciones cae bajo el monto donde manda la comisión mínima.";})()}</div>`):"";
   // ── 4 · composición antes y después ──
@@ -8824,8 +8838,8 @@ function viewCambios(){
         <td class="r">${r.b!=null?r.b.toFixed(2):"—"}</td>
         <td class="r">${r.sh0>1e-9?r.sh0.toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td>
         <td class="r" style="font-weight:700">${r.sh1>1e-9?r.sh1.toLocaleString("es-CL",{maximumFractionDigits:2}):"—"}</td>
-        <td class="r">${r.w0>0.005?r.w0.toFixed(1)+"%":"—"}</td>
-        <td class="r" style="font-weight:700">${r.w1>0.005?r.w1.toFixed(1)+"%":"—"}</td>
+        <td class="r">${r.w0>0.005?r.w0.toFixed(1).replace(".",",").replace("-","−")+"%":"—"}</td>
+        <td class="r" style="font-weight:700">${r.w1>0.005?r.w1.toFixed(1).replace(".",",").replace("-","−")+"%":"—"}</td>
         <td class="r">${Math.abs(r.w1-r.w0)<0.05?'<span style="color:var(--faint)">—</span>':`<span style="color:${r.w1>r.w0?green:red};font-weight:700">${(r.w1>r.w0?"+":"−")+Math.abs(r.w1-r.w0).toFixed(1)} pts</span>`}</td></tr>`;}).join("");
     return card("Composición antes y después","Acciones y peso de cada posición · el peso es sobre el costo, igual que el β esperado",
       `<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r"><span class="gl">β</span></th><th class="r">Acciones ahora</th><th class="r">Acciones simuladas</th><th class="r">Peso ahora</th><th class="r">Peso simulado</th><th class="r">Cambio</th></tr></thead><tbody>${rows}</tbody></table></div>`);
@@ -9070,7 +9084,7 @@ function viewActiva(){
   const PA=_ps.find(x=>String(x.id)===String(actProjId))||_ps[0];
   if(String(actProjId)!==String(PA.id)){actProjId=PA.id;try{lsSet("inv_act_proj",actProjId);}catch(e){}}
   const rt=M.rt,mn=M.minimo;
-  const pctFmt=v=>(v==null?"—":v.toFixed(2)+"%");
+  const pctFmt=v=>(v==null?"—":v.toFixed(2).replace(".",",").replace("-","−")+"%");
   // ── 1 · CARTERA Y COSTO FIJO DE OPERAR ──
   const winSeg=`<div class="home-seg" role="group" aria-label="Ventana de días" style="align-self:stretch">${[20,60,120].map(v=>`<button data-actwin="${v}" class="${actWin===v?"on":""}" title="Últimos ${v} días hábiles con cierre real" style="flex:1">${v}d</button>`).join("")}</div>`;
   const escala=card("Cartera y costo de operar","La estrategia opera siempre al menos el monto mínimo rentable, así que el costo de cada vuelta es fijo · las propuestas de abajo no dependen del tamaño de la orden",
@@ -9082,7 +9096,7 @@ function viewActiva(){
        ${tile("Operación mínima",mn?fmtCLP(mn):"—",mn?"desde aquí la comisión deja de ser el mínimo":"el operador no cobra mínimo",indigo,mn?amber:muted)}
        ${tile("Costo ida y vuelta",pctFmt(rt.pct),fmtCLP(rt.clp)+" sobre "+fmtCLP(M.ticket)+" · comprar y vender",indigo,red)}
      </div>
-     <div class="note" style="margin-top:11px">Con <b>${brokerName()}</b> la comisión es <b>${(+BROKER.pct||0)}%${BROKER.iva?" + IVA":""}</b>${mn?` con un mínimo de <b>${fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1)))}</b>, que manda bajo ${fmtCLP(mn)} por operación`:""}. Operando desde ese mínimo hacia arriba, cada vuelta cuesta <b>${rt.pct.toFixed(2)}%</b> del monto — esa es la rentabilidad que necesitas <b>solo para empatar</b>, y es la vara con la que se miden los horizontes y las propuestas.</div>`);
+     <div class="note" style="margin-top:11px">Con <b>${brokerName()}</b> la comisión es <b>${(+BROKER.pct||0).toLocaleString("es-CL",{maximumFractionDigits:3})}%${BROKER.iva?" + IVA":""}</b>${mn?` con un mínimo de <b>${fmtCLP(Math.round((+BROKER.min)*(BROKER.iva?1.19:1)))}</b>, que manda bajo ${fmtCLP(mn)} por operación`:""}. Operando desde ese mínimo hacia arriba, cada vuelta cuesta <b>${rt.pct.toFixed(2).replace(".",",").replace("-","−")}%</b> del monto — esa es la rentabilidad que necesitas <b>solo para empatar</b>, y es la vara con la que se miden los horizontes y las propuestas.</div>`);
   // ── 2 · RANKING DE ROTACIÓN ──
   const rk=M.rows.slice().sort((a,b)=>b.score-a.score);   // siempre por score: los encabezados de la tabla ya permiten leerla por cualquier columna
   const rkRows=rk.map((r,i)=>{
@@ -9093,13 +9107,13 @@ function viewActiva(){
       <td class="r" style="font-weight:800;color:${sc}">${r.score}</td>
       <td class="r">${r.r5!=null?chip(r.r5):"—"}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.r60!=null?chip(r.r60):"—"}</td>
       <td class="r">${r.rel!=null?chip(r.rel):"—"}</td>
-      <td class="r" title="Movimiento medio de un día (media del valor absoluto de los retornos diarios)">${r.movD.toFixed(2)}%</td>
-      <td class="r" title="Volatilidad anualizada de la ventana">${r.volAnn.toFixed(1)}%</td>
+      <td class="r" title="Movimiento medio de un día (media del valor absoluto de los retornos diarios)">${r.movD.toFixed(2).replace(".",",").replace("-","−")}%</td>
+      <td class="r" title="Volatilidad anualizada de la ventana">${r.volAnn.toFixed(1).replace(".",",").replace("-","−")}%</td>
       <td class="r" style="color:${opera?green:red};font-weight:700" title="${opera?"Un día típico se mueve más que el costo de ida y vuelta: la acción da espacio para operarla":"Un día típico NO alcanza a pagar la ida y vuelta: rotarla seguido destruye rentabilidad"}">${r.dias!=null?r.dias.toFixed(1):"—"}</td>
       <td class="r" title="Correlación media con las demás acciones en la ventana diaria: más baja = aporta más diversificación">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td></tr>`;}).join("");
   const rankCard=card("Ranking de rotación",`${M.rows.length} acciones · ventana de ${M.win} días hábiles (${fD(M.desde)} → ${fD(M.hasta)}) · el score premia tendencia y fuerza relativa, y castiga que la comisión se coma el movimiento`,
     `<div class="tw"><table><thead><tr><th class="r t-idx">#</th><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r" title="Retorno de 20 días menos el del IPSA">vs IPSA</th><th class="r" title="Cuánto se mueve un día típico">Mov. día</th><th class="r"><span class="gl">σ</span> anual</th><th class="r" title="Cuántos días de movimiento típico se necesitan solo para pagar la ida y vuelta">Días p/ pagar</th><th class="r" title="Correlación media con el resto: más baja aporta más diversificación">Corr. media</th></tr></thead><tbody>${rkRows}</tbody></table></div>
-     <div class="note" style="margin-top:11px"><b>Días para pagar</b> dice si una acción se mueve lo suficiente para operarla: divide el costo de ida y vuelta (<b>${rt.pct.toFixed(2)}%</b>, fijo al operar desde el mínimo) por lo que se mueve un día típico. Si necesitas <b>más de un día</b> de movimiento solo para empatar, cada vuelta corta te resta. <b>Corr. media</b> baja = esa acción se mueve distinto al resto: es la que de verdad diversifica cuando amplías el número de nombres.</div>`);
+     <div class="note" style="margin-top:11px"><b>Días para pagar</b> dice si una acción se mueve lo suficiente para operarla: divide el costo de ida y vuelta (<b>${rt.pct.toFixed(2).replace(".",",").replace("-","−")}%</b>, fijo al operar desde el mínimo) por lo que se mueve un día típico. Si necesitas <b>más de un día</b> de movimiento solo para empatar, cada vuelta corta te resta. <b>Corr. media</b> baja = esa acción se mueve distinto al resto: es la que de verdad diversifica cuando amplías el número de nombres.</div>`);
   // ── 2b · HORIZONTES: cuántos días para pagar la comisión y para superar el umbral de venta ──
   const HOLD=activaHoldings(PA);   // posiciones de la cartera ELEGIDA arriba
   const horCard=(()=>{
@@ -9110,18 +9124,18 @@ function viewActiva(){
       const opera=r.margen!=null&&r.margen>0;
       const uCol=r.umbral==null?muted:(r.umbral<=10?green:r.umbral<=30?amber:red);
       return `<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${h?' <span class="badge pos" style="font-size:8px" title="Tienes esta acción en cartera">EN CARTERA</span>':""}</td>
-        <td class="r" title="Movimiento típico de un día, sin signo">${r.movD.toFixed(2)}%</td>
+        <td class="r" title="Movimiento típico de un día, sin signo">${r.movD.toFixed(2).replace(".",",").replace("-","−")}%</td>
         <td class="r" style="color:${opera?green:red};font-weight:700" title="${opera?"Un día típico se mueve más que el costo de ida y vuelta":"Un día típico no alcanza a pagar la ida y vuelta"}">${r.dias!=null?r.dias.toFixed(1):"—"}</td>
-        <td class="r" title="Retorno medio por día en la ventana: la dirección, no la magnitud">${r.driftD>=0?"+":""}${r.driftD.toFixed(3)}%</td>
+        <td class="r" title="Retorno medio por día en la ventana: la dirección, no la magnitud">${r.driftD>=0?"+":""}${r.driftD.toFixed(3).replace(".",",").replace("-","−")}%</td>
         <td class="r" style="color:${uCol};font-weight:800" title="${r.umbral==null?"La deriva de la ventana es negativa o nula: por sí sola no lleva la posición sobre el costo de salir":"Días hábiles que la deriva reciente necesitaría para acumular el costo de ida y vuelta"}">${r.umbral!=null?Math.round(r.umbral)+" d":"—"}</td>
-        <td class="r" title="Probabilidad de que el retorno acumulado a 20 días hábiles supere el costo de ida y vuelta, con la deriva y la volatilidad de la ventana">${r.prob20!=null?r.prob20.toFixed(0)+"%":"—"}</td>
-        <td class="r" title="Lo mismo a 60 días hábiles">${r.prob60!=null?r.prob60.toFixed(0)+"%":"—"}</td>
-        <td class="r">${h?`<span style="color:${h.cubre?green:amber};font-weight:700" title="${h.cubre?("Vendiendo hoy quedarían "+fmtCLP(Math.round(h.neto))+" después de la comisión de salida ("+fmtCLP(h.feeSalida)+")"):("Falta que suba "+(h.faltaPct||0).toFixed(2)+"% para que la ganancia cubra la comisión de salida de "+fmtCLP(h.feeSalida))}">${h.cubre?"sí":"falta "+(h.faltaPct||0).toFixed(1)+"%"}</span>`:'<span style="color:var(--faint)">—</span>'}</td></tr>`;}).join("");
+        <td class="r" title="Probabilidad de que el retorno acumulado a 20 días hábiles supere el costo de ida y vuelta, con la deriva y la volatilidad de la ventana">${r.prob20!=null?r.prob20.toFixed(0).replace(".",",").replace("-","−")+"%":"—"}</td>
+        <td class="r" title="Lo mismo a 60 días hábiles">${r.prob60!=null?r.prob60.toFixed(0).replace(".",",").replace("-","−")+"%":"—"}</td>
+        <td class="r">${h?`<span style="color:${h.cubre?green:amber};font-weight:700" title="${h.cubre?("Vendiendo hoy quedarían "+fmtCLP(Math.round(h.neto))+" después de la comisión de salida ("+fmtCLP(h.feeSalida)+")"):("Falta que suba "+(h.faltaPct||0).toFixed(2).replace(".",",").replace("-","−")+"% para que la ganancia cubra la comisión de salida de "+fmtCLP(h.feeSalida))}">${h.cubre?"sí":"falta "+(h.faltaPct||0).toFixed(1).replace(".",",").replace("-","−")+"%"}</span>`:'<span style="color:var(--faint)">—</span>'}</td></tr>`;}).join("");
     const conUmbral=M.rows.filter(r=>r.umbral!=null).length;
     const rapidas=M.rows.filter(r=>r.umbral!=null&&r.umbral<=10).length;
     return card("Cuántos días para pagar la comisión","Dos horizontes distintos: el <b>movimiento</b> mide magnitud (cuánto se mueve un día contra lo que cuesta la vuelta) y la <b>deriva</b> mide dirección (cuánto tarda la tendencia reciente en dejar la posición sobre el umbral desde el cual vender deja algo)",
       `<div class="tiles">
-        ${tile("Costo a superar",rt.pct.toFixed(2)+"%",fmtCLP(rt.clp)+" sobre "+fmtCLP(M.ticket)+" (mínimo)",indigo,red)}
+        ${tile("Costo a superar",rt.pct.toFixed(2).replace(".",",").replace("-","−")+"%",fmtCLP(rt.clp)+" sobre "+fmtCLP(M.ticket)+" (mínimo)",indigo,red)}
         ${tile("Con deriva a favor",conUmbral+" de "+M.rows.length,"su tendencia reciente apunta a cubrir el costo",indigo,conUmbral?green:red)}
         ${tile("Lo cubrirían en ≤10 días",String(rapidas),"al ritmo de la ventana de "+M.win+" días",indigo,rapidas?green:muted)}
         ${tile("Posiciones que ya cubren la salida",(()=>{const k=Object.keys(HOLD).filter(t=>HOLD[t].cubre).length,n=Object.keys(HOLD).length;return n?(k+" de "+n):"—";})(),"su ganancia paga la comisión de vender",indigo,Object.keys(HOLD).length?green:muted)}</div>
@@ -9155,23 +9169,23 @@ function viewActiva(){
     const motivoV=r=>{const m=[];const h=HOLD[r.t];
       m.push("score bajo ("+r.score+")");
       if(r.rel!=null)m.push("bajo el IPSA por "+Math.abs(r.rel).toFixed(1)+" pts en 20d");
-      m.push("deriva "+r.driftD.toFixed(3)+"%/día: la tendencia va en contra");
-      if(r.r60!=null&&r.r60<0)m.push("cae "+Math.abs(r.r60).toFixed(1)+"% en 60d");
+      m.push("deriva "+r.driftD.toFixed(3).replace(".",",").replace("-","−")+"%/día: la tendencia va en contra");
+      if(r.r60!=null&&r.r60<0)m.push("cae "+Math.abs(r.r60).toFixed(1).replace(".",",").replace("-","−")+"% en 60d");
       if(h&&!h.cubre)m.push("⚠ tu ganancia aún no cubre la comisión de salir");
       return m.join(" · ");};
     const tblC=compras.length?`<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">20d</th><th class="r">vs IPSA</th><th class="r">Días al umbral</th><th class="r">Prob. 20d</th><th class="r">Corr.</th><th>Por qué</th></tr></thead><tbody>${
-      compras.map(r=>`<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${HOLD[r.t]?' <span class="badge" style="font-size:8px;color:var(--muted)" title="Ya la tienes: sería aumentar la posición">AMPLIAR</span>':""}</td><td class="r" style="font-weight:800;color:${green}">${r.score}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r">${Math.round(r.umbral)} d</td><td class="r">${r.prob20!=null?r.prob20.toFixed(0)+"%":"—"}</td><td class="r">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:320px" title="${iesc(motivoC(r))}">${iesc(motivoC(r))}</td></tr>`).join("")
-      }</tbody></table></div>`:`<div class="note" style="margin:0">Ninguna acción cumple hoy los tres requisitos de compra. Con el mercado en contra, <b>no operar es una decisión válida</b>: cada vuelta cuesta ${rt.pct.toFixed(2)}%.</div>`;
+      compras.map(r=>`<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${HOLD[r.t]?' <span class="badge" style="font-size:8px;color:var(--muted)" title="Ya la tienes: sería aumentar la posición">AMPLIAR</span>':""}</td><td class="r" style="font-weight:800;color:${green}">${r.score}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r">${Math.round(r.umbral)} d</td><td class="r">${r.prob20!=null?r.prob20.toFixed(0).replace(".",",").replace("-","−")+"%":"—"}</td><td class="r">${r.corrMedia!=null?r.corrMedia.toFixed(2):"—"}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:320px" title="${iesc(motivoC(r))}">${iesc(motivoC(r))}</td></tr>`).join("")
+      }</tbody></table></div>`:`<div class="note" style="margin:0">Ninguna acción cumple hoy los tres requisitos de compra. Con el mercado en contra, <b>no operar es una decisión válida</b>: cada vuelta cuesta ${rt.pct.toFixed(2).replace(".",",").replace("-","−")}%.</div>`;
     const tblV=ventas.length?`<div class="tw tbl-compact"><table><thead><tr><th>Acción</th><th class="r">Score</th><th class="r">5d</th><th class="r">20d</th><th class="r">60d</th><th class="r">vs IPSA</th><th class="r">Deriva diaria</th><th class="r" title="Si la tienes: lo que quedaría al vender hoy, ya descontada la comisión de salida">Si la tienes</th><th>Por qué</th></tr></thead><tbody>${
       ventas.map(r=>{const h=HOLD[r.t];
-        return `<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${h?' <span class="badge neg" style="font-size:8px" title="La tienes en cartera">EN CARTERA</span>':""}</td><td class="r" style="font-weight:800;color:${red}">${r.score}</td><td class="r">${r.r5!=null?chip(r.r5):"—"}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.r60!=null?chip(r.r60):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r" style="color:${red}">${r.driftD.toFixed(3)}%</td><td class="r" style="color:${h?(h.cubre?green:amber):"var(--faint)"};font-weight:${h?"700":"400"}"${h?` title="Tienes ${fmtCLP(Math.round(h.valor))} · resultado ${(h.gain>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.gain)))} menos la comisión de salida (${fmtCLP(h.feeSalida)})"`:""}>${h?((h.neto>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.neto)))):"—"}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:300px" title="${iesc(motivoV(r))}">${iesc(motivoV(r))}</td></tr>`;}).join("")
+        return `<tr><td><span class="dot" style="background:${r.c}"></span><b>${r.t}</b>${h?' <span class="badge neg" style="font-size:8px" title="La tienes en cartera">EN CARTERA</span>':""}</td><td class="r" style="font-weight:800;color:${red}">${r.score}</td><td class="r">${r.r5!=null?chip(r.r5):"—"}</td><td class="r">${r.r20!=null?chip(r.r20):"—"}</td><td class="r">${r.r60!=null?chip(r.r60):"—"}</td><td class="r">${r.rel!=null?chip(r.rel):"—"}</td><td class="r" style="color:${red}">${r.driftD.toFixed(3).replace(".",",").replace("-","−")}%</td><td class="r" style="color:${h?(h.cubre?green:amber):"var(--faint)"};font-weight:${h?"700":"400"}"${h?` title="Tienes ${fmtCLP(Math.round(h.valor))} · resultado ${(h.gain>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.gain)))} menos la comisión de salida (${fmtCLP(h.feeSalida)})"`:""}>${h?((h.neto>=0?"+":"−")+fmtCLP(Math.abs(Math.round(h.neto)))):"—"}</td><td class="cut" style="font-size:10.5px;color:var(--muted);max-width:300px" title="${iesc(motivoV(r))}">${iesc(motivoV(r))}</td></tr>`;}).join("")
       }</tbody></table></div>`:`<div class="note" style="margin:0">Ninguna acción del universo cumple hoy los tres requisitos de venta: no hay nombres con score bajo, rezago frente al IPSA y deriva en contra al mismo tiempo.</div>`;
     return card("Acciones propuestas","Listas mecánicas construidas con los criterios de abajo · <b>no son recomendaciones de inversión</b>: son el resultado de aplicar reglas fijas a los datos de la base",
       `<div class="genl" style="margin:0 0 8px">▲ Propuestas de COMPRA <span style="font-weight:600;color:var(--faint)">· ${compras.length} de ${M.rows.length} acciones</span></div>
        ${tblC}
        <div class="genl" style="margin:18px 0 8px">▼ Propuestas de VENTA o SALIDA <span style="font-weight:600;color:var(--faint)">· ${ventas.length} de ${M.rows.length} acciones${enCartera.length?(" · "+ventas.filter(r=>HOLD[r.t]).length+" en tu cartera"):""}</span></div>
        ${tblV}
-       <div class="note" style="margin-top:13px"><b>Criterios exactos.</b> Ambas listas salen del <b>análisis de todo el universo</b>, no de tu cartera: qué tengas no decide si una acción aparece. Entra a <b>comprar</b> la que cumple las tres: score ≥ 55, rendir más que el IPSA en 20 días y tener deriva positiva. Entra a <b>vender o salir</b> —el espejo— la que cumple las tres opuestas: score ≤ 45, rendir menos que el IPSA en 20 días y tener deriva negativa. <b>El tamaño de la orden no filtra nada</b>: se asume que siempre operas desde el mínimo rentable (${fmtCLP(mn||0)}), donde la vuelta cuesta ${rt.pct.toFixed(2)}%; si además la tienes, se marca <b>EN CARTERA</b> y la columna <b>Si la tienes</b> muestra lo que quedaría al vender hoy ya descontada la comisión de salida, porque cuando el resultado no la cubre salir <b>concreta una pérdida mayor</b> que la del papel. Cambia la ventana o el monto por operación arriba y las listas se recalculan.</div>`);
+       <div class="note" style="margin-top:13px"><b>Criterios exactos.</b> Ambas listas salen del <b>análisis de todo el universo</b>, no de tu cartera: qué tengas no decide si una acción aparece. Entra a <b>comprar</b> la que cumple las tres: score ≥ 55, rendir más que el IPSA en 20 días y tener deriva positiva. Entra a <b>vender o salir</b> —el espejo— la que cumple las tres opuestas: score ≤ 45, rendir menos que el IPSA en 20 días y tener deriva negativa. <b>El tamaño de la orden no filtra nada</b>: se asume que siempre operas desde el mínimo rentable (${fmtCLP(mn||0)}), donde la vuelta cuesta ${rt.pct.toFixed(2).replace(".",",").replace("-","−")}%; si además la tienes, se marca <b>EN CARTERA</b> y la columna <b>Si la tienes</b> muestra lo que quedaría al vender hoy ya descontada la comisión de salida, porque cuando el resultado no la cubre salir <b>concreta una pérdida mayor</b> que la del papel. Cambia la ventana o el monto por operación arriba y las listas se recalculan.</div>`);
   })();
   // ── 3 · DIVERSIFICACIÓN AL SUMAR NOMBRES ──
   const divCard=(()=>{
@@ -9185,7 +9199,7 @@ function viewActiva(){
       return Math.sqrt(Math.max(0,v))*100*Math.sqrt(252);};
     const ns=[2,3,5,8,12,Math.min(20,M.rows.length)].filter((v,i,a)=>v<=M.rows.length&&a.indexOf(v)===i);
     const curva=ns.map(n=>({n,s:sigN(n)})).filter(x=>x.s!=null);
-    const barras=curva.length?`<div class="tw"><table><thead><tr><th class="r">Acciones en cartera</th><th class="r"><span class="gl">σ</span> anual de la cartera</th><th class="r">Baja vs la anterior</th></tr></thead><tbody>${curva.map((x,i)=>`<tr><td class="r"><b>${x.n}</b></td><td class="r">${x.s.toFixed(1)}%</td><td class="r" style="color:${i?(x.s<curva[i-1].s?green:red):"var(--faint)"}">${i?((x.s-curva[i-1].s>=0?"+":"")+(x.s-curva[i-1].s).toFixed(2)+" pts"):"—"}</td></tr>`).join("")}</tbody></table></div>`:"";
+    const barras=curva.length?`<div class="tw"><table><thead><tr><th class="r">Acciones en cartera</th><th class="r"><span class="gl">σ</span> anual de la cartera</th><th class="r">Baja vs la anterior</th></tr></thead><tbody>${curva.map((x,i)=>`<tr><td class="r"><b>${x.n}</b></td><td class="r">${x.s.toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r" style="color:${i?(x.s<curva[i-1].s?green:red):"var(--faint)"}">${i?((x.s-curva[i-1].s>=0?"+":"")+(x.s-curva[i-1].s).toFixed(2)+" pts"):"—"}</td></tr>`).join("")}</tbody></table></div>`:"";
     return card("¿Cuánto suma agregar más nombres?","Riesgo de una cartera equiponderada armada con las acciones MENOS correlacionadas entre sí · el beneficio de diversificar se agota rápido",
       `<div class="home-grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
         <div><div class="genl" style="margin:0 0 8px">Las que más diversifican (correlación media baja)</div><div class="home-mvgrid">${li(mejores,green)}</div></div>
@@ -9204,10 +9218,10 @@ function viewActiva(){
         <td class="r">${o.nOps}</td><td class="r">${o.opsMes.toFixed(1)}</td><td class="r">${o.nombres}</td>
         <td class="r">${fmtCLP(Math.round(o.ticket))}</td>
         <td class="r" style="color:${o.bajoMin?amber:"var(--muted)"};font-weight:${o.bajoMin?"800":"400"}">${o.bajoMin||"—"}</td>
-        <td class="r">${o.rot!=null?(o.rot*100).toFixed(0)+"%":"—"}</td>
+        <td class="r">${o.rot!=null?(o.rot*100).toFixed(0).replace(".",",").replace("-","−")+"%":"—"}</td>
         <td class="r" style="color:${red};font-weight:700">${fmtCLP(o.fees)}</td>
-        <td class="r" style="color:${o.arrastre!=null?(o.arrastre>2?red:o.arrastre>1?amber:"var(--muted)"):"var(--muted)"}">${o.arrastre!=null?o.arrastre.toFixed(2)+"%":"—"}</td>
-        <td class="r" style="color:${mordida!=null?(mordida>30?red:mordida>15?amber:green):"var(--muted)"};font-weight:700">${mordida!=null?mordida.toFixed(1)+"%":"—"}</td></tr>`;}).join("");
+        <td class="r" style="color:${o.arrastre!=null?(o.arrastre>2?red:o.arrastre>1?amber:"var(--muted)"):"var(--muted)"}">${o.arrastre!=null?o.arrastre.toFixed(2).replace(".",",").replace("-","−")+"%":"—"}</td>
+        <td class="r" style="color:${mordida!=null?(mordida>30?red:mordida>15?amber:green):"var(--muted)"};font-weight:700">${mordida!=null?mordida.toFixed(1).replace(".",",").replace("-","−")+"%":"—"}</td></tr>`;}).join("");
     const tF=OP.reduce((a,o)=>a+o.fees,0),tOps=OP.reduce((a,o)=>a+o.nOps,0);
     const tBajo=OP.reduce((a,o)=>a+o.bajoMin,0);
     return card("Tu operativa real","Reconstruida del libro de operaciones de cada cartera · cuánto estás rotando de verdad y qué te está costando",
@@ -10158,7 +10172,7 @@ function projEliminarPreguntando(pid){
   const p=PROJECTS.find(x=>String(x.id)===String(pid));if(!p)return false;
   const R=projLoQueTiene(p),nEsc=projEscenariosPropios(p);
   const det=R?("\n\nSe lleva por delante:\n• "+R.reg+" registro(s) de seguimiento y "+R.ops+" operación(es)"
-    +(R.val!=null?("\n• su valor actual ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2)+"%) dejan de contar en el patrimonio consolidado del Inicio"):"")
+    +(R.val!=null?("\n• su valor actual ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2).replace(".",",").replace("-","−")+"%) dejan de contar en el patrimonio consolidado del Inicio"):"")
     +(R.real!=null?("\n• su contabilidad: "+fmtCLP(R.real)+" de ganancia realizada y "+fmtCLP(R.fees)+" de comisiones pagadas"):"")
     +(nEsc?("\n• "+nEsc+" escenario(s) suyos en Comparación de escenarios"):"")
     +"\n\nTodo se recalcula sobre los proyectos que queden."
@@ -10178,7 +10192,7 @@ function projArchivarPreguntando(pid){
     +"\n\nSE CONSERVA TODO:"
     +(R?("\n• sus "+R.reg+" registro(s) y "+R.ops+" operación(es)"
        +(R.real!=null?("\n• su contabilidad: "+fmtCLP(R.real)+" de ganancia realizada y "+fmtCLP(R.fees)+" de comisiones con IVA"):"")
-       +(R.val!=null?("\n• su valor ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2)+"%) siguen contando en el patrimonio del Inicio"):"")):"")
+       +(R.val!=null?("\n• su valor ("+fmtCLP(R.val)+") y su retorno ("+(R.ret>=0?"+":"")+R.ret.toFixed(2).replace(".",",").replace("-","−")+"%) siguen contando en el patrimonio del Inicio"):"")):"")
     +"\n\nPuedes reactivarlo cuando quieras y vuelve tal como está.";
   return confirm('¿Archivar el proyecto "'+p.name+'"?'+det)?projArchivar(p.id):false;
 }
@@ -10341,8 +10355,8 @@ function mkwFrontierSVG(R){
     const x0=Math.max(0,smin-spad),x1=smax+spad,y0=rmin-rpad,y1=rmax+rpad;
     const X=v=>m.l+(v-x0)/(x1-x0)*(W-m.l-m.r),Y=v=>H-m.b-(v-y0)/(y1-y0)*(H-m.t-m.b);
     let g="";
-    for(let i=0;i<=4;i++){const rv=y0+(y1-y0)*i/4,yy=Y(rv);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end" font-size="10.5" fill="${faint}">${rv.toFixed(0)}%</text>`;}
-    for(let i=0;i<=4;i++){const sv=x0+(x1-x0)*i/4,xx=X(sv);g+=`<line x1="${xx.toFixed(1)}" y1="${m.t}" x2="${xx.toFixed(1)}" y2="${H-m.b}" stroke="${GC}" opacity=".55"/><text x="${xx.toFixed(1)}" y="${H-m.b+16}" text-anchor="middle" font-size="10.5" fill="${faint}">${sv.toFixed(0)}%</text>`;}
+    for(let i=0;i<=4;i++){const rv=y0+(y1-y0)*i/4,yy=Y(rv);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end" font-size="10.5" fill="${faint}">${rv.toFixed(0).replace(".",",").replace("-","−")}%</text>`;}
+    for(let i=0;i<=4;i++){const sv=x0+(x1-x0)*i/4,xx=X(sv);g+=`<line x1="${xx.toFixed(1)}" y1="${m.t}" x2="${xx.toFixed(1)}" y2="${H-m.b}" stroke="${GC}" opacity=".55"/><text x="${xx.toFixed(1)}" y="${H-m.b+16}" text-anchor="middle" font-size="10.5" fill="${faint}">${sv.toFixed(0).replace(".",",").replace("-","−")}%</text>`;}
     g+=`<text x="${(m.l+(W-m.l-m.r)/2).toFixed(0)}" y="${H-5}" text-anchor="middle" font-size="11" font-weight="700" fill="${muted}">Riesgo σ (% anual)</text>`;
     g+=`<text x="13" y="${(m.t+(H-m.t-m.b)/2).toFixed(0)}" text-anchor="middle" font-size="11" font-weight="700" fill="${muted}" transform="rotate(-90 13 ${(m.t+(H-m.t-m.b)/2).toFixed(0)})">Retorno μ (% anual)</text>`;
     cloud.forEach(p=>{g+=`<circle cx="${X(p.s).toFixed(1)}" cy="${Y(p.r).toFixed(1)}" r="2" fill="var(--accent)" opacity="0.14"/>`;});
@@ -10363,7 +10377,7 @@ function mkwAttachFrontier(){
     let bi=-1,bd=420;G.pts.forEach((p,i)=>{const d=(p.x-vx)**2+(p.y-vy)**2;if(d<bd){bd=d;bi=i;}});
     let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
     if(bi<0){tt.style.display="none";return;}
-    const p=G.pts[bi];tt.innerHTML=`<b>${p.lbl}</b>Retorno μ ${p.r.toFixed(1)}% anual<span class="ttr">Riesgo σ ${p.s.toFixed(1)}%</span>`;placeTip(tt,e);};
+    const p=G.pts[bi];tt.innerHTML=`<b>${p.lbl}</b>Retorno μ ${p.r.toFixed(1).replace(".",",").replace("-","−")}% anual<span class="ttr">Riesgo σ ${p.s.toFixed(1).replace(".",",").replace("-","−")}%</span>`;placeTip(tt,e);};
   svg.onmouseleave=()=>{const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
 function viewMarkowitz(){
@@ -10400,8 +10414,8 @@ function viewMarkowitz(){
       const sug=R.sell
         ? (Math.abs(r.delta)<Math.max(1000,R.T*0.001)?`<span style="color:${muted}">Mantener</span>`:(r.delta>0?`<b style="color:${green}">Comprar ${fmtCLP(r.delta)}</b>`:`<b style="color:${amber}">Vender ${fmtCLP(-r.delta)}</b>`))
         : ((R.buys[r.t]||0)>0?`<b style="color:${green}">Comprar ${fmtCLP(R.buys[r.t])}</b>`:`<span style="color:${muted}">Mantener</span>`);
-      return `<tr><td>${tk(r.hd)}</td><td class="r">${(r.wc*100).toFixed(1)}%</td><td class="r" style="font-weight:800">${(r.wo*100).toFixed(1)}%</td><td class="r" style="color:${(r.wo-r.wc)>=0?green:red}">${((r.wo-r.wc)*100>=0?"+":"")+((r.wo-r.wc)*100).toFixed(1)} pp</td><td class="r">${fmtCLP(r.val)}</td><td class="r">${fmtCLP(r.target)}</td><td class="r">${sug}</td></tr>`;}).join("");
-    const coverNote=(!R.sell&&R.need>0)?`<div class="note" style="margin:11px 13px">${R.cover>=1?`✓ Con el aporte de <b>${fmtCLP(R.A)}</b> alcanzas el óptimo <b>sin vender nada</b>: las compras de arriba cubren el 100% del ajuste.`:`Con el aporte de <b>${fmtCLP(R.A)}</b> cubres el <b>${(R.cover*100).toFixed(0)}%</b> del ajuste hacia el óptimo (el ajuste completo requiere ${fmtCLP(R.need)}). El resto exigiría ventas — actívalas arriba para ver el rebalanceo completo.`}</div>`:"";
+      return `<tr><td>${tk(r.hd)}</td><td class="r">${(r.wc*100).toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r" style="font-weight:800">${(r.wo*100).toFixed(1).replace(".",",").replace("-","−")}%</td><td class="r" style="color:${(r.wo-r.wc)>=0?green:red}">${((r.wo-r.wc)*100>=0?"+":"")+((r.wo-r.wc)*100).toFixed(1)} pp</td><td class="r">${fmtCLP(r.val)}</td><td class="r">${fmtCLP(r.target)}</td><td class="r">${sug}</td></tr>`;}).join("");
+    const coverNote=(!R.sell&&R.need>0)?`<div class="note" style="margin:11px 13px">${R.cover>=1?`✓ Con el aporte de <b>${fmtCLP(R.A)}</b> alcanzas el óptimo <b>sin vender nada</b>: las compras de arriba cubren el 100% del ajuste.`:`Con el aporte de <b>${fmtCLP(R.A)}</b> cubres el <b>${(R.cover*100).toFixed(0).replace(".",",").replace("-","−")}%</b> del ajuste hacia el óptimo (el ajuste completo requiere ${fmtCLP(R.need)}). El resto exigiría ventas — actívalas arriba para ver el rebalanceo completo.`}</div>`:"";
     const outNote=R.outSet.length?`<div class="note" style="margin:11px 13px;border-color:var(--amber-line);background:var(--amberbg);color:var(--amber)">⚠ Sin datos de análisis (quedan FUERA de la optimización y mantienen su posición): <b>${R.outSet.map(x=>x.hd.t).join(", ")}</b>.</div>`:"";
     // SOLUCIÓN DE ESQUINA: en Markowitz sin venta corta es normal que el óptimo deje acciones en 0% —
     // se explica en vez de dejar al usuario dudando si "vender todo un papel" es un error del modelo
@@ -10415,7 +10429,7 @@ function viewMarkowitz(){
     const donut=key=>svgDonut(R.rows.map(r=>({value:key==="wc"?r.wc:r.wo,color:r.hd.c})));
     const dLeg=R.rows.map(r=>`<span><span class="lgdot" style="background:${r.hd.c}"></span>${r.t}</span>`).join("");
     const wmaxBar=Math.max(...R.rows.map(r=>Math.max(r.wc,r.wo)))||1;
-    const wRows=R.rows.map(r=>`<div class="mkw-wrow"><span class="mkw-wt" style="color:${r.hd.c}">${r.t}</span><div class="mkw-tracks"><div class="mkw-track" title="Peso actual: ${(r.wc*100).toFixed(1)}%"><div class="mkw-bar" style="width:${(r.wc/wmaxBar*100).toFixed(1)}%;background:var(--faint);opacity:.55"></div></div><div class="mkw-track" title="Peso óptimo: ${(r.wo*100).toFixed(1)}%"><div class="mkw-bar" style="width:${(r.wo/wmaxBar*100).toFixed(1)}%;background:${r.hd.c}"></div></div></div><span class="mkw-wd" style="color:${Math.abs(r.wo-r.wc)<0.005?muted:((r.wo-r.wc)>=0?green:red)}">${((r.wo-r.wc)*100>=0?"+":"")+((r.wo-r.wc)*100).toFixed(1)} pp</span></div>`).join("");
+    const wRows=R.rows.map(r=>`<div class="mkw-wrow"><span class="mkw-wt" style="color:${r.hd.c}">${r.t}</span><div class="mkw-tracks"><div class="mkw-track" title="Peso actual: ${(r.wc*100).toFixed(1).replace(".",",").replace("-","−")}%"><div class="mkw-bar" style="width:${(r.wc/wmaxBar*100).toFixed(1)}%;background:var(--faint);opacity:.55"></div></div><div class="mkw-track" title="Peso óptimo: ${(r.wo*100).toFixed(1).replace(".",",").replace("-","−")}%"><div class="mkw-bar" style="width:${(r.wo/wmaxBar*100).toFixed(1)}%;background:${r.hd.c}"></div></div></div><span class="mkw-wd" style="color:${Math.abs(r.wo-r.wc)<0.005?muted:((r.wo-r.wc)>=0?green:red)}">${((r.wo-r.wc)*100>=0?"+":"")+((r.wo-r.wc)*100).toFixed(1)} pp</span></div>`).join("");
     const compCard=card("4 · Composición: actual vs óptima","Los mismos pesos, en visual: dona izquierda = tu cartera de HOY, dona derecha = la sugerida · cada acción con su barra actual (gris) sobre la óptima (color)",
       `<div class="mkw-cmp"><div class="mkw-don"><div class="mkw-dt">Actual</div>${donut("wc")}</div><div class="mkw-don"><div class="mkw-dt">Óptima</div>${donut("wo")}</div><div class="mkw-wlist"><div class="mkw-wleg"><span style="color:var(--faint)">▬ actual</span><span style="color:var(--accent)">▬ óptima</span></div>${wRows}</div></div><div class="legend" style="justify-content:center;margin-top:11px">${dLeg}</div>`);
     const plan=card("5 · Pesos óptimos y plan de ejecución · "+((""+R.p.name).replace(/</g,"&lt;")),
@@ -10467,29 +10481,29 @@ function viewMontecarlo(){
   const probGoal=(st.goalOn&&st.goal>0)?mcProbGoal(R,st.goal):null;
   const fin=R.final,invested=R.invested,medGain=invested>0?(fin.p50/invested-1)*100:0;
   const goalTile=(st.goalOn&&probGoal!=null)
-    ? tile("Prob. de meta",(probGoal*100).toFixed(0)+"%","alcanzar "+fmtK(st.goal),MC,probGoal>=0.6?green:probGoal>=0.3?amber:red)
+    ? tile("Prob. de meta",(probGoal*100).toFixed(0).replace(".",",").replace("-","−")+"%","alcanzar "+fmtK(st.goal),MC,probGoal>=0.6?green:probGoal>=0.3?amber:red)
     : tile("Media esperada",fmtCLP(fin.mean),"promedio de trayectorias",MC,ink);
   const tiles=`<div class="tiles">
-    ${tile("Mediana a "+st.horizonY+" año"+(st.horizonY>1?"s":""),fmtCLP(fin.p50),(medGain>=0?"+":"")+medGain.toFixed(1)+"% vs aportado",MC,col(medGain))}
+    ${tile("Mediana a "+st.horizonY+" año"+(st.horizonY>1?"s":""),fmtCLP(fin.p50),(medGain>=0?"+":"")+medGain.toFixed(1).replace(".",",").replace("-","−")+"% vs aportado",MC,col(medGain))}
     ${tile("Rango probable (50%)",fmtK(fin.p25)+" – "+fmtK(fin.p75),"entre p25 y p75",MC,ink)}
     ${tile("Optimista (p95)",fmtCLP(fin.p95),"solo 5% supera esto",MC,green)}
     ${tile("Adverso (p5)",fmtCLP(fin.p5),"solo 5% cae bajo esto",MC,red)}
-    ${tile("Prob. de pérdida",(R.probLoss*100).toFixed(0)+"%","terminar bajo lo aportado ("+fmtK(invested)+")",MC,R.probLoss>0.4?red:R.probLoss>0.2?amber:green)}
+    ${tile("Prob. de pérdida",(R.probLoss*100).toFixed(0).replace(".",",").replace("-","−")+"%","terminar bajo lo aportado ("+fmtK(invested)+")",MC,R.probLoss>0.4?red:R.probLoss>0.2?amber:green)}
     ${goalTile}</div>`;
   // riesgo DEL CAMINO (no solo del punto final): el peor retroceso que verías en una trayectoria típica
   const dd=R.ddStats||{};
   const riskTiles=`<div class="tiles" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
-    ${tile("Caída máx. típica","−"+((dd.p50||0)*100).toFixed(0)+"%","peor retroceso en la trayectoria mediana",MC,amber)}
-    ${tile("Caída máx. (peor 10%)","−"+((dd.p90||0)*100).toFixed(0)+"%","en 1 de cada 10 trayectorias es peor",MC,red)}
-    ${tile("Prob. de ver una caída ≥20%",((dd.prob20||0)*100).toFixed(0)+"%","en algún momento del camino",MC,(dd.prob20||0)>0.5?red:(dd.prob20||0)>0.25?amber:green)}
-    ${tile("Prob. de ver una caída ≥30%",((dd.prob30||0)*100).toFixed(0)+"%","en algún momento del camino",MC,(dd.prob30||0)>0.35?red:(dd.prob30||0)>0.15?amber:green)}</div>`;
+    ${tile("Caída máx. típica","−"+((dd.p50||0)*100).toFixed(0).replace(".",",").replace("-","−")+"%","peor retroceso en la trayectoria mediana",MC,amber)}
+    ${tile("Caída máx. (peor 10%)","−"+((dd.p90||0)*100).toFixed(0).replace(".",",").replace("-","−")+"%","en 1 de cada 10 trayectorias es peor",MC,red)}
+    ${tile("Prob. de ver una caída ≥20%",((dd.prob20||0)*100).toFixed(0).replace(".",",").replace("-","−")+"%","en algún momento del camino",MC,(dd.prob20||0)>0.5?red:(dd.prob20||0)>0.25?amber:green)}
+    ${tile("Prob. de ver una caída ≥30%",((dd.prob30||0)*100).toFixed(0).replace(".",",").replace("-","−")+"%","en algún momento del camino",MC,(dd.prob30||0)>0.35?red:(dd.prob30||0)>0.15?amber:green)}</div>`;
   const leg=`<div class="legend"><span><span class="lgdot" style="background:${MC};opacity:.28"></span>Rango 5–95%</span><span><span class="lgdot" style="background:${MC};opacity:.5"></span>Rango 25–75%</span><span><span class="lgdot" style="background:${MC}"></span>Mediana</span>${st.goalOn?`<span><span class="lgdot" style="background:${green}"></span>Meta</span>`:""}</div>`;
   const chart=card("Abanico de proyección","Cada banda es un rango de resultados posibles; la línea central es la mediana. "+(st.contrib>0?("Aporte mensual "+fmtCLP(st.contrib)+". "):"")+R.N+" trayectorias · horizonte "+st.horizonY+" año"+(st.horizonY>1?"s":"")+".",svgFan({steps:R.steps,v0:v0,goal:st.goalOn?st.goal:0,c:MC,h:344}),leg);
   // HITOS POR AÑO: la distribución en cada año cumplido, con prob. de meta si hay meta activa
   const yrs=Object.keys(R.yearCols||{}).map(Number).sort((a,b)=>a-b);
   const hitosRows=yrs.map(y=>{const s=R.steps[y*12];const pg=(st.goalOn&&st.goal>0)?mcColGE(R.yearCols[y],st.goal):null;
     const inv_y=v0+(st.contrib||0)*y*12;const g=s.p50/inv_y-1;
-    return `<tr><td><b>Año ${y}</b></td><td class="r" style="color:${red}">${fmtK(s.p5)}</td><td class="r">${fmtK(s.p25)}</td><td class="r" style="font-weight:800;color:${MC}">${fmtCLP(s.p50)}</td><td class="r">${fmtK(s.p75)}</td><td class="r" style="color:${green}">${fmtK(s.p95)}</td><td class="r" style="color:${col(g*100)}">${(g>=0?"+":"")+(g*100).toFixed(1)}%</td>${st.goalOn?`<td class="r" style="font-weight:700;color:${pg==null?muted:pg>=0.6?green:pg>=0.3?amber:red}">${pg==null?"—":(pg*100).toFixed(0)+"%"}</td>`:""}</tr>`;}).join("");
+    return `<tr><td><b>Año ${y}</b></td><td class="r" style="color:${red}">${fmtK(s.p5)}</td><td class="r">${fmtK(s.p25)}</td><td class="r" style="font-weight:800;color:${MC}">${fmtCLP(s.p50)}</td><td class="r">${fmtK(s.p75)}</td><td class="r" style="color:${green}">${fmtK(s.p95)}</td><td class="r" style="color:${col(g*100)}">${(g>=0?"+":"")+(g*100).toFixed(1).replace(".",",").replace("-","−")}%</td>${st.goalOn?`<td class="r" style="font-weight:700;color:${pg==null?muted:pg>=0.6?green:pg>=0.3?amber:red}">${pg==null?"—":(pg*100).toFixed(0).replace(".",",").replace("-","−")+"%"}</td>`:""}</tr>`;}).join("");
   const hitos=yrs.length?card("Hitos por año","La distribución de resultados en cada año cumplido del horizonte"+(st.goalOn?" · última columna: probabilidad de haber alcanzado la meta ese año":""),{html:`<div class="tw"><table><thead><tr><th>Hito</th><th class="r">Adverso (p5)</th><th class="r">p25</th><th class="r">Mediana</th><th class="r">p75</th><th class="r">Optimista (p95)</th><th class="r">Mediana vs aportado</th>${st.goalOn?'<th class="r">Prob. meta</th>':''}</tr></thead><tbody>${hitosRows}</tbody></table></div>`,flush:true}):"";
   const guia=card("Cómo leer esta proyección","Guía rápida del método y sus límites",`
     <div class="proj-steps">
@@ -10499,7 +10513,7 @@ function viewMontecarlo(){
       <div class="pstep"><span class="pstep-n">4</span><div class="pstep-b"><b>Decisiones</b><span>Usa la <b>prob. de meta</b> para calibrar aporte mensual y horizonte, y las <b>caídas del camino</b> para saber qué retrocesos deberías tolerar sin vender.</span></div></div>
     </div>
     <div class="note" style="margin-top:12px"><b>Supuestos y límites.</b> μ y σ constantes durante todo el horizonte (los mercados reales tienen ciclos y crisis que este modelo suaviza); retornos log-normales (subestima eventos extremos); aportes constantes a fin de mes; no descuenta comisiones ni impuestos ni inflación. Cambiar la <b>meta</b> no re-sortea las trayectorias; «Volver a simular» sí. Herramienta educativa: no es una promesa de rentabilidad.</div>`);
-  const note=notecard(`En <b>${st.horizonY} año${st.horizonY>1?"s":""}</b>, partiendo de <b>${fmtCLP(v0)}</b>${st.contrib>0?(" más aportes de "+fmtCLP(st.contrib)+"/mes"):""} con μ ${mu.toFixed(1)}% y σ ${sg.toFixed(1)}% anual: la mitad de los escenarios termina entre <b>${fmtK(fin.p25)}</b> y <b>${fmtK(fin.p75)}</b>, con mediana <b>${fmtCLP(fin.p50)}</b>. En el 5% más adverso el capital cae a <b>${fmtK(fin.p5)}</b> o menos; hay <b>${(R.probLoss*100).toFixed(0)}%</b> de probabilidad de terminar bajo lo aportado. En el camino, la trayectoria típica sufre un retroceso máximo de <b>−${((dd.p50||0)*100).toFixed(0)}%</b>. La dispersión crece con el horizonte: a más tiempo, más rango entre el mejor y el peor escenario.${mu<=RF?" Con μ ≤ tasa libre de riesgo, esta proyección es muy conservadora.":""}`);
+  const note=notecard(`En <b>${st.horizonY} año${st.horizonY>1?"s":""}</b>, partiendo de <b>${fmtCLP(v0)}</b>${st.contrib>0?(" más aportes de "+fmtCLP(st.contrib)+"/mes"):""} con μ ${mu.toFixed(1).replace(".",",").replace("-","−")}% y σ ${sg.toFixed(1).replace(".",",").replace("-","−")}% anual: la mitad de los escenarios termina entre <b>${fmtK(fin.p25)}</b> y <b>${fmtK(fin.p75)}</b>, con mediana <b>${fmtCLP(fin.p50)}</b>. En el 5% más adverso el capital cae a <b>${fmtK(fin.p5)}</b> o menos; hay <b>${(R.probLoss*100).toFixed(0).replace(".",",").replace("-","−")}%</b> de probabilidad de terminar bajo lo aportado. En el camino, la trayectoria típica sufre un retroceso máximo de <b>−${((dd.p50||0)*100).toFixed(0).replace(".",",").replace("-","−")}%</b>. La dispersión crece con el horizonte: a más tiempo, más rango entre el mejor y el peor escenario.${mu<=RF?" Con μ ≤ tasa libre de riesgo, esta proyección es muy conservadora.":""}`);
   return betaBanner+head+tiles+riskTiles+chart+hitos+note+guia;
 }
 function attachMontecarlo(){
@@ -10534,7 +10548,7 @@ function viewProyectos(){
       ${tile("Capital invertido",fmtCLP(totInv),"suma aportada",indigo,ink)}
       ${tile("Valor actual",fmtCLP(totVal),"a últimos precios",indigo,accentT)}
       ${tile("Rentabilidad",(totGain>=0?"+":"")+fmtCLP(totGain),"ganancia/pérdida total",indigo,totGain>=0?green:red)}
-      ${tile("Rentabilidad %",(totPct>=0?"+":"")+totPct.toFixed(2)+"%","sobre el capital",indigo,totPct>=0?green:red)}</div>`
+      ${tile("Rentabilidad %",(totPct>=0?"+":"")+totPct.toFixed(2).replace(".",",").replace("-","−")+"%","sobre el capital",indigo,totPct>=0?green:red)}</div>`
     :`<div class="note" style="margin:0">Aún no tienes proyectos. Pulsa <b>➕ Nuevo proyecto</b> y constrúyelo en 3 pasos: análisis → simulación → invertir.</div>`,
     `<button class="btn btn-pri" id="projNew">➕ Nuevo proyecto</button>`);
   // proyecto ACTIVO recién creado (sin inversión): muestra los pasos guiados arriba
@@ -10561,9 +10575,9 @@ function viewProyectos(){
         <div class="prj-m"><span class="l">Invertido</span><b>${fmtCLP(s.invested)}</b></div>
         <div class="prj-m"><span class="l">Valor actual</span><b>${s.hasData?fmtCLP(s.value):"—"}</b></div>
         <div class="prj-m"><span class="l">Rentab. $</span><b style="color:${s.gain>=0?green:red}">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</b></div>
-        <div class="prj-m"><span class="l">Rentab. %</span><b style="color:${s.gainPct>=0?green:red}">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2)+"%"):"—"}</b></div>
+        <div class="prj-m"><span class="l">Rentab. %</span><b style="color:${s.gainPct>=0?green:red}">${s.hasData?((s.gainPct>=0?"+":"")+s.gainPct.toFixed(2).replace(".",",").replace("-","−")+"%"):"—"}</b></div>
         <div class="prj-m"><span class="l"><span class="gl">β</span> cartera</span><b style="color:${accentT}">${(s.beta||0).toFixed(2)}</b></div>
-        <div class="prj-m" title="α de Jensen realizado: retorno real menos el exigido por CAPM para la β de la cartera (acumulado a la fecha, no anualizado)"><span class="l"><span class="gl">α</span> de Jensen</span><b style="color:${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0)?green:red):'var(--navy)'}">${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0?"+":"")+(s.alphaReal*100).toFixed(2)+"%"):"—"}</b></div>
+        <div class="prj-m" title="α de Jensen realizado: retorno real menos el exigido por CAPM para la β de la cartera (acumulado a la fecha, no anualizado)"><span class="l"><span class="gl">α</span> de Jensen</span><b style="color:${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0)?green:red):'var(--navy)'}">${s.hasData&&s.alphaReal!=null?((s.alphaReal>=0?"+":"")+(s.alphaReal*100).toFixed(2).replace(".",",").replace("-","−")+"%"):"—"}</b></div>
         <div class="prj-m" title="Sharpe modelado de la cartera (retorno esperado por unidad de riesgo, según su construcción CAPM/Markowitz)"><span class="l">Sharpe</span><b style="color:${accentT}">${(s.sharpe||0).toFixed(2)}</b></div>
       </div>
       <div class="prj-links">
@@ -10617,7 +10631,7 @@ function viewClientes(){
       ${tile("Valor actual",fmtCLP(T.value),"a últimos precios",indigo,accentT)}
       ${tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName(),indigo,red)}
       ${tile("Ganancia neta",(T.gainNet>=0?"+":"−")+fmtCLP(Math.abs(T.gainNet)),"después de comisiones",indigo,T.gainNet>=0?green:red)}
-      ${tile("Rentabilidad neta %",(Tpct>=0?"+":"")+Tpct.toFixed(2)+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}
+      ${tile("Rentabilidad neta %",(Tpct>=0?"+":"")+Tpct.toFixed(2).replace(".",",").replace("-","−")+"%","sobre el capital aportado",indigo,Tpct>=0?green:red)}
       ${tile("<span class=\"gl\">β</span> consolidado",Tbeta>0?Tbeta.toFixed(2):"—",Tbeta>0?("esperada · "+betaTag(Tbeta)):"sin posiciones",indigo,accentT)}</div>`);
   const rows=stats.map(({c,s,pr})=>{const act=c.id===activeClient;
     return `<tr class="adm-row ${act?"on":""}">
@@ -10627,12 +10641,12 @@ function viewClientes(){
       <td>${fmtCLP(s.value)}</td>
       <td style="color:${red}">${s.fees>0?fmtCLP(s.fees):"—"}</td>
       <td style="color:${s.gainNet>=0?green:red};font-weight:800">${(s.gainNet>=0?"+":"−")+fmtCLP(Math.abs(s.gainNet))}</td>
-      <td style="color:${s.pct>=0?green:red};font-weight:800">${(s.pct>=0?"+":"")+s.pct.toFixed(2)}%</td>
+      <td style="color:${s.pct>=0?green:red};font-weight:800">${(s.pct>=0?"+":"")+s.pct.toFixed(2).replace(".",",").replace("-","−")}%</td>
       <td class="adm-c">${s.ndistinct}</td>
       <td class="adm-b" style="color:${accentT}">${s.beta>0?s.beta.toFixed(2):"—"}</td>
       <td class="adm-act">${act?'<span class="adm-here">estás aquí</span>':`<button class="btn" data-cliswitch="${c.id}">Entrar →</button>`}<button class="prj-del" data-clirename2="${c.id}" title="Renombrar">✎</button><button class="prj-del" data-clidel="${c.id}" title="Eliminar cliente">🗑</button></td>
     </tr>`;}).join("");
-  const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${red}">${T.fees>0?fmtCLP(T.fees):"—"}</td><td style="color:${T.gainNet>=0?green:red}">${(T.gainNet>=0?"+":"−")+fmtCLP(Math.abs(T.gainNet))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%</td><td class="adm-c">—</td><td class="adm-b" style="color:${accentT}">${Tbeta>0?Tbeta.toFixed(2):"—"}</td><td></td></tr>`;
+  const foot=`<tr class="adm-tot"><td>Consolidado</td><td>${fmtCLP(T.aportado)}</td><td>${T.retirado>0?fmtCLP(T.retirado):"—"}</td><td>${fmtCLP(T.value)}</td><td style="color:${red}">${T.fees>0?fmtCLP(T.fees):"—"}</td><td style="color:${T.gainNet>=0?green:red}">${(T.gainNet>=0?"+":"−")+fmtCLP(Math.abs(T.gainNet))}</td><td style="color:${Tpct>=0?green:red}">${(Tpct>=0?"+":"")+Tpct.toFixed(2).replace(".",",").replace("-","−")}%</td><td class="adm-c">—</td><td class="adm-b" style="color:${accentT}">${Tbeta>0?Tbeta.toFixed(2):"—"}</td><td></td></tr>`;
   const tbl=card("Carteras por cliente","Capital aportado y retirado, valor actual, comisiones pagadas, ganancia neta de comisiones ($ y %), acciones distintas, perfil de riesgo y β de la cartera. Entra a un cliente para gestionar sus proyectos.",
     `<div class="adm-wrap"><table class="adm-tbl"><thead><tr><th>Cliente</th><th>Aportado</th><th>Retirado</th><th>Valor actual</th><th>Comisiones</th><th>Ganancia neta $</th><th>Rentab. %</th><th class="cc">Acciones</th><th class="cc"><span class="gl">β</span> cartera</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>
      <div style="margin-top:13px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-pri" id="cliAddBtn">+ Nuevo cliente</button><button class="btn" data-go-proj>Ver proyectos de ${(""+activeClientObj().name).replace(/</g,"&lt;")} →</button></div>`);
@@ -11402,7 +11416,7 @@ function viewHome(){
       <div class="hh-val" style="color:${_hcol}">${fmtCLP(Tvalue)}</div>
       <div class="hh-sub">${T.nproj} proyecto${T.nproj!==1?"s":""} de inversión · capital aportado ${fmtCLP(T.aportado)}</div></div>
     ${patSeries.length>1?`<div class="hh-c" title="Rentabilidad neta en el tiempo">${heroSpark(patSeries)}</div>`:""}
-    <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(TgainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2)}%<span>rentabilidad neta total</span></div></div></div>`;
+    <div class="hh-r"><div class="hh-gain" style="color:${_hcol}">${sg(TgainNet)}</div><div class="hh-pct" style="color:${_hcol}">${(Tpct>=0?"+":"")+Tpct.toFixed(2).replace(".",",").replace("-","−")}%<span>rentabilidad neta total</span></div></div></div>`;
   const tiles=card("Resumen consolidado","Todas tus carteras de inversión en una sola vista · neto de comisiones",`<div class="tiles-consol">
     ${tile("Valor actual",fmtCLP(Tvalue),"a últimos precios · "+(Tgain>=0?"sobre":"bajo")+" el capital aportado",indigo,Tgain>=0?green:red)}
     ${tile("Capital aportado",fmtCLP(T.aportado),"total comprado",indigo,ink)}
@@ -11413,7 +11427,7 @@ function viewHome(){
       //   ganancia bruta − comisiones = ganancia neta, y su rentabilidad sobre el capital.
       // UNA CIFRA POR TARJETA: el monto y el porcentaje van separados, cada uno en la suya.
       const _gbp=T.aportado>0?Tgain/T.aportado*100:0;
-      const _pct=v=>(v>=0?"+":"−")+Math.abs(v).toFixed(2)+"%";
+      const _pct=v=>(v>=0?"+":"−")+Math.abs(v).toFixed(2).replace(".",",").replace("-","−")+"%";
       return tile("Ganancia bruta",sg(Tgain),`antes de comisiones · <b style="color:${col(_gbp)}">${_pct(_gbp)}</b>`,indigo,Tgain>=0?green:red)
         +tile("Comisiones",T.fees>0?fmtCLP(T.fees):"$0",brokerName()+" · con IVA",indigo,red)
         +tile("Ganancia neta",sg(TgainNet),"después de comisiones",indigo,TgainNet>=0?green:red)
@@ -11424,7 +11438,7 @@ function viewHome(){
   const ipsaCard=(()=>{
     if(!_ips)return "";
     const _fD=d=>d?(""+d).slice(8,10)+"/"+(""+d).slice(5,7)+"/"+(""+d).slice(0,4):"";
-    const cell=(lbl,r,desc,base)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2)+"%"):"—";const tt=desc+(base?(" · base: cierre del "+_fD(base)):"");return `<div class="ipsa-cell" title="${tt}"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
+    const cell=(lbl,r,desc,base)=>{const has=r!=null,col=has?(r>=0?green:red):muted,v=has?((r>=0?"+":"")+r.toFixed(2).replace(".",",").replace("-","−")+"%"):"—";const tt=desc+(base?(" · base: cierre del "+_fD(base)):"");return `<div class="ipsa-cell" title="${tt}"><span class="ipsa-cl">${lbl}</span><span class="ipsa-cv" style="color:${col}">${v}</span></div>`;};
     // curva del índice con CADENCIA elegible (cierre de cada día, semana o mes) y VENTANA en meses.
     // Las etiquetas de rentabilidad de arriba NO se tocan: siguen siendo variaciones móviles día/~7d/~30d/12m.
     let ipsaChart="";
@@ -11445,7 +11459,7 @@ function viewHome(){
       // "elegí 6 meses, ¿cuánto rindió?" — las variaciones de arriba (día/semana/mes/12m) son móviles y fijas,
       // no siguen al selector. El título lleva las fechas exactas para que el número sea auditable.
       const _venRet=rs.length>=2&&rs[0].v>0?(rs[rs.length-1].v/rs[0].v-1)*100:null;
-      const _venChip=_venRet==null?"":`<span class="ipsa-venret" style="color:${_venRet>=0?green:red};border-color:${_venRet>=0?green:red}33;background:${_venRet>=0?green:red}14" title="Rentabilidad del tramo dibujado: del cierre del ${_fD(rs[0].d)} (${(+rs[0].v).toLocaleString("es-CL",{maximumFractionDigits:2})} pts) al del ${_fD(rs[rs.length-1].d)} (${(+rs[rs.length-1].v).toLocaleString("es-CL",{maximumFractionDigits:2})} pts)">${(_venRet>=0?"+":"−")+Math.abs(_venRet).toFixed(2)}%<small>en ${homeIpsaWin}m</small></span>`;
+      const _venChip=_venRet==null?"":`<span class="ipsa-venret" style="color:${_venRet>=0?green:red};border-color:${_venRet>=0?green:red}33;background:${_venRet>=0?green:red}14" title="Rentabilidad del tramo dibujado: del cierre del ${_fD(rs[0].d)} (${(+rs[0].v).toLocaleString("es-CL",{maximumFractionDigits:2})} pts) al del ${_fD(rs[rs.length-1].d)} (${(+rs[rs.length-1].v).toLocaleString("es-CL",{maximumFractionDigits:2})} pts)">${(_venRet>=0?"+":"−")+Math.abs(_venRet).toFixed(2).replace(".",",").replace("-","−")}%<small>en ${homeIpsaWin}m</small></span>`;
       const seg=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="genl" style="margin:0">Cadencia</span>${segF}<span class="genl" style="margin:0 0 0 4px">Ventana</span><div class="home-seg" role="group" aria-label="Ventana del gráfico del IPSA">${[3,6,12,24].map(k=>`<button data-ipsawin="${k}" class="${homeIpsaWin===k?"on":""}" title="Últimos ${k} meses de historia; las variaciones de arriba no se tocan">${k}m</button>`).join("")}</div>${_venChip}<span class="genl" style="margin:0 0 0 4px">Base</span>${segB}</div>`;
       if(rs.length>=2){const up=rs[rs.length-1].v>=rs[0].v;
         // en mensual la etiqueta es MM/AA (un "DD/MM" se repetiría idéntico entre años); en día y semana, DD/MM
@@ -11456,7 +11470,7 @@ function viewHome(){
         let _cmp="";
         if(_bk){try{const ri=dropTrailingFlat(resampleMap(C.ipsaMap,homeIpsaFreq)).filter(x=>x.d>=_corte);
           if(ri.length>=2){const gI=(ri[ri.length-1].v/ri[0].v-1)*100,gB=(rs[rs.length-1].v/rs[0].v-1)*100,dif=gB-gI;
-            _cmp=`<div class="note" style="margin:9px 0 0;font-size:10.5px">En esta ventana la <b>${BS.nom.toLowerCase()}</b> rinde <b style="color:${gB>=0?green:red}">${(gB>=0?"+":"")+gB.toFixed(2)}%</b> contra <b style="color:${gI>=0?green:red}">${(gI>=0?"+":"")+gI.toFixed(2)}%</b> del índice (<b>${(dif>=0?"+":"")+dif.toFixed(2)} pts</b> de diferencia). Al ponderar por capitalización la canasta debe seguir de cerca al índice: una diferencia grande delataría cierres faltantes o mal cargados.</div>`;}
+            _cmp=`<div class="note" style="margin:9px 0 0;font-size:10.5px">En esta ventana la <b>${BS.nom.toLowerCase()}</b> rinde <b style="color:${gB>=0?green:red}">${(gB>=0?"+":"")+gB.toFixed(2).replace(".",",").replace("-","−")}%</b> contra <b style="color:${gI>=0?green:red}">${(gI>=0?"+":"")+gI.toFixed(2).replace(".",",").replace("-","−")}%</b> del índice (<b>${(dif>=0?"+":"")+dif.toFixed(2)} pts</b> de diferencia). Al ponderar por capitalización la canasta debe seguir de cerca al índice: una diferencia grande delataría cierres faltantes o mal cargados.</div>`;}
         }catch(e){}}
         ipsaChart=`<div class="ipsa-chart">${svgMulti({series:[{label:BS.nom,c:up?green:red,vals:rs.map(x=>x.v),w:2.3,op:1}],labels,h:190,area:true,flatx:true,id:"ipsahome",unit:"",yfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:0}),ttfmt:v=>(+v).toLocaleString("es-CL",{maximumFractionDigits:2})+" pts"})}<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 0;flex-wrap:wrap">${seg}<div class="genl" style="margin:0;text-align:right">${cap}</div></div>${_bkFalla?`<div class="note" style="margin:9px 0 0;font-size:10.5px">No se pudo armar esa canasta (faltan capitalizaciones en <b>Análisis → Fundamentos</b> o hay muy pocas acciones en la base): se muestra el índice.</div>`:""}${_cmp}</div>`;}
       else ipsaChart=`<div class="ipsa-chart"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 0;flex-wrap:wrap">${seg}<div class="genl" style="margin:0;text-align:right">sin datos suficientes en esta ventana</div></div></div>`;
@@ -11472,7 +11486,7 @@ function viewHome(){
   const fundCard=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     if(!p.hasData)return `<button class="home-cart nodata" data-gohome="${p.cliId}|${p.pid}" title="${nm}"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct nd">— sin seguimiento</div><div class="cart-spark"></div><div class="cart-foot"><span>${fmtCLP(p.val)} aportado</span>${sd?`<span title="Inicio del proyecto">desde ${fD(sd)}</span>`:""}<span>β ${(p.beta||0).toFixed(2)}</span></div></button>`;
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,40);
-    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span style="color:${pos?green:red};font-weight:800" title="Valor actual · verde = sobre tu capital aportado">${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2)+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
+    return `<button class="home-cart" data-gohome="${p.cliId}|${p.pid}" title="${nm} · curva: rentabilidad acumulada (base 100), sin los saltos de capital de las compras"><div class="cart-h"><span class="rk-dot" style="background:${p.col}"></span><span class="cart-name" style="flex:1;min-width:0">${nm}</span></div><div class="cart-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» del proyecto mide la estrategia y puede diferir cuando hay aportes.">${(pos?"+":"")+p.pct.toFixed(2).replace(".",",").replace("-","−")}<span>%</span></div><div class="cart-spark">${spark}</div><div class="cart-foot"><span style="color:${pos?green:red};font-weight:800" title="Valor actual · verde = sobre tu capital aportado">${fmtCLP(p.val)}</span><span style="color:${p.twr!=null?(p.twr>=0?green:red):"var(--faint)"};font-weight:800" title="Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande de arriba es sobre tu capital aportado">TWR ${p.twr!=null?((p.twr>=0?"+":"")+p.twr.toFixed(2).replace(".",",").replace("-","−")+"%"):"—"}</span><span title="${p.betaR!=null?"β REALIZADO: sensibilidad efectiva al IPSA, por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")":"β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)}">β real ${p.betaR!=null?p.betaR.toFixed(2):"—"}</span></div></button>`;};
   // con 1–2 fondos: tarjeta ancha y detallada para aprovechar el espacio
   const fundWide=p=>{const pos=p.pct>=0,nm=(""+p.name).replace(/</g,"&lt;"),sd=_sD(p.since);
     const stat=(l,v,c,lc,ti)=>`<div class="fw-stat"${ti?` title="${ti}"`:""}><span class="fw-sl ${lc||''}">${l}</span><span class="fw-sv" ${c?`style="color:${c}"`:""}>${v}</span></div>`;
@@ -11480,14 +11494,14 @@ function viewHome(){
     const spark=lineSpark(p.retSeries&&p.retSeries.length>1?p.retSeries:[100,100],pos?green:red,112);
     // fila 1: dinero y rentabilidad · fila 2: métricas ajustadas por riesgo (todas REALIZADAS, no las esperadas)
     const aR=p.alphaReal!=null?p.alphaReal*100:null;
-    const row1=`<div class="fw-row">${stat("Valor",fmtCLP(p.val),pos?green:red)}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2)+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
+    const row1=`<div class="fw-row">${stat("Valor",fmtCLP(p.val),pos?green:red)}${stat("Aportado",fmtCLP(p.inv))}${stat("Ganancia",(p.gain>=0?"+":"−")+fmtCLP(Math.abs(p.gain)),pos?green:red)}${p.twr!=null?stat("TWR",(p.twr>=0?"+":"")+p.twr.toFixed(2).replace(".",",").replace("-","−")+"%",p.twr>=0?green:red,null,"Retorno acumulado TWR: mide la ESTRATEGIA (rentabilidad diaria compuesta, neteando los aportes de cada día) — el % grande es sobre tu capital aportado"):""}${sd?stat("Inicio",sd,null,"ntr"):""}</div>`;
     const row2=`<div class="fw-row fw-risk">`
       +stat("β real",p.betaR!=null?p.betaR.toFixed(2):"—",null,"ntr",p.betaR!=null?("β REALIZADO: sensibilidad efectiva al IPSA por regresión de los retornos del fondo (esperado "+(p.beta||0).toFixed(2)+")"):("β realizado: aún sin datos suficientes (≥5 fechas de retorno) · esperado "+(p.beta||0).toFixed(2)))
-      +stat("α Jensen",aR!=null?((aR>=0?"+":"")+aR.toFixed(2)+"%"):"—",aR!=null?(aR>=0?green:red):null,"ntr","α de Jensen REALIZADO: retorno real − el exigido por CAPM para el riesgo de la cartera, en el período transcurrido. Positivo = batiendo lo exigido por su riesgo.")
-      +stat("Volatilidad",p.vol!=null?p.vol.toFixed(1)+"%":"—",null,"ntr","Volatilidad realizada anualizada de los retornos del fondo. Con pocos registros es ruidosa.")
+      +stat("α Jensen",aR!=null?((aR>=0?"+":"")+aR.toFixed(2).replace(".",",").replace("-","−")+"%"):"—",aR!=null?(aR>=0?green:red):null,"ntr","α de Jensen REALIZADO: retorno real − el exigido por CAPM para el riesgo de la cartera, en el período transcurrido. Positivo = batiendo lo exigido por su riesgo.")
+      +stat("Volatilidad",p.vol!=null?p.vol.toFixed(1).replace(".",",").replace("-","−")+"%":"—",null,"ntr","Volatilidad realizada anualizada de los retornos del fondo. Con pocos registros es ruidosa.")
       +stat("Sharpe",p.sharpeR!=null?p.sharpeR.toFixed(2):"—",p.sharpeR!=null?(p.sharpeR>=0?green:red):null,"ntr",p.sharpeR!=null?"Sharpe realizado: retorno ajustado por la volatilidad efectiva (sobre 1 es bueno).":"Sharpe realizado: se muestra desde los 30 días de seguimiento y ≥8 retornos. Con menos, anualizar una racha corta dispara el ratio (Sharpe irreal), por eso se omite.")
       +`</div>`;
-    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}" title="Curva: rentabilidad acumulada — mide la gestión, sin los saltos de capital de las compras"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» dentro del proyecto mide la estrategia y puede diferir cuando hay aportes en distintos momentos.">${(pos?"+":"")+p.pct.toFixed(2)}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${row1}${row2}</div></button>`;};
+    return `<button class="home-fundwide" data-gohome="${p.cliId}|${p.pid}" title="Curva: rentabilidad acumulada — mide la gestión, sin los saltos de capital de las compras"><div class="fw-head"><span class="rk-dot" style="background:${p.col}"></span><span class="fw-name">${nm}</span><span class="fw-pct" style="color:${pos?green:red}" title="Rentabilidad sobre TU capital aportado (ganancia ÷ aportado). El «Retorno acumulado (TWR)» dentro del proyecto mide la estrategia y puede diferir cuando hay aportes en distintos momentos.">${(pos?"+":"")+p.pct.toFixed(2).replace(".",",").replace("-","−")}<span>%</span></span></div><div class="fw-chart">${spark}</div><div class="fw-stats">${row1}${row2}</div></button>`;};
   /* UN SOLO FONDO: con una sola cartera en gestión, la tarjeta comprimida desperdicia todo el ancho y el
      sparkline sin ejes no dice nada. Aquí el fondo ocupa la tarjeta entera: gráfico grande CON ejes, fechas
      y la curva del IPSA al lado (que es la comparación que importa: ¿le gano al mercado?), y los parámetros
@@ -11505,7 +11519,7 @@ function viewHome(){
     const aPct=v=>(v==null||!isFinite(v))?null:+(v-100).toFixed(2);
     // el cero de la línea de referencia no lleva signo · coma decimal, como el resto de Investor
     const fp1=v=>(Math.abs(+v)<0.05?"0%":((+v>0?"+":"−")+Math.abs(+v).toLocaleString("es-CL",{minimumFractionDigits:1,maximumFractionDigits:1})+"%"));
-    const fp2=v=>(Math.abs(+v)<0.005?"0%":((+v>0?"+":"−")+Math.abs(+v).toFixed(2)+"%"));
+    const fp2=v=>(Math.abs(+v)<0.005?"0%":((+v>0?"+":"−")+Math.abs(+v).toFixed(2).replace(".",",").replace("-","−")+"%"));
     const chart=hayCurva
       ? svgMulti({series:[{label:"Tu cartera",c:pos?green:red,vals:R.map(aPct),w:2.4,op:1}]
             .concat(hayIpsa?[{label:"IPSA",c:muted,vals:I.map(aPct),w:1.8,dash:true}]:[]),
@@ -11514,7 +11528,7 @@ function viewHome(){
       : `<div class="note" style="margin:0">Con un solo registro todavía no hay curva. Registra el seguimiento en <b>Inversión → Ingresar datos</b> y aquí verás tu evolución contra el IPSA.</div>`;
     const leg=hayCurva?`<div class="legend" style="margin-top:9px"><span><span class="lgdot" style="background:${pos?green:red}"></span>Tu cartera · rentabilidad acumulada</span>${hayIpsa?`<span><span class="lgdot" style="background:${muted}"></span>IPSA en el mismo período</span>`:""}<span style="color:var(--faint);font-weight:600">${F.length} fecha${F.length!==1?"s":""} de seguimiento${sd?" · desde "+sd:""}</span></div>`:"";
     const aR=p.alphaReal!=null?p.alphaReal*100:null;
-    const sgp=(v,d)=>(v>=0?"+":"−")+Math.abs(v).toFixed(d==null?2:d)+"%";
+    const sgp=(v,d)=>(v>=0?"+":"−")+Math.abs(v).toFixed(d==null?2:d).replace(".",",")+"%";
     const num=(v,d)=>(v<0?"−":"")+Math.abs(v).toFixed(d==null?2:d);
     const cinco='style="grid-template-columns:repeat(auto-fit,minmax(158px,1fr))"';
     const fichas=`<div class="tiles fsolo-t" ${cinco}>
@@ -11526,7 +11540,7 @@ function viewHome(){
       <div class="tiles fsolo-t" ${cinco}>
       ${tile('<span class="gl">β</span> realizada',p.betaR!=null?num(p.betaR):"—",p.betaR!=null?("esperada "+(p.beta||0).toFixed(2)):"faltan ≥5 fechas",indigo,accentT)}
       ${tile('<span class="gl">α</span> de Jensen',aR!=null?sgp(aR):"—","sobre lo exigido por su riesgo",indigo,aR!=null?(aR>=0?green:red):muted)}
-      ${tile("Volatilidad",p.vol!=null?p.vol.toFixed(1)+"%":"—","anualizada, realizada",indigo,ink)}
+      ${tile("Volatilidad",p.vol!=null?p.vol.toFixed(1).replace(".",",").replace("-","−")+"%":"—","anualizada, realizada",indigo,ink)}
       ${tile("Sharpe",p.sharpeR!=null?num(p.sharpeR):"—",p.sharpeR!=null?"retorno por unidad de riesgo":"desde 30 días de seguimiento",indigo,p.sharpeR!=null?(p.sharpeR>=0?green:red):muted)}
       ${tile("Registros",String(p.nrec),"fechas de seguimiento",indigo,ink)}</div>`;
     // MISMA ANATOMÍA que las otras tarjetas del Home: gráfico en .ipsa-chart, pie de referencia y tiles.
@@ -11546,7 +11560,7 @@ function viewHome(){
     _f1?("Fondo administrado · "+(""+_f1.name).replace(/</g,"&lt;")):"Fondos administrados",
     _f1
       ? (_f1.hasData
-         ? `<b style="color:${_f1.pct>=0?green:red}">${(_f1.pct>=0?"+":"−")+Math.abs(_f1.pct).toFixed(2)}%</b> sobre tu capital aportado · la curva es la rentabilidad acumulada (%) contra el IPSA del mismo período — mide la GESTIÓN, sin los saltos de capital de las compras`
+         ? `<b style="color:${_f1.pct>=0?green:red}">${(_f1.pct>=0?"+":"−")+Math.abs(_f1.pct).toFixed(2).replace(".",",").replace("-","−")}%</b> sobre tu capital aportado · la curva es la rentabilidad acumulada (%) contra el IPSA del mismo período — mide la GESTIÓN, sin los saltos de capital de las compras`
          : `Tu única cartera en gestión · aún sin seguimiento registrado`)
       : `${funds.length} carteras en gestión · la curva es la rentabilidad acumulada (base 100) · haz clic para entrar`,
     fundsInner,
@@ -11572,12 +11586,12 @@ function viewHome(){
       if(fe)parts.push(`<span style="display:block;color:${red};font-weight:700;font-size:10.5px">↳ comisiones −${fmtCLP(fe)}</span>`);
       if(fl>0&&k>0)parts.push(`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">el % se diluye: la ganancia se reparte sobre el capital nuevo</span>`);
       return parts.join("");});
-    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>p0(v,1),ttfmt:v=>pc(v,2)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2)}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
+    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>p0(v,1),ttfmt:v=>pc(v,2)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2).replace(".",",").replace("-","−")}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
     return card("Rentabilidad neta en el tiempo","Historia de la rentabilidad neta de todas tus carteras · (valor − aportado − comisiones) sobre el capital aportado a cada fecha · el último punto es la misma «Rentabilidad» del resumen de arriba",body);
   })();
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
-  const mvRows=movers.length?movers.map(x=>{const _flat=Math.abs(x.chg)<0.005;const _cc=_flat?"var(--muted)":(x.chg>=0?green:red);const _sc=_flat?undefined:(x.chg>=0?"var(--green)":"var(--red)");return `<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${_cc}">${_flat?"• ":(x.chg>=0?"▲ +":"▼ −")}${Math.abs(x.chg).toFixed(2)}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k],_sc)||""}</div>`;}).join("")
+  const mvRows=movers.length?movers.map(x=>{const _flat=Math.abs(x.chg)<0.005;const _cc=_flat?"var(--muted)":(x.chg>=0?green:red);const _sc=_flat?undefined:(x.chg>=0?"var(--green)":"var(--red)");return `<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${_cc}">${_flat?"• ":(x.chg>=0?"▲ +":"▼ −")}${Math.abs(x.chg).toFixed(2).replace(".",",").replace("-","−")}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k],_sc)||""}</div>`;}).join("")
     :`<div class="note" style="margin:0">${mindBusy?"Cargando indicadores de mercado…":"Cargando indicadores… (también en Mercados)"}</div>`;
   const mvCard=card("Indicadores que se movieron","Mayores variaciones recientes · dólar, euro, cobre, UF (mindicador.cl)",`<div class="home-mvgrid">${mvRows}</div>`);
   // acciones destacadas — rankings desde los precios reales de los seguimientos
@@ -11596,8 +11610,8 @@ function viewHome(){
   const _stkTT={diario:"Retorno vs el cierre del día hábil anterior",semanal:"Retorno de los últimos ~7 días (móvil)",mensual:"Retorno de los últimos ~30 días (móvil, no lo que va del mes)"};
   const freqSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Frecuencia de los rankings">${["diario","semanal","mensual"].map(f=>`<button data-stkfreq="${f}" class="${homeStkFreq===f?"on":""}" title="${_stkTT[f]}">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join("")}</div></div>`;
   const stkInner=stats.length?`<div class="stk-cols">
-    ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,bestArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}
-    ${stkBlock("Peor rentabilidad","retorno "+perPhrase,worstArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2)+"%",s=>s.ret>=0?green:red,1)}</div>`
+    ${stkBlock("Mejor rentabilidad","retorno "+perPhrase,bestArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2).replace(".",",").replace("-","−")+"%",s=>s.ret>=0?green:red,1)}
+    ${stkBlock("Peor rentabilidad","retorno "+perPhrase,worstArr,s=>(s.ret>=0?"+":"")+s.ret.toFixed(2).replace(".",",").replace("-","−")+"%",s=>s.ret>=0?green:red,1)}</div>`
     :`<div class="note" style="margin:0">Aún no hay suficiente historial para rankear acciones. Usa <b>↻ Actualizar precios</b> para cargar cierres, o registra operaciones en tus proyectos.</div>`;
   const stkCard=card("Acciones destacadas",`Mejores y peores por rentabilidad ${perPhrase} (convención móvil, igual que el IPSA de arriba) · cada acción con su último dato disponible (y su fecha) · los cierres se cargan en <b>⚙ Configuración → Datos</b> · el Sharpe y el α de Jensen de cada cartera están en <b>Proyectos</b>`,stkInner,freqSeg);
   const newsCard=homeNewsCard();
@@ -11704,10 +11718,10 @@ function scoreWhy(r){
   const rrTxt=[];
   rrTxt.push(`Sharpe ${r.sharpe} (retorno por unidad de riesgo)`);
   if(r.alphaAdj>1)rrTxt.push(`α confiable +${r.alphaAdj}pp sobre lo exigido`);else if(r.alphaAdj<-1)rrTxt.push(`α ${r.alphaAdj}pp bajo lo exigido`);
-  rrTxt.push(`σ ${r.sig}% y caída máxima ${r.maxDD}% en el año`);
+  rrTxt.push(`σ ${(""+r.sig).replace(".",",")}% y caída máxima ${(""+r.maxDD).replace(".",",")}% en el año`);
   P.push(`<b>Riesgo-retorno (${r.rr}/100, ${q(r.rr)}):</b> ${rrTxt.join(" · ")}.`);
   // fundamentos
-  if(r.fund!=null){const ft=[];if(r.roe!=null)ft.push(`ROE ${r.roe.toLocaleString("es-CL",{maximumFractionDigits:1})}%`);if(r.upside!=null)ft.push(`upside de analistas ${r.upside>=0?"+":""}${r.upside}%`);
+  if(r.fund!=null){const ft=[];if(r.roe!=null)ft.push(`ROE ${r.roe.toLocaleString("es-CL",{maximumFractionDigits:1})}%`);if(r.upside!=null)ft.push(`upside de analistas ${r.upside>=0?"+":""}${(""+r.upside).replace(".",",")}%`);
     P.push(`<b>Fundamentos (${r.fund}/100, ${q(r.fund)}):</b> valorización, calidad y consenso${ft.length?" — "+ft.join(", "):""}.`);}
   else P.push(`<b>Fundamentos:</b> sin datos de Yahoo para esta acción → se pondera solo riesgo-retorno y tendencia (sin inventar).`);
   // tendencia

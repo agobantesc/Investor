@@ -459,7 +459,12 @@ let days = Object.values(byDate)
 // las del 17-07-2026: contra el día previo esos vectores se ven perfectamente normales y entraban enteros.
 // Por eso se busca el MEJOR calce entre los últimos 10 días hábiles con precios.
 const CALCO_MIN = 0.85;
-const CALCO_ATRAS = 10;
+// La ventana de búsqueda del día de ORIGEN va en DÍAS CALENDARIO, no en conteo de días reales. Con el
+// conteo (10 días reales) el origen se salía de la ventana justo POR el arreglo anterior: al restaurar los
+// días intermedios pisados por el calco, los restaurados llenaban la ventana y empujaban al origen fuera.
+// Medido el 08-08-2026: Yahoo sirvió el vector del 17-07 para el 06-08 (13 días hábiles después); el 17-07
+// quedó 11.º entre los reales y la copia entró como cierre legítimo, pisando los cierres buenos del 06-08.
+const CALCO_ATRAS_DIAS = 45;
 // proporción de acciones de `cur` que repiten EXACTO su valor en `ref` (solo cuenta las comparables)
 const calcoRatio = (cur, ref) => {
   const ks = Object.keys(cur || {}).filter(t => (ref || {})[t] != null);
@@ -476,10 +481,13 @@ const reales = [];
 for (let i = 0; i < days.length; i++) {
   const cur = days[i].prices || {};
   if (Object.keys(cur).length < 5) { if (Object.keys(cur).length) reales.push(i); continue; }
-  // el día de referencia es el que MÁS se parece entre los últimos CALCO_ATRAS días hábiles REALES
+  // el día de referencia es el que MÁS se parece entre los días REALES de los últimos CALCO_ATRAS_DIAS días
   let mejor = null;
-  for (let k = reales.length - 1; k >= 0 && reales.length - k <= CALCO_ATRAS; k--) {
-    const j = reales[k], cc = calcoRatio(cur, days[j].prices);
+  const _tCur = new Date(days[i].date + "T00:00:00").getTime();
+  for (let k = reales.length - 1; k >= 0; k--) {
+    const j = reales[k];
+    if (_tCur - new Date(days[j].date + "T00:00:00").getTime() > CALCO_ATRAS_DIAS * 864e5) break;
+    const cc = calcoRatio(cur, days[j].prices);
     if (cc.n >= 5 && (!mejor || cc.ratio > mejor.c.ratio)) mejor = { j, c: cc };
   }
   if (!mejor) { reales.push(i); continue; }
