@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-11T02:34:11.584Z",
+ "updatedAt": "2026-08-11T22:52:25.619Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -23,6 +23,7 @@
   "2026-08-06=11311.4 (28 acc, 0.86%)",
   "2026-08-07=11291.08 (28 acc, -0.18%)",
   "2026-08-10=11303.94 (28 acc, 0.11%)",
+  "2026-08-11=11172 (28 acc, -1.17%)",
   "492 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
@@ -18026,6 +18027,41 @@
     "CAP": 5600
    },
    "ipsa": 11303.94,
+   "ipsaSynth": true
+  },
+  {
+   "date": "2026-08-11",
+   "prices": {
+    "CHILE": 186.85,
+    "SANTANDER": 80.2,
+    "BCI": 67900,
+    "ENELCHILE": 81.09,
+    "COLBUN": 144,
+    "FALABELLA": 6429,
+    "CENCOSUD": 1989.9,
+    "COPEC": 6030,
+    "CMPC": 1040,
+    "SQM-B": 65860,
+    "CCU": 5500,
+    "ENTEL": 3824.3,
+    "LATAM": 24.35,
+    "PARAUCO": 3951,
+    "AGUAS-A": 337.1,
+    "IAM": 955,
+    "ENELAM": 87,
+    "ECL": 1930,
+    "ANDINA-B": 4800,
+    "CONCHATORO": 865,
+    "QUINENCO": 4499.9,
+    "MALLPLAZA": 3881,
+    "VAPORES": 46.88,
+    "RIPLEY": 403.22,
+    "SMU": 128,
+    "SONDA": 303,
+    "ITAUCL": 22750,
+    "CAP": 5475
+   },
+   "ipsa": 11172,
    "ipsaSynth": true
   }
  ]
