@@ -1820,6 +1820,31 @@
   /* letras griegas en encabezados: `text-transform:uppercase` las convierte en Β y Α (que se leen
      como B y A latinas). Cualquier β/α/σ/μ de una cabecera va dentro de .gl */
   .tw thead th .gl,thead th .gl{text-transform:none!important;}
+
+  /* ══ PULIDO v8 · ACABADO PROFESIONAL ═══════════════════════════════════════════════════════════════
+     Capa transversal de acabado. SOLO variables del tema (sirve igual en claro y oscuro) y solo reglas
+     que no mueven el layout: tipografía numérica, ritmo de cabeceras y estados de interacción. */
+  /* 1 · Números TABULARES en todo lo que forma columnas: las cifras dejan de "bailar" al variar el dígito */
+  td,.tile .v,.kv,.net-it b,.net-pct b,.ipsa-val,.fw-sv,.cart-pct,.isc-score,.ops-stat b{font-variant-numeric:tabular-nums;}
+  /* 2 · Tick de marca ante el título de cada tarjeta: ancla visual que ordena la página sin agregar peso.
+     inline-block, no flex: un título con spans internos no debe cambiar su flujo. El informe impreso
+     tiene su propia pauta tipográfica y no lo hereda. */
+  .card>.hd .ct::before{content:"";display:inline-block;width:3px;height:13px;border-radius:2px;margin-right:8px;vertical-align:-2px;background:linear-gradient(180deg,var(--accent),#7C4DD8);}
+  .rp-page .ct::before,.rp-doc .ct::before{content:none;}
+  /* 3 · Botones dentro de cabeceras de tarjeta: compactos y SIEMPRE de una línea ("Eliminar proyecto"
+     partido en dos renglones desalineaba toda la fila de acciones) */
+  .btn{white-space:nowrap;}
+  .card>.hd .btn{padding:.44rem .78rem;font-size:11.5px;}
+  /* 4 · La fila de herramientas suelta (Generar informe / Excel) se lee como barra de acciones */
+  .toolrow{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;align-items:center;}
+  /* 5 · (retirado) subir el letter-spacing de las cabeceras ensanchaba la tabla "Resumen anual" justo
+     hasta hacerla scrollear en horizontal: el acabado no puede costar una barra de scroll */
+  /* 6 · Estados de interacción parejos en controles chicos */
+  .wbtn{border-radius:7px;}
+  .home-seg button:hover:not(.on){background:var(--soft);}
+  .ctxtab:hover:not(.on){background:var(--soft);}
+  /* 7 · Selección de texto con el color de la casa (el azul del sistema desentona en el tema oscuro) */
+  ::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);}
 </style>
 </head>
 <body>
@@ -4179,7 +4204,7 @@ function viewInvActive(){
       <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:12px"><button class="btn btn-pri" id="objSave">✓ Guardar objetivos</button><button class="btn" id="objUseActual" title="Copia los pesos actuales de la cartera como nuevo objetivo (drift queda en 0)">Usar pesos actuales</button><button class="btn" id="objEqual" title="Reparte el objetivo en partes iguales">Partes iguales</button><button class="btn" id="objCancel">✕ Cancelar</button><span class="genl" style="margin:0" id="objSum"></span></div>`;
   })():"";
   const allocCard=card("Composición actual vs objetivo","Cómo se desviaron los pesos desde la compra · base para rebalancear · los objetivos son editables",(objEditOn?objEditor:allocBody+driftAlert),`<button class="btn" id="objEditBtn">${objEditOn?"✕ Cerrar editor":"✎ Editar objetivos"}</button>`);
-  const invTools=`<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button class="btn" id="geninforme">📄 Generar informe</button><button class="btn" id="genxls">📊 Generar Excel</button></div>`;
+  const invTools=`<div class="toolrow"><button class="btn" id="geninforme">📄 Generar informe</button><button class="btn" id="genxls">📊 Generar Excel</button></div>`;
   const b0q=WEEKS[0];
   const deltaCard=b0q.qty?card("Inversión inicial: real vs objetivo","Acciones compradas y monto real por acción frente al objetivo de la simulación",{html:`<div class="tw"><table><thead><tr><th>Acción</th><th class="r">Acciones</th><th class="r">Precio compra</th><th class="r">Objetivo</th><th class="r">Real</th><th class="r">Δ</th></tr></thead><tbody>`+PF.holdings.map(hd=>{const q=b0q.qty[hd.t]||0,p=b0q.prices[hd.t]||0,real=q*p,obj=PF.amount*hd.w,d=real-obj;return `<tr><td>${tk(hd)}</td><td class="r">${q.toLocaleString("es-CL")}</td><td class="r">${fmtP(p)}</td><td class="r">${fmtCLP(obj)}</td><td class="r" style="font-weight:700">${fmtCLP(real)}</td><td class="r" style="color:${Math.abs(d)<1?muted:(d>=0?green:red)}">${(d>=0?"+":"−")+fmtCLP(Math.abs(d))}</td></tr>`;}).join("")+`<tr style="background:var(--soft);font-weight:800"><td>Total invertido</td><td></td><td></td><td class="r">${fmtCLP(PF.amount)}</td><td class="r">${fmtCLP(IM.series[0].val)}</td><td class="r" style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</td></tr></tbody></table><div class="note" style="margin-top:11px">Por el precio entero de las acciones, invertiste <b>${fmtCLP(IM.series[0].val)}</b> vs el objetivo de <b>${fmtCLP(PF.amount)}</b> → delta <b style="color:${(IM.series[0].val-PF.amount)>=0?green:red}">${((IM.series[0].val-PF.amount)>=0?"+":"−")+fmtCLP(Math.abs(IM.series[0].val-PF.amount))}</b> (${((IM.series[0].val-PF.amount)/PF.amount*100).toFixed(1).replace(".",",").replace("-","−")}%). El seguimiento usa las acciones y montos realmente comprados.</div></div>`,flush:true}):"";
   if(histPg) return projbar+summary+invTools+tbl;
