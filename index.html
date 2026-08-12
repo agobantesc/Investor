@@ -11319,13 +11319,22 @@ function svgOpsBars(o){
   // se abre con un CLIC en la columna (tabla bajo el gráfico), además del tooltip con los totales.
   const per="mes",agg={},ord=[];
   o.dates.forEach((d,i)=>{const k=d.slice(0,7);if(!agg[k]){agg[k]={buy:0,sell:0,div:0,fee:0,n:0,ops:[]};ord.push(k);}const r=o.rows[i];agg[k].buy+=r.buy||0;agg[k].sell+=r.sell||0;agg[k].div+=r.div||0;agg[k].fee+=r.fee||0;agg[k].n+=r.n||0;if(r.ops)agg[k].ops=agg[k].ops.concat(r.ops);});
+  // RESULTADO POR MES (o.mret, de homeMonthlyReturns): el eje de meses es la UNIÓN de los meses con
+  // operaciones y los meses con seguimiento — un mes que solo tiene resultado (sin operar) también aparece
+  const mrM={};(o.mret||[]).forEach(r=>{mrM[r.key]=r;if(!agg[r.key]){agg[r.key]={buy:0,sell:0,div:0,fee:0,n:0,ops:[]};ord.push(r.key);}});
+  ord.sort();
   const labels=ord.map(k=>MESL[+k.slice(5,7)-1]+" "+k.slice(2,4)),rows=ord.map(k=>agg[k]),mks=ord;
+  const mrArr=ord.map(k=>mrM[k]||null);
   const n=rows.length,step=(W-m.l-m.r)/Math.max(1,n);
   const xs=[];for(let i=0;i<n;i++)xs.push(m.l+step*(i+0.5));
+  // CARRIL SUPERIOR con escala propia (el espejo del carril de comisiones): el RESULTADO de cada mes —
+  // ganancia o pérdida % del patrimonio, TWR que netea los aportes/retiros del mes — verde/rojo desde su
+  // línea cero; el mes en curso va tenue (aún es parcial). Solo existe si viene o.mret.
+  const RL=mrArr.some(Boolean)?56:0,RGAP=RL?12:0;
   // panel principal: el cero se ubica según cuánto pesa cada lado (sin entradas, las compras usan todo el alto).
   // ENTRADAS DE CAJA hacia abajo = ventas + dividendos apilados (ambos son dinero que vuelve a tu bolsillo,
   // pero de naturaleza distinta: la venta liquida posición, el dividendo es renta que la posición generó).
-  const top=m.t,bot=H-m.b-FL-GAP,H1=bot-top;
+  const top=m.t+RL+RGAP,bot=H-m.b-FL-GAP,H1=bot-top;
   const mxB=Math.max(...rows.map(r=>r.buy||0),0),mxS=Math.max(...rows.map(r=>(r.sell||0)+(r.div||0)),0);
   const MB=Math.max(1,mxB)*1.07,MS=mxS>0?mxS*1.07:0,unit=MB+MS;
   const z=top+H1*(MB/unit);
@@ -11361,9 +11370,28 @@ function svgOpsBars(o){
   const fw=Math.max(3,Math.min(12,bw*0.5));
   rows.forEach((r,i)=>{if(!(r.fee>0))return;const h0=Math.max(2,(r.fee/mxF)*(FL-19));
     g+=rbar(xs[i]-fw/2,fB-3,fB-3-h0,OPS_FEE_COL,fw,"0.85");});
+  // carril superior del RESULTADO: banda tenue, línea cero propia y una barra verde/rojo por mes con su
+  // cifra cuando la columna tiene aire — la ganancia/pérdida en pesos y el detalle van en el tooltip
+  if(RL){
+    const rT=m.t,rB=m.t+RL,rA=rT+15,rZ2=rB-4;   // área útil bajo el rótulo del carril
+    const rvs=mrArr.filter(Boolean).map(r=>r.pct);
+    let rMx=Math.max(0.1,...rvs,0),rMn=Math.min(0,...rvs);rMx*=1.15;if(rMn<0)rMn*=1.15;
+    const yR=v=>rA+(rMx-v)*(rZ2-rA)/((rMx-rMn)||1),zR=yR(0);
+    g+=`<rect x="${m.l}" y="${rT}" width="${W-m.l-m.r}" height="${RL}" rx="6" fill="var(--accent)" opacity="0.05"/>`;
+    g+=`<text x="${m.l+8}" y="${rT+11}" font-size="8.5" font-weight="800" letter-spacing="1.1" fill="var(--accent)" opacity="0.8">RESULTADO DEL MES (%)</text>`;
+    g+=`<line x1="${m.l}" y1="${zR.toFixed(1)}" x2="${W-m.r}" y2="${zR.toFixed(1)}" stroke="${AC}" stroke-dasharray="3 3" opacity="0.75"/><text x="${m.l-9}" y="${(zR+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${faint}" style="font-variant-numeric:tabular-nums">0%</text>`;
+    const rw=Math.max(4,Math.min(14,bw*0.55));
+    mrArr.forEach((r,i)=>{if(!r)return;const col=r.pct>=0?green:red,y1=yR(r.pct);
+      const yT2=Math.min(zR,y1),h2=Math.max(1.5,Math.abs(y1-zR));
+      g+=`<rect data-mr="1" x="${(xs[i]-rw/2).toFixed(1)}" y="${yT2.toFixed(1)}" width="${rw.toFixed(1)}" height="${h2.toFixed(1)}" rx="${Math.min(2.5,rw/2).toFixed(1)}" fill="${col}" opacity="${r.parcial?"0.5":"0.9"}"/>`;
+      if(step>=40){const yl=Math.max(rA-2,Math.min(rZ2+1,r.pct>=0?yT2-3:yT2+h2+9));
+        // halo del color de la tarjeta: la cifra se lee aunque caiga sobre su propia barra
+        g+=`<text x="${xs[i].toFixed(1)}" y="${yl.toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="${col}" stroke="var(--card)" stroke-width="2.6" style="font-variant-numeric:tabular-nums;paint-order:stroke">${pc(r.pct,1)}</text>`;}
+    });
+  }
   const kk=Math.max(1,Math.ceil(n/12));
   labels.forEach((lb,i)=>{const on=o.selKey&&mks[i]===o.selKey;if(i%kk===0||i===n-1||on)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" font-weight="${on?"800":"400"}" fill="${on?"var(--accent)":muted}">${lb}</text>`;});
-  if(o.id)window["__ob_"+o.id]={dates:labels,rows,xs,W,H,mt:m.t,mb:m.b,step,cum,per,mks};
+  if(o.id)window["__ob_"+o.id]={dates:labels,rows,xs,W,H,mt:m.t,mb:m.b,step,cum,per,mks,mret:mrArr};
   return `<svg id="${o.id||""}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet" style="cursor:pointer">${g}<g id="${(o.id||"")}hover"></g></svg>`;
 }
 function attachOpsHover(id){
@@ -11374,6 +11402,11 @@ function attachOpsHover(id){
     if(hv){const _st=g.step||30;hv.innerHTML=`<rect x="${(g.xs[bi]-_st/2).toFixed(1)}" y="${g.mt}" width="${_st.toFixed(1)}" height="${(g.H-g.mb-g.mt).toFixed(1)}" fill="var(--accent)" opacity=".07"/>`;}   // la franja cruza AMBOS paneles (flujo + comisiones)
     let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
     const d=g.rows[bi];
+    // primero el RESULTADO del mes (si hay seguimiento): % TWR y pesos ganados/perdidos, netos de aportes/retiros
+    const mr=g.mret&&g.mret[bi];
+    const resLine=mr?`<span style="display:block;color:${mr.pct>=0?green:red};font-weight:800">Resultado: ${pc(mr.pct,2)} · ${mr.clp>=0?"+":"−"}${fmtCLP(Math.abs(mr.clp))}${mr.parcial?' <span style="font-weight:600;color:var(--faint);font-size:10px">(mes en curso)</span>':""}</span>`
+      +((mr.ap||mr.re)?`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">${mr.ap?("aportes +"+fmtCLP(mr.ap)):""}${mr.ap&&mr.re?" · ":""}${mr.re?("retiros −"+fmtCLP(mr.re)):""} — neteados del resultado</span>`:"")
+      :"";
     const buyLine=d.buy?`<span style="display:block;color:var(--accent);font-weight:800">Compras: ${fmtCLP(d.buy)}</span>`:"";
     const sellLine=d.sell?`<span style="display:block;color:${amber};font-weight:800">Ventas: ${fmtCLP(d.sell)}</span>`:"";
     const divLine=d.div?`<span style="display:block;color:${green};font-weight:800">Dividendos: +${fmtCLP(d.div)}</span>`:"";
@@ -11381,7 +11414,7 @@ function attachOpsHover(id){
     const feeLine=`<span style="display:block;color:${OPS_FEE_COL};font-weight:800">Comisiones: −${fmtCLP(d.fee)}</span>`;
     const cumLine=(g.cum&&g.cum[bi]!=null)?`<span style="display:block;color:${indigo};font-weight:700">Invertido neto acum.: ${fmtCLP(g.cum[bi])}</span>`:"";
     const nLine=`<span style="display:block;color:var(--faint);font-weight:600;font-size:10.5px">${d.n} operaci${d.n===1?"ón":"ones"} este mes · clic para el detalle</span>`;
-    tt.innerHTML=`<b>${g.dates[bi]}</b>`+buyLine+sellLine+divLine+rescLine+feeLine+cumLine+nLine;
+    tt.innerHTML=`<b>${g.dates[bi]}</b>`+resLine+buyLine+sellLine+divLine+rescLine+feeLine+cumLine+nLine;
     placeTip(tt,e);};
   svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
   // CLIC en una columna: abre/cierra el detalle de las operaciones de ese mes bajo el gráfico
@@ -11391,59 +11424,6 @@ function attachOpsHover(id){
     homeOpsMonthSel=(homeOpsMonthSel===k)?null:k;
     const tt=document.getElementById("charttip");if(tt)tt.style.display="none";
     render();};
-}
-/* barras de RENTABILIDAD MENSUAL (%): una columna por mes desde la línea cero — verde al alza, rojo a la
-   baja — con la cifra sobre cada barra cuando hay espacio y el mes EN CURSO en tono tenue (es parcial).
-   Guarda la geometría en __mr_<id> para el tooltip (attachMretHover). */
-function svgMretBars(o){
-  const W=820,H=o.h||230,m={l:56,r:18,t:24,b:30};
-  const MESL=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-  const rows=o.rows||[],n=rows.length;
-  const labels=rows.map(r=>MESL[+r.key.slice(5,7)-1]+" "+r.key.slice(2,4));
-  const step=(W-m.l-m.r)/Math.max(1,n);
-  const xs=[];for(let i=0;i<n;i++)xs.push(m.l+step*(i+0.5));
-  let mx=Math.max(0.1,...rows.map(r=>r.pct)),mn=Math.min(0,...rows.map(r=>r.pct));
-  mx*=1.22;if(mn<0)mn*=1.22;
-  const yV=v=>m.t+(mx-v)*(H-m.t-m.b)/((mx-mn)||1);
-  const z=yV(0);
-  // rejilla con paso "limpio" (mantisa 1-2-5) y rótulos con coma; el cero lleva su propia línea
-  const nice=v=>{if(!(v>0))return 1;const p=Math.pow(10,Math.floor(Math.log10(v)));const f=v/p;return (f>=5?5:f>=2?2:1)*p;};
-  const stp=nice((mx-mn)/4);
-  let g="";
-  for(let v=Math.ceil(mn/stp)*stp;v<=mx+1e-9;v+=stp){const yy=yV(v);if(Math.abs(yy-z)<8)continue;
-    g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">${(v<0?"−":"")+_pcN(Math.abs(v),stp<1?1:0)}%</text>`;}
-  g+=`<line x1="${m.l}" y1="${z.toFixed(1)}" x2="${W-m.r}" y2="${z.toFixed(1)}" stroke="${AC}" stroke-width="1.2"/><text x="${m.l-9}" y="${(z+3.5).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}" style="font-variant-numeric:tabular-nums">0%</text>`;
-  const bw=Math.max(9,Math.min(30,step*0.62-2));
-  rows.forEach((r,i)=>{
-    const col=r.pct>=0?green:red,y1=yV(r.pct);
-    const yT=Math.min(z,y1),h0=Math.max(1.2,Math.abs(y1-z));
-    g+=`<rect x="${(xs[i]-bw/2).toFixed(1)}" y="${yT.toFixed(1)}" width="${bw.toFixed(1)}" height="${h0.toFixed(1)}" rx="${Math.min(3.5,bw/2).toFixed(1)}" fill="${col}"${r.parcial?' opacity="0.5"':''}/>`;
-    // cifra sobre la barra (bajo ella si es pérdida) — solo cuando la columna tiene aire
-    if(step>=34)g+=`<text x="${xs[i].toFixed(1)}" y="${(r.pct>=0?yT-5:yT+h0+12).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${col}" style="font-variant-numeric:tabular-nums">${pc(r.pct,1)}</text>`;
-  });
-  const kk=Math.max(1,Math.ceil(n/12));
-  labels.forEach((lb,i)=>{if(i%kk===0||i===n-1)g+=`<text x="${xs[i].toFixed(1)}" y="${H-m.b+17}" text-anchor="middle" font-size="11" fill="${muted}"${rows[i].parcial?' font-style="italic"':''}>${lb}</text>`;});
-  if(o.id)window["__mr_"+o.id]={rows,labels,xs,W,H,mt:m.t,mb:m.b,step};
-  return `<svg id="${o.id||""}" viewBox="0 0 ${W} ${H}" class="chart" preserveAspectRatio="xMidYMid meet">${g}<g id="${(o.id||"")}hover"></g></svg>`;
-}
-function attachMretHover(id){
-  const svg=document.getElementById(id),g=window["__mr_"+id];if(!svg||!g)return;
-  const MESLF=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  svg.onmousemove=e=>{const r=svg.getBoundingClientRect();const vx=(e.clientX-r.left)/r.width*g.W;
-    let bi=0,bd=1e9;g.xs.forEach((x,i)=>{const d=Math.abs(x-vx);if(d<bd){bd=d;bi=i;}});
-    const hv=document.getElementById(id+"hover");
-    if(hv)hv.innerHTML=`<rect x="${(g.xs[bi]-g.step/2).toFixed(1)}" y="${g.mt}" width="${g.step.toFixed(1)}" height="${(g.H-g.mb-g.mt).toFixed(1)}" fill="var(--accent)" opacity=".07"/>`;
-    let tt=document.getElementById("charttip");if(!tt){tt=document.createElement("div");tt.id="charttip";tt.className="charttip";document.body.appendChild(tt);}
-    const d=g.rows[bi],col=d.pct>=0?green:red;
-    tt.innerHTML=`<b style="text-transform:capitalize">${MESLF[+d.key.slice(5,7)-1]+" "+d.key.slice(0,4)}${d.parcial?" · en curso":""}</b>`
-      +`<span style="display:block;color:${col};font-weight:800">Rentabilidad: ${pc(d.pct,2)}</span>`
-      +`<span style="display:block;color:${col};font-weight:700">${d.clp>=0?"Ganancia: +":"Pérdida: −"}${fmtCLP(Math.abs(d.clp))}</span>`
-      +(d.ap?`<span style="display:block;color:var(--accent);font-weight:700;font-size:10.5px">↳ aportes +${fmtCLP(d.ap)} (neteados del %)</span>`:"")
-      +(d.re?`<span style="display:block;color:${amber};font-weight:700;font-size:10.5px">↳ retiros −${fmtCLP(d.re)} (neteados del %)</span>`:"")
-      +(d.fee?`<span style="display:block;color:${OPS_FEE_COL};font-weight:700;font-size:10.5px">↳ comisiones −${fmtCLP(d.fee)} (aparte del %)</span>`:"")
-      +`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">medido del ${fD(d.from)} al ${fD(d.to)} · ${d.n} fecha${d.n===1?"":"s"} de seguimiento</span>`;
-    placeTip(tt,e);};
-  svg.onmouseleave=()=>{const hv=document.getElementById(id+"hover");if(hv)hv.innerHTML="";const tt=document.getElementById("charttip");if(tt)tt.style.display="none";};
 }
 function lineSpark(series,col,h){if(!series||series.length<2)return "";const w=300;h=h||40;const n=series.length,mn=Math.min(...series),mx=Math.max(...series),rg=(mx-mn)||1;const pts=series.map((v,i)=>[(i/(n-1))*w,h-3-((v-mn)/rg)*(h-7)]);const d="M"+pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L");const gid="ls"+(Math.abs(((series[0]||1)*7|0)+n)%99999);return `<svg class="line-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".15"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w},${h} L0,${h} Z" fill="url(#${gid})"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;}
 /* banner de bienvenida (propuesta de valor) — descartable */
@@ -11690,32 +11670,8 @@ function viewHome(){
     const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>p0(v,1),ttfmt:v=>pc(v,2)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2).replace(".",",").replace("-","−")}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
     return card("Rentabilidad neta en el tiempo","Historia de la rentabilidad neta de todas tus carteras · (valor − aportado − comisiones) sobre el capital aportado a cada fecha · el último punto es la misma «Rentabilidad» del resumen de arriba",body);
   })();
-  // RENTABILIDAD POR MES: la misma historia de arriba, partida por mes calendario — cuánto rindió y cuántos
-  // pesos ganó o perdió CADA MES, neteando los aportes/retiros (TWR, la regla de toda la casa). El detalle
-  // fino (aportes, retiros, comisiones y fechas medidas de cada mes) va en el tooltip y en la tabla.
-  const mretCard=(()=>{
-    const mr=(_mtH&&typeof homeMonthlyReturns==="function")?homeMonthlyReturns(_mtH):null;
-    if(!mr||!mr.length)return "";
-    const MESLF=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    const nom=k=>MESLF[+k.slice(5,7)-1]+" "+k.slice(0,4);
-    const best=mr.reduce((a,b)=>b.pct>a.pct?b:a),worst=mr.reduce((a,b)=>b.pct<a.pct?b:a);
-    const alza=mr.filter(r=>r.pct>=0).length;
-    const acum=(mr.reduce((a,r)=>a*(1+r.pct/100),1)-1)*100;   // encadenado = la curva base-100 completa
-    const clpTot=mr.reduce((a,r)=>a+r.clp,0);
-    const stat=(l,v,c,sub)=>`<div class="ops-stat"><span>${l}</span><b style="color:${c||"var(--ink)"}">${v}</b>${sub?`<i>${sub}</i>`:""}</div>`;
-    const stats=`<div class="ops-stats">`
-      +stat("Acumulado",pc(acum,2),acum>=0?green:red,"los "+mr.length+" meses encadenados (TWR)")
-      +stat("Ganancia total",(clpTot>=0?"+":"−")+fmtCLP(Math.abs(clpTot)),clpTot>=0?green:red,"sin contar aportes ni retiros · antes de comisiones")
-      +stat("Mejor mes",pc(best.pct,2),green,nom(best.key))
-      +stat("Peor mes",pc(worst.pct,2),worst.pct>=0?green:red,nom(worst.key))
-      +stat("Meses al alza",alza+" de "+mr.length,alza>=mr.length-alza?green:amber,mr[mr.length-1].parcial?"el mes en curso es parcial":"meses calendario completos")
-      +`</div>`;
-    const trs=[...mr].reverse().map(r=>`<tr><td style="text-transform:capitalize;font-weight:700">${nom(r.key)}${r.parcial?' <span class="badge" style="margin-left:5px">en curso</span>':''}</td><td class="r" style="font-weight:800;color:${r.pct>=0?green:red}">${pc(r.pct,2)}</td><td class="r" style="font-weight:700;color:${r.clp>=0?green:red}">${(r.clp>=0?"+":"−")+fmtCLP(Math.abs(r.clp))}</td><td class="r" style="color:${r.ap?"var(--accent)":"var(--faint)"}">${r.ap?("+"+fmtCLP(r.ap)):"—"}</td><td class="r" style="color:${r.re?amber:"var(--faint)"}">${r.re?("−"+fmtCLP(r.re)):"—"}</td><td class="r" style="color:${r.fee?OPS_FEE_COL:"var(--faint)"}">${r.fee?("−"+fmtCLP(r.fee)):"—"}</td><td class="r" style="color:var(--faint)">${r.n}</td></tr>`).join("");
-    const tabla=`<div class="tw" style="margin-top:13px${mr.length>13?";max-height:340px;overflow:auto":""}"><table><thead><tr><th>Mes</th><th class="r">Rentabilidad</th><th class="r">Ganancia / pérdida</th><th class="r">Aportes</th><th class="r">Retiros</th><th class="r">Comisiones</th><th class="r">Fechas</th></tr></thead><tbody>${trs}</tbody></table></div>`;
-    const body=`${stats}<div class="ipsa-chart">${svgMretBars({rows:mr,h:230,id:"mgmret"})}
-      <div class="genl" style="margin:6px 0 0;text-align:right">un mes sin seguimiento no aparece (no se puede medir) · el mes en curso va en tono tenue: aún es parcial</div>${tabla}</div>`;
-    return card("Rentabilidad por mes","Cuánto rindió y cuántos pesos ganó o perdió cada mes calendario · el % netea los aportes y retiros del mes (TWR: mide la gestión, no el tamaño del capital) y los pesos son el movimiento del patrimonio sin la plata que entró o salió · pasa el mouse por una columna para el detalle",body);
-  })();
+  // el RESULTADO POR MES (rentabilidad y ganancia/pérdida de cada mes calendario) vive DENTRO de la
+  // tarjeta "Operaciones y comisiones" (pedido explícito): carril superior del gráfico + tooltip + KPI.
   // indicadores que se movieron
   const movers=MIND_DEF.filter(d=>d.spark).map(d=>({d,chg:mindChange(d.k),o:MIND&&MIND[d.k]})).filter(x=>x.chg!=null&&x.o).sort((a,b)=>Math.abs(b.chg)-Math.abs(a.chg)).slice(0,4);
   const mvRows=movers.length?movers.map(x=>{const _flat=Math.abs(x.chg)<0.005;const _cc=_flat?"var(--muted)":(x.chg>=0?green:red);const _sc=_flat?undefined:(x.chg>=0?"var(--green)":"var(--red)");return `<div class="home-mv"><div class="mv-top"><span class="mv-name">${x.d.label}</span><span class="mv-chg" style="color:${_cc}">${_flat?"• ":(x.chg>=0?"▲ +":"▼ −")}${Math.abs(x.chg).toFixed(2).replace(".",",").replace("-","−")}%</span></div><div class="mv-val">${mindFmt(x.o.valor,x.d.dec,x.d.unit)}</div>${mindSparkSVG(MINDH[x.d.k],_sc)||""}</div>`;}).join("")
@@ -11761,10 +11717,15 @@ function viewHome(){
   const opsCard=(()=>{
     const os=(typeof homeOpsSeries==="function")?homeOpsSeries():null;
     if(!os)return "";
-    // UNA sola vista: compras ↑ / (ventas + dividendos) ↓ en la escala CLP y las comisiones en su carril
-    // inferior con escala propia — la historia completa de las operaciones, alineada por fecha
-    const legend=`<div class="legend" style="margin:0"><span><span class="lgdot" style="background:var(--accent)"></span>Compras ↑</span><span><span class="lgdot" style="background:${amber}"></span>Ventas ↓</span><span><span class="lgdot" style="background:${green}"></span>Dividendos ↓</span><span><span class="lgdot" style="background:${OPS_FEE_COL}"></span>Comisiones (carril inferior, escala propia)</span></div>`;
-    // FRANJA DE KPIs — siempre las 7, aunque alguna vaya en cero: una tarjeta que aparece y desaparece
+    // RESULTADO POR MES (pedido explícito: vive en ESTE mismo objeto visual): % TWR y pesos de cada mes
+    // calendario desde homeMonthlyReturns — carril superior del gráfico, tooltip, detalle del mes y KPI
+    const mrAll=(_mtH&&typeof homeMonthlyReturns==="function")?(homeMonthlyReturns(_mtH)||[]):[];
+    const mrAcum=mrAll.length?(mrAll.reduce((a,r)=>a*(1+r.pct/100),1)-1)*100:null;
+    const mrClp=mrAll.reduce((a,r)=>a+r.clp,0);
+    // UNA sola vista: el resultado del mes en el carril superior (% con escala propia), compras ↑ /
+    // (ventas + dividendos) ↓ en la escala CLP y las comisiones en su carril inferior con escala propia
+    const legend=`<div class="legend" style="margin:0">${mrAll.length?`<span><span class="lgdot" style="background:${green}"></span>Resultado del mes (carril superior, % neto de aportes)</span>`:""}<span><span class="lgdot" style="background:var(--accent)"></span>Compras ↑</span><span><span class="lgdot" style="background:${amber}"></span>Ventas ↓</span><span><span class="lgdot" style="background:${green}"></span>Dividendos ↓</span><span><span class="lgdot" style="background:${OPS_FEE_COL}"></span>Comisiones (carril inferior, escala propia)</span></div>`;
+    // FRANJA DE KPIs — siempre las mismas, aunque alguna vaya en cero: una tarjeta que aparece y desaparece
     // según el mes hace que la franja "baile" y obliga a releerla. El "—" comunica ausencia sin ambigüedad.
     const nOps={buy:0,sell:0,div:0};(os.rows||[]).forEach(r=>(r.ops||[]).forEach(o=>{nOps[o.side==="sell"?"sell":o.side==="div"?"div":"buy"]++;}));
     const feePct=(os.tBuy+os.tSell)>0?(os.tFee/(os.tBuy+os.tSell)*100):null;
@@ -11778,6 +11739,7 @@ function viewHome(){
       +stat("Rescatado",(os.tSell+os.tDiv)?fmtCLP(os.tSell+os.tDiv):"—",(os.tSell+os.tDiv)?ink:muted,"ventas + dividendos")
       +stat("Neto invertido",fmtCLP(os.tBuy-os.tSell-os.tDiv),indigo,"comprado − rescatado")
       +stat("Comisiones","−"+fmtCLP(os.tFee),OPS_FEE_COL,feePct!=null?("costo medio "+feePct.toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+"%"+(feePct>1?" ⚠":"")):"IVA incluido")
+      +(mrAcum!=null?stat("Resultado",pc(mrAcum,2),mrAcum>=0?green:red,(mrClp>=0?"+":"−")+fmtCLP(Math.abs(mrClp))+" en "+mrAll.length+" mes"+(mrAll.length===1?"":"es")+" · sin aportes ni retiros"):"")
       +`</div>`;
     const caption=`neto acumulado <b style="color:${indigo}">${fmtCLP(os.tBuy-os.tSell-os.tDiv)}</b> invertido${os.tDiv?` · dividendos <b style="color:${green}">+${fmtCLP(os.tDiv)}</b>`:""} · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(os.tFee)}</b>`;
     // DETALLE DEL MES seleccionado (clic en una columna): cada operación con fecha, tipo, monto y comisión
@@ -11789,26 +11751,28 @@ function viewHome(){
       else{
         const mName=MESL[+homeOpsMonthSel.slice(5,7)-1]+" "+homeOpsMonthSel.slice(0,4);
         const mBuy=ops.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0),mSell=ops.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0),mDiv=ops.filter(x=>x.side==="div").reduce((a,x)=>a+x.monto,0),mFee=ops.reduce((a,x)=>a+(x.fee||0),0);
+        const mRes=mrAll.find(r=>r.key===homeOpsMonthSel);
+        const mResTxt=mRes?` · resultado del mes <b style="color:${mRes.pct>=0?green:red}">${pc(mRes.pct,2)} (${mRes.clp>=0?"+":"−"}${fmtCLP(Math.abs(mRes.clp))})</b>${mRes.parcial?" — en curso":""}`:"";
         const tag=x=>x.side==="sell"?`<span class="badge neg">Venta</span>`:x.side==="div"?`<span class="badge pos" style="color:${green}">Dividendo</span>`:`<span class="badge pos">Compra</span>`;
         const rows=ops.sort((a,b)=>a.date<b.date?-1:1).map(x=>`<tr><td>${fD(x.date)}</td><td>${tag(x)}</td><td><b>${x.t}</b></td><td style="color:var(--faint)">${(""+(x.proj||"")).replace(/</g,"&lt;")}</td><td class="r">${x.side==="div"?"—":(+x.shares).toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${x.side==="div"?"—":fmtP(x.price)}</td><td class="r" style="font-weight:700">${fmtCLP(x.monto)}</td><td class="r" style="color:${OPS_FEE_COL}">${x.fee?("−"+fmtCLP(x.fee)):"—"}</td></tr>`).join("");
         detail=`<div style="margin-top:13px;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--card2)">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:.65rem .85rem;border-bottom:1px solid var(--line)">
             <b style="font-size:12.5px;color:var(--navy);text-transform:capitalize">${mName}</b>
-            <span class="genl" style="margin:0">${ops.length} operaci${ops.length===1?"ón":"ones"}${mBuy?` · comprado <b style="color:var(--accent)">${fmtCLP(mBuy)}</b>`:""}${mSell?` · vendido <b style="color:${amber}">${fmtCLP(mSell)}</b>`:""}${mDiv?` · dividendos <b style="color:${green}">+${fmtCLP(mDiv)}</b>`:""}${mFee?` · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(mFee)}</b>`:""}</span>
+            <span class="genl" style="margin:0">${ops.length} operaci${ops.length===1?"ón":"ones"}${mResTxt}${mBuy?` · comprado <b style="color:var(--accent)">${fmtCLP(mBuy)}</b>`:""}${mSell?` · vendido <b style="color:${amber}">${fmtCLP(mSell)}</b>`:""}${mDiv?` · dividendos <b style="color:${green}">+${fmtCLP(mDiv)}</b>`:""}${mFee?` · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(mFee)}</b>`:""}</span>
             <button class="btn btnu" data-opsdetclose style="margin-left:auto">✕ Cerrar</button></div>
           <div class="tw"><table><thead><tr><th>Fecha</th><th>Operación</th><th>Acción</th><th>Proyecto</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Monto</th><th class="r">Comisión</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
       }
     }
-    const body=`${stats}<div class="ipsa-chart">${svgOpsBars({dates:os.dates,rows:os.rows,h:250,id:"mgops",selKey:homeOpsMonthSel})}
+    const body=`${stats}<div class="ipsa-chart">${svgOpsBars({dates:os.dates,rows:os.rows,h:mrAll.length?318:250,id:"mgops",selKey:homeOpsMonthSel,mret:mrAll})}
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 0;flex-wrap:wrap">
         ${legend}
         <div class="genl" style="margin:0;text-align:right">${caption}</div></div>${detail}</div>`;
-    const sub="Un mes por columna: compras hacia arriba, ventas hacia abajo y las comisiones en su carril inferior (IVA incluido, escala propia) · <b>haz clic en un mes para ver el detalle de sus operaciones</b> · el libro completo va en Contabilidad";
+    const sub="Un mes por columna: arriba el <b>resultado del mes</b> (ganancia o pérdida %, neteando aportes y retiros — mide la gestión), al centro compras hacia arriba y ventas hacia abajo, y las comisiones en su carril inferior (IVA incluido, escala propia) · <b>haz clic en un mes para ver el detalle de sus operaciones</b> · el libro completo va en Contabilidad";
     return card("Operaciones y comisiones",sub,body);
   })();
   // los dos gráficos del consolidado van juntos: primero la rentabilidad neta y debajo el patrimonio,
   // que es la misma historia en pesos. Los fondos vienen después.
-  return greetStrip+avisoBase+hero+tiles+totalCard+mretCard+patrCard+fundsCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
+  return greetStrip+avisoBase+hero+tiles+totalCard+patrCard+fundsCard+opsCard+ipsaCard+scoreCard+`<div class="home-grid2 home-grid-news">${newsCard}${mvCard}</div>`+stkCard;
 }
 /* color por tramo del score */
 function iscCol(v){return v>=70?green:v>=55?indigo:v>=40?amber:red;}
@@ -12115,8 +12079,7 @@ function attachHome(){
   try{attachMultiHover("ipsahome");}catch(e){}
   try{attachMultiHover("homesolo");}catch(e){}   // fondo único: tooltip con la fecha y el valor de la cartera y del IPSA
   try{attachMultiHover("mgret");}catch(e){}   // rentabilidad neta en el tiempo: tooltip con fecha y % al pasar el mouse
-  try{attachOpsHover("mgops");}catch(e){}   // operaciones y comisiones: tooltip mensual + clic abre el detalle del mes
-  try{attachMretHover("mgmret");}catch(e){}   // rentabilidad por mes: tooltip con %, pesos, aportes/retiros y comisiones del mes
+  try{attachOpsHover("mgops");}catch(e){}   // operaciones y comisiones: tooltip mensual (con el resultado del mes) + clic abre el detalle
   {const _oc=document.querySelector("[data-opsdetclose]");if(_oc)_oc.onclick=()=>{homeOpsMonthSel=null;render();};}
   try{attachMultiHover("mgpat");}catch(e){}   // patrimonio total gestionado: aporte vs rentabilidad del día al pasar el mouse
   document.querySelectorAll("[data-newsretry]").forEach(b=>b.onclick=()=>{try{newsFetch(true);}catch(e){}});
