@@ -11360,9 +11360,12 @@ function svgOpsBars(o){
   // rótulo con halo del color de la tarjeta: la cifra se lee sobre cualquier barra o línea
   const lbl=(x,y,txt,col,fs,fw)=>`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="${fs||9.5}" font-weight="${fw||700}" fill="${col}" stroke="var(--card)" stroke-width="2.6" style="font-variant-numeric:tabular-nums;paint-order:stroke">${txt}</text>`;
   if(view==="resultados"){
-    // barra = ganancia/pérdida del mes (neta de aportes/retiros), % grande y pesos chicos en el extremo libre
+    // barra = ganancia/pérdida del mes (neta de aportes/retiros). El COLOR sigue al MONTO — lo que la
+    // barra dibuja — no al %: con un aporte grande a mitad de mes el TWR puede dar +% con pesos en
+    // contra (rindió por peso invertido, pero la baja llegó con más capital dentro) y una barra verde
+    // apuntando hacia abajo se leía como contradicción. La divergencia se explica en el tooltip.
     const bw=Math.max(10,Math.min(36,step*0.46));
-    mrArr.forEach((r,i)=>{if(!r)return;const col=r.pct>=0?green:red,pos=r.clp>=0;
+    mrArr.forEach((r,i)=>{if(!r)return;const col=r.clp>=0?green:red,pos=r.clp>=0;
       g+=rbar(xs[i]-bw/2,pos?z-0.6:z+0.6,yV(r.clp),col,bw,r.parcial?"0.5":null,' data-mr="1"');
       // SOLO el monto (pedido explícito): el % del mes queda como dato fino del tooltip
       if(step>=46){const yEnd=yV(r.clp);
@@ -11402,7 +11405,8 @@ function attachOpsHover(id){
     const d=g.rows[bi];
     // primero el RESULTADO del mes (si hay seguimiento): % TWR y pesos ganados/perdidos, netos de aportes/retiros
     const mr=g.mret&&g.mret[bi];
-    const resLine=mr?`<span style="display:block;color:${mr.pct>=0?green:red};font-weight:800">Resultado: ${mr.clp>=0?"+":"−"}${fmtCLP(Math.abs(mr.clp))} <span style="font-weight:600;font-size:10px;color:var(--faint)">(${pc(mr.pct,2)})</span>${mr.parcial?' <span style="font-weight:600;color:var(--faint);font-size:10px">· mes en curso</span>':""}</span>`
+    const resLine=mr?`<span style="display:block;color:${mr.clp>=0?green:red};font-weight:800">Resultado: ${mr.clp>=0?"+":"−"}${fmtCLP(Math.abs(mr.clp))} <span style="font-weight:600;font-size:10px;color:var(--faint)">(${pc(mr.pct,2)})</span>${mr.parcial?' <span style="font-weight:600;color:var(--faint);font-size:10px">· mes en curso</span>':""}</span>`
+      +((mr.clp<0)!==(mr.pct<0)&&Math.abs(mr.clp)>0.5?`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px;max-width:250px;white-space:normal">pesos y % difieren: el % (TWR) mide por peso invertido, y la parte ${mr.clp<0?"negativa":"positiva"} del mes llegó con ${mr.clp<0?"más":"menos"} capital dentro (aportes/retiros de por medio) — manda el monto</span>`:"")
       +((mr.ap||mr.re)?`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">${mr.ap?("aportes +"+fmtCLP(mr.ap)):""}${mr.ap&&mr.re?" · ":""}${mr.re?("retiros −"+fmtCLP(mr.re)):""} — neteados del resultado</span>`:"")
       :"";
     const buyLine=d.buy?`<span style="display:block;color:var(--accent);font-weight:800">Compras: ${fmtCLP(d.buy)}</span>`:"";
@@ -11755,7 +11759,7 @@ function viewHome(){
         const mName=MESL[+homeOpsMonthSel.slice(5,7)-1]+" "+homeOpsMonthSel.slice(0,4);
         const mBuy=ops.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0),mSell=ops.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0),mDiv=ops.filter(x=>x.side==="div").reduce((a,x)=>a+x.monto,0),mFee=ops.reduce((a,x)=>a+(x.fee||0),0);
         const mRes=mrAll.find(r=>r.key===homeOpsMonthSel);
-        const mResTxt=mRes?` · resultado del mes <b style="color:${mRes.pct>=0?green:red}">${mRes.clp>=0?"+":"−"}${fmtCLP(Math.abs(mRes.clp))}</b> (${pc(mRes.pct,2)})${mRes.parcial?" — en curso":""}`:"";
+        const mResTxt=mRes?` · resultado del mes <b style="color:${mRes.clp>=0?green:red}">${mRes.clp>=0?"+":"−"}${fmtCLP(Math.abs(mRes.clp))}</b> (${pc(mRes.pct,2)})${mRes.parcial?" — en curso":""}`:"";
         const tag=x=>x.side==="sell"?`<span class="badge neg">Venta</span>`:x.side==="div"?`<span class="badge pos" style="color:${green}">Dividendo</span>`:`<span class="badge pos">Compra</span>`;
         const rows=ops.sort((a,b)=>a.date<b.date?-1:1).map(x=>`<tr><td>${fD(x.date)}</td><td>${tag(x)}</td><td><b>${x.t}</b></td><td style="color:var(--faint)">${(""+(x.proj||"")).replace(/</g,"&lt;")}</td><td class="r">${x.side==="div"?"—":(+x.shares).toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${x.side==="div"?"—":fmtP(x.price)}</td><td class="r" style="font-weight:700">${fmtCLP(x.monto)}</td><td class="r" style="color:${OPS_FEE_COL}">${x.fee?("−"+fmtCLP(x.fee)):"—"}</td></tr>`).join("");
         detail=`<div style="margin-top:13px;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--card2)">
