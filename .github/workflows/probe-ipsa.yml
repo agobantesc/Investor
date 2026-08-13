@@ -1,0 +1,18 @@
+# Sonda de fuentes del IPSA: se lanza a mano (workflow_dispatch), imprime el diagnóstico en el log
+# y NO escribe nada en el repo. Sirve para decidir con evidencia qué fuente promover al bot de cierres.
+name: probe-ipsa
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Sondear fuentes del IPSA
+        env:
+          TWELVEDATA_KEY: ${{ secrets.TWELVEDATA_KEY }}
+        run: node automation/probe-ipsa.mjs
