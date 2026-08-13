@@ -92,6 +92,45 @@ async function twelveData(symbol) {
   return out;
 }
 
+/* WSJ/MarketWatch "michelangelo": el API de charting que usan sus propias páginas, con token público
+   (distinto del CSV downloaddatapartial que responde 401). Serie del S&P/CLX IPSA. */
+async function michelangelo(key) {
+  const ET = "cecc4267a0194af89ca343805a3e57af";
+  const body = { Step: "P1D", TimeFrame: "P1Y", EntitlementToken: ET, IncludeMockTick: false, FilterNullSlots: false, FilterClosedPoints: true, IncludeClosedSlots: false, IncludeOfficialClose: true, InjectOpen: false, ShowPreMarket: false, ShowAfterHours: false, UseExtendedTimeFrame: true, WantPriorClose: false, IncludeCurrentQuotes: false, ResetTodaysAfterHoursPercentChange: false, Series: [{ Key: key, Dialect: "Charting", Kind: "Ticker", SeriesId: "s1", DataTypes: ["Last"] }] };
+  const url = `https://api.wsj.net/api/michelangelo/timeseries/history?json=${encodeURIComponent(JSON.stringify(body))}&ckey=${ET.slice(0, 10)}`;
+  const res = await fetch(url, { headers: { "User-Agent": BUA, Accept: "application/json, text/plain, */*", "Dylan2010.EntitlementToken": ET, Origin: "https://www.marketwatch.com", Referer: "https://www.marketwatch.com/" } });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  const ticks = j?.TimeInfo?.Ticks || [], pts = j?.Series?.[0]?.DataPoints || [];
+  const out = {};
+  ticks.forEach((t, i) => {
+    const v = pts[i] && +pts[i][0];
+    if (!isFinite(v) || v <= 0) return;
+    out[new Date(+t).toLocaleDateString("en-CA", { timeZone: "America/Santiago" })] = +v.toFixed(2);
+  });
+  if (!Object.keys(out).length) throw new Error("sin puntos (" + JSON.stringify(j).slice(0, 120) + ")");
+  return out;
+}
+/* investing.com moderno: /api/financialdata/historical (distinto del tvc que responde 403). pair 40802 = S&P/CLX IPSA */
+async function investingHist() {
+  const hoy = new Date(), d1 = new Date(Date.now() - 365 * 86400e3);
+  const f = x => x.toISOString().slice(0, 10);
+  const url = `https://api.investing.com/api/financialdata/historical/40802?start-date=${f(d1)}&end-date=${f(hoy)}&time-frame=Daily&add-missing-rows=false`;
+  const res = await fetch(url, { headers: { "User-Agent": BUA, Accept: "application/json", "domain-id": "www", Origin: "https://www.investing.com", Referer: "https://www.investing.com/" } });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  const rows = j && j.data;
+  if (!Array.isArray(rows) || !rows.length) throw new Error("sin filas (" + JSON.stringify(j).slice(0, 120) + ")");
+  const out = {};
+  for (const r of rows) {
+    const t = +r.rowDateTimestamp || +r.rowDate || 0;
+    const c = +(("" + (r.last_close ?? r.last_closeRaw ?? "")).replace(/,/g, ""));
+    if (!t || !isFinite(c) || c <= 0) continue;
+    out[new Date(t < 2e10 ? t * 1000 : t).toLocaleDateString("en-CA", { timeZone: "America/Santiago" })] = +c.toFixed(2);
+  }
+  if (!Object.keys(out).length) throw new Error("filas sin cierre");
+  return out;
+}
 /* la base actual (con su IPSA sintético) para el careo */
 let synth = {};
 try {
@@ -129,14 +168,11 @@ function analiza(tag, map) {
 }
 
 const CANDIDATOS = [
-  ["chart SPCLXIPSA.SN 1y", () => chart("SPCLXIPSA.SN", "1y")],
-  ["chart ^SPCLXIPSA 1y", () => chart("^SPCLXIPSA", "1y")],
-  ["chart IPSA.SN 1y", () => chart("IPSA.SN", "1y")],
+  ["wsj/mw michelangelo INDEX/CL/XSGO/IPSA", () => michelangelo("INDEX/CL/XSGO/IPSA")],
+  ["wsj/mw michelangelo INDEX/CL/IPSA", () => michelangelo("INDEX/CL/IPSA")],
+  ["investing financialdata 40802", investingHist],
   ["chart ^IPSA 1y (línea base)", () => chart("^IPSA", "1y")],
-  ["quote v7 SPCLXIPSA.SN", () => quoteV7("SPCLXIPSA.SN")],
   ["quote v7 ^IPSA (línea base)", () => quoteV7("^IPSA")],
-  ["download v7 SPCLXIPSA.SN 1y", () => download("SPCLXIPSA.SN")],
-  ["download v7 ^IPSA 1y", () => download("^IPSA")],
   ["twelvedata IPSA", () => twelveData("IPSA")],
   ["twelvedata SPCLXIPSA", () => twelveData("SPCLXIPSA")],
 ];
