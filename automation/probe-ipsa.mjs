@@ -102,11 +102,19 @@ async function michelangelo(key) {
   if (!res.ok) throw new Error("HTTP " + res.status);
   const j = await res.json();
   const ticks = j?.TimeInfo?.Ticks || [], pts = j?.Series?.[0]?.DataPoints || [];
+  // DIAGNÓSTICO de zona horaria: ticks crudos de los últimos puntos, en ISO y con día de semana
+  const DOW = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+  const raw = [];
+  for (let i = Math.max(0, ticks.length - 6); i < ticks.length; i++) {
+    const dt = new Date(+ticks[i]);
+    raw.push(`${dt.toISOString()} (${DOW[dt.getUTCDay()]} UTC · stgo ${dt.toLocaleDateString("en-CA", { timeZone: "America/Santiago" })} ${DOW[+dt.toLocaleDateString("en-CA", { timeZone: "America/Santiago" }).slice(8, 10) ? new Date(dt.toLocaleDateString("en-CA", { timeZone: "America/Santiago" }) + "T12:00:00Z").getUTCDay() : 0]}) v=${pts[i] && pts[i][0]}`);
+  }
+  console.log("    ticks crudos: " + raw.join(" | "));
   const out = {};
   ticks.forEach((t, i) => {
     const v = pts[i] && +pts[i][0];
     if (!isFinite(v) || v <= 0) return;
-    out[new Date(+t).toLocaleDateString("en-CA", { timeZone: "America/Santiago" })] = +v.toFixed(2);
+    out[new Date(+t).toISOString().slice(0, 10)] = +v.toFixed(2);   // fecha en UTC (el careo dirá si calza)
   });
   if (!Object.keys(out).length) throw new Error("sin puntos (" + JSON.stringify(j).slice(0, 120) + ")");
   return out;
