@@ -254,6 +254,34 @@ async function ipsaFromYahooQuote() {
   }
   throw new Error(last || "v7 quote sin ^IPSA");
 }
+/* S&P/CLX IPSA vía el API de charting de WSJ/MarketWatch ("michelangelo", token público) — la ÚNICA
+   fuente del índice que hoy entrega serie diaria completa y al día desde el runner (sonda probe-ipsa:
+   248 días sin congelar, correlación 0,988 con la canasta). OJO: viene en OTRA BASE (~mitad del ^IPSA
+   de Yahoo, índice precio vs total-return) — NUNCA se pega el nivel crudo: sus RETORNOS oficiales se
+   re-escalan al ancla real de la base en la reconstrucción (abajo). Ticks = medianoche UTC del día
+   bursátil, por eso la fecha se toma en UTC (convertida a Santiago aparecían domingos). */
+async function ipsaMichelangeloSP() {
+  const ET = "cecc4267a0194af89ca343805a3e57af";
+  const body = { Step: "P1D", TimeFrame: "P2Y", EntitlementToken: ET, IncludeMockTick: false, FilterNullSlots: false, FilterClosedPoints: true, IncludeClosedSlots: false, IncludeOfficialClose: true, InjectOpen: false, ShowPreMarket: false, ShowAfterHours: false, UseExtendedTimeFrame: true, WantPriorClose: false, IncludeCurrentQuotes: false, ResetTodaysAfterHoursPercentChange: false, Series: [{ Key: "INDEX/CL/XSGO/IPSA", Dialect: "Charting", Kind: "Ticker", SeriesId: "s1", DataTypes: ["Last"] }] };
+  const url = `https://api.wsj.net/api/michelangelo/timeseries/history?json=${encodeURIComponent(JSON.stringify(body))}&ckey=${ET.slice(0, 10)}`;
+  const res = await fetch(url, { headers: { "User-Agent": BUA, Accept: "application/json, text/plain, */*", "Dylan2010.EntitlementToken": ET, Origin: "https://www.marketwatch.com", Referer: "https://www.marketwatch.com/" } });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const j = await res.json();
+  const ticks = j?.TimeInfo?.Ticks || [], pts = j?.Series?.[0]?.DataPoints || [];
+  const out = {};
+  ticks.forEach((t, i) => {
+    const v = pts[i] && +pts[i][0];
+    if (!isFinite(v) || v <= 0) return;
+    out[new Date(+t).toISOString().slice(0, 10)] = +v.toFixed(2);
+  });
+  const dts = Object.keys(out).sort();
+  if (dts.length < 30) throw new Error("serie corta (" + dts.length + " días)");
+  // guardas de cordura: sin fines de semana (mapeo de fecha correcto) y sin saltos absurdos (otro instrumento)
+  const finde = dts.filter(d => [0, 6].includes(new Date(d + "T12:00:00Z").getUTCDay()));
+  if (finde.length > dts.length * 0.02) throw new Error("fechas corridas (" + finde.length + " caen en fin de semana)");
+  for (let i = 1; i < dts.length; i++) { const r = out[dts[i]] / out[dts[i - 1]] - 1; if (Math.abs(r) > 0.15) throw new Error(`salto absurdo ${dts[i - 1]}→${dts[i]} (${(r * 100).toFixed(1)}%)`); }
+  return out;
+}
 const IPSA_SOURCES = [
   ["yahoo quote ^IPSA", ipsaFromYahooQuote],
   ["yahoo ^IPSA hoy", () => chart(IPSA_SYMBOL)],
@@ -280,6 +308,10 @@ const ipsaSources = [];
   console.log(`IPSA: ${nIpsa} día(s). Fuentes → ${ipsaSources.join(" · ")}`);
   if (nIpsa < 10) errors.push("IPSA histórico incompleto (" + nIpsa + " día/s) — " + ipsaSources.join(" · "));
 }
+// serie oficial S&P/CLX IPSA (otra base): alimenta la RECONSTRUCCIÓN con retornos oficiales, no entra cruda
+let SP_IPSA = {};
+try { SP_IPSA = await ipsaMichelangeloSP(); const k = Object.keys(SP_IPSA).sort(); ipsaSources.push(`michelangelo S&P (retornos): ${k.length} día(s) hasta ${k[k.length - 1]}`); console.log(`IPSA S&P (michelangelo): ${k.length} día(s), ${k[0]} → ${k[k.length - 1]} — retornos oficiales para la reconstrucción.`); }
+catch (e) { ipsaSources.push("michelangelo S&P: " + String((e && e.message) || e).slice(0, 120)); console.log("IPSA S&P (michelangelo): falló — la reconstrucción usará la canasta de acciones. " + String((e && e.message) || e).slice(0, 120)); }
 
 for (const [tick, sym] of Object.entries(TICKERS)) {
   try {
@@ -546,11 +578,25 @@ try {
   let caps = {};
   try { const fj = JSON.parse(readFileSync("data/fundamentals.json", "utf8")); for (const [t, f] of Object.entries(fj.byTicker || {})) if (f && +f.mcap > 0) caps[t] = +f.mcap; } catch (e) {}
   const capOf = t => caps[t] > 0 ? caps[t] : 1;   // sin capitalización conocida: peso neutro (equivale a igual ponderación)
-  let anchorIpsa = null, anchorPx = null;         // último día con IPSA (real o sintético) y sus precios
+  // PRIORIDAD del relleno: 1º el RETORNO OFICIAL del S&P/CLX IPSA (michelangelo) re-escalado al ancla —
+  // el índice de verdad, con sus ponderaciones y su free-float — y 2º la canasta cap-ponderada de las
+  // acciones (estimación, como hasta ahora) cuando la serie oficial no cubre el paso.
+  let anchorIpsa = null, anchorPx = null, anchorDate = null;   // último día con IPSA (real o reconstruido)
+  let nOfi = 0;
   for (const d of days) {                          // days ya viene ordenado ascendente
     const px = d.prices || {};
-    if (d.ipsa != null && d.ipsa > 0) { if (Object.keys(px).length >= 5) { anchorIpsa = d.ipsa; anchorPx = px; } continue; }   // día con IPSA real → re-ancla SOLO si trae precios propios (un IPSA sin precios no sirve de base de retorno; con base vacía el 22-07-2026 quedó sin reconstruir)
-    if (anchorIpsa == null || !anchorPx) continue;
+    if (d.ipsa != null && d.ipsa > 0) { if (Object.keys(px).length >= 5 || SP_IPSA[d.date] > 0) { anchorIpsa = d.ipsa; anchorPx = px; anchorDate = d.date; } continue; }   // día con IPSA real → re-ancla si trae precios propios O cobertura oficial (base de retorno disponible)
+    if (anchorIpsa == null) continue;
+    if (SP_IPSA[d.date] > 0 && anchorDate && SP_IPSA[anchorDate] > 0) {
+      const ret = SP_IPSA[d.date] / SP_IPSA[anchorDate] - 1;
+      d.ipsa = +(anchorIpsa * (1 + ret)).toFixed(2);
+      d.ipsaSynth = true;                           // el NIVEL sigue anclado (la fuente viene en otra base): sello honesto
+      nOfi++;
+      ipsaSynth.push(`${d.date}=${d.ipsa} (S&P oficial ${(ret * 100).toFixed(2)}%)`);
+      anchorIpsa = d.ipsa; anchorPx = Object.keys(px).length >= 5 ? px : anchorPx; anchorDate = d.date;
+      continue;
+    }
+    if (!anchorPx) continue;
     const common = Object.keys(px).filter(t => anchorPx[t] > 0 && px[t] > 0);
     if (common.length < 8) continue;               // muy pocas acciones comunes: no estimar (evita ruido)
     let wsum = 0, rsum = 0;
@@ -560,8 +606,9 @@ try {
     d.ipsa = +(anchorIpsa * (1 + ret)).toFixed(2);
     d.ipsaSynth = true;                             // sello para la app/diagnóstico
     ipsaSynth.push(`${d.date}=${d.ipsa} (${common.length} acc, ${(ret * 100).toFixed(2)}%)`);
-    anchorIpsa = d.ipsa; anchorPx = px;             // encadena desde este día
+    anchorIpsa = d.ipsa; anchorPx = px; anchorDate = d.date;   // encadena desde este día
   }
+  if (nOfi) console.log(`IPSA reconstruido con RETORNO OFICIAL S&P/CLX (michelangelo): ${nOfi} día(s); la canasta de acciones quedó solo de respaldo.`);
   // ── HACIA ATRÁS: mismo encadenamiento, en reversa desde el PRIMER día con índice ──
   //   Las fuentes del IPSA solo entregan el valor del día (su historia está bloqueada), así que el archivo
   //   tenía índice únicamente desde la primera corrida. Sin historia del índice NO se puede construir el
@@ -576,6 +623,13 @@ try {
       const cur = days[i].prices || {}, nxt = days[i + 1].prices || {};
       const ipNext = days[i + 1].ipsa;
       if (!(ipNext > 0)) continue;
+      // también hacia atrás manda el retorno OFICIAL del tramo cuando la serie S&P cubre ambas fechas
+      if (SP_IPSA[days[i].date] > 0 && SP_IPSA[days[i + 1].date] > 0) {
+        days[i].ipsa = +(ipNext * SP_IPSA[days[i].date] / SP_IPSA[days[i + 1].date]).toFixed(2);
+        days[i].ipsaSynth = true;
+        nBack++;
+        continue;
+      }
       const common = Object.keys(cur).filter(t => nxt[t] > 0 && cur[t] > 0);
       if (common.length < 8) continue;
       let wsum = 0, rsum = 0;
