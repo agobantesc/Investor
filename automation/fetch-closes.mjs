@@ -593,7 +593,9 @@ try {
     if (SP_IPSA[d.date] > 0 && anchorDate && SP_IPSA[anchorDate] > 0) {
       const ret = SP_IPSA[d.date] / SP_IPSA[anchorDate] - 1;
       d.ipsa = +(anchorIpsa * (1 + ret)).toFixed(2);
-      d.ipsaSynth = true;                           // el NIVEL sigue anclado (la fuente viene en otra base): sello honesto
+      // SIN sello ipsaSynth: el movimiento del día es el CIERRE OFICIAL del índice (solo el nivel viene
+      // reescalado a la base de la casa) — "estimado" era la canasta, y esto ya no es una estimación
+      delete d.ipsaSynth;
       nOfi++;
       ipsaSynth.push(`${d.date}=${d.ipsa} (S&P oficial ${(ret * 100).toFixed(2)}%)`);
       anchorIpsa = d.ipsa; anchorPx = Object.keys(px).length >= 5 ? px : anchorPx; anchorDate = d.date;
@@ -630,7 +632,7 @@ try {
       // (con la misma guarda de días basura: casi sin precios de acciones, no se rellena)
       if (Object.keys(cur).length >= 8 && SP_IPSA[days[i].date] > 0 && SP_IPSA[days[i + 1].date] > 0) {
         days[i].ipsa = +(ipNext * SP_IPSA[days[i].date] / SP_IPSA[days[i + 1].date]).toFixed(2);
-        days[i].ipsaSynth = true;
+        delete days[i].ipsaSynth;   // retorno oficial del índice: no es estimación (ver el pase hacia adelante)
         nBack++;
         continue;
       }
