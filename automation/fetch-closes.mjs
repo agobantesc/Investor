@@ -587,6 +587,9 @@ try {
     const px = d.prices || {};
     if (d.ipsa != null && d.ipsa > 0) { if (Object.keys(px).length >= 5 || SP_IPSA[d.date] > 0) { anchorIpsa = d.ipsa; anchorPx = px; anchorDate = d.date; } continue; }   // día con IPSA real → re-ancla si trae precios propios O cobertura oficial (base de retorno disponible)
     if (anchorIpsa == null) continue;
+    // la MISMA guarda que la canasta: un día casi sin precios de acciones (día basura del feed) no se
+    // rellena — un punto "solo índice" obliga a puentear la cartera y mete ruido en cada ventana
+    if (Object.keys(px).length < 8) continue;
     if (SP_IPSA[d.date] > 0 && anchorDate && SP_IPSA[anchorDate] > 0) {
       const ret = SP_IPSA[d.date] / SP_IPSA[anchorDate] - 1;
       d.ipsa = +(anchorIpsa * (1 + ret)).toFixed(2);
@@ -624,7 +627,8 @@ try {
       const ipNext = days[i + 1].ipsa;
       if (!(ipNext > 0)) continue;
       // también hacia atrás manda el retorno OFICIAL del tramo cuando la serie S&P cubre ambas fechas
-      if (SP_IPSA[days[i].date] > 0 && SP_IPSA[days[i + 1].date] > 0) {
+      // (con la misma guarda de días basura: casi sin precios de acciones, no se rellena)
+      if (Object.keys(cur).length >= 8 && SP_IPSA[days[i].date] > 0 && SP_IPSA[days[i + 1].date] > 0) {
         days[i].ipsa = +(ipNext * SP_IPSA[days[i].date] / SP_IPSA[days[i + 1].date]).toFixed(2);
         days[i].ipsaSynth = true;
         nBack++;
