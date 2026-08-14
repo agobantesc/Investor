@@ -11887,7 +11887,10 @@ function cartaRecoData(){
     const f=(typeof fundGet==="function"&&fundGet(r.t))||{};
     let per=null;try{per=stkPeriodReturns(r.t);}catch(e){}
     const px=(r.ivPx!=null&&r.ivPx>0)?r.ivPx:((f.px>0)?Math.round(f.px):null);
-    const val=r.intrinsic,mos=(r.ivMos!=null)?r.ivMos/100:null;
+    // el margen se calcula SIEMPRE del par precio/valor que la carta exhibe (el ivMos del score puede
+    // venir del precio de la foto de fundamentos, y con ~1% de diferencia el motivo no cuadraba con
+    // las cifras mostradas); ivMos queda solo de respaldo cuando falta alguno de los dos
+    const val=r.intrinsic,mos=(px>0&&val>0)?(1-px/val):((r.ivMos!=null)?r.ivMos/100:null);
     // fiabilidad con el MISMO criterio que usa el agente (valorizacionJSON): sin triangulación o con las
     // anclas cercanas a la mediana discrepando, la valorización es una referencia gruesa.
     const fiab=(val==null)?null:((r.ivN<2||r.ivDisp>0.6)?"baja":(r.ivDisp>0.35?"media":"alta"));
