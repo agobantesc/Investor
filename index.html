@@ -11405,7 +11405,11 @@ function attachOpsHover(id){
     const d=g.rows[bi];
     // primero el RESULTADO del mes (si hay seguimiento): % TWR y pesos ganados/perdidos, netos de aportes/retiros
     const mr=g.mret&&g.mret[bi];
-    const resLine=mr?`<span style="display:block;color:${mr.clp>=0?green:red};font-weight:800">Resultado: ${mr.clp>=0?"+":"−"}${fmtCLP(Math.abs(mr.clp))} <span style="font-weight:600;font-size:10px;color:var(--faint)">(${pc(mr.pct,2)})</span>${mr.parcial?' <span style="font-weight:600;color:var(--faint);font-size:10px">· mes en curso</span>':""}</span>`
+    // la cuenta se lee completa y CIERRA con las mismas cifras del tooltip: resultado ANTES de
+    // comisiones − las comisiones del mes (d.fee, la misma línea "Comisiones" de abajo) = neto
+    const _neto=mr?(mr.clp-(d.fee||0)):null;
+    const resLine=mr?`<span style="display:block;color:${mr.clp>=0?green:red};font-weight:800">Resultado: ${mr.clp>=0?"+":"−"}${fmtCLP(Math.abs(mr.clp))} <span style="font-weight:600;font-size:10px;color:var(--faint)">(${pc(mr.pct,2)} · antes de comisiones)</span>${mr.parcial?' <span style="font-weight:600;color:var(--faint);font-size:10px">· mes en curso</span>':""}</span>`
+      +(d.fee?`<span style="display:block;color:${_neto>=0?green:red};font-weight:700;font-size:10.5px">Neto del mes (menos comisiones): ${_neto>=0?"+":"−"}${fmtCLP(Math.abs(_neto))}</span>`:"")
       +((mr.clp<0)!==(mr.pct<0)&&Math.abs(mr.clp)>0.5?`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px;max-width:250px;white-space:normal">pesos y % difieren: el % (TWR) mide por peso invertido, y la parte ${mr.clp<0?"negativa":"positiva"} del mes llegó con ${mr.clp<0?"más":"menos"} capital dentro (aportes/retiros de por medio) — manda el monto</span>`:"")
       +((mr.ap||mr.re)?`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">${mr.ap?("aportes +"+fmtCLP(mr.ap)):""}${mr.ap&&mr.re?" · ":""}${mr.re?("retiros −"+fmtCLP(mr.re)):""} — neteados del resultado</span>`:"")
       :"";
@@ -11746,7 +11750,7 @@ function viewHome(){
       +stat("Rescatado",(os.tSell+os.tDiv)?fmtCLP(os.tSell+os.tDiv):"—",(os.tSell+os.tDiv)?ink:muted,"ventas + dividendos")
       +stat("Neto invertido",fmtCLP(os.tBuy-os.tSell-os.tDiv),indigo,"comprado − rescatado")
       +stat("Comisiones","−"+fmtCLP(os.tFee),OPS_FEE_COL,feePct!=null?("costo medio "+feePct.toLocaleString("es-CL",{minimumFractionDigits:2,maximumFractionDigits:2})+"%"+(feePct>1?" ⚠":"")):"IVA incluido")
-      +(mrAcum!=null?stat("Resultado",(mrClp>=0?"+":"−")+fmtCLP(Math.abs(mrClp)),mrClp>=0?green:red,pc(mrAcum,2)+" acumulado (TWR) en "+mrAll.length+" mes"+(mrAll.length===1?"":"es")+" · sin aportes ni retiros"):"")
+      +(mrAcum!=null?stat("Resultado",(mrClp>=0?"+":"−")+fmtCLP(Math.abs(mrClp)),mrClp>=0?green:red,pc(mrAcum,2)+" acumulado (TWR) en "+mrAll.length+" mes"+(mrAll.length===1?"":"es")+" · sin aportes ni retiros · antes de comisiones"):"")
       +`</div>`;
     const caption=`neto acumulado <b style="color:${indigo}">${fmtCLP(os.tBuy-os.tSell-os.tDiv)}</b> invertido${os.tDiv?` · dividendos <b style="color:${green}">+${fmtCLP(os.tDiv)}</b>`:""} · comisiones <b style="color:${OPS_FEE_COL}">−${fmtCLP(os.tFee)}</b>`;
     // DETALLE DEL MES seleccionado (clic en una columna): cada operación con fecha, tipo, monto y comisión
@@ -11759,7 +11763,7 @@ function viewHome(){
         const mName=MESL[+homeOpsMonthSel.slice(5,7)-1]+" "+homeOpsMonthSel.slice(0,4);
         const mBuy=ops.filter(x=>x.side==="buy").reduce((a,x)=>a+x.monto,0),mSell=ops.filter(x=>x.side==="sell").reduce((a,x)=>a+x.monto,0),mDiv=ops.filter(x=>x.side==="div").reduce((a,x)=>a+x.monto,0),mFee=ops.reduce((a,x)=>a+(x.fee||0),0);
         const mRes=mrAll.find(r=>r.key===homeOpsMonthSel);
-        const mResTxt=mRes?` · resultado del mes <b style="color:${mRes.clp>=0?green:red}">${mRes.clp>=0?"+":"−"}${fmtCLP(Math.abs(mRes.clp))}</b> (${pc(mRes.pct,2)})${mRes.parcial?" — en curso":""}`:"";
+        const mResTxt=mRes?` · resultado del mes <b style="color:${mRes.clp>=0?green:red}">${mRes.clp>=0?"+":"−"}${fmtCLP(Math.abs(mRes.clp))}</b> (${pc(mRes.pct,2)}, antes de comisiones)${mRes.parcial?" — en curso":""}`:"";
         const tag=x=>x.side==="sell"?`<span class="badge neg">Venta</span>`:x.side==="div"?`<span class="badge pos" style="color:${green}">Dividendo</span>`:`<span class="badge pos">Compra</span>`;
         const rows=ops.sort((a,b)=>a.date<b.date?-1:1).map(x=>`<tr><td>${fD(x.date)}</td><td>${tag(x)}</td><td><b>${x.t}</b></td><td style="color:var(--faint)">${(""+(x.proj||"")).replace(/</g,"&lt;")}</td><td class="r">${x.side==="div"?"—":(+x.shares).toLocaleString("es-CL",{maximumFractionDigits:2})}</td><td class="r">${x.side==="div"?"—":fmtP(x.price)}</td><td class="r" style="font-weight:700">${fmtCLP(x.monto)}</td><td class="r" style="color:${OPS_FEE_COL}">${x.fee?("−"+fmtCLP(x.fee)):"—"}</td></tr>`).join("");
         detail=`<div style="margin-top:13px;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--card2)">
@@ -11776,7 +11780,7 @@ function viewHome(){
         <div class="genl" style="margin:0;text-align:right">${caption}</div></div>${detail}</div>`;
     const _vTT={resultados:"Ganancia o pérdida de cada mes, neteando aportes y retiros (mide la gestión)",operaciones:"Compras hacia arriba, ventas y dividendos hacia abajo",comisiones:"Lo pagado en comisiones cada mes (IVA incluido)"};
     const viewSeg=`<div class="home-hdacts"><div class="home-seg" role="group" aria-label="Qué mostrar">${[["resultados","Resultados"],["operaciones","Operaciones"],["comisiones","Comisiones"]].map(([k,l])=>`<button data-opsview="${k}" class="${_view===k?"on":""}" title="${_vTT[k]}"${k==="resultados"&&!mrAll.length?" disabled":""}>${l}</button>`).join("")}</div></div>`;
-    const sub="Elige qué ver con el filtro: el <b>resultado</b> de cada mes (ganancia o pérdida en pesos, neteando aportes y retiros), las <b>operaciones</b> (compras, ventas y dividendos) o las <b>comisiones</b> pagadas · un mes por columna, mismas columnas en las tres vistas · <b>haz clic en un mes para el detalle de sus operaciones</b> · el tooltip trae todas las cifras del mes · el libro completo va en Contabilidad";
+    const sub="Elige qué ver con el filtro: el <b>resultado</b> de cada mes (ganancia o pérdida en pesos, neteando aportes y retiros, <b>antes de comisiones</b> — el neto va en el tooltip), las <b>operaciones</b> (compras, ventas y dividendos) o las <b>comisiones</b> pagadas · un mes por columna, mismas columnas en las tres vistas · <b>haz clic en un mes para el detalle de sus operaciones</b> · el libro completo va en Contabilidad";
     return card("Resultados, operaciones y comisiones",sub,body,viewSeg);
   })();
   // los dos gráficos del consolidado van juntos: primero la rentabilidad neta y debajo el patrimonio,
