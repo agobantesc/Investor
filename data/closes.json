@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-14T00:05:01.028Z",
+ "updatedAt": "2026-08-14T00:17:20.153Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -7,21 +7,19 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=allorigins/raw: respuesta inesperada (<! | allorigins/get=al",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor",
   "yahoo ^IPSA period: 0 día(s)",
   "michelangelo S&P (retornos): 495 día(s) hasta 2026-08-13"
  ],
  "ipsaSynth": [
   "2026-07-21=10954.03 (S&P oficial 0.61%)",
   "2026-07-23=10916.59 (S&P oficial -0.34%)",
-  "2026-07-24=10950.74 (S&P oficial 0.31%)",
-  "2026-07-27=10962.63 (S&P oficial 0.11%)",
+  "2026-07-27=10962.63 (S&P oficial 0.42%)",
   "2026-07-28=10879.65 (S&P oficial -0.76%)",
   "2026-07-29=10935.89 (S&P oficial 0.52%)",
   "2026-07-30=11030.67 (S&P oficial 0.87%)",
   "2026-07-31=11016.85 (S&P oficial -0.13%)",
-  "2026-08-03=11049.59 (S&P oficial 0.30%)",
-  "2026-08-04=10996.46 (S&P oficial -0.48%)",
+  "2026-08-04=10996.46 (S&P oficial -0.19%)",
   "2026-08-05=11157.68 (S&P oficial 1.47%)",
   "2026-08-06=11275.15 (S&P oficial 1.05%)",
   "2026-08-07=11256.27 (S&P oficial -0.17%)",
@@ -37,11 +35,11 @@
   "getPointHistGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "getPointIntradayGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
-  "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
+  "/api/RV_ResumenMercado/getResumenAccionesPrecios: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> "
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=allorigins/raw: respuesta inesperada (<! | allorigins/get=al · yahoo ^IPSA period: 0 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 0 día(s)"
  ],
  "days": [
   {
@@ -17677,9 +17675,7 @@
    "date": "2026-07-24",
    "prices": {
     "SONDA": 301.81
-   },
-   "ipsa": 10950.74,
-   "ipsaSynth": true
+   }
   },
   {
    "date": "2026-07-27",
@@ -17859,9 +17855,7 @@
    "date": "2026-08-03",
    "prices": {
     "SONDA": 301.81
-   },
-   "ipsa": 11049.59,
-   "ipsaSynth": true
+   }
   },
   {
    "date": "2026-08-04",
