@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-17T22:31:23.269Z",
+ "updatedAt": "2026-08-18T01:57:32.285Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -7,12 +7,11 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=allorigins/raw: respuesta inesperada (<! | allorigins/get=al",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor",
   "yahoo ^IPSA period: 0 día(s)",
   "michelangelo S&P (retornos): 495 día(s) hasta 2026-08-17"
  ],
  "ipsaSynth": [
-  "2026-08-17=11148.11 (S&P oficial 0.95%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
@@ -25,7 +24,7 @@
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=allorigins/raw: respuesta inesperada (<! | allorigins/get=al · yahoo ^IPSA period: 0 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 0 día(s)"
  ],
  "days": [
   {
@@ -60,7 +59,7 @@
     "ITAUCL": 10495,
     "CAP": 6128
    },
-   "ipsa": 6925.81,
+   "ipsa": 6925.46,
    "ipsaSynth": true
   },
   {
@@ -95,7 +94,7 @@
     "ITAUCL": 10550,
     "CAP": 6249
    },
-   "ipsa": 6929.52,
+   "ipsa": 6929.21,
    "ipsaSynth": true
   },
   {
@@ -130,7 +129,7 @@
     "ITAUCL": 10628,
     "CAP": 6125
    },
-   "ipsa": 6888.67,
+   "ipsa": 6888.09,
    "ipsaSynth": true
   },
   {
@@ -165,7 +164,7 @@
     "ITAUCL": 10700,
     "CAP": 6137
    },
-   "ipsa": 6925.37,
+   "ipsa": 6924.81,
    "ipsaSynth": true
   },
   {
@@ -200,7 +199,7 @@
     "ITAUCL": 10670,
     "CAP": 6090
    },
-   "ipsa": 6885.18,
+   "ipsa": 6884.5,
    "ipsaSynth": true
   },
   {
@@ -235,7 +234,7 @@
     "ITAUCL": 10640,
     "CAP": 5996
    },
-   "ipsa": 6877.83,
+   "ipsa": 6877.18,
    "ipsaSynth": true
   },
   {
@@ -270,7 +269,7 @@
     "ITAUCL": 10700,
     "CAP": 5996
    },
-   "ipsa": 6957.95,
+   "ipsa": 6957.37,
    "ipsaSynth": true
   },
   {
@@ -305,7 +304,7 @@
     "ITAUCL": 10629,
     "CAP": 5881
    },
-   "ipsa": 6976.17,
+   "ipsa": 6975.67,
    "ipsaSynth": true
   },
   {
@@ -340,7 +339,7 @@
     "ITAUCL": 10640,
     "CAP": 5936.5
    },
-   "ipsa": 7000.72,
+   "ipsa": 7000.23,
    "ipsaSynth": true
   },
   {
@@ -375,7 +374,7 @@
     "ITAUCL": 10600,
     "CAP": 5849.9
    },
-   "ipsa": 7014.08,
+   "ipsa": 7013.72,
    "ipsaSynth": true
   },
   {
@@ -410,7 +409,7 @@
     "ITAUCL": 10898,
     "CAP": 5799
    },
-   "ipsa": 7043.6,
+   "ipsa": 7043.19,
    "ipsaSynth": true
   },
   {
@@ -445,7 +444,7 @@
     "ITAUCL": 10770,
     "CAP": 5833.4
    },
-   "ipsa": 7020.07,
+   "ipsa": 7019.81,
    "ipsaSynth": true
   },
   {
@@ -480,7 +479,7 @@
     "ITAUCL": 10898,
     "CAP": 5750
    },
-   "ipsa": 7061.02,
+   "ipsa": 7060.68,
    "ipsaSynth": true
   },
   {
@@ -515,7 +514,7 @@
     "ITAUCL": 10759,
     "CAP": 5580
    },
-   "ipsa": 7021.51,
+   "ipsa": 7021.23,
    "ipsaSynth": true
   },
   {
@@ -550,7 +549,7 @@
     "ITAUCL": 10737,
     "CAP": 5500
    },
-   "ipsa": 6980.06,
+   "ipsa": 6979.86,
    "ipsaSynth": true
   },
   {
@@ -585,7 +584,7 @@
     "ITAUCL": 10523,
     "CAP": 5300
    },
-   "ipsa": 6892.18,
+   "ipsa": 6892.22,
    "ipsaSynth": true
   },
   {
@@ -620,7 +619,7 @@
     "ITAUCL": 10496,
     "CAP": 5471.6
    },
-   "ipsa": 6878.82,
+   "ipsa": 6878.94,
    "ipsaSynth": true
   },
   {
@@ -655,7 +654,7 @@
     "ITAUCL": 10550,
     "CAP": 5499
    },
-   "ipsa": 6938.05,
+   "ipsa": 6938.08,
    "ipsaSynth": true
   },
   {
@@ -690,7 +689,7 @@
     "ITAUCL": 10554,
     "CAP": 5300
    },
-   "ipsa": 6918.32,
+   "ipsa": 6918.35,
    "ipsaSynth": true
   },
   {
@@ -725,7 +724,7 @@
     "ITAUCL": 10511,
     "CAP": 5310
    },
-   "ipsa": 6897.69,
+   "ipsa": 6897.77,
    "ipsaSynth": true
   },
   {
@@ -760,7 +759,7 @@
     "ITAUCL": 10460,
     "CAP": 5250
    },
-   "ipsa": 6882.9,
+   "ipsa": 6882.87,
    "ipsaSynth": true
   },
   {
@@ -795,7 +794,7 @@
     "ITAUCL": 10350,
     "CAP": 5197
    },
-   "ipsa": 6769.29,
+   "ipsa": 6769.11,
    "ipsaSynth": true
   },
   {
@@ -830,7 +829,7 @@
     "ITAUCL": 10028,
     "CAP": 5135.7
    },
-   "ipsa": 6544.63,
+   "ipsa": 6544.58,
    "ipsaSynth": true
   },
   {
@@ -865,7 +864,7 @@
     "ITAUCL": 10046,
     "CAP": 5211.3
    },
-   "ipsa": 6628.62,
+   "ipsa": 6628.36,
    "ipsaSynth": true
   },
   {
@@ -900,7 +899,7 @@
     "ITAUCL": 10249,
     "CAP": 5464.6
    },
-   "ipsa": 6644.71,
+   "ipsa": 6644.3,
    "ipsaSynth": true
   },
   {
@@ -935,7 +934,7 @@
     "ITAUCL": 10300,
     "CAP": 5410
    },
-   "ipsa": 6748.2,
+   "ipsa": 6747.95,
    "ipsaSynth": true
   },
   {
@@ -970,7 +969,7 @@
     "ITAUCL": 10250,
     "CAP": 5329
    },
-   "ipsa": 6783.24,
+   "ipsa": 6782.92,
    "ipsaSynth": true
   },
   {
@@ -1005,7 +1004,7 @@
     "ITAUCL": 10250,
     "CAP": 5234
    },
-   "ipsa": 6803.36,
+   "ipsa": 6803.12,
    "ipsaSynth": true
   },
   {
@@ -1040,7 +1039,7 @@
     "ITAUCL": 10201,
     "CAP": 5228
    },
-   "ipsa": 6851.53,
+   "ipsa": 6851.49,
    "ipsaSynth": true
   },
   {
