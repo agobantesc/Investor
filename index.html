@@ -1845,6 +1845,21 @@
   .ctxtab:hover:not(.on){background:var(--soft);}
   /* 7 · Selección de texto con el color de la casa (el azul del sistema desentona en el tema oscuro) */
   ::selection{background:color-mix(in srgb,var(--accent) 30%,transparent);}
+  /* ══ PULIDO v9 · INTERACCIÓN Y LECTURA ════════════════════════════════════════════════════════════
+     1 · Filas de tabla que responden al mouse: guía la lectura horizontal en tablas anchas (28 acciones).
+         Solo en la app (#main): el informe impreso no tiene mouse y no debe heredar estados hover. */
+  #main .tw tbody tr{transition:background .12s ease;}
+  #main .tw tbody tr:hover{background:color-mix(in srgb,var(--accent) 6%,transparent);}
+  /* 2 · Foco visible al navegar con teclado — el anillo usa el acento de la casa, no el del sistema */
+  .btn:focus-visible,.pbtn:focus-visible,.home-seg button:focus-visible,.ctxtab:focus-visible,.iconbtn:focus-visible,.topnav:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px;}
+  input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent);}
+  /* 3 · Barras de scroll del tema (las nativas grises quiebran el oscuro) — solo WebKit, sin riesgo */
+  #main::-webkit-scrollbar,.tw::-webkit-scrollbar{width:10px;height:10px;}
+  #main::-webkit-scrollbar-thumb,.tw::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 34%,transparent);border-radius:6px;border:2px solid transparent;background-clip:content-box;}
+  #main::-webkit-scrollbar-thumb:hover,.tw::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--muted) 52%,transparent);border:2px solid transparent;background-clip:content-box;}
+  #main::-webkit-scrollbar-track,.tw::-webkit-scrollbar-track{background:transparent;}
+  /* 4 · El segmentado activo gana peso (el estado "dónde estoy" se leía débil en pantallas grandes) */
+  .home-seg button.on{font-weight:800;}
 </style>
 </head>
 <body>
@@ -11368,25 +11383,30 @@ function svgOpsBars(o){
     // El COLOR sigue al MONTO — lo que la barra dibuja — no al %: con un aporte grande a mitad de mes el
     // TWR puede dar +% con pesos en contra (rindió por peso invertido, pero la baja llegó con más capital
     // dentro) y una barra verde apuntando hacia abajo se leía como contradicción. Se explica en el tooltip.
-    const bw=Math.max(10,Math.min(36,step*0.46));
+    // ancho ADAPTATIVO: con pocos meses la barra se ensancha (hasta la mitad de su columna) — barras
+    // de palito en un panel ancho se veían pobres; con muchos meses vuelve a angostarse sola
+    const bw=Math.max(10,Math.min(90,step*0.5));
     mrArr.forEach((r,i)=>{if(!r)return;
       const v=view==="neto"?netoArr[i]:r.clp;if(v==null)return;
       const col=v>=0?green:red,pos=v>=0;
       g+=rbar(xs[i]-bw/2,pos?z-0.6:z+0.6,yV(v),col,bw,r.parcial?"0.5":null,view==="neto"?' data-nt="1"':' data-mr="1"');
-      // SOLO el monto (pedido explícito): el % del mes queda como dato fino del tooltip
+      // SOLO el monto (pedido explícito): el % del mes queda como dato fino del tooltip.
+      // La etiqueta va FUERA de la barra: sobre su extremo libre y, si el panel no le deja aire
+      // (barra corta contra el borde), salta al lado LIBRE de la línea cero — nunca pisa la barra.
       if(step>=46){const yEnd=yV(v);
-        const y1=pos?Math.max(top+9,yEnd-5):Math.min(bot-3,yEnd+12);
+        const y1=pos?((yEnd-15>=top)?(yEnd-5):(z+13)):((yEnd+13<=bot-2)?(yEnd+12):(z-6));
         g+=lbl(xs[i],y1,(v>=0?"+":"−")+fmtK(Math.abs(v)),col,10.5,800);}
     });
   }else if(view==="comisiones"){
     // lo pagado cada mes, con su cifra — en su escala las comisiones dejan de ser astillas
-    const bw=Math.max(10,Math.min(36,step*0.46));
+    const bw=Math.max(10,Math.min(90,step*0.5));
     rows.forEach((r,i)=>{if(!(r.fee>0))return;
       g+=rbar(xs[i]-bw/2,z-0.6,yV(r.fee),OPS_FEE_COL,bw,"0.9");
-      if(step>=46)g+=lbl(xs[i],Math.max(top+9,yV(r.fee)-5),"−"+fmtK(r.fee),OPS_FEE_COL,9.5,700);});
+      if(step>=46){const yEnd=yV(r.fee);
+        g+=lbl(xs[i],(yEnd-14>=top)?(yEnd-5):(yEnd+13),"−"+fmtK(r.fee),OPS_FEE_COL,9.5,700);}});
   }else{
     // flujo clásico: compras ↑ · ventas ↓ con los dividendos apilados bajo ellas (2px de aire) · cifras
-    const bw=Math.max(7,Math.min(24,step*0.6-2));
+    const bw=Math.max(7,Math.min(72,step*0.45));
     rows.forEach((r,i)=>{const x=xs[i]-bw/2;
       if(r.buy>0){g+=rbar(x,z-0.6,yV(r.buy),"var(--accent)",bw);
         if(step>=46)g+=lbl(xs[i],Math.max(top+9,yV(r.buy)-5),fmtK(r.buy),"var(--accent)",9,700);}
