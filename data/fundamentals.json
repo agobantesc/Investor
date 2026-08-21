@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-20T22:35:55.688Z",
+ "updatedAt": "2026-08-21T02:07:27.457Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -109,7 +109,7 @@
    "dps": 3.47,
    "mcap": 5567216091136,
    "hi52": 84,
-   "lo52": 65.7,
+   "lo52": 65.8,
    "vol3m": 37386137,
    "roe": 11,
    "nm": 12.8,
@@ -140,7 +140,7 @@
    "eg": -17.4,
    "rg": 11.6,
    "de": 0.74,
-   "target": 154.56155,
+   "target": 154.70073,
    "rec": "none",
    "nAn": 6,
    "peg": 1.37,
@@ -168,7 +168,7 @@
    "rec": "hold",
    "nAn": 12,
    "peg": 1.03,
-   "evEbitda": 12.6
+   "evEbitda": 12.5
   },
   "CENCOSUD": {
    "name": "Cencosud S.A.",
@@ -188,11 +188,11 @@
    "eg": null,
    "rg": -1.8,
    "de": 0.99,
-   "target": 2748.3333,
+   "target": 2742.5,
    "rec": "hold",
    "nAn": 12,
    "peg": 1.13,
-   "evEbitda": 12.2
+   "evEbitda": 12.4
   },
   "COPEC": {
    "name": "Empresas Copec S.A.",
@@ -212,7 +212,7 @@
    "eg": 92.6,
    "rg": 28.8,
    "de": 0.89,
-   "target": 7320.302,
+   "target": 7326.893,
    "rec": "hold",
    "nAn": 14,
    "peg": 3.22,
@@ -236,7 +236,7 @@
    "eg": -89.2,
    "rg": 0.5,
    "de": 0.63,
-   "target": 1516.8547,
+   "target": 1518.2206,
    "rec": "hold",
    "nAn": 14,
    "peg": null,
@@ -288,7 +288,7 @@
    "rec": "hold",
    "nAn": 9,
    "peg": 1.67,
-   "evEbitda": 8.8
+   "evEbitda": 9
   },
   "ENTEL": {
    "name": "Empresa Nacional de Telecomunicaciones S.A.",
@@ -301,7 +301,7 @@
    "dps": 140,
    "mcap": 1162765926400,
    "hi52": 5250,
-   "lo52": 3147.8,
+   "lo52": 3190,
    "vol3m": 160735,
    "roe": 10.6,
    "nm": 6.7,
@@ -332,7 +332,7 @@
    "eg": -46.2,
    "rg": 27.2,
    "de": 4.55,
-   "target": 31.60921,
+   "target": 31.63767,
    "rec": "strong_buy",
    "nAn": 7,
    "peg": 2.49,
@@ -344,7 +344,7 @@
    "pe": 23.81,
    "fpe": 37.22,
    "eps": 168.46,
-   "pb": 2.28,
+   "pb": 2.01,
    "dy": 1.1,
    "dps": 45,
    "mcap": 3936298205184,
@@ -360,7 +360,7 @@
    "rec": "buy",
    "nAn": 10,
    "peg": 0.76,
-   "evEbitda": 18.6
+   "evEbitda": 18.3
   },
   "AGUAS-A": {
    "name": "Aguas Andinas S.A.",
@@ -380,7 +380,7 @@
    "eg": 22.1,
    "rg": 6.6,
    "de": 1.03,
-   "target": 413.57144,
+   "target": 408.57144,
    "rec": "none",
    "nAn": 7,
    "peg": null,
@@ -428,7 +428,7 @@
    "eg": 36.8,
    "rg": 22.7,
    "de": 0.39,
-   "target": 110.43404,
+   "target": 110.53348,
    "rec": "none",
    "nAn": 5,
    "peg": 0.32,
@@ -452,8 +452,8 @@
    "eg": -19.5,
    "rg": -10.4,
    "de": 1.39,
-   "target": 1867.9115,
-   "rec": "none",
+   "target": 1869.5934,
+   "rec": "buy",
    "nAn": 6,
    "peg": null,
    "evEbitda": null
@@ -480,7 +480,7 @@
    "rec": "buy",
    "nAn": 11,
    "peg": null,
-   "evEbitda": 9
+   "evEbitda": 8.9
   },
   "CONCHATORO": {
    "name": "Viña Concha y Toro S.A.",
@@ -504,7 +504,7 @@
    "rec": "hold",
    "nAn": 4,
    "peg": null,
-   "evEbitda": 9.3
+   "evEbitda": 9.4
   },
   "QUINENCO": {
    "name": "Quiñenco SA",
@@ -600,7 +600,7 @@
    "rec": "buy",
    "nAn": 5,
    "peg": 0.66,
-   "evEbitda": 19.7
+   "evEbitda": 19.9
   },
   "SMU": {
    "name": "SMU S.A.",
@@ -661,7 +661,7 @@
    "dps": 1187.27,
    "mcap": 4822235348992,
    "hi52": 25887,
-   "lo52": 13365,
+   "lo52": 13401,
    "vol3m": 253391,
    "roe": null,
    "nm": 13.5,
@@ -692,7 +692,7 @@
    "eg": null,
    "rg": 14.2,
    "de": 0.6,
-   "target": 6648.3506,
+   "target": 6654.3364,
    "rec": "hold",
    "nAn": 5,
    "peg": null,
