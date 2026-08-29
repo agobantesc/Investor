@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-28T11:36:47.965Z",
+ "updatedAt": "2026-08-29T03:38:33.564Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -9,18 +9,19 @@
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
   "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor",
   "yahoo ^IPSA period: 0 día(s)",
-  "michelangelo S&P (retornos): 496 día(s) hasta 2026-08-27"
+  "michelangelo S&P (retornos): 496 día(s) hasta 2026-08-28"
  ],
  "ipsaSynth": [
+  "2026-08-28=11441.6 (S&P oficial 0.67%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
   "csrf en HTML: no",
-  "getPointHistGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
-  "getPointIntradayGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
-  "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
-  "/api/RV_ResumenMercado/getResumenAccionesPrecios: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> "
+  "getPointHistGAT BCI: 2485 punto(s) · keys=ADJ_CLOSE,CLOSE,DATE,HIGH,LOW,OPEN,VOLUME · sample={\"ADJ_CLOSE\":67200,\"CLOSE\":67200,\"DATE\":\"2026-08-28\",\"HIGH\":0,\"LOW\":0,\"OPEN\":0,\"VOLUME\":0}",
+  "hist: fila no parseable con las claves conocidas",
+  "getPointIntradayGAT BCI: 420 punto(s) · sample={\"hora\":\"2026-08-28 16:05:00.0\",\"monto\":0,\"pre_ape\":67200,\"pre_cie\":67200,\"pre_may\":67200,\"pre_med\":67200,\"pre_men\":67200}",
+  "aplicadas 28 acciones vía intra"
  ],
  "ajustesDeFuente": [],
  "errors": [
@@ -17955,6 +17956,40 @@
    "prices": {
     "SONDA": 301.81
    }
+  },
+  {
+   "date": "2026-08-28",
+   "prices": {
+    "CHILE": 194.8,
+    "SANTANDER": 82,
+    "BCI": 67200,
+    "ENELCHILE": 80.9,
+    "COLBUN": 145,
+    "FALABELLA": 6370,
+    "CENCOSUD": 2078,
+    "COPEC": 6820,
+    "CMPC": 1060,
+    "SQM-B": 73200,
+    "CCU": 5673,
+    "ENTEL": 3785,
+    "LATAM": 23.69,
+    "PARAUCO": 4032.1,
+    "AGUAS-A": 327.7,
+    "IAM": 910.34,
+    "ENELAM": 89.9,
+    "ECL": 1950,
+    "ANDINA-B": 4525,
+    "CONCHATORO": 916.75,
+    "QUINENCO": 4529.9,
+    "MALLPLAZA": 4085,
+    "VAPORES": 49,
+    "RIPLEY": 428,
+    "SMU": 125.74,
+    "SONDA": 300,
+    "ITAUCL": 22750,
+    "CAP": 5601
+   },
+   "ipsa": 11441.6
   }
  ]
 }
