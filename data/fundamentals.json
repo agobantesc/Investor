@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-08-29T07:14:32.657Z",
+ "updatedAt": "2026-08-29T16:39:15.181Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -254,7 +254,7 @@
    "mcap": 20908689326080,
    "hi52": 86900,
    "lo52": 39150,
-   "vol3m": 217227,
+   "vol3m": 207181,
    "roe": 21.8,
    "nm": 20.6,
    "eg": null,
@@ -288,7 +288,7 @@
    "rec": "none",
    "nAn": 9,
    "peg": 1.67,
-   "evEbitda": 9.2
+   "evEbitda": 9.1
   },
   "ENTEL": {
    "name": "Empresa Nacional de Telecomunicaciones S.A.",
@@ -360,7 +360,7 @@
    "rec": "hold",
    "nAn": 10,
    "peg": 0.76,
-   "evEbitda": 18.3
+   "evEbitda": 18.4
   },
   "AGUAS-A": {
    "name": "Aguas Andinas S.A.",
@@ -480,7 +480,7 @@
    "rec": "buy",
    "nAn": 11,
    "peg": null,
-   "evEbitda": 8.8
+   "evEbitda": 8.7
   },
   "CONCHATORO": {
    "name": "Viña Concha y Toro S.A.",
@@ -552,7 +552,7 @@
    "rec": "hold",
    "nAn": 10,
    "peg": null,
-   "evEbitda": 19.2
+   "evEbitda": 19.1
   },
   "VAPORES": {
    "name": "Compañía Sud Americana de Vapores S.A.",
@@ -600,7 +600,7 @@
    "rec": "buy",
    "nAn": 5,
    "peg": 0.66,
-   "evEbitda": 20
+   "evEbitda": 20.1
   },
   "SMU": {
    "name": "SMU S.A.",
