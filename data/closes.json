@@ -1,17 +1,18 @@
 {
- "updatedAt": "2026-08-29T16:39:03.148Z",
+ "updatedAt": "2026-09-01T01:11:12.556Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
-  "yahoo ^IPSA hoy: 1 día(s)",
+  "yahoo ^IPSA hoy: 0 día(s)",
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 408 | allorigins/get=allorigins/get: respuesta inespera",
-  "yahoo ^IPSA period: 1 día(s)",
-  "michelangelo S&P (retornos): 495 día(s) hasta 2026-08-28"
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=HTTP 500 | codetabs=HTTP 522 | cor",
+  "yahoo ^IPSA period: 0 día(s)",
+  "michelangelo S&P (retornos): 495 día(s) hasta 2026-08-31"
  ],
  "ipsaSynth": [
+  "2026-08-31=11329.3 (S&P oficial -0.98%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
@@ -20,11 +21,11 @@
   "getPointHistGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "getPointIntradayGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
-  "/api/RV_ResumenMercado/getResumenAccionesPrecios: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> "
+  "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 408 | allorigins/get=allorigins/get: respuesta inespera · yahoo ^IPSA period: 1 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 500 | allorigins/get=HTTP 500 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 0 día(s)"
  ],
  "days": [
   {
@@ -17989,6 +17990,39 @@
     "CAP": 5601
    },
    "ipsa": 11441.6
+  },
+  {
+   "date": "2026-08-31",
+   "prices": {
+    "CHILE": 192.5,
+    "SANTANDER": 80.51,
+    "BCI": 64500,
+    "ENELCHILE": 80,
+    "COLBUN": 147.5,
+    "FALABELLA": 6180,
+    "CENCOSUD": 1956,
+    "COPEC": 6620,
+    "CMPC": 1005,
+    "SQM-B": 76000,
+    "CCU": 5431,
+    "ENTEL": 3880,
+    "LATAM": 24.12,
+    "PARAUCO": 3900,
+    "AGUAS-A": 320,
+    "IAM": 905,
+    "ENELAM": 84.5,
+    "ECL": 1960,
+    "ANDINA-B": 4530,
+    "CONCHATORO": 910,
+    "QUINENCO": 4500,
+    "MALLPLAZA": 3931,
+    "VAPORES": 48,
+    "RIPLEY": 421,
+    "SMU": 128.5,
+    "ITAUCL": 22100,
+    "CAP": 5550
+   },
+   "ipsa": 11329.3
   }
  ]
 }
