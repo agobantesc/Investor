@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-01T23:57:46.231Z",
+ "updatedAt": "2026-09-02T04:51:38.454Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -38,7 +38,7 @@
    "mcap": 19845817040896,
    "hi52": 200.68,
    "lo52": 138,
-   "vol3m": 31553021,
+   "vol3m": 31052180,
    "roe": 21.6,
    "nm": 45.4,
    "eg": 28.6,
@@ -206,7 +206,7 @@
    "mcap": 8839005995008,
    "hi52": 7949,
    "lo52": 5702.1,
-   "vol3m": 475091,
+   "vol3m": 467550,
    "roe": 8.4,
    "nm": 3.6,
    "eg": 92.6,
@@ -254,7 +254,7 @@
    "mcap": 21605644238848,
    "hi52": 86900,
    "lo52": 39150,
-   "vol3m": 201802,
+   "vol3m": 198598,
    "roe": 21.8,
    "nm": 20.6,
    "eg": null,
@@ -278,7 +278,7 @@
    "mcap": 2002705580032,
    "hi52": 6598.3,
    "lo52": 4947,
-   "vol3m": 119774,
+   "vol3m": 117872,
    "roe": 7.9,
    "nm": 3.5,
    "eg": null,
@@ -288,7 +288,7 @@
    "rec": "hold",
    "nAn": 9,
    "peg": 1.67,
-   "evEbitda": 9.1
+   "evEbitda": 8.9
   },
   "ENTEL": {
    "name": "Empresa Nacional de Telecomunicaciones S.A.",
@@ -302,7 +302,7 @@
    "mcap": 1177262751744,
    "hi52": 5250,
    "lo52": 3220.1,
-   "vol3m": 140815,
+   "vol3m": 138580,
    "roe": 10.6,
    "nm": 6.7,
    "eg": 39.4,
@@ -360,7 +360,7 @@
    "rec": "hold",
    "nAn": 10,
    "peg": 0.76,
-   "evEbitda": 18.4
+   "evEbitda": 18.1
   },
   "AGUAS-A": {
    "name": "Aguas Andinas S.A.",
@@ -422,7 +422,7 @@
    "mcap": 8702544838656,
    "hi52": 105.23,
    "lo52": 73.95,
-   "vol3m": 37068708,
+   "vol3m": 36480316,
    "roe": 7.6,
    "nm": 6.8,
    "eg": 36.8,
@@ -480,7 +480,7 @@
    "rec": "buy",
    "nAn": 11,
    "peg": null,
-   "evEbitda": 8.7
+   "evEbitda": 8.8
   },
   "CONCHATORO": {
    "name": "Viña Concha y Toro S.A.",
@@ -542,7 +542,7 @@
    "mcap": 8847600123904,
    "hi52": 4700,
    "lo52": 2325.1,
-   "vol3m": 636111,
+   "vol3m": 626014,
    "roe": 29.7,
    "nm": null,
    "eg": -44.5,
@@ -552,7 +552,7 @@
    "rec": "hold",
    "nAn": 10,
    "peg": null,
-   "evEbitda": 19.1
+   "evEbitda": 18.9
   },
   "VAPORES": {
    "name": "Compañía Sud Americana de Vapores S.A.",
@@ -567,7 +567,7 @@
    "hi52": 55,
    "lo52": 42,
    "vol3m": 18869630,
-   "roe": -0.3,
+   "roe": -0.7,
    "nm": 0,
    "eg": null,
    "rg": null,
@@ -662,7 +662,7 @@
    "mcap": 4889301221376,
    "hi52": 25887,
    "lo52": 13700,
-   "vol3m": 148472,
+   "vol3m": 146115,
    "roe": null,
    "nm": 13.5,
    "eg": 16.2,
