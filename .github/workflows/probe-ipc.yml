@@ -1,0 +1,17 @@
+# Sonda de fuentes del IPC (y macro): se lanza a mano, imprime el diagnóstico en el log y NO escribe nada.
+name: probe-ipc
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Sondear fuentes del IPC
+        env:
+          CMF_KEY: ${{ secrets.CMF_KEY }}
+        run: node automation/probe-ipc.mjs
