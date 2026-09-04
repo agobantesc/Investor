@@ -1467,16 +1467,6 @@
   .ct-vs{display:block;font-size:9px;color:var(--ct-mute);margin-top:1px}
   .ct-vw{margin-top:8px;font-size:10px;line-height:1.55;color:var(--ct-ink)}
   .ct-warn{color:var(--ct-warn)}
-  /* glosario: dos columnas, término y definición en una línea */
-  .ct-glo{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0}
-  .ct-g{padding:7px 11px;border-top:1px solid var(--ct-line);font-size:9.8px;line-height:1.5;color:var(--ct-ink)}
-  .ct-g:nth-child(-n+2){border-top:0}
-  .ct-g:nth-child(odd){border-right:1px solid var(--ct-line)}
-  /* solo el TÉRMINO va en bloque: un <b> dentro de la definición (p. ej. "P/U proy.") partía la línea */
-  .ct-g>b{display:block;color:var(--ct-navy);font-weight:800;font-size:10px;margin-bottom:1px}
-  .ct-g span b{color:var(--ct-navy);font-weight:800}
-  .ct-g span{color:var(--ct-mute)}
-  @media(max-width:900px){.ct-glo{grid-template-columns:1fr}.ct-g:nth-child(odd){border-right:0}.ct-g:nth-child(2){border-top:1px solid var(--ct-line)}}
   .isc-cols{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px;}
   .isc-block{display:flex;flex-direction:column;}
   .isc-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:none;border-bottom:1px solid var(--line);background:transparent;padding:.5rem .4rem;cursor:pointer;border-radius:8px;transition:.12s var(--ease);}
@@ -1860,6 +1850,25 @@
   #main::-webkit-scrollbar-track,.tw::-webkit-scrollbar-track{background:transparent;}
   /* 4 · El segmentado activo gana peso (el estado "dónde estoy" se leía débil en pantallas grandes) */
   .home-seg button.on{font-weight:800;}
+  /* ══ PULIDO v10 · JERARQUÍA DENTRO DE LA TARJETA ══════════════════════════════════════════════════
+     1 · Rótulo de GRUPO dentro de una tarjeta: ordena bloques de tiles que antes flotaban sueltos
+         entre tarjetas (Contabilidad) sin inventar una tarjeta más ni un tamaño de título nuevo. */
+  .cnt-grp{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+    margin:16px 0 9px;padding-bottom:6px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+  .cnt-grp:first-child{margin-top:2px;}
+  .cnt-grp::after{content:"";flex:1;}
+  /* 2 · Aire parejo entre la franja de resultado y los grupos que la explican */
+  .net-strip+.cnt-grp{margin-top:18px;}
+  /* 3 · Notas al pie de tarjeta: mismo ritmo en todas (algunas iban pegadas a la tabla) */
+  .card>.bd>.note:last-child{margin-bottom:0;}
+  /* 4 · Tablas largas (libro de operaciones, base de precios): scroll propio y CABECERA FIJA, para no
+         perder de vista qué columna era cuál. Lo marca tablasLargas() midiendo el alto real. */
+  #main .tw{position:relative;}
+  #main .tw.tw-alta{max-height:70vh;}
+  #main .tw.tw-alta thead th{position:sticky;top:0;z-index:2;background:var(--card);
+    box-shadow:inset 0 -1px 0 var(--line2);}
+  .rp-page .tw,.rp-doc .tw{max-height:none;}
+  .rp-page .tw thead th,.rp-doc .tw thead th{position:static;box-shadow:none;}
 </style>
 </head>
 <body>
@@ -4886,6 +4895,19 @@ function evalEmpty(){
   return card("Análisis · el análisis del sistema aún no está disponible","Investor construye el análisis automáticamente con los datos reales de la base · sin datos suficientes no se muestra nada ilustrativo",body);
 }
 let _lastViewKey="";
+/* TABLAS LARGAS: el libro de operaciones o la base de precios llegan a 4.000 px de alto y, al scrollear
+   la página, se pierde de vista qué columna era cuál. A las que superan cierto alto se les da su propio
+   scroll (con la cabecera fija dentro, ver .tw-alta en el CSS): la página deja de estirarse y los rótulos
+   acompañan a los datos. Se decide con el alto REAL medido, no con el número de filas, porque una tabla
+   ancha con pocas filas no necesita esto. El informe impreso nunca lo hereda (allí no hay scroll). */
+const TW_ALTA_PX=760;
+function tablasLargas(){try{
+  document.querySelectorAll("#main .tw").forEach(tw=>{
+    tw.classList.remove("tw-alta");
+    if(tw.closest(".rp-page,.rp-doc"))return;
+    if(tw.scrollHeight>TW_ALTA_PX)tw.classList.add("tw-alta");
+  });
+}catch(e){}}
 function render(){
   renderChrome();
   refreshPalette();
@@ -4951,6 +4973,7 @@ function render(){
     {const _ar=document.getElementById("anaReportBtn");if(_ar)_ar.onclick=()=>{try{genAnalysisReport();}catch(e){try{console.error("genAnalysisReport:",e);}catch(_){}window.alert("No se pudo generar el informe del análisis: "+((e&&e.message)||e));}};}   // informe PDF del análisis completo
     attachScatterAll();
     attachTableSort();
+    tablasLargas();
   }catch(err){try{console.error("attach("+modulo+"/"+page+"):",err);}catch(e){}}
   const _rh=document.querySelector("[data-recover-home]");if(_rh)_rh.onclick=()=>{modulo="inicio";page="home";editIdx=null;invNew=null;render();};
 }
@@ -5632,7 +5655,18 @@ function cpRunTool(name,input){
       if(!hasM&&!hasOil)return "El usuario aún no cargó indicadores de mercado (módulo Mercados, botón superior). Sugiérele abrirlo y pulsar Actualizar para traer dólar, euro, cobre, petróleo, IPC, desempleo, etc.";
       const out={fuentes:["mindicador.cl (Banco Central de Chile / INE)","Stooq (petróleo)"],actualizado:(typeof mindTs!=="undefined"?mindTs:null),
         frescura:(typeof mindStale==="function"&&mindStale())?"DESACTUALIZADOS (más de 6 h): se están refrescando en segundo plano — adviértelo si citas cifras, y sugiere reconsultar en unos segundos":"al día"};
-      if(hasM){out.indicadores={};MIND_DEF.forEach(d=>{if(MIND[d.k])out.indicadores[d.label]={valor:MIND[d.k].valor,unidad:MIND[d.k].unidad,fecha:MIND[d.k].fecha};});}
+      // CADA indicador viaja con su antigüedad y, si la fuente lo abandonó (el IPC lleva meses sin
+      // publicarse), con la instrucción explícita de NO citarlo como cifra vigente: un dato de hace 9
+      // meses presentado como "la inflación de hoy" es exactamente el tipo de error que no se perdona.
+      if(hasM){out.indicadores={};const _viejos=[];
+        MIND_DEF.forEach(d=>{const o=MIND[d.k];if(!o)return;
+          const e=(typeof mindEstado==="function")?mindEstado(d.k):{};
+          const it={valor:o.valor,unidad:o.unidad,fecha:o.fecha,dias_de_antiguedad:e.dias!=null?e.dias:null};
+          if(o.src)it.fuente=o.src;
+          if(e.abandonado){it.vigente=false;it.advertencia="La fuente dejó de publicar este indicador: es el ÚLTIMO dato conocido, no la cifra actual. NO lo cites como vigente; si te preguntan, di desde cuándo no se publica.";_viejos.push(d.label);}
+          else if(e.viejo)it.vigente="dato con retraso: cítalo con su fecha";
+          out.indicadores[d.label]=it;});
+        if(_viejos.length)out.sin_publicar="La fuente pública no actualiza: "+_viejos.join(", ")+". Menciona la fecha del último dato en vez de presentarlo como actual.";}
       if(hasOil){out.petroleo={};OIL_DEF.forEach(d=>{if(OIL[d.k])out.petroleo[d.label]={valor:OIL[d.k].valor,unidad:d.unit,variacion_pct:OIL[d.k].chg!=null?+OIL[d.k].chg.toFixed(2):null,fecha:OIL[d.k].fecha};});}
       return JSON.stringify(out);
     }
@@ -7675,6 +7709,7 @@ function cfgRender(){
         row("Planillas y cierres","Sube CSV/XLSX (diario, semanal o mensual) o ingresa el cierre de un día",'<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn" id="cfgGoCargar">📈 Cargar planilla</button><button class="btn" id="cfgGoCierre">📝 Cierre diario</button></div>'))+
       sec("Otros","",
         row("Análisis activo",ds,'<span class="cfg-sub">Siempre se construye solo desde tu base real · se ajusta en Análisis → Ajustes del análisis</span>')+
+        row("API key de la CMF (opcional)","La fuente pública <b>dejó de publicar el IPC</b> (su último dato es de diciembre de 2025). Con una key gratuita de <b>cmfchile.cl</b> el IPC —y la UF, UTM y dólar— se traen del <b>regulador</b> cuando la fuente pública llegue vieja. Se guarda solo en este navegador.",`<input id="cfgCmfKey" type="password" autocomplete="off" placeholder="${CMF_KEY?'•••••••• guardada · pega una nueva para reemplazar':'tu API key de cmfchile.cl (opcional)'}" value="" style="${inStyle}">`+(CMF_KEY?` <button class="btn" id="cfgCmfClr" style="margin-top:8px">Quitar key</button>`:""),1)+
         row("Fuente de petróleo (URL JSON)","Opcional · un Gist público que tu tarea diaria actualice. Vacío = usar Stooq.",`<input id="cfgOilUrl" placeholder="https://…/oil.json" value="${(typeof OIL_URL!=="undefined"?OIL_URL:"").replace(/"/g,"&quot;")}" style="${inStyle}">`,1));
   }else if(cfgTab==="respaldo"){
     const bkInfo=(typeof autobkSnapInfo==="function")?autobkSnapInfo():null;
@@ -7782,6 +7817,16 @@ function cfgRender(){
     if(!v.ok){window.alert(v.msg);_apx.value=AUTOPX_URL||"";return;}   // no se guarda basura: el campo vuelve a lo que había
     AUTOPX_URL=v.url;try{localStorage.setItem("inv_autopx_url",AUTOPX_URL);localStorage.removeItem("inv_autopx_last");}catch(e){}
     _apx.value=AUTOPX_URL;
+  }
+  {const _ck=document.getElementById("cfgCmfKey");
+   if(_ck)_ck.onchange=()=>{const v=(_ck.value||"").trim();
+     if(!v)return;
+     CMF_KEY=v;try{localStorage.setItem("inv_cmf_key",v);}catch(e){}
+     _ck.value="";
+     mindFetch(true).then(()=>{render();cfgOpen();});   // se prueba de inmediato: si sirve, el IPC se actualiza solo
+   };
+   const _cc=document.getElementById("cfgCmfClr");
+   if(_cc)_cc.onclick=()=>{CMF_KEY="";try{localStorage.removeItem("inv_cmf_key");}catch(e){}cfgOpen();};
     if(v.aviso)window.alert(v.aviso);
     if(confirm("Fuente guardada:\n\n"+AUTOPX_URL+"\n\n¿Sincronizar los cierres ahora?"))autopxSync(true).finally(()=>cfgRender());else cfgRender();
   };
@@ -8111,8 +8156,11 @@ function mindTile(d){
   // desempleo, Imacec, UTM, TPM) muestran su fecha normal — su "antigüedad" es esperada, no un problema.
   let sub=o?("al "+mindDate(o.fecha)+(o.unidad?" · "+o.unidad:"")+(o.src?" · "+o.src:"")):(mindBusy?"cargando…":"sin datos");
   if(o){const lim=MIND_MAXAGE[d.k]||4,days=mindDaysOld(o.fecha);
-    if(days!=null&&days>lim)sub=`<span style="color:var(--amber);font-weight:700" title="${MIND_DAILY[d.k]?"Este indicador debería moverse cada día hábil":"Para este indicador se espera un dato nuevo a más tardar cada "+lim+" días"}; su último dato tiene ${days} días. Se está reintentando la actualización (consultando también su serie propia en la fuente).">⚠ al ${mindDate(o.fecha)} · hace ${days} d</span>`;}
-  return mktTileHTML(d.label, o?mindFmt(o.valor,d.dec,d.unit):'<span class="mkt-na">—</span>', chg, d.spark?MINDH[d.k]:null, sub);
+    if(days!=null&&days>lim*2)sub=`<span style="color:var(--red);font-weight:700" title="La fuente pública (mindicador.cl) dejó de publicar este indicador: su último dato es del ${mindDate(o.fecha)} y ya pasaron ${days} días, muy por sobre los ${lim} de su cadencia normal. El valor mostrado es ese último dato conocido, NO la cifra vigente. Para traerlo de la fuente oficial, configura tu API key de la CMF en ⚙ Configuración → Datos.">■ sin publicar desde ${mindDate(o.fecha)} · hace ${days} d</span>`;
+    else if(days!=null&&days>lim)sub=`<span style="color:var(--amber);font-weight:700" title="${MIND_DAILY[d.k]?"Este indicador debería moverse cada día hábil":"Para este indicador se espera un dato nuevo a más tardar cada "+lim+" días"}; su último dato tiene ${days} días. Se está reintentando la actualización (consultando también su serie propia en la fuente).">⚠ al ${mindDate(o.fecha)} · hace ${days} d</span>`;}
+  const _ab=o&&mindDaysOld(o.fecha)!=null&&mindDaysOld(o.fecha)>(MIND_MAXAGE[d.k]||4)*2;
+  const _v=o?(_ab?`<span style="opacity:.55" title="Último dato conocido: la fuente dejó de publicar este indicador">${mindFmt(o.valor,d.dec,d.unit)}</span>`:mindFmt(o.valor,d.dec,d.unit)):'<span class="mkt-na">—</span>';
+  return mktTileHTML(d.label, _v, _ab?null:chg, d.spark?MINDH[d.k]:null, sub);
 }
 function oilTile(d){
   const o=OIL&&OIL[d.k];
@@ -8136,6 +8184,24 @@ async function mindGetJson(url,ms){
   for(const u of prox(url)){try{const t=await mktGet(u,"text",ms||9000);const j=(typeof t==="string")?JSON.parse(t):t;if(j&&typeof j==="object")return j;}catch(e){err=String((e&&e.message)||e);}}
   throw new Error(err);
 }
+/* CMF (ex-SBIF), fuente OFICIAL opcional. mindicador.cl dejó de publicar el IPC (verificado desde el
+   runner: su serie de 2026 viene vacía y boostr.cl sirve el mismo valor congelado), así que la única vía
+   pública para tener el dato de verdad es el regulador, que pide una API key gratuita. La key se guarda
+   SOLO en este navegador (⚙ Configuración → Datos) y se usa nada más para los indicadores que llegaron
+   viejos: si no hay key, o si la respuesta no trae nada más nuevo, todo sigue funcionando igual. */
+let CMF_KEY=(function(){try{return localStorage.getItem("inv_cmf_key")||"";}catch(e){return "";}})();
+const CMF_MAP={ipc:"ipc",uf:"uf",utm:"utm",dolar:"dolar",euro:"euro"};
+async function cmfSerie(rec,anio){
+  const u="https://api.cmfchile.cl/api-sbifv3/recursos_api/"+rec+(anio?("/"+anio):"")+"?apikey="+encodeURIComponent(CMF_KEY)+"&formato=json";
+  const j=await mindGetJson(u,9000);
+  // la CMF responde {"IPCs":[{Fecha,Valor}]} / {"UFs":[...]} — se toma la primera lista del objeto
+  const lista=Object.keys(j||{}).map(k=>j[k]).find(v=>Array.isArray(v)&&v.length);
+  if(!lista)throw new Error("respuesta sin serie");
+  const pts=lista.map(x=>({fecha:(""+(x.Fecha||x.fecha||"")).slice(0,10),valor:+(""+(x.Valor||x.valor||"")).replace(/\./g,"").replace(",",".")}))
+    .filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.fecha)&&isFinite(x.valor));
+  if(!pts.length)throw new Error("serie sin puntos válidos");
+  return pts.reduce((a,b)=>(a.fecha>b.fecha?a:b));
+}
 async function mindCore(){
   try{
     const j=await mindGetJson(MIND_URL);const m={};
@@ -8151,6 +8217,14 @@ async function mindCore(){
       const top=s.reduce((a,b)=>(((""+a.fecha)>(""+b.fecha))?a:b));
       if(!m[d.k]||((""+top.fecha).slice(0,10)>(""+m[d.k].fecha).slice(0,10)))m[d.k]={valor:+top.valor,fecha:top.fecha,unidad:(m[d.k]&&m[d.k].unidad)||jj.unidad_medida};
     }catch(e){}}));
+    // CMF: último recurso para lo que mindicador dejó viejo (requiere key del usuario). Se marca la
+    // fuente en la tarjeta para que se vea de dónde salió cada cifra.
+    if(CMF_KEY){await Promise.allSettled(Object.keys(CMF_MAP).filter(k=>{const o=m[k];if(!o)return true;const d=mindDaysOld(o.fecha);return d!=null&&d>(MIND_MAXAGE[k]||4);}).map(async k=>{try{
+      const anio=new Date().getFullYear();
+      let top=null;
+      try{top=await cmfSerie(CMF_MAP[k],anio);}catch(e){top=await cmfSerie(CMF_MAP[k]);}
+      if(top&&(!m[k]||top.fecha>(""+m[k].fecha).slice(0,10)))m[k]={valor:top.valor,fecha:top.fecha,unidad:(m[k]&&m[k].unidad)||"",src:"CMF"};
+    }catch(e){}}));}
     // BITCOIN: mindicador suele quedarse días atrás en cripto. Si sigue con >2 días, se toma el precio vivo de
     // CoinGecko (API pública con CORS) y se marca la fuente en la tarjeta para plena transparencia.
     try{const b=m.bitcoin,days=b?mindDaysOld(b.fecha):null;
@@ -8237,6 +8311,13 @@ const MIND_DAILY={dolar:1,euro:1,libra_cobre:1,uf:1,bitcoin:1};
    referencia (≤100 d). Sobre su umbral, el dato ESTÁ atrasado aunque el indicador sea mensual — así se detecta
    un IPC congelado (caso real: pegado en dic-2025), que el filtro "solo diarios" dejaba pasar sin marcar. */
 const MIND_MAXAGE={dolar:4,euro:4,libra_cobre:4,uf:4,bitcoin:2,utm:35,tpm:35,ipc:45,tasa_desempleo:100,imacec:100};
+/* ABANDONO: más allá del DOBLE de su cadencia, el dato ya no es "un poco viejo" — la fuente dejó de
+   publicarlo. Se distingue en la interfaz (y ante el agente) porque un IPC de hace 9 meses presentado
+   como cifra vigente induce a error; medido en producción: mindicador.cl publica el resto de sus
+   indicadores al día pero no entrega IPC desde el 01-12-2025 (su serie de 2026 viene vacía). */
+function mindEstado(k){const o=MIND&&MIND[k];if(!o)return {hay:false};
+  const dias=mindDaysOld(o.fecha),lim=MIND_MAXAGE[k]||4;
+  return {hay:true,dias,lim,viejo:dias!=null&&dias>lim,abandonado:dias!=null&&dias>lim*2};}
 /* días corridos desde la fecha de un dato (o.fecha "YYYY-MM-DD" o ISO) */
 function mindDaysOld(fecha){if(!fecha)return null;try{const d=new Date((""+fecha).slice(0,10)+"T00:00:00");if(isNaN(d))return null;return Math.floor((Date.now()-d.getTime())/864e5);}catch(e){return null;}}
 /* frescura por FECHA DEL DATO (no solo por hora de fetch): si el indicador DIARIO más reciente tiene >4 días
@@ -8531,9 +8612,9 @@ function viewContab(){
   if(!PROJECTS.length)return notecard("Aún no tienes proyectos de inversión. Crea uno en <b>Simulación → Constructor → Aplicar inversión</b> y registra la compra inicial en <b>Inversión → Ingresar datos</b>.");
   const per=PROJECTS.map(p=>({p,A:contabAggFor(p)}));
   const withOps=per.filter(x=>x.A);
-  const head=card("Contabilidad consolidada","Todos tus proyectos de inversión: compras, ventas, fechas y montos · rentabilidad realizada y no realizada para tu contador",
-    `<button class="btn btn-pri" id="contabreport">🧾 Informe consolidado para el contador</button>`);
-  if(!withOps.length)return head+notecard("Tus proyectos aún no tienen operaciones registradas. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>, o compras/ventas en <b>Operar</b>.");
+  const headSub="Todos tus proyectos: compras, ventas, dividendos y comisiones · la base ordenada para tu contador";
+  const headAct=`<button class="btn btn-pri" id="contabreport">🧾 Informe consolidado para el contador</button>`;
+  if(!withOps.length)return card("Contabilidad consolidada",headSub,"",headAct)+notecard("Tus proyectos aún no tienen operaciones registradas. Registra la <b>compra inicial</b> en <b>Inversión → Ingresar datos</b>, o compras/ventas en <b>Operar</b>.");
   const T={buy:0,sell:0,div:0,real:0,unreal:0,val:0,fees:0,feesIva:0,costOpen:0};
   withOps.forEach(({A})=>{T.buy+=A.totBuy;T.sell+=A.totSell;T.div+=A.totDiv||0;T.real+=A.totReal;T.unreal+=A.totUnreal;T.val+=A.V;T.fees+=A.fees||0;T.feesIva+=A.feesIva||0;T.costOpen+=(A.rows||[]).reduce((a,o)=>a+o.avg*o.sh,0);});
   const totGain=T.real+T.unreal+T.div,netInv=T.buy-T.sell-T.div,totPct=netInv>0?totGain/netInv*100:0;
@@ -8543,8 +8624,7 @@ function viewContab(){
   // 70% de opacidad — el número más importante de la vista era el más difícil de leer. La tarjeta
   // "Rentabilidad total" (bruta, sin comisiones) se quitó: convivían un +3,99% bruto y un +3,51% real en la
   // misma pantalla sin que nada explicara la diferencia, y el que manda es el real.
-  const netCard=card("Resultado real (neto de comisiones e IVA)","Tu ganancia después de descontar las comisiones del operador (IVA incluido) · "+brokerSummary(),
-    `<div class="net-strip">
+  const netStrip=`<div class="net-strip">
       <div class="net-it"><span>Ganancia bruta${T.div?" (incl. dividendos)":""}</span><b style="color:${totGain>=0?green:red}">${sgM(totGain)}</b></div>
       <div class="net-op">−</div>
       <div class="net-it"><span>Comisiones (IVA incl.)</span><b style="color:${red}">${T.fees>0?fmtCLP(T.fees):"$0"}</b></div>
@@ -8552,7 +8632,7 @@ function viewContab(){
       <div class="net-it big"><span>Ganancia real</span><b style="color:${netGain>=0?green:red}">${sgM(netGain)}</b></div>
       <div class="net-pct" style="--pc:${netPct>=0?green:red}"><span>Rentabilidad real</span><b>${pc(netPct,2)}</b><i>ganancia real ÷ capital comprado</i></div>
     </div>
-    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary()})${T.feesIva>0?`, de las cuales <b>${fmtCLP(T.feesIva)}</b> corresponden a <b>IVA</b>`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy${T.div?`; los <b>dividendos</b> (${fmtCLP(T.div)}) son ganancia cobrada en efectivo, sin comisión`:""}.</div>`);
+    <div class="note" style="margin-top:11px">Comisiones aplicadas a <b>cada compra y venta</b> según el operador configurado (${brokerSummary()})${T.feesIva>0?`, de las cuales <b>${fmtCLP(T.feesIva)}</b> corresponden a <b>IVA</b>`:""}. La <b>ganancia realizada</b> es por ventas concretadas; la <b>no realizada</b> son posiciones abiertas a precio de hoy${T.div?`; los <b>dividendos</b> (${fmtCLP(T.div)}) son ganancia cobrada en efectivo, sin comisión`:""}.</div>`;
   // Resultado realizado por venta — lo más importante para la declaración de renta
   const sales=realizedSales(withOps);
   let realizedCard="";
@@ -8564,14 +8644,19 @@ function viewContab(){
       <tfoot><tr style="border-top:2px solid var(--line2);font-weight:800"><td colspan="5">Total ventas</td><td class="r">${fmtCLP(sales.reduce((a,s)=>a+s.proceeds,0))}</td><td class="r">${fmtCLP(sales.reduce((a,s)=>a+s.cost,0))}</td><td class="r" style="color:var(--mut)">${fmtCLP(tFee)}</td><td class="r" style="color:${tNet>=0?green:red}">${(tNet>=0?"+":"−")+fmtCLP(Math.abs(tNet))}</td></tr></tfoot></table></div>
       <div class="note" style="margin-top:11px">El <b>resultado neto</b> por venta = monto de venta − costo promedio − comisión de venta (IVA incl.), como referencia. El <b>tratamiento tributario lo define tu contador</b>; aquí tienes el detalle ordenado.</div>`);
   }
-  const tiles=`<div class="tiles">
+  // LOS TILES YA NO FLOTAN SUELTOS entre tarjetas: viven DENTRO del resumen y en dos grupos rotulados,
+  // porque son las PARTES de la franja de arriba — el capital que se movió y de dónde sale la ganancia.
+  const tiles=`<div class="cnt-grp">Capital movido</div><div class="tiles">
     ${tile("Invertido (compras)",fmtCLP(T.buy),"capital total comprado",indigo,ink)}
     ${tile("Dinero rescatado",T.sell+T.div?fmtCLP(T.sell+T.div):"—",T.div?("ventas "+fmtCLP(T.sell)+" + dividendos "+fmtCLP(T.div)):"efectivo recibido por ventas",indigo,ink)}
-    ${tile("Valor actual total",fmtCLP(T.val),"posiciones abiertas a hoy · "+(totGain>=0?"sobre":"bajo")+" el capital",indigo,totGain>=0?green:red)}
-    ${tile("Comisiones pagadas",T.fees?fmtCLP(T.fees):"$0",T.feesIva>0?("incluye IVA "+fmtCLP(T.feesIva)):"sin IVA",indigo,red)}
-    ${tile("Ganancia realizada",(T.real>=0?"+":"")+fmtCLP(T.real),"por ventas (costo prom.)",indigo,T.real>=0?green:red)}
-    ${tile("Dividendos recibidos",T.div?("+"+fmtCLP(T.div)):"—","ganancia cobrada en efectivo",indigo,T.div?green:muted)}
-    ${tile("Ganancia no realizada",(T.unreal>=0?"+":"")+fmtCLP(T.unreal),"posiciones abiertas",indigo,T.unreal>=0?green:red)}</div>`;
+    ${tile("Valor actual total",fmtCLP(T.val),"posiciones abiertas a hoy · "+(totGain>=0?"sobre":"bajo")+" el capital",indigo,totGain>=0?green:red)}</div>
+    <div class="cnt-grp">De dónde viene la ganancia bruta</div><div class="tiles">
+    ${tile("Ganancia realizada",sgM(T.real),"por ventas (costo prom.)",T.real>=0?green:red,T.real>=0?green:red)}
+    ${tile("Dividendos recibidos",T.div?("+"+fmtCLP(T.div)):"—","ganancia cobrada en efectivo",green,T.div?green:muted)}
+    ${tile("Ganancia no realizada",sgM(T.unreal),"posiciones abiertas",T.unreal>=0?green:red,T.unreal>=0?green:red)}
+    ${tile("Comisiones pagadas",T.fees?("−"+fmtCLP(T.fees)):"$0",T.feesIva>0?("incluye IVA "+fmtCLP(T.feesIva)):"sin IVA",OPS_FEE_COL,T.fees?red:muted)}</div>`;
+  // UNA sola tarjeta de resumen: el titular (bruta − comisiones = real, con su %) y debajo sus partes
+  const resumenCard=card("Contabilidad consolidada",headSub+" · "+brokerSummary(),netStrip+tiles,headAct);
   const projRows=per.map(({p,A})=>{const s=projSummary(p);const arch=projArchivado(p),act=!arch&&p.id===activeId;
     return `<tr><td class="cut" title="${(""+p.name).replace(/</g,"&lt;")}"><b style="color:var(--navy)">${(""+p.name).replace(/</g,"&lt;")}</b>${act?' <span class="badge pos" style="font-size:8.5px">ACTIVO</span>':""}${arch?' <span class="badge neu" style="font-size:8.5px" title="Archivado: fuera de la operativa, pero su contabilidad sigue contando aquí">ARCHIVADO</span>':""}</td><td>${fD(p.date)||"—"}</td><td class="r">${fmtCLP(s.invested)}</td><td class="r">${s.hasData?fmtCLP(s.value):"—"}</td><td class="r" style="color:${s.gain>=0?green:red};font-weight:700">${s.hasData?((s.gain>=0?"+":"")+fmtCLP(s.gain)):"—"}</td><td class="r" style="color:${s.gainPct>=0?green:red};font-weight:700">${s.hasData?pc(s.gainPct,2):"—"}</td><td class="r" style="color:var(--muted)">${A?A.L.tx.length:0}</td></tr>`;}).join("");
   const projCard=card("Por proyecto","Capital invertido, valor actual y rentabilidad de cada proyecto"+(projArchivados().length?" · los proyectos archivados siguen incluidos: su historia no se borra al apagarlos":""),
@@ -8595,7 +8680,9 @@ function viewContab(){
   const yearCard=years.length?card("Resumen anual (base para tu declaración)","Por año calendario: compras, ventas con su costo, mayor valor realizado, dividendos y comisiones · el tratamiento tributario definitivo lo aplica tu contador",
     `<div class="tw tbl-compact"><table><thead><tr><th>Año</th><th class="r">Ops.</th><th class="r">Comprado</th><th class="r">Vendido</th><th class="r">Costo de lo vendido</th><th class="r">Mayor valor realizado</th><th class="r">Dividendos</th><th class="r">Comisiones (IVA incl.)</th><th class="r">Resultado del año</th></tr></thead><tbody>${contabYearlyRows(years,fmtCLP)}</tbody></table></div>
     <div class="note" style="margin-top:11px">El <b>resultado del año</b> = mayor valor realizado + dividendos − comisiones (solo lo CONCRETADO ese año; la ganancia no realizada de posiciones abiertas no tributa hasta venderse). Los <b>dividendos</b> tributan como renta en el año en que se perciben.</div>`):"";
-  return head+netCard+tiles+realizedCard+yearCard+projCard+txCard+disc;
+  // ORDEN: primero el resumen; después lo que el contador necesita (el año), su respaldo (las ventas),
+  // el desglose por proyecto y al final el libro completo. Antes el detalle iba antes que el agregado.
+  return resumenCard+yearCard+realizedCard+projCard+txCard+disc;
 }
 function genContabReport(){
   const per=PROJECTS.map(p=>({p,A:contabAggFor(p)})).filter(x=>x.A);
@@ -11877,7 +11964,7 @@ function investorScoreCard(){
   const head=`<div class="isc-head">
       <div class="isc-badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 5.5L20 8.2l-4.2 3.9 1.1 5.7L12 15.6 7.1 17.8l1.1-5.7L4 8.2l5.6-.7z"/></svg></div>
       <div class="isc-h-txt"><div class="isc-title">Investor Score</div><div class="isc-sub">Las mejores alternativas del IPSA según Investor · ${sc.n} acciones · actualizado ${(""+sc.day).slice(8,10)}/${(""+sc.day).slice(5,7)}</div></div>
-      <button class="isc-carta" data-cartareco title="Informe imprimible sobre las 10 mejor evaluadas: desempeño y riesgo, fundamentos, veredicto de invertir o no invertir con su precio de compra, y glosario">📄 Informe de recomendación</button>
+      <button class="isc-carta" data-cartareco title="Informe imprimible sobre las 10 mejor evaluadas: desempeño y riesgo, fundamentos, y veredicto de invertir o no invertir con su precio de compra">📄 Informe de recomendación</button>
       <button class="isc-all" data-scoreall>Ver las ${sc.n} →</button></div>`;
   const legend=`<div class="isc-legend"><span><i style="background:${green}"></i>≥70 fuerte</span><span><i style="background:${indigo}"></i>55–69 sólido</span><span><i style="background:${amber}"></i>40–54 neutro</span><span><i style="background:${red}"></i>&lt;40 evitar</span></div>`;
   const nota=`<div class="note" style="margin:10px 0 0;font-size:10.5px">Síntesis diaria: <b>45% riesgo-retorno</b> + 30% fundamentos (${_fc}/${sc.n} reales) + 25% tendencia, con candado de confianza. Todo el riesgo ya está descontado. <b>Léelo por tramos</b>: diferencias menores a ~5 puntos no son significativas. Clic en una acción para ver por qué. Educativo, no asesoría financiera.</div>`;
@@ -12013,7 +12100,7 @@ function cartaRecoData(){
      1 · Desempeño   — ¿cómo se han comportado? (rentabilidad, riesgo, sensibilidad al mercado)
      2 · Fundamentos — ¿cómo son los negocios detrás?
      3 · Veredicto   — ¿invertir o no, y a qué precio?
-     4 · Glosario    — qué significa cada término, para que nadie tenga que preguntar.
+   (El glosario se retiró: cada tabla rotula sus columnas y el veredicto explica su regla.)
    Todo se construye sobre el TOP del Investor Score. Números en tablas y una línea de texto por
    veredicto: el cliente no viene a leer, viene a decidir. */
 function genCartaReco(){
@@ -12095,31 +12182,12 @@ function genCartaReco(){
       ${D.noComprar.length?`<div class="ct-panel" style="margin-top:11px"><table class="ct-tab"><thead><tr><th>Acción</th><th>Veredicto</th><th>Motivo</th><th class="r">Cuándo revisarla</th></tr></thead><tbody>${D.noComprar.map(vNo).join("")}</tbody></table></div>`:""}
     </div>`;
 
-  // ── 4 · GLOSARIO ────────────────────────────────────────────────────────────────────────────────
-  const G=[
-    ["Investor Score","Nota de 0 a 100 que resume riesgo-retorno, fundamentos y tendencia de cada acción. Sobre 70 es fuerte; bajo 40, se evita."],
-    ["Último mes / 6 meses","Cuánto subió o bajó el precio en los últimos ~30 y ~180 días corridos."],
-    ["Volatilidad","Cuánto oscila el precio en un año. Más alta, viaje más movido: no dice si sube o baja, dice cuánto se mueve."],
-    ["Beta (β)","Sensibilidad al mercado. β 1,0 se mueve como el IPSA; β 1,5 amplifica sus subidas y sus caídas; bajo 1,0 las amortigua."],
-    ["Sharpe","Cuánto retorno entrega por cada unidad de riesgo asumido. Sobre 1,0 es bueno; negativo, no compensó el riesgo."],
-    ["Máxima caída","La peor caída desde un máximo hasta el fondo en el último año. Es la pérdida que hubo que aguantar."],
-    ["P/U","Precio dividido por la utilidad anual por acción: cuántos años de utilidades cuesta la empresa. <b>P/U proy.</b> usa la utilidad que se espera."],
-    ["P/B","Precio sobre el valor contable del patrimonio. Bajo 1,0 se paga menos de lo que dicen los libros."],
-    ["Dividendos","Porcentaje del precio que la empresa reparte al año en efectivo."],
-    ["ROE","Rentabilidad sobre el patrimonio: cuánto gana la empresa con la plata de sus dueños."],
-    ["Margen neto","De cada $100 vendidos, cuánto queda de utilidad final."],
-    ["Valor estimado","Lo que creemos que vale la acción por sus números, triangulando dividendos, utilidades y precio objetivo de analistas."],
-    ["Precio objetivo / Potencial","Dónde ven el precio los analistas que cubren la acción, y cuánto es eso sobre el precio de hoy."],
-    ["Consenso","Qué recomiendan en promedio los analistas que siguen la acción. Entre paréntesis, cuántos son."],
-    ["Precio de compra","Hasta cuánto conviene pagar. <b>A mercado</b>: el precio de hoy ya sirve. <b>Orden límite</b>: solo comprar si baja a ese valor."],
-    ["Margen de seguridad","Distancia entre el valor estimado y el precio. Exigimos al menos "+(CARTA_MOS_OBJ*100).toFixed(0)+"% a favor antes de recomendar una compra."]
-  ];
-  const gloHTML=`<div class="ct-panel ct-glo">${G.map(g=>`<div class="ct-g"><b>${g[0]}</b><span>${g[1]}</span></div>`).join("")}</div>`;
+  // ── (el GLOSARIO se retiró a pedido: el informe va al grano — cada tabla ya rotula sus columnas y
+  //     el veredicto explica su regla; menos papel y menos texto para el mismo mensaje) ──
 
   const bodyHTML=bloque("1","Desempeño","cómo se han comportado en el último mes y en el año",desHTML,true)
     +bloque("2","Fundamentos","los negocios detrás de cada acción",fundHTML,true)
-    +bloque("3","Veredicto","invertir o no invertir, y a qué precio",verHTML)
-    +bloque("4","Glosario","qué significa cada término de este informe",gloHTML);
+    +bloque("3","Veredicto","invertir o no invertir, y a qué precio",verHTML);
 
   const _quien=userNombre()?esc(userNombre()):"";
   const execHTML=D.comprar.length
