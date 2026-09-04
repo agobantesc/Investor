@@ -71,11 +71,21 @@ try {
   console.log("  · BCCh respondió: " + JSON.stringify(j).slice(0, 160));
 } catch (e) { console.log("  ✗ BCCh (si3.bcentral.cl): " + String(e.message || e).slice(0, 140)); }
 
-// 3c) INE — serie del IPC publicada como JSON en su portal de datos abiertos
-for (const u of ["https://stat.ine.cl/api/v1/es/BADATOS/IPC",
-                 "https://api.boostr.cl/economy/indicators.json"]) {
-  try { const j = await getJson(u, 12000); console.log(`  · ${u}: respondió ${JSON.stringify(j).slice(0, 200)}`); }
-  catch (e) { console.log(`  ✗ ${u}: ${String(e.message || e).slice(0, 120)}`); }
+// 3c) OTRAS APIs chilenas de indicadores (respuesta COMPLETA: interesa si traen ipc y con qué fecha)
+for (const u of ["https://api.gael.cloud/general/public/indicadores",
+                 "https://api.boostr.cl/economy/indicators.json",
+                 "https://mindicador.cl/api/ipc/01-08-2026"]) {
+  try {
+    const j = await getJson(u, 12000);
+    const txt = JSON.stringify(j);
+    const tieneIpc = /ipc/i.test(txt);
+    console.log(`  · ${u}: ${tieneIpc ? "MENCIONA ipc" : "sin ipc"} · ${txt.length} bytes`);
+    if (tieneIpc) {
+      // imprime solo lo relacionado con ipc para no inundar el log
+      const m = txt.match(/.{0,160}ipc.{0,220}/i);
+      console.log("      " + (m ? m[0] : "(no se pudo recortar)"));
+    }
+  } catch (e) { console.log(`  ✗ ${u}: ${String(e.message || e).slice(0, 140)}`); }
   await new Promise(r => setTimeout(r, 300));
 }
 
