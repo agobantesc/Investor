@@ -1,15 +1,15 @@
 {
- "updatedAt": "2026-09-05T04:46:04.007Z",
+ "updatedAt": "2026-09-05T15:02:02.658Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
-  "yahoo ^IPSA hoy: 0 día(s)",
+  "yahoo ^IPSA hoy: 1 día(s)",
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor",
-  "yahoo ^IPSA period: 0 día(s)",
-  "michelangelo S&P (retornos): 496 día(s) hasta 2026-09-04"
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 503 | cor",
+  "yahoo ^IPSA period: 1 día(s)",
+  "michelangelo S&P (retornos): 495 día(s) hasta 2026-09-04"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
@@ -24,7 +24,7 @@
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 520 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | cor · yahoo ^IPSA period: 0 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 1 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 503 | cor · yahoo ^IPSA period: 1 día(s)"
  ],
  "days": [
   {
