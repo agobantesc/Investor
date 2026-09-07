@@ -8,13 +8,25 @@
 name: Actualizar cierres IPSA
 on:
   schedule:
-    - cron: "5 22 * * 1-5"   # 22:05 UTC ≈ 18:05/19:05 Chile (después del cierre ~16:00)
-    # RED DE SEGURIDAD. Las corridas programadas de GitHub son "best-effort": normalmente salen con ~1 hora
-    # de atraso (medido: 23:03–23:12 UTC en las últimas 14) y a veces la flota está cargada y NO SALEN. Pasó
-    # el 2026-08-06: cero ejecuciones creadas ese día, con el workflow activo, y el cierre se perdió hasta
-    # que se disparó a mano. Esta segunda hora recupera el día sola. Martes a SÁBADO porque las 00:30 UTC
-    # del sábado son el viernes por la tarde en Chile. Si la primera sí corrió, esta no encuentra nada nuevo
-    # y termina en "Sin cambios" sin hacer commit: repetirla no cuesta ni ensucia.
+    # HORA DE CHILE FIJA TODO EL AÑO. cron solo entiende UTC, así que la hora local se corría sola con el
+    # cambio de horario: el 2026-09-06 Chile pasó a UTC−3 (horario de verano) y la corrida de las 22:05 UTC,
+    # que era 18:05, pasó a ser 19:05 — una hora más tarde en el reloj de casa sin que nadie tocara nada.
+    # Se parte en dos citas con filtro de MES para que ambas caigan a las 17:00 de Chile:
+    #   · octubre-marzo → horario de VERANO (UTC−3): 20:00 UTC = 17:00 Chile
+    #   · abril-septiembre → horario de INVIERNO (UTC−4): 21:00 UTC = 17:00 Chile
+    # Los meses de TRANSICIÓN (abril y septiembre, donde el cambio cae el primer sábado) se dejan en la cita
+    # de invierno a propósito: en los pocos días que ya están en verano la corrida sale a las 18:00 de Chile
+    # —más tarde, nunca más temprano—, así jamás se adelanta al cierre de la Bolsa (~16:00).
+    - cron: "0 20 * 10,11,12,1,2,3 1-5"   # verano de Chile: 20:00 UTC = 17:00 Chile
+    - cron: "0 21 * 4,5,6,7,8,9 1-5"      # invierno de Chile: 21:00 UTC = 17:00 Chile
+    # RED DE SEGURIDAD. Las corridas programadas de GitHub son "best-effort" y salen TARDE: medido en las
+    # cinco últimas, ~1 h 50 min de atraso (03-09: 23:54 · 04-09: 23:52 · 05-09: 04:44 y 15:00 UTC), y a
+    # veces la flota está cargada y NO SALEN. Pasó el 2026-08-06: cero ejecuciones creadas ese día, con el
+    # workflow activo, y el cierre se perdió hasta que se disparó a mano. Por ese atraso sistemático la cita
+    # de arriba se fija a las 17:00 de Chile: aterriza cerca de las 19:00, con el cierre ya firme.
+    # Esta segunda hora recupera el día sola. Martes a SÁBADO porque las 00:30 UTC del sábado son el viernes
+    # por la tarde en Chile. Si la primera sí corrió, esta no encuentra nada nuevo y termina en "Sin cambios"
+    # sin hacer commit: repetirla no cuesta ni ensucia.
     - cron: "30 0 * * 2-6"   # 00:30 UTC ≈ 20:30/21:30 Chile del día hábil anterior
     - cron: "0 12 * * 6"     # sábado 12:00 UTC: backfill semanal de 2 años (re-afirma el histórico)
   workflow_dispatch:          # ejecución manual desde la pestaña Actions
