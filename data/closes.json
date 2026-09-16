@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-16T05:02:26.062Z",
+ "updatedAt": "2026-09-16T23:34:44.652Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: 1 día(s)",
@@ -7,11 +7,12 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=allorigins/get: respuesta inespera",
+  "stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=allorigins/raw: respuesta inesperada (<! | allorigins/get=HT",
   "yahoo ^IPSA period: 0 día(s)",
-  "michelangelo S&P (retornos): 496 día(s) hasta 2026-09-15"
+  "michelangelo S&P (retornos): 496 día(s) hasta 2026-09-16"
  ],
  "ipsaSynth": [
+  "2026-09-16=11194.63 (S&P oficial -0.77%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "fuenteOficial": [
@@ -24,7 +25,7 @@
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=HTTP 522 | allorigins/get=allorigins/get: respuesta inespera · yahoo ^IPSA period: 0 día(s)"
+  "IPSA histórico incompleto (1 día/s) — yahoo quote ^IPSA: 1 día(s) · yahoo ^IPSA hoy: 0 día(s) · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=stooq.com: respuesta inesperada (<!DOCTY | stooq.pl=stooq.pl: respuesta inesperada (<!DOCTYP | allorigins/raw=allorigins/raw: respuesta inesperada (<! | allorigins/get=HT · yahoo ^IPSA period: 0 día(s)"
  ],
  "days": [
   {
@@ -18394,6 +18395,40 @@
     "CAP": 5450
    },
    "ipsa": 11281.31
+  },
+  {
+   "date": "2026-09-16",
+   "prices": {
+    "CHILE": 198,
+    "SANTANDER": 82.17,
+    "BCI": 66100,
+    "ENELCHILE": 81.26,
+    "COLBUN": 146,
+    "FALABELLA": 6488.9,
+    "CENCOSUD": 2101,
+    "COPEC": 6520,
+    "CMPC": 969,
+    "SQM-B": 66200,
+    "CCU": 5415,
+    "ENTEL": 3961,
+    "LATAM": 24.05,
+    "PARAUCO": 3745,
+    "AGUAS-A": 326,
+    "IAM": 911,
+    "ENELAM": 83.51,
+    "ECL": 1880.2,
+    "ANDINA-B": 4743,
+    "CONCHATORO": 942,
+    "QUINENCO": 4749,
+    "MALLPLAZA": 3859.9,
+    "VAPORES": 48.55,
+    "RIPLEY": 441.43,
+    "SMU": 117.8,
+    "SONDA": 300,
+    "ITAUCL": 23660,
+    "CAP": 5380
+   },
+   "ipsa": 11194.63
   }
  ]
 }
