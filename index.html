@@ -2104,9 +2104,30 @@ function svgMulti(o){
   const all=o.series.reduce((a,s)=>a.concat(s.vals),[]).filter(v=>v!=null&&isFinite(v));const bd=niceBounds(all,0.08);   // null = tramo sin dato (p.ej. una acción antes de comprarla): se ignora en los límites y la línea empieza donde hay dato
   const X=i=>m.l+step*i,Y=v=>H-m.b-(v-bd.min)/(bd.max-bd.min)*(H-m.t-m.b);
   let g="";
-  for(let i=0;i<=4;i++){const v=bd.min+(bd.max-bd.min)*i/4,yy=Y(v);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}">${(o.yfmt||(z=>z.toFixed(0)))(v)}</text>`;}
+  const _tickY=[];
+  for(let i=0;i<=4;i++){const v=bd.min+(bd.max-bd.min)*i/4,yy=Y(v);_tickY.push(yy);g+=`<line x1="${m.l}" y1="${yy.toFixed(1)}" x2="${W-m.r}" y2="${yy.toFixed(1)}" stroke="${GC}"/><text x="${m.l-9}" y="${(yy+3).toFixed(1)}" text-anchor="end" font-size="11" fill="${faint}">${(o.yfmt||(z=>z.toFixed(0)))(v)}</text>`;}
   const _zr=(o.zero!=null?o.zero:100);   // línea de referencia: 100 en las series base-100, 0 en las que van en %
-  if(bd.min<_zr&&bd.max>_zr){const z=Y(_zr);g+=`<line x1="${m.l}" y1="${z.toFixed(1)}" x2="${W-m.r}" y2="${z.toFixed(1)}" stroke="${AC}" stroke-width="1.2" stroke-dasharray="3 4"/>`;}
+  if(bd.min<_zr&&bd.max>_zr){const z=Y(_zr);
+    g+=`<line x1="${m.l}" y1="${z.toFixed(1)}" x2="${W-m.r}" y2="${z.toFixed(1)}" stroke="${o.areaSign?AC:AC}" stroke-width="${o.areaSign?1.6:1.2}"${o.areaSign?'':' stroke-dasharray="3 4"'}/>`;
+    // el 0% se rotula en el eje SOLO si no queda encima de una marca vecina (con poco rango, el cero cae
+    // casi sobre otro tick y los dos números se pisaban); si no cabe, mandan la línea y los colores
+    if(o.areaSign&&_tickY.every(ty=>Math.abs(ty-z)>=12))
+      g+=`<text x="${m.l-9}" y="${(z+3).toFixed(1)}" text-anchor="end" font-size="11" font-weight="800" fill="${muted}">0%</text>`;}
+  /* ÁREA PARTIDA POR EL CERO (areaSign): el relleno va entre la curva y la línea de referencia, verde
+     donde la serie está por encima y ROJO donde cayó por debajo. Se dibuja el MISMO polígono dos veces,
+     recortado arriba y abajo del cero: así el color cambia exactamente en el cruce, sin costuras. */
+  if(o.areaSign&&o.series[0]){
+    const s0=o.series[0],zy=Y(_zr),gid="mgs"+(o.id||"x");
+    const P=[];for(let i=0;i<s0.vals.length;i++){const v=s0.vals[i];if(v==null||!isFinite(v))continue;P.push([X(i),Y(v)]);}
+    if(P.length>1){
+      const d="M"+P[0][0].toFixed(1)+" "+zy.toFixed(1)+" "+P.map(p=>"L"+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ")+" L"+P[P.length-1][0].toFixed(1)+" "+zy.toFixed(1)+" Z";
+      const alto=Math.max(0,zy-m.t),bajo=Math.max(0,(H-m.b)-zy);
+      g+=`<defs><clipPath id="${gid}A"><rect x="${m.l}" y="${m.t}" width="${(W-m.r-m.l).toFixed(1)}" height="${alto.toFixed(1)}"/></clipPath>`
+        +`<clipPath id="${gid}B"><rect x="${m.l}" y="${zy.toFixed(1)}" width="${(W-m.r-m.l).toFixed(1)}" height="${bajo.toFixed(1)}"/></clipPath></defs>`
+        +`<path d="${d}" fill="${green}" opacity="0.20" clip-path="url(#${gid}A)"/>`
+        +`<path d="${d}" fill="${red}" opacity="0.20" clip-path="url(#${gid}B)"/>`;
+    }
+  }
   const _liveI=o.live?n-1:-1;   // punto EN VIVO: el ÚLTIMO índice se dibuja aparte (tramo punteado + punto pulsante), nunca como parte de la historia
   if(o.area&&o.series[0]){const s0=o.series[0];let fi=0;while(fi<s0.vals.length&&(s0.vals[fi]==null||!isFinite(s0.vals[fi])))fi++;   // primer índice con dato: el área empieza ahí (soporta series que arrancan más tarde)
     const PA=[];for(let i=fi;i<s0.vals.length;i++){if(i===_liveI)continue;const v=s0.vals[i];if(v==null||!isFinite(v))continue;PA.push([X(i),Y(v)]);}
@@ -3843,8 +3864,25 @@ function viewInvActive(){
   // _real.tot = capital de la COMPRA INICIAL (weeks[0].qty) — se mantiene como referencia "capital real vs objetivo"
   // (PF.amount = plan). β/E(R)/σ, en cambio, se leen de PF.* (tenencias ACTUALES), coherente con opDo y el agente.
   const _real=(_b0&&_b0.qty)?(function(){const per=PF.holdings.map(hd=>({hd,m:(_b0.qty[hd.t]||0)*(_b0.prices[hd.t]||0)}));const tot=per.reduce((a,x)=>a+x.m,0)||1;return {per,tot};})():null;
-  const chips=(_real?_real.per.filter(x=>x.m>1e-9).map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}">${x.hd.t} ${(x.m/_real.tot*100).toFixed(0).replace(".",",").replace("-","−")}% · ${fmtCLP(x.m)}</span>`).join(" "):PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0).replace(".",",").replace("-","−")}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
-  const _sub=_real?`Aplicada el ${fD(PF.date)} · capital real ${fmtCLP(_real.tot)} (objetivo ${fmtCLP(PF.amount)}) · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2).replace(".",",").replace("-","−")}% · σ ${(PF.sig||0).toFixed(1).replace(".",",").replace("-","−")}%`:`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap())} · seguimiento ${fr.cap} · β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2).replace(".",",").replace("-","−")}% · σ ${(PF.sig||0).toFixed(1).replace(".",",").replace("-","−")}%`;
+  // COMPOSICIÓN DE HOY, no la de la compra inicial. Los chips mostraban los pesos y montos del primer día
+  // (weeks[0]) aunque después se hubiera comprado, vendido o movido el precio: con la cartera de hoy eso ya
+  // no describe nada. Ahora salen del valor ACTUAL de cada posición (precio de hoy × acciones que quedan),
+  // ordenados de mayor a menor peso; las posiciones liquidadas desaparecen solas (siguen en el historial).
+  const _hoy=(function(){
+    const per=((IM&&IM.perStock)||[]).filter(x=>x&&x.sh>0&&x.val>0);
+    const tot=per.reduce((a,x)=>a+x.val,0);
+    return tot>0?{per:per.slice().sort((a,b)=>b.val-a.val),tot}:null;
+  })();
+  const chips=(_hoy
+    ?_hoy.per.map(x=>`<span class="altchip" style="border-color:${x.hd.c}66;color:${x.hd.c}" title="${x.hd.t}: ${(+x.sh).toLocaleString("es-CL",{maximumFractionDigits:2})} acciones a ${fmtP(x.cur)} · costo promedio ${fmtP(x.buy)}">${x.hd.t} ${(x.val/_hoy.tot*100).toFixed(0)}% · ${fmtCLP(x.val)}</span>`).join(" ")
+    // sin seguimiento todavía: la cartera aún ES el plan, así que se muestran sus pesos objetivo
+    :PF.holdings.map(hd=>`<span class="altchip" style="border-color:${hd.c}66;color:${hd.c}">${hd.t} ${(hd.w*100).toFixed(0)}% · ${fmtCLP(hd.monto)}</span>`).join(" "));
+  // el subtítulo también deja de anclarse al día uno: describe la cartera que existe hoy. El capital de la
+  // compra inicial no se pierde — sigue en la tarjeta "Capital aportado" de más abajo.
+  const _cap=`β ${(PF.bp||0).toFixed(2)} · E(R) CAPM ${(PF.erCapm||0).toFixed(2).replace(".",",").replace("-","−")}% · σ ${(PF.sig||0).toFixed(1).replace(".",",").replace("-","−")}%`;
+  const _sub=_hoy
+    ?`Aplicada el ${fD(PF.date)} · <b>${_hoy.per.length} acci${_hoy.per.length===1?"ón":"ones"} en cartera hoy</b> por ${fmtCLP(_hoy.tot)} · seguimiento ${fr.cap} · ${_cap}`
+    :`Aplicada el ${fD(PF.date)} · capital ${fmtCLP(realCap()||PF.amount)} · aún sin seguimiento registrado · ${_cap}`;
   const summary=card(PF.name,_sub,`<div class="altchips">${chips}</div>`,`<button class="btn" id="versim">🔬 Ver simulación</button> <button class="btn" id="renpf">✎ Renombrar</button> <button class="btn" id="archpf" title="Archivar: lo apaga sin perder ni un dato">🗄 Archivar</button> <button class="btn" id="resetpf">Eliminar proyecto</button>`);
   if(editIdx!=null&&!WEEKS[editIdx])editIdx=null;   // el índice en edición puede quedar de otro proyecto: nunca editar un registro inexistente
   const editing=editIdx!=null,ed=editing?WEEKS[editIdx]:null,isFirst=WEEKS.length===0;
@@ -11801,8 +11839,8 @@ function viewHome(){
       if(fe)parts.push(`<span style="display:block;color:${red};font-weight:700;font-size:10.5px">↳ comisiones −${fmtCLP(fe)}</span>`);
       if(fl>0&&k>0)parts.push(`<span style="display:block;color:var(--faint);font-weight:600;font-size:10px">el % se diluye: la ganancia se reparte sobre el capital nuevo</span>`);
       return parts.join("");});
-    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,area:true,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>p0(v,1),ttfmt:v=>pc(v,2)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2).replace(".",",").replace("-","−")}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
-    return card("Rentabilidad neta en el tiempo","Historia de la rentabilidad neta de todas tus carteras · (valor − aportado − comisiones) sobre el capital aportado a cada fecha · el último punto es la misma «Rentabilidad» del resumen de arriba",body);
+    const body=`<div class="ipsa-chart">${svgMulti({series:[{label:"Rentabilidad neta",c:upN?green:red,vals:mt.netPct,w:2.4,op:1}],labels:mt.dates,h:210,areaSign:true,zero:0,id:"mgret",unit:"",signBase:0,extra:_xtr,yfmt:v=>p0(v,1),ttfmt:v=>pc(v,2)})}<div class="genl" style="margin:6px 0 0;text-align:right">${mt.dates.length} fechas · ${(lastN>=0?"+":"")+lastN.toFixed(2).replace(".",",").replace("-","−")}% neta acumulada (después de comisiones) · patrimonio actual ${fmtCLP(lastV)}</div><div class="note" style="margin:9px 0 0;font-size:10.5px">En los días con <b>aportes grandes</b> (compras con capital nuevo) la curva puede <b>bajar sin que pierdas dinero</b>: la ganancia acumulada se reparte sobre un capital mayor (<b>dilución</b>) y se descuentan las comisiones de esas compras. Las curvas de cada fondo (abajo) miden la estrategia <b>por peso invertido</b> (TWR) y no se diluyen — por eso pueden subir el mismo día en que esta baja.</div></div>`;
+    return card("Rentabilidad neta en el tiempo","Historia de la rentabilidad neta de todas tus carteras · (valor − aportado − comisiones) sobre el capital aportado a cada fecha · <b>verde sobre la línea del cero, rojo bajo ella</b>: los tramos en rojo son los días en que ibas perdiendo · el último punto es la misma «Rentabilidad» del resumen de arriba",body);
   })();
   // el RESULTADO POR MES (rentabilidad y ganancia/pérdida de cada mes calendario) vive DENTRO de la
   // tarjeta "Operaciones y comisiones" (pedido explícito): carril superior del gráfico + tooltip + KPI.
