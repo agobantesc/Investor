@@ -1407,7 +1407,12 @@
   /* la carta de recomendación es la ACCIÓN principal de la tarjeta: va en sólido, "ver todas" queda de apoyo */
   .isc-carta{flex:0 0 auto;border:1px solid transparent;background:linear-gradient(135deg,var(--accent),#7C4DD8);color:#fff;font:800 11.5px var(--font);padding:.42rem .78rem;border-radius:9px;cursor:pointer;white-space:nowrap;transition:.14s var(--ease);box-shadow:0 6px 16px -9px rgba(60,80,200,.75);}
   .isc-carta:hover{filter:brightness(1.07);box-shadow:0 8px 20px -8px rgba(60,80,200,.85);}
-  @media(max-width:760px){.isc-head{flex-wrap:wrap}.isc-carta,.isc-all{font-size:11px;padding:.38rem .6rem}}
+  /* selector de ENFOQUE del informe: vive pegado al botón que lo genera, porque solo manda sobre él */
+  .isc-enf{flex:0 0 auto;display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .isc-enfl{font:800 8.6px var(--font);letter-spacing:.6px;text-transform:uppercase;color:var(--mut);cursor:help}
+  .isc-enf .home-seg{padding:2px}
+  .isc-enf .home-seg button{font:700 10.5px var(--font);padding:.24rem .5rem}
+  @media(max-width:760px){.isc-head{flex-wrap:wrap}.isc-carta,.isc-all{font-size:11px;padding:.38rem .6rem}.isc-enf{align-items:flex-start}}
   /* ══ INFORME DE RECOMENDACIÓN ═══════════════════════════════════════════════════════════════════
      Va a manos de un cliente, así que tiene identidad propia dentro del informe: paleta declarada en
      variables del PROPIO documento (nunca las constantes JS, que llevan la paleta del tema en que esté
@@ -1442,6 +1447,9 @@
   .ct-rk{width:22px;padding-left:8px!important}
   .ct-rk span{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:5px;color:#fff;font:800 9px var(--font)}
   .ct-score{display:inline-block;min-width:26px;text-align:center;padding:2px 5px;border-radius:5px;color:#fff;font:800 10px var(--font)}
+  /* segunda línea dentro de una celda: el dato crudo bajo el puntaje que lo resume (ej. el margen
+     sobre el valor estimado bajo la nota de precio), para que el número no haya que creerlo a ciegas */
+  .ct-mini{display:block;font:700 8.4px var(--font);color:var(--ct-mute);letter-spacing:.1px;margin-top:1px;white-space:nowrap}
   .ct-rec{display:inline-block;padding:1px 6px;border-radius:999px;border:1px solid var(--ct-line);background:#F2F6FC;color:var(--ct-navy2);font:700 9px var(--font);white-space:nowrap}
   .ct-why{color:var(--ct-mute);white-space:normal}
   /* barra proporcional del retorno del mes, dentro de la celda */
@@ -12002,7 +12010,10 @@ function investorScoreCard(){
   const head=`<div class="isc-head">
       <div class="isc-badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 5.5L20 8.2l-4.2 3.9 1.1 5.7L12 15.6 7.1 17.8l1.1-5.7L4 8.2l5.6-.7z"/></svg></div>
       <div class="isc-h-txt"><div class="isc-title">Investor Score</div><div class="isc-sub">Las mejores alternativas del IPSA según Investor · ${sc.n} acciones · actualizado ${(""+sc.day).slice(8,10)}/${(""+sc.day).slice(5,7)}</div></div>
-      <button class="isc-carta" data-cartareco title="Informe imprimible sobre las 10 mejor evaluadas: desempeño y riesgo, fundamentos, y veredicto de invertir o no invertir con su precio de compra">📄 Informe de recomendación</button>
+      <div class="isc-enf"><span class="isc-enfl" title="Con qué criterio se ordena el informe: el índice de inversión reparte el peso entre la calidad del negocio y el precio de hoy">Enfoque del informe</span>
+        <div class="home-seg" role="group" aria-label="Enfoque del informe de recomendación">${Object.keys(CARTA_ENFOQUES).map(k=>{const e=CARTA_ENFOQUES[k];
+          return `<button data-cartaenf="${k}" class="${cartaEnfoque===k?"on":""}" title="${e.label}: ${e.desc} (${Math.round(e.cal*100)}% calidad / ${Math.round(e.pre*100)}% precio)">${e.label}</button>`;}).join("")}</div></div>
+      <button class="isc-carta" data-cartareco title="Informe imprimible sobre las 10 primeras del índice de inversión: ranking, desempeño y riesgo, fundamentos, y veredicto de invertir o no invertir con su precio de compra">📄 Informe de recomendación</button>
       <button class="isc-all" data-scoreall>Ver las ${sc.n} →</button></div>`;
   const legend=`<div class="isc-legend"><span><i style="background:${green}"></i>≥70 fuerte</span><span><i style="background:${indigo}"></i>55–69 sólido</span><span><i style="background:${amber}"></i>40–54 neutro</span><span><i style="background:${red}"></i>&lt;40 evitar</span></div>`;
   const nota=`<div class="note" style="margin:10px 0 0;font-size:10.5px">Síntesis diaria: <b>45% riesgo-retorno</b> + 30% fundamentos (${_fc}/${sc.n} reales) + 25% tendencia, con candado de confianza. Todo el riesgo ya está descontado. <b>Léelo por tramos</b>: diferencias menores a ~5 puntos no son significativas. Clic en una acción para ver por qué. Educativo, no asesoría financiera.</div>`;
@@ -12072,7 +12083,30 @@ function scoreAllModal(){
    El margen exigido para comprar A MERCADO es del 15%; entre 0% y 15% la carta propone una orden LÍMITE. */
 const CARTA_SCORE_MIN=55;     // "sólido" o mejor, el mismo tramo de la leyenda del Investor Score
 const CARTA_MOS_OBJ=0.15;     // margen de seguridad exigido para comprar al precio de hoy
-const CARTA_TOP=10;           // el informe se construye sobre el TOP del Investor Score, y sobre ese top opina
+const CARTA_TOP=10;           // el informe se construye sobre el TOP del índice de inversión, y sobre ese top opina
+const CARTA_CAL_MIN=40;       // piso de calidad para ENTRAR al ranking: bajo 40 el score dice "evitar"
+/* ÍNDICE DE INVERSIÓN — el orden del informe.
+   Ordenar por Investor Score dejaba el informe casi inmóvil: medido sobre la base real, el top-10
+   conservaba 9 de 10 nombres al cabo de un mes y 7 de 10 al cabo de un AÑO. No es un defecto del score,
+   es su naturaleza: mide la calidad del negocio y su comportamiento (riesgo-retorno, fundamentos,
+   tendencia), y eso se mueve lento. El problema es que un informe que responde "¿en qué invierto HOY?"
+   no puede ignorar el precio: en la misma corrida, la 2ª del ranking cotizaba 25% SOBRE su valor
+   estimado mientras la 7ª cotizaba 15% BAJO él.
+   El índice combina las dos mitades de una decisión de compra: QUÉ tan bueno es el negocio (el score) y
+   QUÉ tan bien está el precio hoy (el margen de seguridad). Como el precio sí se mueve, el orden rota
+   con el mercado sin tocar nada. El enfoque elegido reparte el peso entre ambas.
+   PISO DE CALIDAD: por barata que esté, una acción del tramo "Evitar" (<40) no entra al ranking. Barato y
+   malo es una trampa de valor, no una oportunidad — y el veredicto jamás la recomendaría igual. */
+const CARTA_ENFOQUES={
+  equilibrado:{cal:0.55,pre:0.45,label:"Equilibrado",desc:"calidad del negocio y precio de hoy, a la par"},
+  calidad:    {cal:0.80,pre:0.20,label:"Calidad",    desc:"manda el negocio; el precio solo desempata"},
+  oportunidad:{cal:0.30,pre:0.70,label:"Oportunidad",desc:"manda el descuento sobre el valor estimado"}
+};
+let cartaEnfoque=(()=>{const v=lsGet("inv_carta_enfoque");return CARTA_ENFOQUES[v]?v:"equilibrado";})();
+/* precio → 0-100 en escala ABSOLUTA (no percentil): +30% de margen = 100, a valor justo = 50, 30% cara = 0.
+   Absoluta a propósito: con percentiles, si TODO el mercado está caro igual habría un "100" — el mejor de
+   los malos con cara de oportunidad. Sin valorización fiable queda en 50: ni suma ni resta. */
+function cartaPrecioScore(mos){if(mos==null||!isFinite(mos))return null;return Math.max(0,Math.min(100,Math.round(50+(mos*100)/30*50)));}
 function cartaRecoData(){
   let sc=null;try{sc=investorScore();}catch(e){}
   if(!sc||!sc.rows||sc.rows.length<3)return null;
@@ -12113,21 +12147,31 @@ function cartaRecoData(){
       :(val==null)?"sin fundamentos publicados para valorizarla"
       :(r.ivN<2)?"una sola referencia de valor: no se puede triangular"
       :(mos!=null&&mos<=0)?("cuesta "+(_sobre!=null?Math.round(_sobre)+"% ":"")+"más de lo que estimamos que vale")
-      :(r.score<CARTA_SCORE_MIN)?"sus números quedan bajo el resto del universo"
+      // al llegar aquí el margen YA es positivo y está triangulado (las ramas de arriba lo filtran): lo
+      // que falla es el negocio. Decirlo completo evita que el lector crea que la descartamos por cara.
+      :(r.score<CARTA_SCORE_MIN)?("el precio acompaña ("+Math.round(mos*100)+"% bajo su valor), pero sus números quedan bajo el resto del universo")
       :"buen negocio, pero sin margen suficiente al precio de hoy";
     return {r,f,px,val,mos,fiab,limite,aMercado,entrada,cede,invertir,motivo,
       mes:per?per.mes:null,semana:per?per.semana:null,dia:per?per.dia:null,fecha:per?per.lastDate:null,
       ipsaMes:ipsa?ipsa.mes:null,vsIpsa:(per&&per.mes!=null&&ipsa&&ipsa.mes!=null)?(per.mes-ipsa.mes):null,
       tengo:enCartera[r.t]||null};
   };
-  const todas=sc.rows.map(arma);
+  const _enf=CARTA_ENFOQUES[cartaEnfoque]||CARTA_ENFOQUES.equilibrado;
+  const todas=sc.rows.filter(r=>r.score>=CARTA_CAL_MIN).map(arma).map(x=>{
+    const qCal=x.r.score;                                   // calidad del negocio (Investor Score)
+    const qPreR=cartaPrecioScore(x.mos);                     // precio de hoy vs valor estimado
+    const qPre=(qPreR==null||x.r.ivN<2)?null:qPreR;          // sin triangulación no hay señal de precio fiable
+    const rank=Math.round(qCal*_enf.cal+(qPre==null?50:qPre)*_enf.pre);
+    return Object.assign(x,{qCal,qPre,rank,precioFiable:qPre!=null});
+  }).sort((a,b)=>b.rank-a.rank||b.qCal-a.qCal);
   // El informe mira el TOP del Investor Score y opina sobre ESAS. No hay tope aparte para las
   // recomendadas: si nueve de las diez merecen compra, la carta dice nueve. Recortar la lista para que
   // "se vea seleccionada" sería esconderle al cliente parte del análisis.
+  if(todas.length<3)return null;   // el piso de calidad dejó el universo sin candidatos: no hay informe que hacer
   const top=todas.slice(0,CARTA_TOP);
   const comprar=top.filter(x=>x.invertir);
   const noComprar=top.filter(x=>!x.invertir);
-  return {sc,top,comprar,noComprar,todas,ipsa,
+  return {sc,top,comprar,noComprar,todas,ipsa,enfoque:cartaEnfoque,enfoqueDef:_enf,
     // monto por operación bajo el cual la comisión MÍNIMA del operador se come el margen: no es opinión,
     // es el punto en que el mínimo deja de ser el porcentaje pactado. Con BTG (0,4%+IVA, mín $1.000+IVA)
     // son $250.000: bajo eso pagas más del 0,4% aunque el contrato diga 0,4%.
@@ -12135,11 +12179,12 @@ function cartaRecoData(){
 }
 /* ══ EL DOCUMENTO ══════════════════════════════════════════════════════════════════════════════════
    Va a manos de un cliente, así que se lee de arriba abajo y en cada sección hay UNA pregunta:
-     1 · Desempeño   — ¿cómo se han comportado? (rentabilidad, riesgo, sensibilidad al mercado)
-     2 · Fundamentos — ¿cómo son los negocios detrás?
-     3 · Veredicto   — ¿invertir o no, y a qué precio?
+     1 · Ranking de inversión — ¿en qué orden conviene mirarlas? (índice = calidad + precio, y el
+                                desempeño con que llegan: mes, semestre, riesgo)
+     2 · Fundamentos          — ¿cómo son los negocios detrás?
+     3 · Veredicto            — ¿invertir o no, y a qué precio?
    (El glosario se retiró: cada tabla rotula sus columnas y el veredicto explica su regla.)
-   Todo se construye sobre el TOP del Investor Score. Números en tablas y una línea de texto por
+   Todo se construye sobre el TOP del ÍNDICE DE INVERSIÓN. Números en tablas y una línea de texto por
    veredicto: el cliente no viene a leer, viene a decidir. */
 function genCartaReco(){
   const D=cartaRecoData();
@@ -12163,25 +12208,33 @@ function genCartaReco(){
       <div class="hd"><span class="ct-secn">${n}</span><div class="ct-sech"><div class="ct-sect">${t}</div><div class="ct-secs">${s}</div></div></div>
       <div class="bd">${html}</div></div>`;
 
-  // ── 1 · DESEMPEÑO ───────────────────────────────────────────────────────────────────────────────
+  // ── 1 · RANKING DE INVERSIÓN ────────────────────────────────────────────────────────────────────
+  // El orden del informe es el ÍNDICE DE INVERSIÓN: calidad del negocio (Investor Score) combinada con
+  // qué tan bien está el precio de hoy frente al valor estimado. Las dos mitades van a la vista en su
+  // propia columna, para que se vea POR QUÉ una acción está donde está —y no haya que creerle al número.
   const _mx=Math.max(1,...T.map(x=>Math.abs(x.mes||0)));
   const barra=v=>{if(v==null)return "";const w=Math.max(3,Math.round(Math.abs(v)/_mx*50));
     return `<span class="ct-bar"><i class="${v>=0?"up":"dn"}" style="width:${w}%"></i></span>`;};
+  const ENF=D.enfoqueDef;
   const desRows=T.map((x,i)=>{const r=x.r;return `<tr>
-    <td class="ct-rk"><span style="background:${cS(r.score)}">${i+1}</span></td>
+    <td class="ct-rk"><span style="background:${cS(x.rank)}">${i+1}</span></td>
     <td class="ct-tk">${esc(r.t)}</td>
+    <td class="r"><span class="ct-score" style="background:${cS(x.rank)}">${x.rank}</span></td>
+    <td class="r ct-strong" style="color:${cS(r.score)}">${r.score}</td>
+    <td class="r ct-strong" style="color:${x.qPre==null?"var(--ct-mute)":cS(x.qPre)}">${x.qPre==null?"—":x.qPre}
+      <span class="ct-mini">${x.qPre==null?"sin valorización":(pct(x.mos*100,0)+" vs. valor")}</span></td>
     <td class="r ct-strong" style="color:${cN(x.mes)}">${pct(x.mes)}${barra(x.mes)}</td>
     <td class="r" style="color:${cN(r.mom6m)}">${pct(r.mom6m,1)}</td>
     <td class="r">${r.sig!=null?nd(r.sig,1)+"%":"—"}</td>
     <td class="r">${r.beta!=null?nd(r.beta,2):"—"}</td>
-    <td class="r" style="color:${r.sharpe>=1?"var(--ct-ok)":r.sharpe>=0?"var(--ct-ink)":"var(--ct-bad)"}">${r.sharpe!=null?nd(r.sharpe,2):"—"}</td>
-    <td class="r" style="color:${r.maxDD>30?"var(--ct-warn)":"var(--ct-ink)"}">${r.maxDD!=null?"−"+nd(Math.abs(r.maxDD),1)+"%":"—"}</td>
-    <td class="r"><span class="ct-score" style="background:${cS(r.score)}">${r.score}</span></td></tr>`;}).join("");
+    <td class="r" style="color:${r.maxDD>30?"var(--ct-warn)":"var(--ct-ink)"}">${r.maxDD!=null?"−"+nd(Math.abs(r.maxDD),1)+"%":"—"}</td></tr>`;}).join("");
+  const _sinPre=T.filter(x=>x.qPre==null).length;
   const desHTML=`<div class="ct-panel"><table class="ct-tab"><thead><tr>
-      <th></th><th>Acción</th><th class="r">Último mes</th><th class="r">6 meses</th><th class="r">Volatilidad</th>
-      <th class="r">Beta</th><th class="r">Sharpe</th><th class="r">Máx. caída</th><th class="r">Score</th></tr></thead>
+      <th></th><th>Acción</th><th class="r">Índice</th><th class="r">Calidad</th><th class="r">Precio</th>
+      <th class="r">Último mes</th><th class="r">6 meses</th><th class="r">Volatilidad</th>
+      <th class="r">Beta</th><th class="r">Máx. caída</th></tr></thead>
     <tbody>${desRows}</tbody></table>
-    <div class="ct-foot">En el mismo período el IPSA rindió <b style="color:${cN(D.ipsa?D.ipsa.mes:null)}">${pct(D.ipsa?D.ipsa.mes:null)}</b> en el mes${D.ipsa&&D.ipsa.anio!=null?` y <b style="color:${cN(D.ipsa.anio)}">${pct(D.ipsa.anio)}</b> en doce meses`:""}. Cierres al ${fD(lastBaseDate())}.</div></div>`;
+    <div class="ct-foot"><b>Índice de inversión</b> (0–100) = <b>${Math.round(ENF.cal*100)}%</b> calidad + <b>${Math.round(ENF.pre*100)}%</b> precio, enfoque <b>${ENF.label}</b> (${ENF.desc}). <b>Calidad</b> es el Investor Score: riesgo-retorno, fundamentos y tendencia del negocio. <b>Precio</b> traduce el margen sobre el valor estimado a la misma escala: 100 = cotiza 30% bajo su valor, 50 = a valor justo, 0 = 30% sobre él${_sinPre?`; ${_sinPre==1?"una acción cuenta":_sinPre+" acciones cuentan"} 50 por falta de valorización triangulada`:""}. Compiten <b>${D.todas.length} de las ${D.sc.n}</b>: por barata que esté, una acción con calidad bajo 40 —tramo <i>evitar</i>— no entra al ranking. En el mismo período el IPSA rindió <b style="color:${cN(D.ipsa?D.ipsa.mes:null)}">${pct(D.ipsa?D.ipsa.mes:null)}</b> en el mes${D.ipsa&&D.ipsa.anio!=null?` y <b style="color:${cN(D.ipsa.anio)}">${pct(D.ipsa.anio)}</b> en doce meses`:""}. Cierres al ${fD(lastBaseDate())}.</div></div>`;
 
   // ── 2 · FUNDAMENTOS ─────────────────────────────────────────────────────────────────────────────
   const fRows=T.map(x=>{const f=x.f,r=x.r,up=(f.target!=null&&x.px>0)?((f.target/x.px-1)*100):null;
@@ -12211,9 +12264,12 @@ function genCartaReco(){
       <div class="ct-vp"><span class="ct-vl">Precio de compra</span><span class="ct-vv">${clp(x.entrada)}</span>
         <span class="ct-vs">${x.aMercado?"a mercado · hoy "+clp(x.px):"orden límite · hoy "+clp(x.px)}</span></div>
       <div class="ct-vw">Vale <b>${clp(x.val)}</b> y cuesta <b>${clp(x.px)}</b>: ${x.aMercado?`hay un <b>${nd(x.mos*100,0)}%</b> de margen a favor.`:`el margen llega comprando bajo <b>${clp(x.limite)}</b>.`}${x.fiab==="baja"?' <b class="ct-warn">Valorización de menor certeza.</b>':""}</div></div>`;};
+  // "cuándo revisarla" tiene que apuntar a lo que FALLA: si el precio ya acompaña y lo que no convence es
+  // el negocio, un precio de entrada sería una invitación a comprar barato algo que no recomendamos.
   const vNo=x=>`<tr><td class="ct-tk">${esc(x.r.t)}</td><td><span class="ct-vb no">No invertir</span></td>
     <td class="ct-why">${esc(x.motivo)}</td>
-    <td class="r">${x.limite>0?("sería atractiva bajo <b>"+clp(x.limite)+"</b>"):"—"}</td></tr>`;
+    <td class="r">${(x.mos>0&&x.r.score<CARTA_SCORE_MIN)?"cuando sus números mejoren"
+      :(x.limite>0?("sería atractiva bajo <b>"+clp(x.limite)+"</b>"):"—")}</td></tr>`;
   const verHTML=`<div class="ct-verdict">
       <div class="ct-vsum"><span class="ct-vnum">${D.comprar.length}</span><span>de las ${N} analizadas reúnen las dos condiciones: <b>buen negocio</b> y <b>buen precio</b>.${D.comprar.length?"":" Ninguna hoy: recomendamos esperar."}</span></div>
       ${D.comprar.length?`<div class="ct-vgrid">${D.comprar.map(vCard).join("")}</div>`:""}
@@ -12223,23 +12279,25 @@ function genCartaReco(){
   // ── (el GLOSARIO se retiró a pedido: el informe va al grano — cada tabla ya rotula sus columnas y
   //     el veredicto explica su regla; menos papel y menos texto para el mismo mensaje) ──
 
-  const bodyHTML=bloque("1","Desempeño","cómo se han comportado en el último mes y en el año",desHTML,true)
+  const bodyHTML=bloque("1","Ranking de inversión","qué tan bueno es el negocio y qué tan bien está el precio hoy",desHTML,true)
     +bloque("2","Fundamentos","los negocios detrás de cada acción",fundHTML,true)
     +bloque("3","Veredicto","invertir o no invertir, y a qué precio",verHTML);
 
   const _quien=userNombre()?esc(userNombre()):"";
+  const _enfTxt=`Las ordenamos por nuestro <b>índice de inversión</b>, que pesa la calidad del negocio y el precio de hoy frente a su valor estimado (enfoque <b>${ENF.label}</b>: ${ENF.desc}).`;
   const execHTML=D.comprar.length
-    ?`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} mejor evaluadas</b>. De ellas recomendamos invertir en <b>${D.comprar.length}</b>: son las únicas que reúnen buen negocio <b>y</b> precio bajo su valor estimado. Para cada una indicamos hasta cuánto conviene pagar.`
-    :`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} mejor evaluadas</b>. Hoy <b>ninguna</b> reúne las dos condiciones que exigimos —buen negocio y precio bajo su valor estimado—, de modo que recomendamos esperar. Para cada una indicamos a qué precio pasaría a ser atractiva.`;
+    ?`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} primeras</b>. ${_enfTxt} De ellas recomendamos invertir en <b>${D.comprar.length}</b>: son las únicas que reúnen buen negocio <b>y</b> precio bajo su valor estimado. Para cada una indicamos hasta cuánto conviene pagar.`
+    :`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} primeras</b>. ${_enfTxt} Hoy <b>ninguna</b> reúne las dos condiciones que exigimos —buen negocio y precio bajo su valor estimado—, de modo que recomendamos esperar. Para cada una indicamos a qué precio pasaría a ser atractiva.`;
   const footHTML=`Elaborado con datos públicos: precios de cierre de la Bolsa de Santiago y estados financieros publicados. Las valorizaciones son estimaciones con supuestos explícitos (CAPM con tasa libre de riesgo ${nd(typeof RF==="number"?RF:5.5,1)}% y prima de mercado ${nd(typeof PRIMA==="number"?PRIMA:6,1)}%), no precios futuros. <b>Este documento es informativo y no constituye asesoría ni recomendación de inversión</b> en los términos de la Ley 18.045 ni de la normativa de la CMF; no considera la situación financiera, el horizonte ni la tolerancia al riesgo de cada inversionista. Rentabilidades pasadas no aseguran rentabilidades futuras. Los costos de transacción y los impuestos reducen el resultado y no están descontados.`;
   const html=invReportShell({
     docTitle:"Informe de recomendación de inversión · Investor",
     title:"Informe de recomendación de inversión",
-    subtitle:"Las "+N+" mejores acciones del IPSA según Investor · desempeño, fundamentos y veredicto · precios al "+fD(lastBaseDate()),
+    subtitle:"Las "+N+" primeras del índice de inversión · ranking, fundamentos y veredicto · precios al "+fD(lastBaseDate()),
     hero:{label:D.comprar.length===1?"Acción recomendada":"Acciones recomendadas",value:String(D.comprar.length),sub:"de "+N+" analizadas",subColor:D.comprar.length?"#9FE8C4":"#FFD9A6"},
     metaHTML:invReportMeta(([_quien?["Preparado por",_quien]:null,
       ["Fecha",esc(fch)],["Universo",D.sc.n+" acciones del IPSA"],
-      ["En este informe",String(N)+" mejor evaluadas"],
+      ["Enfoque",ENF.label+" · "+Math.round(ENF.cal*100)+"% calidad / "+Math.round(ENF.pre*100)+"% precio"],
+      ["En este informe",String(N)+" primeras del índice"],
       ["Recomendadas",D.comprar.length+" de "+N]
     ]).filter(Boolean)),
     execHTML,execLabel:"Síntesis",bodyHTML,footHTML,sigHTML:"",
@@ -12266,6 +12324,9 @@ function attachHome(){
   document.querySelectorAll("[data-openprices]").forEach(b=>b.onclick=()=>{platformPricesOpen();});
   document.querySelectorAll("[data-scoredet]").forEach(b=>b.onclick=()=>{try{scoreDetailModal(b.dataset.scoredet);}catch(e){}});
   {const _sa=document.querySelector("[data-scoreall]");if(_sa)_sa.onclick=()=>{try{scoreAllModal();}catch(e){}};}
+  // enfoque del informe: cambia el ORDEN del índice de inversión (no toca el Investor Score de la tarjeta)
+  document.querySelectorAll("[data-cartaenf]").forEach(b=>b.onclick=()=>{const k=b.dataset.cartaenf;
+    if(!CARTA_ENFOQUES[k])return;cartaEnfoque=k;lsSet("inv_carta_enfoque",k);render();});
   {const _cr=document.querySelector("[data-cartareco]");if(_cr)_cr.onclick=()=>{try{genCartaReco();}catch(e){try{console.error("genCartaReco:",e);}catch(_){}window.alert("No se pudo generar la carta: "+((e&&e.message)||e));}};}
   try{attachMultiHover("ipsahome");}catch(e){}
   try{attachMultiHover("homesolo");}catch(e){}   // fondo único: tooltip con la fecha y el valor de la cartera y del IPSA
