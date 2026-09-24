@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-23T23:27:28.024Z",
+ "updatedAt": "2026-09-24T05:08:34.459Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -117,7 +117,7 @@
    "rg": -11.3,
    "de": 0.67,
    "target": 85.75,
-   "rec": "hold",
+   "rec": "none",
    "nAn": 8,
    "peg": null,
    "evEbitda": null
@@ -405,7 +405,7 @@
    "rg": 6.6,
    "de": 0.9,
    "target": 1050.8334,
-   "rec": "buy",
+   "rec": "none",
    "nAn": 6,
    "peg": 1.19,
    "evEbitda": 8.2
@@ -446,7 +446,7 @@
    "mcap": 2027621318656,
    "hi52": 1949.9,
    "lo52": 1272.5,
-   "vol3m": 369904,
+   "vol3m": 362417,
    "roe": 13.2,
    "nm": 11.8,
    "eg": -19.5,
