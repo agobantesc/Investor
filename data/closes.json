@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-26T05:15:24.760Z",
+ "updatedAt": "2026-09-26T16:16:11.156Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,9 +7,9 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 500 | allorigins/get=HTTP 522 | codetabs=HTTP 503 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 520 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
-  "michelangelo S&P (retornos): 498 día(s) hasta 2026-09-25"
+  "michelangelo S&P (retornos): 497 día(s) hasta 2026-09-25"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
@@ -24,7 +24,7 @@
  ],
  "ajustesDeFuente": [],
  "errors": [
-  "IPSA histórico incompleto (0 día/s) — yahoo quote ^IPSA: quote sin precio/hora · yahoo ^IPSA hoy: ^IPSA: HTTP 404 · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 500 | allorigins/get=HTTP 522 | codetabs=HTTP 503 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate · yahoo ^IPSA period: ^IPSA: HTTP 404"
+  "IPSA histórico incompleto (0 día/s) — yahoo quote ^IPSA: quote sin precio/hora · yahoo ^IPSA hoy: ^IPSA: HTTP 404 · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 520 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate · yahoo ^IPSA period: ^IPSA: HTTP 404"
  ],
  "days": [
   {
@@ -17125,6 +17125,13 @@
    "ipsa": 10887.72
   },
   {
+   "date": "2026-07-20",
+   "prices": {
+    "CHILE": 189.95,
+    "SANTANDER": 78.9
+   }
+  },
+  {
    "date": "2026-07-21",
    "prices": {
     "CHILE": 190.01,
@@ -17156,6 +17163,13 @@
     "CAP": 6247.7
    },
    "ipsa": 10954.03
+  },
+  {
+   "date": "2026-07-22",
+   "prices": {
+    "CHILE": 193.5,
+    "SANTANDER": 79.85
+   }
   },
   {
    "date": "2026-07-23",
@@ -17194,7 +17208,9 @@
   {
    "date": "2026-07-24",
    "prices": {
-    "SONDA": 301.81
+    "SONDA": 301.81,
+    "CHILE": 193.1,
+    "SANTANDER": 79.32
    }
   },
   {
@@ -17369,7 +17385,9 @@
   {
    "date": "2026-08-03",
    "prices": {
-    "SONDA": 301.81
+    "SONDA": 301.81,
+    "CHILE": 192.48,
+    "SANTANDER": 80.44
    }
   },
   {
@@ -17953,7 +17971,9 @@
   {
    "date": "2026-08-27",
    "prices": {
-    "SONDA": 301.81
+    "SONDA": 301.81,
+    "CHILE": 193,
+    "SANTANDER": 80.85
    }
   },
   {
@@ -18026,8 +18046,8 @@
   {
    "date": "2026-09-01",
    "prices": {
-    "CHILE": 188.5,
-    "SANTANDER": 77,
+    "CHILE": 196.46,
+    "SANTANDER": 81.96,
     "BCI": 62502,
     "ENELCHILE": 81.01,
     "COLBUN": 135.29,
