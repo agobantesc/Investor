@@ -175,18 +175,98 @@ function analiza(tag, map) {
   if (corr != null) console.log(`    careo vs base (${comunes.length} fechas comunes): correlación de retornos ${corr} · dif máx de nivel ${maxDif} · ${difUlt}`);
 }
 
+/* ── fuentes de NIVEL (ronda 2026-09-30: el IPSA de la casa se despegó ~5% de la canasta desde el 17-09) ── */
+async function txt(url, extra) {
+  const r = await fetch(url, { headers: Object.assign({ "User-Agent": BUA, Accept: "text/html,application/json,*/*", "Accept-Language": "es-CL,es;q=0.9,en;q=0.8" }, extra || {}), redirect: "follow" });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.text();
+}
+const pnum = s => { s = ("" + s).trim(); if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else s = s.replace(/,/g, ""); return +s; };
+async function googleFin(sym) {
+  const h = await txt(`https://www.google.com/finance/quote/${sym}?hl=en`);
+  const m = /data-last-price="([\d.]+)"/.exec(h), pc = /Previous close<\/div>[\s\S]{0,200}?>([\d,]+\.\d+)</.exec(h);
+  const ts = /data-last-normal-market-timestamp="(\d+)"/.exec(h);
+  if (!m) throw new Error("sin data-last-price (" + h.length + " bytes)");
+  const d = ts ? new Date(+ts[1] * 1000).toLocaleDateString("en-CA", { timeZone: "America/Santiago" }) : "hoy";
+  console.log(`    google ${sym}: último ${m[1]} (${d}) · cierre anterior ${pc ? pc[1] : "?"}`);
+  return { [d]: +(+m[1]).toFixed(2) };
+}
+async function cnbcBars(sym) {
+  const hoy = new Date(), d1 = new Date(Date.now() - 400 * 86400e3);
+  const f = x => x.toISOString().slice(0, 10).replace(/-/g, "") + "000000";
+  const j = JSON.parse(await txt(`https://ts-api.cnbc.com/harmony/app/bars/${encodeURIComponent(sym)}/1D/${f(d1)}/${f(hoy)}/adjusted/EST5EDT.json`, { Accept: "application/json" }));
+  const b = j?.barData?.priceBars || [];
+  const out = {};
+  for (const x of b) { const d = ("" + x.tradeTime).slice(0, 8); const c = +x.close; if (c > 0) out[`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`] = +c.toFixed(2); }
+  if (!Object.keys(out).length) throw new Error("sin barras (" + JSON.stringify(j).slice(0, 140) + ")");
+  return out;
+}
+async function cnbcQuote(sym) {
+  const j = JSON.parse(await txt(`https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=${encodeURIComponent(sym)}&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=1&output=json&events=1`, { Accept: "application/json" }));
+  const q = j?.FormattedQuoteResult?.FormattedQuote?.[0];
+  if (!q || !q.last) throw new Error("sin quote (" + JSON.stringify(j).slice(0, 140) + ")");
+  console.log(`    cnbc ${sym}: ${q.name} · last ${q.last} · prev ${q.previous_day_closing} · ${q.last_time}`);
+  return { [("" + q.last_time).slice(0, 10)]: pnum(q.last) };
+}
+async function ftHist(s) {
+  const h = await txt(`https://markets.ft.com/data/indices/tearsheet/historical?s=${encodeURIComponent(s)}`);
+  const xid = /xid&quot;:&quot;(\d+)|"xid":"(\d+)|data-mod-config="[^"]*?xid[^0-9]+(\d+)/.exec(h);
+  const px = /mod-ui-data-list__value">([\d,]+\.\d+)</.exec(h);
+  if (px) console.log(`    ft ${s}: precio en ficha ${px[1]} · xid ${xid ? (xid[1] || xid[2] || xid[3]) : "?"}`);
+  if (!xid) throw new Error("sin xid (" + h.length + " bytes)");
+  const id = xid[1] || xid[2] || xid[3];
+  const hoy = new Date(), d1 = new Date(Date.now() - 360 * 86400e3), f = x => x.toISOString().slice(0, 10).replace(/-/g, "/");
+  const j = JSON.parse(await txt(`https://markets.ft.com/data/equities/ajax/get-historical-prices?startDate=${f(d1)}&endDate=${f(hoy)}&symbol=${id}`, { Accept: "application/json" }));
+  const out = {};
+  const re = /<span class="mod-ui-hide-small-below">([^<]+)<\/span>[\s\S]*?<\/td>(?:<td[^>]*>([^<]*)<\/td>){4}/g;
+  let m; while ((m = re.exec(j.html || ""))) { const d = new Date(m[1] + " 12:00 UTC"); if (!isNaN(d)) out[d.toISOString().slice(0, 10)] = pnum(m[2]); }
+  if (!Object.keys(out).length) throw new Error("tabla vacía (" + ("" + (j.html || "")).slice(0, 120) + ")");
+  return out;
+}
+
+/* canasta cap-ponderada de las acciones de la base (los precios SÍ son reales): careo de retornos día a día */
+let basket = {};
+try {
+  const cl = JSON.parse(readFileSync("data/closes.json", "utf8")), fj = JSON.parse(readFileSync("data/fundamentals.json", "utf8")).byTicker || {};
+  const sh = {}; for (const [t, f] of Object.entries(fj)) if (f && f.mcap > 0 && f.px > 0) sh[t] = f.mcap / f.px;
+  let prev = null;
+  for (const d of cl.days || []) {
+    const px = d.prices || {};
+    if (prev) { let a = 0, b = 0; for (const t in sh) if (px[t] > 0 && prev[t] > 0) { a += sh[t] * px[t]; b += sh[t] * prev[t]; } if (b > 0) basket[d.date] = a / b - 1; }
+    if (Object.keys(px).length >= 20) prev = px;
+  }
+} catch (e) {}
+function careoDiario(tag, map) {
+  const dts = Object.keys(map).sort().slice(-26);
+  const filas = [];
+  for (let i = 1; i < dts.length; i++) {
+    const r = (map[dts[i]] / map[dts[i - 1]] - 1) * 100, b = basket[dts[i]] != null ? basket[dts[i]] * 100 : null;
+    filas.push(`${dts[i]} ${map[dts[i]]} (${r >= 0 ? "+" : ""}${r.toFixed(2)}% | canasta ${b == null ? "—" : (b >= 0 ? "+" : "") + b.toFixed(2) + "%"} | base ${synth[dts[i]] ? synth[dts[i]].v : "—"})`);
+  }
+  console.log(`    día a día ${tag}:\n      ` + filas.join("\n      "));
+}
+
 const CANDIDATOS = [
-  ["wsj/mw michelangelo INDEX/CL/XSGO/IPSA", () => michelangelo("INDEX/CL/XSGO/IPSA")],
-  ["wsj/mw michelangelo INDEX/CL/IPSA", () => michelangelo("INDEX/CL/IPSA")],
-  ["investing financialdata 40802", investingHist],
-  ["chart ^IPSA 1y (línea base)", () => chart("^IPSA", "1y")],
+  ["wsj/mw michelangelo INDEX/CL/XSGO/IPSA", () => michelangelo("INDEX/CL/XSGO/IPSA"), true],
+  ["wsj/mw michelangelo INDEX/CL/XSGO/SPIPSA", () => michelangelo("INDEX/CL/XSGO/SPIPSA"), true],
+  ["wsj/mw michelangelo INDEX/CL//IPSA", () => michelangelo("INDEX/CL//IPSA"), true],
+  ["google finance SPIPSA:INDEXSTGO", () => googleFin("SPIPSA:INDEXSTGO")],
+  ["google finance IPSA:INDEXSTGO", () => googleFin("IPSA:INDEXSTGO")],
+  ["cnbc barras .SPIPSA", () => cnbcBars(".SPIPSA"), true],
+  ["cnbc barras .IPSA", () => cnbcBars(".IPSA"), true],
+  ["cnbc quote .SPIPSA", () => cnbcQuote(".SPIPSA")],
+  ["cnbc quote .IPSA", () => cnbcQuote(".IPSA")],
+  ["ft IPSA:SGO", () => ftHist("IPSA:SGO"), true],
+  ["ft SPIPSA:SGO", () => ftHist("SPIPSA:SGO"), true],
+  ["investing financialdata 40802", investingHist, true],
+  ["chart ^IPSA 1y (línea base)", () => chart("^IPSA", "1y"), true],
+  ["chart ^SPIPSA 1y", () => chart("^SPIPSA", "1y"), true],
   ["quote v7 ^IPSA (línea base)", () => quoteV7("^IPSA")],
   ["twelvedata IPSA", () => twelveData("IPSA")],
-  ["twelvedata SPCLXIPSA", () => twelveData("SPCLXIPSA")],
 ];
 console.log(`SONDA IPSA · ${new Date().toISOString()} · base actual: ${Object.keys(synth).length} días con índice (${Object.values(synth).filter(x => x.s).length} sintéticos)`);
-for (const [tag, fn] of CANDIDATOS) {
-  try { analiza(tag, await fn()); }
+for (const [tag, fn, dia] of CANDIDATOS) {
+  try { const m = await fn(); analiza(tag, m); if (dia && Object.keys(m).length > 5) careoDiario(tag, m); }
   catch (e) { console.log(`✗ ${tag}: ${String((e && e.message) || e).slice(0, 160)}`); }
   await new Promise(r => setTimeout(r, 400));
 }
