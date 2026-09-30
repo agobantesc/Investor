@@ -329,6 +329,27 @@ async function mindDolar() {
   const k = Object.keys(out).sort(); console.log(`    dólar observado: ${k.slice(-22).map(d => d.slice(5) + "=" + out[d]).join(" · ")}`);
   return {};
 }
+/* ── ronda 4: historia OFICIAL desde MSCI (código 767564 = MSCI IPSA, visto en Yahoo ^767564-CLP-STRD) ── */
+async function ronda4() {
+  const hoy = new Date(), f = x => x.toISOString().slice(0, 10).replace(/-/g, "");
+  const d1 = new Date(Date.now() - 75 * 86400e3);
+  for (const v of ["GRTR", "STRD", "NETR"]) {
+    for (const base of ["https://app2.msci.com/products/service/index/indexmaster/getLevelDataForGraph", "https://www.msci.com/products/service/index/indexmaster/getLevelDataForGraph"]) {
+      const url = `${base}?currency_symbol=CLP&index_variant=${v}&start_date=${f(d1)}&end_date=${f(hoy)}&data_frequency=DAILY&index_codes=767564`;
+      try {
+        const t = await txt(url, { Accept: "application/json" });
+        let j = null; try { j = JSON.parse(t); } catch (e) {}
+        const lv = j?.indexes?.INDEX_LEVELS || j?.indexes?.index_levels || [];
+        if (lv.length) console.log(`    MSCI ${v} (${base.slice(8, 20)}): ${lv.length} días · ${lv.slice(-26).map(x => (x.calc_date || x.date) + "=" + (x.level_eod ?? x.level)).join(" ")}`);
+        else console.log(`    MSCI ${v} (${base.slice(8, 20)}): sin niveles · ${t.slice(0, 160).replace(/\s+/g, " ")}`);
+      } catch (e) { console.log(`    MSCI ${v} (${base.slice(8, 20)}): ${String(e.message || e).slice(0, 80)}`); }
+    }
+  }
+  for (const u of ["https://www.msci.com/indexes/index/767564", "https://www.msci.com/indexes/api/index/767564/performance?currency=CLP&variant=GRTR"]) {
+    try { const t = await txt(u); console.log(`    ${u}: ${t.length} bytes · ${t.slice(0, 160).replace(/\s+/g, " ")}`); } catch (e) { console.log(`    ${u}: ${String(e.message || e).slice(0, 80)}`); }
+  }
+}
+await ronda4();
 await ronda3();
 console.log("FIN RONDA 3");
 process.exit(0);
