@@ -351,8 +351,6 @@ async function ronda4() {
 }
 await ronda4();
 await ronda3();
-console.log("FIN RONDA 3");
-process.exit(0);
 const RONDA2 = [
   ["yahoo search IPSA", () => yahooSearch("IPSA")],
   ["yahoo search S&P IPSA", () => yahooSearch("S&P IPSA")],

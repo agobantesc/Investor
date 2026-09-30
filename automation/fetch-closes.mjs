@@ -11,6 +11,23 @@
 import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { TICKERS } from "./tickers.mjs";   // universo IPSA compartido con fetch-fundamentals.mjs
 const IPSA_SYMBOL = "^IPSA";
+/* EL IPSA CAMBIÓ DE PROVEEDOR. Desde el 01-09-2026 la Bolsa de Santiago publica el IPSA calculado por MSCI
+   ("MSCI IPSA INDEX", Yahoo MXIPSAGC.SN · TradingView BCS:MXIPSAGC) en lugar del S&P/CLX IPSA, cuyo último
+   cierre oficial fue el 31-08-2026 (Yahoo SPIPSA.SN = 11.315,26). La serie de WSJ/MarketWatch que se usaba
+   para encadenar el índice siguió publicando OTRA cosa: medido contra la canasta de sus propias acciones
+   calzó al ~0,1% diario durante 26 meses y en septiembre se despegó 4,7% — la base llegó a mostrar 10.581,62
+   el 29-09 cuando el cierre oficial fue 11.055,94. Desde esa fecha solo valen los valores OFICIALES (MSCI) y,
+   entre dos oficiales, la canasta de acciones AJUSTADA para calzar con ambos. */
+const MSCI_DESDE = "2026-09-01";
+const IPSA_MSCI_SYMBOL = "MXIPSAGC.SN";
+// historia OFICIAL diaria directo de MSCI (índice 767564 = MSCI IPSA, variante GRTR = "con dividendos", la
+// que la Bolsa publica como IPSA y la que empalma exacto con el último cierre S&P: 31-08 = 11.315,2558)
+const MSCI_IPSA_CODE = "767564", MSCI_IPSA_VARIANT = "GRTR";
+// cierres oficiales verificados a mano (sonda probe-ipsa del 30-09-2026) que siembran la serie
+const IPSA_ANCLAS = {
+  "2026-08-31": 11315.26,   // último cierre del S&P/CLX IPSA (Yahoo SPIPSA.SN, regularMarketTime 31-08 20:00 UTC)
+  "2026-09-29": 11055.94,   // MSCI IPSA: cierre anterior informado por Yahoo MXIPSAGC.SN la mañana del 30-09
+};
 // Rango a bajar. Por defecto ~2 semanas (rellena días perdidos; la fusión de Investor es por celda, no duplica).
 // Para POBLAR MASIVAMENTE la base una vez, ejecútalo con un rango largo: RANGE=2y node automation/fetch-closes.mjs
 // (o desde GitHub → Actions → Run workflow con range=2y). Valores válidos de Yahoo: 10d, 1mo, 6mo, 1y, 2y, 5y, max.
@@ -70,6 +87,7 @@ try {
     if (d.ipsa != null && isFinite(+d.ipsa) && +d.ipsa > 0) {
       e.ipsa = +d.ipsa;
       if (d.ipsaSynth) { e.ipsaSynth = true; synthLoaded[d.date] = e.ipsa; }   // el sello viaja con el valor (antes se perdía y el sintético quedaba como "oficial")
+      if (d.ipsaOfi) e.ipsaOfi = true;   // cierre OFICIAL del índice (MSCI desde 09-2026): nunca se recalcula
     }
     for (const [t, v] of Object.entries(d.prices || {})) if (isFinite(+v) && +v > 0) e.prices[t] = +v;
   }
@@ -467,6 +485,84 @@ try {
   }
 } catch (e) { officialLog.push("capa oficial: " + String(e.message || e).slice(0, 80)); console.log("Cierre oficial Bolsa de Santiago: falló (" + String(e.message || e).slice(0, 80) + ")"); }
 
+/* ── IPSA OFICIAL (MSCI) ─────────────────────────────────────────────────────────────────────────────
+   El quote v7 de Yahoo entrega el valor y la HORA de la última sesión del MSCI IPSA y el CIERRE ANTERIOR.
+   Solo el chart de 1 día existe (Yahoo no publica su historia), así que la serie oficial se ACUMULA corrida
+   a corrida: cada una fija dos cierres oficiales (el del día, si ya cerró, y el anterior). El respaldo es el
+   escáner público de TradingView (mismo índice). El cierre anterior se asigna al último día hábil con
+   precios de acciones ANTES de la sesión informada — por eso este paso va después de bajar las acciones. */
+const ipsaOfiLog = [];
+{
+  const ponOfi = (d, v, fuente) => {
+    if (!(v > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(d) || d < MSCI_DESDE) return;
+    const e = (byDate[d] ??= { date: d, prices: {} });
+    if (e.ipsa !== v) ipsaOfiLog.push(`${d}=${v} (${fuente}${e.ipsa != null ? ", antes " + e.ipsa : ""})`);
+    e.ipsa = v; e.ipsaOfi = true; delete e.ipsaSynth;
+  };
+  const diaAnterior = d => Object.keys(byDate).filter(x => x < d && Object.keys(byDate[x].prices || {}).length >= 8).sort().pop();
+  for (const [d, v] of Object.entries(IPSA_ANCLAS)) {
+    const e = (byDate[d] ??= { date: d, prices: {} });
+    if (!e.ipsaOfi || e.ipsa !== v) { e.ipsa = v; e.ipsaOfi = true; delete e.ipsaSynth; }
+  }
+  // 1º MSCI: la serie oficial completa (cada corrida re-afirma todo el tramo, así un día perdido se recupera solo)
+  try {
+    const f8 = x => x.toISOString().slice(0, 10).replace(/-/g, "");
+    const desde = new Date(Math.max(Date.parse("2026-08-31T12:00:00Z"), Date.now() - Math.max(rangeSeconds(), 60 * 86400) * 1000));
+    const url = `https://app2.msci.com/products/service/index/indexmaster/getLevelDataForGraph?currency_symbol=CLP&index_variant=${MSCI_IPSA_VARIANT}&start_date=${f8(desde)}&end_date=${f8(new Date())}&data_frequency=DAILY&index_codes=${MSCI_IPSA_CODE}`;
+    const r = await fetch(url, { headers: { "User-Agent": BUA, Accept: "application/json" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const lv = (await r.json())?.indexes?.INDEX_LEVELS || [];
+    let n = 0, prev = null; const feriados = [];
+    for (const x of lv.slice().sort((a, b) => (a.calc_date > b.calc_date ? 1 : -1))) {
+      const c = "" + x.calc_date, d = `${c.slice(0, 4)}-${c.slice(4, 6)}-${c.slice(6, 8)}`, v = +x.level_eod;
+      // antes del empalme MSCI publica su historia en OTRA base (~1.000): no es el IPSA
+      if (!(v > 3000) || d < "2026-08-31") { prev = null; continue; }
+      // MSCI publica también los FERIADOS de Chile repitiendo el valor anterior (18-09-2026 = 17-09): fuera
+      const repetido = prev != null && Math.abs(v / prev - 1) < 1e-9; prev = v;
+      if (repetido) { feriados.push(d); continue; }
+      const dw = new Date(d + "T12:00:00Z").getUTCDay(); if (dw === 0 || dw === 6) continue;
+      // solo días con cierres de acciones (día hábil de verdad en la base); si faltan, la próxima corrida lo toma
+      if (!(byDate[d] && Object.keys(byDate[d].prices || {}).length >= 8)) continue;
+      ponOfi(d, +v.toFixed(2), "MSCI " + MSCI_IPSA_VARIANT); n++;
+    }
+    ipsaSources.push(`MSCI IPSA oficial (API MSCI ${MSCI_IPSA_CODE}/${MSCI_IPSA_VARIANT}): ${n} día(s) hasta ${lv.length ? lv[lv.length - 1].calc_date : "?"}${feriados.length ? " · feriados omitidos " + feriados.join(",") : ""}`);
+  } catch (e) { ipsaSources.push(`MSCI IPSA oficial (API MSCI): ${String((e && e.message) || e).slice(0, 80)}`); }
+  // 2º Yahoo: el cierre de HOY (MSCI publica el EOD más tarde) y el cierre anterior
+  let got = false;
+  try {
+    await yahooAuth();
+    for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
+      const res = await fetch(`https://${host}/v7/finance/quote?symbols=${encodeURIComponent(IPSA_MSCI_SYMBOL)}&crumb=${encodeURIComponent(_yCrumb)}`, { headers: { "User-Agent": BUA, Cookie: _yCookie, Accept: "application/json" } });
+      if (!res.ok) continue;
+      const q = (await res.json())?.quoteResponse?.result?.[0];
+      const px = q && +q.regularMarketPrice, pc = q && +q.regularMarketPreviousClose, t = q && +q.regularMarketTime;
+      if (!(px > 0) || !(t > 0)) continue;
+      const dSes = new Date(t * 1000).toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+      const hSes = +new Date(t * 1000).toLocaleString("en-US", { timeZone: "America/Santiago", hour: "2-digit", hour12: false });
+      // el valor de la sesión es CIERRE solo si la hora informada ya es post-cierre (≥16 h de Chile);
+      // antes es intradía (o el indicativo de pre-apertura) y no entra
+      if (hSes >= 16) ponOfi(dSes, +px.toFixed(2), "Yahoo " + IPSA_MSCI_SYMBOL);
+      const dPrev = diaAnterior(dSes);
+      if (pc > 0 && dPrev) ponOfi(dPrev, +pc.toFixed(2), "Yahoo " + IPSA_MSCI_SYMBOL + " cierre anterior");
+      ipsaSources.push(`MSCI IPSA oficial (${IPSA_MSCI_SYMBOL}): ${px} @ ${dSes} ${hSes}h${hSes >= 16 ? " (cierre)" : " (intradía, no entra)"} · cierre anterior ${pc} → ${dPrev || "?"}`);
+      got = true; break;
+    }
+    if (!got) ipsaSources.push(`MSCI IPSA oficial (${IPSA_MSCI_SYMBOL}): sin precio`);
+  } catch (e) { ipsaSources.push(`MSCI IPSA oficial (${IPSA_MSCI_SYMBOL}): ${String((e && e.message) || e).slice(0, 80)}`); }
+  if (!got) {
+    // RESPALDO: TradingView (sin hora de la sesión: solo se toma después del cierre, un día hábil con acciones)
+    try {
+      const r = await fetch("https://scanner.tradingview.com/global/scan", { method: "POST", headers: { "User-Agent": BUA, "Content-Type": "application/json", Origin: "https://www.tradingview.com", Referer: "https://www.tradingview.com/" },
+        body: JSON.stringify({ symbols: { tickers: ["BCS:MXIPSAGC"], query: { types: [] } }, columns: ["close"] }) });
+      const v = r.ok ? +((await r.json())?.data?.[0]?.d?.[0]) : NaN;
+      const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+      const h = +new Date().toLocaleString("en-US", { timeZone: "America/Santiago", hour: "2-digit", hour12: false });
+      if (v > 0 && h >= 17 && byDate[hoy] && Object.keys(byDate[hoy].prices || {}).length >= 8) ponOfi(hoy, +v.toFixed(2), "TradingView BCS:MXIPSAGC");
+      ipsaSources.push(`MSCI IPSA respaldo (TradingView): ${v > 0 ? v : "sin valor"}`);
+    } catch (e) { ipsaSources.push("MSCI IPSA respaldo (TradingView): " + String((e && e.message) || e).slice(0, 60)); }
+  }
+  if (ipsaOfiLog.length) console.log(`IPSA OFICIAL (MSCI): ${ipsaOfiLog.join(" · ")}`);
+}
 // Si el run ocurre con la Bolsa de Santiago ABIERTA (antes de ~17:00 hora de Chile), el dato de HOY es un
 // valor intradía, no un cierre: se descarta. El run programado (18:05 Chile) trae el cierre real del día.
 const scHour = +new Date().toLocaleString("en-US", { timeZone: "America/Santiago", hour: "2-digit", hour12: false });
@@ -553,6 +649,41 @@ if (nCalco) {
 // El IPSA SINTÉTICO heredado se descarta aquí y se RECALCULA más abajo con los precios de ESTA corrida:
 // así nunca se encadena a ciegas sobre una estimación vieja y, si una fuente oficial escribió otro valor
 // para esa fecha, ese valor manda (solo se limpia el sello).
+/* DÍA CORRUPTO ("pico y vuelta"): muchas acciones saltan >4% un día y lo devuelven >4% al siguiente,
+   con el mercado tranquilo. Ninguna rueda real hace eso en bloque; es una foto mala del upstream. Caso real:
+   01-09-2026, nueve acciones a la vez (SQM-B −13,9% y vuelta, CAP +13,8% y vuelta, RIPLEY −9,0%…) mientras
+   el índice se movía +0,6%. Con ≥5 acciones así, NINGÚN precio de ese día es confiable: el día se descarta
+   entero (el IPSA de ese día también, salvo que sea oficial) y queda registrado en `borrar` para que la app
+   lo quite de las bases locales que ya lo tenían. */
+const PICO_MIN_ACC = 5, PICO_UMBRAL = 0.04;
+const borrar = {};
+{
+  const conPx = days.map((d, i) => i).filter(i => Object.keys(days[i].prices || {}).length >= 8);
+  const malos = [];
+  for (let k = 1; k < conPx.length - 1; k++) {
+    const a = days[conPx[k - 1]].prices, b = days[conPx[k]].prices, c = days[conPx[k + 1]].prices;
+    const raros = [];
+    for (const t in b) {
+      if (!(a[t] > 0 && c[t] > 0)) continue;
+      const r1 = b[t] / a[t] - 1, r2 = c[t] / b[t] - 1;
+      if (Math.abs(r1) > PICO_UMBRAL && Math.abs(r2) > PICO_UMBRAL && Math.sign(r1) !== Math.sign(r2) && Math.abs(c[t] / a[t] - 1) < Math.abs(r1) / 2) raros.push(t);
+    }
+    if (raros.length >= PICO_MIN_ACC) malos.push([conPx[k], raros]);
+  }
+  for (const [i, raros] of malos) {
+    const d = days[i];
+    borrar[d.date] = d.ipsaOfi ? "precios" : "todo";
+    console.log(`Día CORRUPTO descartado: ${d.date} — ${raros.length} acciones con pico y vuelta (${raros.join(", ")}).`);
+    d.prices = {};
+    if (!d.ipsaOfi) { delete d.ipsa; delete d.ipsaSynth; }
+  }
+  if (malos.length) days = days.filter(d => Object.keys(d.prices).length || d.ipsa != null);
+}
+// Tramo MSCI: todo IPSA que NO sea un cierre oficial se borra y se recalcula en esta corrida (así un valor
+// mal encadenado nunca queda congelado en el archivo como si fuera real — que es lo que pasó en septiembre).
+let nMsciDrop = 0;
+for (const d of days) if (d.date >= MSCI_DESDE && !d.ipsaOfi && d.ipsa != null) { delete d.ipsa; delete d.ipsaSynth; nMsciDrop++; }
+if (nMsciDrop) { days = days.filter(d => Object.keys(d.prices).length || d.ipsa != null); console.log(`IPSA tramo MSCI: ${nMsciDrop} valor(es) no oficiales se recalculan entre anclas oficiales.`); }
 let nSynthDrop = 0;
 for (const d of days) if (d.ipsaSynth) {
   if (synthLoaded[d.date] != null && d.ipsa === synthLoaded[d.date]) { delete d.ipsa; nSynthDrop++; }
@@ -590,7 +721,7 @@ try {
     // la MISMA guarda que la canasta: un día casi sin precios de acciones (día basura del feed) no se
     // rellena — un punto "solo índice" obliga a puentear la cartera y mete ruido en cada ventana
     if (Object.keys(px).length < 8) continue;
-    if (SP_IPSA[d.date] > 0 && anchorDate && SP_IPSA[anchorDate] > 0) {
+    if (d.date < MSCI_DESDE && SP_IPSA[d.date] > 0 && anchorDate && SP_IPSA[anchorDate] > 0) {   // la serie S&P de WSJ dejó de ser el IPSA oficial el 01-09-2026
       const ret = SP_IPSA[d.date] / SP_IPSA[anchorDate] - 1;
       d.ipsa = +(anchorIpsa * (1 + ret)).toFixed(2);
       // SIN sello ipsaSynth: el movimiento del día es el CIERRE OFICIAL del índice (solo el nivel viene
@@ -614,6 +745,36 @@ try {
     anchorIpsa = d.ipsa; anchorPx = px; anchorDate = d.date;   // encadena desde este día
   }
   if (nOfi) console.log(`IPSA reconstruido con RETORNO OFICIAL S&P/CLX (michelangelo): ${nOfi} día(s); la canasta de acciones quedó solo de respaldo.`);
+  // ── ENTRE DOS CIERRES OFICIALES (tramo MSCI): la canasta da la FORMA del camino y los oficiales el NIVEL.
+  //   El residuo entre lo que encadena la canasta y lo que marcó el índice se reparte parejo (en log) entre
+  //   los días del tramo, así el camino calza EXACTO con ambos extremos y ningún error se acumula más allá
+  //   del siguiente oficial. Esos días quedan con sello ipsaSynth (estimación), los extremos son oficiales.
+  const cestaRet = (pa, pb) => {
+    const common = Object.keys(pb || {}).filter(t => (pa || {})[t] > 0 && pb[t] > 0);
+    if (common.length < 8) return null;
+    let w = 0, r = 0;
+    for (const t of common) { const c = capOf(t); w += c; r += c * (pb[t] / pa[t] - 1); }
+    return w > 0 ? r / w : null;
+  };
+  {
+    const ofi = []; days.forEach((d, i) => { if (d.ipsaOfi && d.ipsa > 0) ofi.push(i); });
+    for (let k = 1; k < ofi.length; k++) {
+      const a = ofi[k - 1], b = ofi[k];
+      if (days[b].date <= MSCI_DESDE || b - a < 2) continue;
+      const idx = [a];
+      for (let i = a + 1; i < b; i++) if (Object.keys(days[i].prices || {}).length >= 8) idx.push(i);
+      idx.push(b);
+      const rets = [];
+      for (let j = 1; j < idx.length; j++) { const r = cestaRet(days[idx[j - 1]].prices, days[idx[j]].prices); if (r == null) { rets.length = 0; break; } rets.push(r); }
+      if (!rets.length) continue;
+      const cadena = rets.reduce((x, r) => x * (1 + r), 1), meta = days[b].ipsa / days[a].ipsa;
+      const f = Math.pow(meta / cadena, 1 / rets.length);
+      let v = days[a].ipsa;
+      for (let j = 1; j < idx.length - 1; j++) { v = v * (1 + rets[j - 1]) * f; const d = days[idx[j]]; d.ipsa = +v.toFixed(2); d.ipsaSynth = true; }
+      const tramo = `${days[a].date}→${days[b].date}: ${idx.length - 2} día(s) entre cierres oficiales ${days[a].ipsa} → ${days[b].ipsa} · canasta ${((cadena - 1) * 100).toFixed(2)}% vs índice ${((meta - 1) * 100).toFixed(2)}% (ajuste ${((f - 1) * 100).toFixed(3)}%/día)`;
+      ipsaSynth.push(tramo); console.log("IPSA " + tramo);
+    }
+  }
   // ── HACIA ATRÁS: mismo encadenamiento, en reversa desde el PRIMER día con índice ──
   //   Las fuentes del IPSA solo entregan el valor del día (su historia está bloqueada), así que el archivo
   //   tenía índice únicamente desde la primera corrida. Sin historia del índice NO se puede construir el
@@ -630,7 +791,7 @@ try {
       if (!(ipNext > 0)) continue;
       // también hacia atrás manda el retorno OFICIAL del tramo cuando la serie S&P cubre ambas fechas
       // (con la misma guarda de días basura: casi sin precios de acciones, no se rellena)
-      if (Object.keys(cur).length >= 8 && SP_IPSA[days[i].date] > 0 && SP_IPSA[days[i + 1].date] > 0) {
+      if (days[i + 1].date < MSCI_DESDE && Object.keys(cur).length >= 8 && SP_IPSA[days[i].date] > 0 && SP_IPSA[days[i + 1].date] > 0) {
         days[i].ipsa = +(ipNext * SP_IPSA[days[i].date] / SP_IPSA[days[i + 1].date]).toFixed(2);
         delete days[i].ipsaSynth;   // retorno oficial del índice: no es estimación (ver el pase hacia adelante)
         nBack++;
@@ -658,6 +819,6 @@ const tickerSet = new Set();
 days.forEach(d => Object.keys(d.prices || {}).forEach(t => tickerSet.add(t)));
 mkdirSync("data", { recursive: true });
 const source = "Yahoo Finance (.SN)" + (process.env.EODHD_KEY ? " + EODHD (cierres oficiales)" : "") + " + cierre oficial Bolsa de Santiago (día) + fuentes IPSA";
-writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, ipsaSynth, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
+writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, ipsaSynth, ipsaOficial: ipsaOfiLog, borrar, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
 if (ADJUST_LOG.length) console.log(`Ajustes de fuente (cierre oficial/EODHD pisó a Yahoo): ${ADJUST_LOG.length} — ej: ${JSON.stringify(ADJUST_LOG[0])}`);
 console.log(`OK: ${days.length} día(s) (${days[0].date} → ${days[days.length - 1].date}) · ${tickerSet.size} acciones · IPSA en ${ipsaDays} día(s). Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);

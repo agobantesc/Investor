@@ -6645,7 +6645,16 @@ async function autopxSync(manual,bust){
     });
     const files=Object.keys(byT).map(t=>({name:t,src:t,dates:byT[t].dates,closes:byT[t].closes}));
     if(ips.dates.length)files.push({name:"IPSA",src:"IPSA",dates:ips.dates,closes:ips.closes});
+    // DÍAS DESCARTADOS por la fuente (foto corrupta del upstream, p.ej. el 01-09-2026 con nueve acciones en
+    // "pico y vuelta"): la fusión por celda nunca borra, así que la base local seguía con los precios malos
+    // que alcanzó a guardar. Se quitan aquí — salvo lo anclado a mano, que siempre manda.
+    let _borr=0;
+    if(j&&!Array.isArray(j)&&j.borrar&&typeof j.borrar==="object"){Object.keys(j.borrar).forEach(d=>{
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;
+      Object.keys(PRICEDB.px||{}).forEach(t=>{if(PRICEDB.px[t]&&PRICEDB.px[t][d]!=null&&!(PRICEDB.pin&&PRICEDB.pin[t]&&PRICEDB.pin[t][d])){delete PRICEDB.px[t][d];_borr++;}});
+      if(j.borrar[d]==="todo"&&PRICEDB.ipsa&&PRICEDB.ipsa[d]!=null&&!(PRICEDB.ipsaPin&&PRICEDB.ipsaPin[d])){delete PRICEDB.ipsa[d];if(PRICEDB.ipsaSynth)delete PRICEDB.ipsaSynth[d];_borr++;}});}
     const r=pricedbMergeFiles(files,"IPSA",{respectPins:true});   // los cierres corregidos a mano no se pisan
+    if(_borr)r.updated+=_borr;
     const ap=pricedbApplyToProjects();
     try{systemAnalysisRefresh();}catch(e){}   // el análisis del sistema se reconstruye con cada sincronización
     const info={at:new Date().toISOString(),day:autopxLocalDay(),added:r.added,updated:r.updated,skipped:r.skipped,lastDate:days[days.length-1].date};
@@ -11739,7 +11748,10 @@ function viewHome(){
     const _ipEst=(typeof ipsaIsSynth==="function")&&ipsaIsSynth(_ips.lastDate);
     const _estTag=_ipEst?` <span style="color:var(--amber);font-weight:700" title="El índice oficial no llegó para esta fecha; este valor es una ESTIMACIÓN reconstruida desde las acciones del IPSA (canasta ponderada por capitalización). Se corrige solo cuando la fuente publica el cierre oficial.">· estimado</span>`:"";
     const body=`<div class="ipsa-row"><div class="ipsa-now"><span class="ipsa-val">${(+_ips.last).toLocaleString("es-CL",{maximumFractionDigits:2})}<small>pts</small></span><span class="ipsa-pts">cierre al ${_fD(_ips.lastDate)}${_estTag}</span></div><div class="ipsa-cells">${cell("Día",_ips.dia,"vs el cierre del día hábil anterior",_ips.diaBase)}${cell("Semana",_ips.semana,"últimos ~7 días (móvil, no la semana calendario)",_ips.semanaBase)}${cell("Mes",_ips.mes,"últimos ~30 días (móvil, no lo que va del mes)",_ips.mesBase)}${_ips.anio!=null?cell("12 meses",_ips.anio,"últimos 12 meses (móvil)",_ips.anioBase):""}</div></div>`+ipsaChart;
-    return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base",body);
+    // desde el 01-09-2026 la Bolsa de Santiago publica el IPSA calculado por MSCI (antes S&P): la serie de la
+    // base empalma ambos en el último cierre oficial del S&P (31-08-2026) — se dice, para que nadie compare
+    // contra la serie vieja de S&P que algunos sitios siguen mostrando
+    return card("IPSA · índice de referencia","Variación móvil: último día, ~7 días, ~30 días y 12 meses (convención rolling, como investing.com) · pasa el cursor sobre cada % para ver su fecha base · desde el 01-09-2026 el IPSA lo calcula <b>MSCI</b> (antes S&amp;P)",body);
   })();
   // Fondos administrados — TODAS las carteras en gestión, independiente de sus resultados
   const funds=D.projs.slice().sort((a,b)=>(b.val||0)-(a.val||0));
