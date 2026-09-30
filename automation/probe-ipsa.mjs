@@ -246,6 +246,46 @@ function careoDiario(tag, map) {
   console.log(`    día a día ${tag}:\n      ` + filas.join("\n      "));
 }
 
+/* ── ronda 3: el IPSA pasó a MSCI (Yahoo: MXIPSAGC.SN "MSCI IPSA INDEX con dividendos"). Historia diaria ── */
+async function yChartP(sym, p1, p2) {
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?period1=${p1}&period2=${p2}&interval=1d&includePrePost=false&events=div`;
+  const res = await fetch(url, { headers: { "User-Agent": BUA } });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const r = (await res.json())?.chart?.result?.[0];
+  const ts = r?.timestamp || [], c = r?.indicators?.quote?.[0]?.close || [];
+  const m = r?.meta || {};
+  console.log(`      meta ${sym}: ${m.longName || m.shortName || ""} · ${m.currency} · price ${m.regularMarketPrice} · prevClose ${m.chartPreviousClose ?? m.previousClose} · firstTrade ${m.firstTradeDate ? new Date(m.firstTradeDate * 1000).toISOString().slice(0, 10) : "?"} · rango ${m.dataGranularity}/${m.range} · 52w ${m.fiftyTwoWeekLow}-${m.fiftyTwoWeekHigh} · día ${m.regularMarketDayLow}-${m.regularMarketDayHigh}`);
+  const out = {};
+  ts.forEach((t, i) => { if (c[i] > 0) out[new Date(t * 1000).toLocaleDateString("en-CA", { timeZone: "America/Santiago" })] = +c[i].toFixed(2); });
+  return out;
+}
+async function yQuote(sym) {
+  await yahooAuth();
+  const res = await fetch(`https://query2.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(sym)}&crumb=${encodeURIComponent(_yCrumb)}`, { headers: { "User-Agent": BUA, Cookie: _yCookie, Accept: "application/json" } });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const q = (await res.json())?.quoteResponse?.result?.[0] || {};
+  const K = ["longName", "regularMarketPrice", "regularMarketPreviousClose", "regularMarketTime", "regularMarketChangePercent", "fiftyDayAverage", "fiftyTwoWeekLow", "fiftyTwoWeekHigh", "fiftyTwoWeekChangePercent", "exchangeTimezoneName", "currency"];
+  console.log(`      quote ${sym}: ` + K.map(k => `${k}=${k === "regularMarketTime" && q[k] ? new Date(q[k] * 1000).toISOString() : q[k]}`).join(" · "));
+}
+async function ronda3() {
+  const now = Math.floor(Date.now() / 1000), y1 = now - 400 * 86400, m3 = now - 95 * 86400;
+  for (const sym of ["MXIPSAGC.SN", "MXIPSAPC.SN", "SPIPSA.SN", "^767564-CLP-STRD"]) {
+    console.log(`    ── ${sym}`);
+    try { await yQuote(sym); } catch (e) { console.log(`      quote: ${String(e.message || e).slice(0, 80)}`); }
+    for (const [tag, a, b] of [["3m", m3, now], ["1y", y1, now]]) {
+      try { const m = await yChartP(sym, a, b); const k = Object.keys(m).sort(); console.log(`      chart ${tag}: ${k.length} días · ${k[0] || ""} → ${k[k.length - 1] || ""} · ${k.slice(-24).map(d => d.slice(5) + "=" + m[d]).join(" ")}`); }
+      catch (e) { console.log(`      chart ${tag}: ${String(e.message || e).slice(0, 80)}`); }
+    }
+    try { const m = await download(sym); const k = Object.keys(m).sort(); console.log(`      download: ${k.length} días · ${k.slice(-24).map(d => d.slice(5) + "=" + m[d]).join(" ")}`); }
+    catch (e) { console.log(`      download: ${String(e.message || e).slice(0, 80)}`); }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  for (const t of ["BCS:MXIPSAGC", "BCS:MXIPSAPC"]) { try { await tradingView(t); } catch (e) { console.log(`    tradingview ${t}: ${String(e.message || e).slice(0, 100)}`); } }
+  for (const k of ["INDEX/CL/XSGO/MXIPSAGC", "INDEX/CL/XSGO/MXIPSAPC", "INDEX/CL/XSGO/MSCIIPSA", "INDEX/XX/MSCI/767564"]) {
+    try { const m = await michelangelo(k); const d = Object.keys(m).sort(); console.log(`    michelangelo ${k}: ${d.length} días · ${d.slice(-24).map(x => x.slice(5) + "=" + m[x]).join(" ")}`); }
+    catch (e) { console.log(`    michelangelo ${k}: ${String(e.message || e).slice(0, 80)}`); }
+  }
+}
 /* ── ronda 2: descubrir el símbolo vigente y fuentes de NIVEL con mínimos/máximos del mes ── */
 async function yahooSearch(q) {
   const j = JSON.parse(await txt(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=15&newsCount=0`, { Accept: "application/json" }));
@@ -289,6 +329,9 @@ async function mindDolar() {
   const k = Object.keys(out).sort(); console.log(`    dólar observado: ${k.slice(-22).map(d => d.slice(5) + "=" + out[d]).join(" · ")}`);
   return {};
 }
+await ronda3();
+console.log("FIN RONDA 3");
+process.exit(0);
 const RONDA2 = [
   ["yahoo search IPSA", () => yahooSearch("IPSA")],
   ["yahoo search S&P IPSA", () => yahooSearch("S&P IPSA")],
