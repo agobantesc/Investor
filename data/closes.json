@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-30T05:48:23.863Z",
+ "updatedAt": "2026-09-30T12:50:04.112Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -9,11 +9,37 @@
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
   "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
-  "michelangelo S&P (retornos): 498 día(s) hasta 2026-09-29"
+  "michelangelo S&P (retornos): 497 día(s) hasta 2026-09-29",
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 21 día(s) hasta 20260929 · feriados omitidos 2026-09-18",
+  "MSCI IPSA oficial (MXIPSAGC.SN): 11090.97 @ 2026-09-30 9h (intradía, no entra) · cierre anterior 11055.94 → 2026-09-29"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
+ "ipsaOficial": [
+  "2026-09-01=11386.24 (MSCI GRTR, antes 11363.98)",
+  "2026-09-02=11556.21 (MSCI GRTR, antes 11533.64)",
+  "2026-09-03=11479.48 (MSCI GRTR, antes 11457.06)",
+  "2026-09-04=11452.94 (MSCI GRTR, antes 11430.56)",
+  "2026-09-07=11451.8 (MSCI GRTR, antes 11413.75)",
+  "2026-09-08=11414.32 (MSCI GRTR, antes 11376.38)",
+  "2026-09-09=11370.12 (MSCI GRTR, antes 11332.33)",
+  "2026-09-10=11238.58 (MSCI GRTR, antes 11197.61)",
+  "2026-09-11=11220.6 (MSCI GRTR, antes 11179.69)",
+  "2026-09-14=11342.39 (MSCI GRTR, antes 11301.03)",
+  "2026-09-15=11322.6 (MSCI GRTR, antes 11281.31)",
+  "2026-09-16=11235.6 (MSCI GRTR, antes 11194.63)",
+  "2026-09-17=11381.18 (MSCI GRTR, antes 11054.28)",
+  "2026-09-21=11357.82 (MSCI GRTR, antes 11105.28)",
+  "2026-09-22=11426.75 (MSCI GRTR, antes 11232.83)",
+  "2026-09-23=11449.63 (MSCI GRTR, antes 11089.62)",
+  "2026-09-24=11299.82 (MSCI GRTR, antes 10880.39)",
+  "2026-09-25=11256.8 (MSCI GRTR, antes 10845.9)",
+  "2026-09-28=11137.23 (MSCI GRTR, antes 10673.2)"
+ ],
+ "borrar": {
+  "2026-09-01": "precios"
+ },
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
   "csrf en HTML: no",
@@ -18041,41 +18067,14 @@
     "ITAUCL": 22100,
     "CAP": 5550
    },
-   "ipsa": 11329.3
+   "ipsa": 11315.26,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-01",
-   "prices": {
-    "CHILE": 196.46,
-    "SANTANDER": 81.96,
-    "BCI": 62502,
-    "ENELCHILE": 81.01,
-    "COLBUN": 135.29,
-    "FALABELLA": 5835,
-    "CENCOSUD": 1995,
-    "COPEC": 6249.6,
-    "CMPC": 1070,
-    "SQM-B": 65450,
-    "CCU": 5218,
-    "ENTEL": 3643,
-    "LATAM": 24.69,
-    "PARAUCO": 4039.9,
-    "AGUAS-A": 332.4,
-    "IAM": 921.89,
-    "ENELAM": 84.04,
-    "ECL": 1807,
-    "ANDINA-B": 4699.9,
-    "CONCHATORO": 852.33,
-    "QUINENCO": 4279,
-    "MALLPLAZA": 3950,
-    "VAPORES": 46.51,
-    "RIPLEY": 382.96,
-    "SMU": 127.9,
-    "ITAUCL": 20678,
-    "CAP": 6313.3,
-    "SONDA": 301.81
-   },
-   "ipsa": 11363.98
+   "prices": {},
+   "ipsa": 11386.24,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-02",
@@ -18108,7 +18107,8 @@
     "ITAUCL": 22450,
     "CAP": 5680
    },
-   "ipsa": 11533.64
+   "ipsa": 11556.21,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-03",
@@ -18141,7 +18141,8 @@
     "ITAUCL": 23500,
     "CAP": 5674.2
    },
-   "ipsa": 11457.06
+   "ipsa": 11479.48,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-04",
@@ -18175,7 +18176,8 @@
     "ITAUCL": 23340,
     "CAP": 5680
    },
-   "ipsa": 11430.56
+   "ipsa": 11452.94,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-07",
@@ -18209,7 +18211,8 @@
     "ITAUCL": 23400,
     "CAP": 5718
    },
-   "ipsa": 11413.75
+   "ipsa": 11451.8,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-08",
@@ -18243,7 +18246,8 @@
     "ITAUCL": 23400,
     "CAP": 5746.8
    },
-   "ipsa": 11376.38
+   "ipsa": 11414.32,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-09",
@@ -18277,7 +18281,8 @@
     "ITAUCL": 23690,
     "CAP": 5655
    },
-   "ipsa": 11332.33
+   "ipsa": 11370.12,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-10",
@@ -18311,7 +18316,8 @@
     "ITAUCL": 23460,
     "CAP": 5571
    },
-   "ipsa": 11197.61
+   "ipsa": 11238.58,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-11",
@@ -18345,7 +18351,8 @@
     "ITAUCL": 23436,
     "CAP": 5590
    },
-   "ipsa": 11179.69
+   "ipsa": 11220.6,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-14",
@@ -18379,7 +18386,8 @@
     "ITAUCL": 23699,
     "CAP": 5480
    },
-   "ipsa": 11301.03
+   "ipsa": 11342.39,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-15",
@@ -18413,7 +18421,8 @@
     "ITAUCL": 24129,
     "CAP": 5450
    },
-   "ipsa": 11281.31
+   "ipsa": 11322.6,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-16",
@@ -18447,7 +18456,8 @@
     "ITAUCL": 23660,
     "CAP": 5380
    },
-   "ipsa": 11194.63
+   "ipsa": 11235.6,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-17",
@@ -18481,7 +18491,8 @@
     "ITAUCL": 24200,
     "CAP": 5390
    },
-   "ipsa": 11054.28
+   "ipsa": 11381.18,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-21",
@@ -18515,7 +18526,8 @@
     "ITAUCL": 24149,
     "CAP": 5315
    },
-   "ipsa": 11105.28
+   "ipsa": 11357.82,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-22",
@@ -18549,7 +18561,8 @@
     "ITAUCL": 24002,
     "CAP": 5399.4
    },
-   "ipsa": 11232.83
+   "ipsa": 11426.75,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-23",
@@ -18583,7 +18596,8 @@
     "ITAUCL": 24100,
     "CAP": 5394
    },
-   "ipsa": 11089.62
+   "ipsa": 11449.63,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-24",
@@ -18617,7 +18631,8 @@
     "ITAUCL": 24200,
     "CAP": 5384
    },
-   "ipsa": 10880.39
+   "ipsa": 11299.82,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-25",
@@ -18651,7 +18666,8 @@
     "ITAUCL": 23837,
     "CAP": 5280
    },
-   "ipsa": 10845.9
+   "ipsa": 11256.8,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-28",
@@ -18685,7 +18701,8 @@
     "ITAUCL": 23290,
     "CAP": 5283.4
    },
-   "ipsa": 10673.2
+   "ipsa": 11137.23,
+   "ipsaOfi": true
   },
   {
    "date": "2026-09-29",
@@ -18719,7 +18736,8 @@
     "ITAUCL": 23277,
     "CAP": 5247.6
    },
-   "ipsa": 10581.62
+   "ipsa": 11055.94,
+   "ipsaOfi": true
   }
  ]
 }
