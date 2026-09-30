@@ -246,6 +246,66 @@ function careoDiario(tag, map) {
   console.log(`    día a día ${tag}:\n      ` + filas.join("\n      "));
 }
 
+/* ── ronda 2: descubrir el símbolo vigente y fuentes de NIVEL con mínimos/máximos del mes ── */
+async function yahooSearch(q) {
+  const j = JSON.parse(await txt(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=15&newsCount=0`, { Accept: "application/json" }));
+  const qs = (j.quotes || []).map(x => `${x.symbol} [${x.quoteType}/${x.exchange}] ${x.shortname || x.longname || ""}`);
+  console.log(`    yahoo search "${q}": ${qs.join(" · ") || "(nada)"}`);
+  const idx = (j.quotes || []).filter(x => /INDEX/i.test(x.quoteType || "")).map(x => x.symbol);
+  const out = {};
+  for (const sym of idx.slice(0, 4)) {
+    try { const m = await chart(sym, "3mo"); const k = Object.keys(m).sort(); console.log(`      chart ${sym}: ${k.length} días · ${k.slice(-5).map(d => d + "=" + m[d]).join(" · ")}`); if (k.length > Object.keys(out).length) Object.assign(out, m); }
+    catch (e) { console.log(`      chart ${sym}: ${String(e.message || e).slice(0, 60)}`); }
+  }
+  if (!Object.keys(out).length) throw new Error("sin serie de índice");
+  return out;
+}
+async function tradingView(sym) {
+  const cols = ["name", "description", "close", "change", "Perf.W", "Perf.1M", "Perf.3M", "Perf.YTD", "Perf.Y", "High.1M", "Low.1M", "High.3M", "Low.3M", "price_52_week_high", "price_52_week_low", "open", "high", "low", "currency"];
+  const r = await fetch("https://scanner.tradingview.com/global/scan", { method: "POST", headers: { "User-Agent": BUA, "Content-Type": "application/json", Origin: "https://www.tradingview.com", Referer: "https://www.tradingview.com/" },
+    body: JSON.stringify({ symbols: { tickers: [sym], query: { types: [] } }, columns: cols }) });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const j = await r.json(); const d = j?.data?.[0]?.d;
+  if (!d) throw new Error("sin fila (" + JSON.stringify(j).slice(0, 120) + ")");
+  console.log(`    tradingview ${sym}: ` + cols.map((c, i) => `${c}=${d[i]}`).join(" · "));
+  return { hoy: +d[2] };
+}
+async function tvSearch(q) {
+  const j = JSON.parse(await txt(`https://symbol-search.tradingview.com/symbol_search/v3/?text=${encodeURIComponent(q)}&hl=0&exchange=&lang=es&search_type=index&domain=production`, { Accept: "application/json", Origin: "https://www.tradingview.com", Referer: "https://www.tradingview.com/" }));
+  const s = (j.symbols || j || []).slice(0, 10).map(x => `${x.exchange || x.prefix}:${x.symbol} ${x.description}`);
+  console.log(`    tradingview search "${q}": ${s.join(" · ")}`);
+  return {};
+}
+async function pagina(tag, url, re) {
+  const h = await txt(url);
+  const t = /<title>([^<]{0,120})/i.exec(h);
+  const nums = [...h.matchAll(re)].slice(0, 8).map(m => m[1]);
+  console.log(`    ${tag}: ${h.length} bytes · título "${t ? t[1].trim() : "?"}" · candidatos ${nums.join(" | ") || "ninguno"}`);
+  return {};
+}
+async function mindDolar() {
+  const j = JSON.parse(await txt("https://mindicador.cl/api/dolar/2026", { Accept: "application/json" }));
+  const out = {}; for (const x of j.serie || []) out[x.fecha.slice(0, 10)] = +x.valor;
+  const k = Object.keys(out).sort(); console.log(`    dólar observado: ${k.slice(-22).map(d => d.slice(5) + "=" + out[d]).join(" · ")}`);
+  return {};
+}
+const RONDA2 = [
+  ["yahoo search IPSA", () => yahooSearch("IPSA")],
+  ["yahoo search S&P IPSA", () => yahooSearch("S&P IPSA")],
+  ["tradingview search IPSA", () => tvSearch("IPSA")],
+  ["tradingview BCS:SP_IPSA", () => tradingView("BCS:SP_IPSA")],
+  ["tradingview BCS:SPIPSA", () => tradingView("BCS:SPIPSA")],
+  ["tradingview SP:SPIPSA", () => tradingView("SP:SPIPSA")],
+  ["google finance (página)", () => pagina("google", "https://www.google.com/finance/quote/SPIPSA:INDEXSTGO?hl=en", /(1\d,\d{3}\.\d{2})/g)],
+  ["ft (página)", () => pagina("ft", "https://markets.ft.com/data/indices/tearsheet/summary?s=IPSA:SGO", /(1\d,\d{3}\.\d{2})/g)],
+  ["businessinsider (página)", () => pagina("bi", "https://markets.businessinsider.com/index/ipsa", /(1\d,\d{3}\.\d{2})/g)],
+  ["mindicador dólar", mindDolar],
+];
+for (const [tag, fn] of RONDA2) {
+  try { await fn(); } catch (e) { console.log(`✗ ${tag}: ${String((e && e.message) || e).slice(0, 160)}`); }
+  await new Promise(r => setTimeout(r, 400));
+}
+
 const CANDIDATOS = [
   ["wsj/mw michelangelo INDEX/CL/XSGO/IPSA", () => michelangelo("INDEX/CL/XSGO/IPSA"), true],
   ["wsj/mw michelangelo INDEX/CL/XSGO/SPIPSA", () => michelangelo("INDEX/CL/XSGO/SPIPSA"), true],
