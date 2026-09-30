@@ -83,10 +83,13 @@ const MIN_MES = 11038.39, MAX_MES = 11556.21;
     const J = JSON.parse(JSON.stringify(D)); J.borrar = Object.assign({}, J.borrar || {}, { [f0]: "todo" });
     const _f = window.fetch; window.fetch = async () => ({ ok: true, json: async () => J });
     await autopxSync(false); window.fetch = _f;
-    return { num, ult, baseUlt: PRICEDB.ipsa[ult], msci: /MSCI/.test(sub), quedoPx: PRICEDB.px.BCI[f0] != null, quedoIpsa: PRICEDB.ipsa[f0] != null };
+    // el IPSA de ese día: si la fuente trae un OFICIAL, queda ese (el valor sembrado se va); si no, nada
+    const dF = (D.days || []).find(x => x.date === f0), esperado = dF && dF.ipsa != null ? dF.ipsa : null;
+    return { num, ult, baseUlt: PRICEDB.ipsa[ult], msci: /MSCI/.test(sub), quedoPx: PRICEDB.px.BCI[f0] != null,
+      ipsaDia: PRICEDB.ipsa[f0] ?? null, esperado };
   }, CL);
   M.ok("6-APP-MUESTRA-EL-OFICIAL-Y-BORRA-LO-DESCARTADO",
-    Math.abs(t6.num - t6.baseUlt) < 0.01 && t6.msci && !t6.quedoPx && !t6.quedoIpsa, t6);
+    Math.abs(t6.num - t6.baseUlt) < 0.01 && t6.msci && !t6.quedoPx && t6.ipsaDia === t6.esperado, t6);
 
   M.ok("7-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
   await navegador.close();

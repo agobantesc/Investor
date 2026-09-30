@@ -525,6 +525,9 @@ const ipsaOfiLog = [];
       if (!(byDate[d] && Object.keys(byDate[d].prices || {}).length >= 8)) continue;
       ponOfi(d, +v.toFixed(2), "MSCI " + MSCI_IPSA_VARIANT); n++;
     }
+    // con la serie oficial al día, el aviso de "IPSA histórico incompleto" de las fuentes viejas (S&P, hoy
+    // muertas) ya no describe un problema real: se retira para que el panel de datos no alarme en vano
+    if (n > 0) for (let i = errors.length - 1; i >= 0; i--) if (/^IPSA histórico incompleto/.test(errors[i])) errors.splice(i, 1);
     ipsaSources.push(`MSCI IPSA oficial (API MSCI ${MSCI_IPSA_CODE}/${MSCI_IPSA_VARIANT}): ${n} día(s) hasta ${lv.length ? lv[lv.length - 1].calc_date : "?"}${feriados.length ? " · feriados omitidos " + feriados.join(",") : ""}`);
   } catch (e) { ipsaSources.push(`MSCI IPSA oficial (API MSCI): ${String((e && e.message) || e).slice(0, 80)}`); }
   // 2º Yahoo: el cierre de HOY (MSCI publica el EOD más tarde) y el cierre anterior
