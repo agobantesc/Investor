@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-30T12:50:04.112Z",
+ "updatedAt": "2026-10-01T00:24:27.316Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,39 +7,19 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 500 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
-  "michelangelo S&P (retornos): 497 día(s) hasta 2026-09-29",
-  "MSCI IPSA oficial (API MSCI 767564/GRTR): 21 día(s) hasta 20260929 · feriados omitidos 2026-09-18",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 11090.97 @ 2026-09-30 9h (intradía, no entra) · cierre anterior 11055.94 → 2026-09-29"
+  "michelangelo S&P (retornos): 498 día(s) hasta 2026-09-30",
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 21 día(s) hasta 20260930 · feriados omitidos 2026-09-18",
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10969.49 @ 2026-09-30 16h (cierre) · cierre anterior 11055.94 → 2026-09-29"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "ipsaOficial": [
-  "2026-09-01=11386.24 (MSCI GRTR, antes 11363.98)",
-  "2026-09-02=11556.21 (MSCI GRTR, antes 11533.64)",
-  "2026-09-03=11479.48 (MSCI GRTR, antes 11457.06)",
-  "2026-09-04=11452.94 (MSCI GRTR, antes 11430.56)",
-  "2026-09-07=11451.8 (MSCI GRTR, antes 11413.75)",
-  "2026-09-08=11414.32 (MSCI GRTR, antes 11376.38)",
-  "2026-09-09=11370.12 (MSCI GRTR, antes 11332.33)",
-  "2026-09-10=11238.58 (MSCI GRTR, antes 11197.61)",
-  "2026-09-11=11220.6 (MSCI GRTR, antes 11179.69)",
-  "2026-09-14=11342.39 (MSCI GRTR, antes 11301.03)",
-  "2026-09-15=11322.6 (MSCI GRTR, antes 11281.31)",
-  "2026-09-16=11235.6 (MSCI GRTR, antes 11194.63)",
-  "2026-09-17=11381.18 (MSCI GRTR, antes 11054.28)",
-  "2026-09-21=11357.82 (MSCI GRTR, antes 11105.28)",
-  "2026-09-22=11426.75 (MSCI GRTR, antes 11232.83)",
-  "2026-09-23=11449.63 (MSCI GRTR, antes 11089.62)",
-  "2026-09-24=11299.82 (MSCI GRTR, antes 10880.39)",
-  "2026-09-25=11256.8 (MSCI GRTR, antes 10845.9)",
-  "2026-09-28=11137.23 (MSCI GRTR, antes 10673.2)"
+  "2026-09-30=10969.49 (MSCI GRTR)"
  ],
- "borrar": {
-  "2026-09-01": "precios"
- },
+ "borrar": {},
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
   "csrf en HTML: no",
@@ -49,9 +29,7 @@
   "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
  ],
  "ajustesDeFuente": [],
- "errors": [
-  "IPSA histórico incompleto (0 día/s) — yahoo quote ^IPSA: quote sin precio/hora · yahoo ^IPSA hoy: ^IPSA: HTTP 404 · marketwatch spipsa: HTTP 401 · investing 40802: HTTP 403 · twelvedata IPSA: sin TWELVEDATA_KEY (opcional) · stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate · yahoo ^IPSA period: ^IPSA: HTTP 404"
- ],
+ "errors": [],
  "days": [
   {
    "date": "2024-07-03",
@@ -18737,6 +18715,41 @@
     "CAP": 5247.6
    },
    "ipsa": 11055.94,
+   "ipsaOfi": true
+  },
+  {
+   "date": "2026-09-30",
+   "prices": {
+    "CHILE": 194.5,
+    "SANTANDER": 81.35,
+    "BCI": 64800,
+    "ENELCHILE": 81.8,
+    "COLBUN": 147.5,
+    "FALABELLA": 6224,
+    "CENCOSUD": 1905,
+    "COPEC": 6300,
+    "CMPC": 975,
+    "SQM-B": 62900,
+    "CCU": 5090,
+    "ENTEL": 3960,
+    "LATAM": 24.33,
+    "PARAUCO": 3505,
+    "AGUAS-A": 321.5,
+    "IAM": 925,
+    "ENELAM": 82.2,
+    "ECL": 1848,
+    "ANDINA-B": 4780.1,
+    "CONCHATORO": 895,
+    "QUINENCO": 4797.9,
+    "MALLPLAZA": 3555,
+    "VAPORES": 50.9,
+    "RIPLEY": 448.22,
+    "SMU": 115.5,
+    "SONDA": 280,
+    "ITAUCL": 23000,
+    "CAP": 5299.4
+   },
+   "ipsa": 10969.49,
    "ipsaOfi": true
   }
  ]
