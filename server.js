@@ -14,28 +14,23 @@
      PORT        → puerto (Render lo inyecta solo)
      DATA_DIR    → carpeta del disco persistente (Render: /var/data)
      SYNC_TOKEN  → token secreto que la app envía en el header x-investor-token
-     AUTH_USER   → (opcional) usuario de la puerta de entrada del SITIO
-     AUTH_PASS   → (opcional) contraseña de esa puerta
 
-   TRES CAPAS INDEPENDIENTES:
+   DOS CAPAS INDEPENDIENTES:
    · CUENTAS (users.json en el disco): la puerta REAL de Investor. El servidor guarda
      las contraseñas con PBKDF2 · 210.000 iteraciones, verifica el ingreso, cuenta los
      intentos fallidos y bloquea la cuenta. La primera cuenta —la de administrador— se
      crea con el SYNC_TOKEN: "todavía no hay cuentas" no es una credencial, y sin esa
      exigencia el primero que llegara a una URL pública se quedaría con el servicio.
-   · PUERTA DEL SITIO (HTTP Basic Auth, opcional y HOY APAGADA): si defines AUTH_USER y
-     AUTH_PASS, el navegador pide usuario y contraseña ANTES de mostrar nada — ni la
-     página ni los datos. Se retiró del blueprint porque Basic Auth no tiene sesión: la
-     credencial vive en la memoria del navegador y el diálogo reaparecía solo. El código
-     sigue aquí; basta volver a definir AMBAS variables para reactivarla. Sin ellas el
-     sitio queda público, y lo que protege el acceso son las cuentas de arriba.
+   · (Ya NO hay "puerta del sitio" con HTTP Basic Auth. Era el diálogo NATIVO del navegador que
+     pedía usuario y contraseña antes de abrir la app; sin sesión propia, reaparecía solo y obligaba a
+     entrar dos veces. Se ELIMINÓ del código: aunque AUTH_USER / AUTH_PASS sigan definidas en el
+     panel de Render, el servidor las ignora. El acceso lo controla solo la sesión de Investor.)
    · CAJA FUERTE (SYNC_TOKEN): protege la API de respaldos aunque alguien pasara la
      puerta. Se define en el panel de Render y se pega una vez en Investor
      (⚙ Configuración → Respaldo → Nube). Sin token válido: 401.
 
-   /api/health queda SIEMPRE accesible sin credenciales (Render lo consulta para saber
-   si el servicio está vivo; si lo bloqueáramos, Render lo reiniciaría en bucle). Sin
-   autenticar responde lo mínimo — solo que está en pie, ningún dato del respaldo.
+   /api/health queda SIEMPRE accesible (Render lo consulta para saber si el servicio está
+   vivo): dice que está en pie y si hay respaldo, nunca su contenido ni datos de las cuentas.
    ═══════════════════════════════════════════════════════════════════════════ */
 "use strict";
 const http = require("http");
@@ -47,9 +42,8 @@ const PORT = +(process.env.PORT || 10000);
 const ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, "cloud-data");
 const TOKEN = (process.env.SYNC_TOKEN || "").trim();
-const AUTH_USER = (process.env.AUTH_USER || "").trim();
-const AUTH_PASS = process.env.AUTH_PASS || "";
-const GATE_ON = !!(AUTH_USER && AUTH_PASS);   // la puerta se activa solo si AMBAS están definidas
+// variables de la antigua puerta Basic Auth: solo para AVISAR en el log que quedaron en el panel (se ignoran)
+const GATE_RESTOS = ["AUTH_USER", "AUTH_PASS"].filter(k => (process.env[k] || "").trim());
 const BK_DIR = path.join(DATA_DIR, "backups");
 const LATEST = path.join(DATA_DIR, "latest.json");
 const MAX_BODY = 30 * 1024 * 1024;   // 30 MB de respaldo como máximo (holgado: los reales pesan cientos de KB)
@@ -81,30 +75,6 @@ function secretEq(recibido, esperado) {
 function authOK(req) {
   if (!TOKEN) return false;
   return secretEq(req.headers["x-investor-token"], TOKEN);
-}
-/* PUERTA DEL SITIO · HTTP Basic Auth. Devuelve true si puede pasar (o si la puerta está apagada).
-   Se comparan usuario Y contraseña en tiempo constante, y siempre ambos, para no filtrar cuál falló. */
-function gateOK(req) {
-  if (!GATE_ON) return true;
-  const h = String(req.headers["authorization"] || "");
-  const m = /^Basic\s+([A-Za-z0-9+/=]+)$/.exec(h.trim());
-  if (!m) return false;
-  let dec = "";
-  try { dec = Buffer.from(m[1], "base64").toString("utf8"); } catch (e) { return false; }
-  const i = dec.indexOf(":");
-  if (i < 0) return false;
-  const okU = secretEq(dec.slice(0, i), AUTH_USER);
-  const okP = secretEq(dec.slice(i + 1), AUTH_PASS);
-  return okU && okP;
-}
-function pedirCredenciales(res) {
-  const body = JSON.stringify({ error: "acceso restringido: se requieren usuario y contraseña" });
-  res.writeHead(401, {
-    "WWW-Authenticate": 'Basic realm="Investor", charset="UTF-8"',
-    "Content-Type": "application/json; charset=utf-8",
-    "Content-Length": Buffer.byteLength(body), "Cache-Control": "no-store"
-  });
-  res.end(body);
 }
 function backupMeta() {
   let savedAt = null, bytes = 0;
@@ -296,16 +266,12 @@ const server = http.createServer((req, res) => {
   const p = u.pathname;
 
   /* ── SALUD: siempre accesible (Render la consulta sin credenciales para saber si el servicio vive).
-     Sin autenticar informa solo que está en pie; el detalle del respaldo exige pasar la puerta. ── */
+     Además de "en pie" dice si hay respaldo y cuándo se guardó (la app lo usa al abrir para ofrecer la
+     restauración); nunca entrega el contenido, que exige token o sesión. ── */
   if (p === "/api/health") {
-    const base = { ok: true, app: "investor", gate: GATE_ON ? "on" : "off" };
-    if (GATE_ON && !gateOK(req)) return sendJSON(res, 200, base);
     const m = backupMeta();
-    return sendJSON(res, 200, Object.assign(base, { tokenConfigured: !!TOKEN, hasBackup: m.hasBackup, savedAt: m.savedAt }));
+    return sendJSON(res, 200, { ok: true, app: "investor", tokenConfigured: !!TOKEN, hasBackup: m.hasBackup, savedAt: m.savedAt });
   }
-
-  /* ── PUERTA DEL SITIO: todo lo demás (app, datos y API) exige credenciales si está activada ── */
-  if (!gateOK(req)) return pedirCredenciales(res);
 
   /* ── DATOS DE LA CUENTA ── lo que hace que Investor se pueda usar desde cualquier equipo. La llave es la
      SESIÓN (tu usuario y contraseña), no el SYNC_TOKEN: pedir el token aquí obligaría a llevarlo encima de
@@ -589,6 +555,6 @@ server.listen(PORT, () => {
   console.log("Investor sirviendo en :" + PORT);
   console.log("  disco de respaldos : " + DATA_DIR + (process.env.DATA_DIR ? " (persistente)" : " (local, solo pruebas)"));
   console.log("  SYNC_TOKEN         : " + (TOKEN ? "configurado" : "⚠ FALTA (la API de respaldos responderá 503)"));
-  console.log("  puerta del sitio   : " + (GATE_ON ? ("ACTIVA · usuario «" + AUTH_USER + "»") : "abierta (define AUTH_USER y AUTH_PASS para exigir contraseña)"));
-  if (!GATE_ON && (AUTH_USER || AUTH_PASS)) console.log("  ⚠ la puerta necesita AMBAS: falta " + (AUTH_USER ? "AUTH_PASS" : "AUTH_USER"));
+  console.log("  acceso             : sesión interna de Investor (sin diálogo Basic Auth del navegador)");
+  if (GATE_RESTOS.length) console.log("  ℹ " + GATE_RESTOS.join(" y ") + " siguen en el panel de Render: se IGNORAN (puedes borrarlas)");
 });

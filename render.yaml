@@ -55,7 +55,7 @@ services:
       #      tras varios intentos fallidos — cosas que Basic Auth no hace.
       # Con las cuentas en el servidor (users.json en el disco persistente) el acceso se administra desde
       # ⚙ Configuración → Accesos, y se entra con el mismo usuario desde cualquier equipo.
-      # El servidor conserva el soporte: si algún día quieres la capa extra, basta volver a definir AMBAS
-      # variables en el panel de Render (el código de server.js sigue ahí y la activa solo).
-      # OJO: quitar estas líneas del blueprint NO borra las variables ya creadas en el servicio. Hay que
-      # borrarlas a mano en Render → investor → Environment, y luego Save (el servicio reinicia).
+      # Desde 10-2026 el soporte se ELIMINÓ también de server.js: aunque AUTH_USER / AUTH_PASS sigan
+      # definidas en el panel (quitar estas líneas del blueprint no las borra del servicio), el servidor
+      # las IGNORA y el navegador ya no muestra su diálogo. Puedes borrarlas en Render → investor →
+      # Environment cuando quieras, solo por orden: el arranque avisa en el log si siguen ahí.

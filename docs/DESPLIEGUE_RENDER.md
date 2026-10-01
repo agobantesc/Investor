@@ -18,19 +18,18 @@ desde el teléfono con los mismos datos.
 
 | Capa | Qué protege | Cómo se pasa |
 |---|---|---|
-| **Puerta del sitio** (`AUTH_USER` + `AUTH_PASS`) | Todo: la página, los datos y la API. Un desconocido que dé con tu URL ni siquiera ve que Investor existe ahí. | Diálogo nativo del navegador; tu gestor de contraseñas lo recuerda. |
-| **Caja fuerte** (`SYNC_TOKEN`) | La API de respaldos, aunque alguien pasara la puerta. | Se pega una vez en la app (⚙ Configuración → Respaldo → Nube). |
+| **Sesión de Investor** (cuentas en el disco) | Tus datos en el servidor y el uso de la app. Contraseñas con PBKDF2 · 210.000 iteraciones y bloqueo tras varios intentos fallidos. | La pantalla de inicio de sesión de la propia app. |
+| **Caja fuerte** (`SYNC_TOKEN`) | La API de respaldos. | Se pega una vez en la app (⚙ Configuración → Respaldo → Nube). |
 
-Son independientes a propósito: pasar la puerta **no** da acceso a los respaldos, y el
-token **no** abre la puerta. Ambas vienen configuradas en el Blueprint.
+> **Ya no existe la "puerta del sitio"** (HTTP Basic Auth con `AUTH_USER` + `AUTH_PASS`). Era el
+> diálogo nativo del navegador que pedía usuario y contraseña *antes* de la app: no tenía sesión,
+> reaparecía solo y obligaba a entrar dos veces. Se eliminó de `server.js` en 10-2026; si esas
+> variables siguen en el panel de Render, el servidor las ignora (y lo avisa en el log). Puedes
+> borrarlas cuando quieras.
 
 > `/api/health` queda siempre accesible sin credenciales, porque Render la consulta para
-> saber si el servicio está vivo (si la bloqueáramos, lo reiniciaría en bucle). Sin
-> autenticar responde solo que está en pie: ningún dato de tu respaldo.
-
-Si prefieres el sitio abierto, borra `AUTH_USER` y `AUTH_PASS` en el panel de Render:
-el servidor detecta que faltan y no exige nada (el `SYNC_TOKEN` sigue protegiendo los
-datos, y quien abra la URL verá un Investor vacío).
+> saber si el servicio está vivo (si la bloqueáramos, lo reiniciaría en bucle). Responde que
+> está en pie y si hay respaldo, nunca su contenido.
 
 ## Pasos (una sola vez, ~10 minutos)
 
@@ -42,7 +41,7 @@ Blueprint. No hay que inventar contraseñas ni tocar archivos.
    - `New → Blueprint` → conecta GitHub → elige el repo **agobantesc/Investor**.
    - Render lee `render.yaml` y propone todo hecho: el servicio `investor`, su disco
      `investor-datos` (1 GB en `/var/data`), la rama correcta y las claves
-     **generadas automáticamente** (`SYNC_TOKEN` y `AUTH_PASS`). Solo confirma.
+     **generada automáticamente** (`SYNC_TOKEN`). Solo confirma.
    - **Instance type**: déjalo en **Starter** (~US$7/mes). El disco persistente exige
      una instancia de pago; sin disco, los respaldos se borrarían en cada deploy.
      ⚠️ *No confundas* el **instance type** (tamaño de la máquina) con el **plan de tu
@@ -50,30 +49,26 @@ Blueprint. No hay que inventar contraseñas ni tocar archivos.
      nada aquí. Subir la instancia a Standard/Pro para esta app es gasto puro.
    - En 2–3 min el servicio queda **Live** con tu URL: `https://investor-XXXX.onrender.com`.
 
-2. **Copia tus tres claves** (Render → tu servicio → `Environment` → *Reveal*)
+2. **Copia tu clave** (Render → tu servicio → `Environment` → *Reveal*)
 
    | Variable | Para qué | Dónde la usarás |
    |---|---|---|
-   | `AUTH_USER` | Usuario de la puerta (viene como `investor`; cámbialo si quieres) | Al abrir la URL |
-   | `AUTH_PASS` | Contraseña de la puerta (generada) | Al abrir la URL |
    | `SYNC_TOKEN` | Llave de la caja fuerte (generado) | Dentro de la app, una vez |
 
-   Guárdalas en tu gestor de contraseñas. **Son las llaves de tus datos.**
+   Guárdala en tu gestor de contraseñas. **Es la llave de tus respaldos.**
 
 3. **Comprueba que quedó bien** (30 segundos, recomendado)
 
    ```bash
-   node automation/verify-deploy.mjs https://USUARIO:CLAVE@investor-XXXX.onrender.com TU_SYNC_TOKEN
+   node automation/verify-deploy.mjs https://investor-XXXX.onrender.com TU_SYNC_TOKEN
    ```
 
    Verifica que la app se sirve, que los cierres del día están ahí, que el disco
    responde, que **la API está cerrada** sin token y que la caja fuerte escribe y lee
    bien (usa un respaldo de prueba y **restaura el tuyo** al terminar, sin tocar nada).
-   Si dejaste el sitio abierto, basta con la URL a secas y sin credenciales.
 
 4. **Conecta la app a la nube**
-   - Abre tu URL de Render → el navegador pedirá `AUTH_USER` / `AUTH_PASS` (marca
-     "recordar" para no repetirlo) → inicia (o crea) tu acceso local.
+   - Abre tu URL de Render → inicia sesión (o crea tu cuenta) en la pantalla de Investor.
    - Si vienes del navegador de siempre: exporta allí un respaldo
      (`⚙ Configuración → Respaldo → 💾 Respaldar`) e impórtalo aquí (`📥 Restaurar`).
    - `⚙ Configuración → Respaldo → Nube`: pega el **token**, deja activado el
@@ -101,12 +96,9 @@ automática (raw.githubusercontent) configurada en Datos — ambas rutas funcion
 - **¿Qué guarda el disco?** `latest.json` (tu último respaldo completo) más las
   últimas 40 versiones históricas en `/var/data/backups/`.
 - **¿Y si pierdo una clave?** Ninguna es irrecuperable: la editas en Render
-  (Environment), esperas el redeploy y listo. Cambiar `AUTH_PASS` solo te hará volver
-  a iniciar sesión; cambiar `SYNC_TOKEN` te hará pegarlo de nuevo en la app. **Los
+  (Environment), esperas el redeploy y listo. Cambiar `SYNC_TOKEN` te hará pegarlo de
+  nuevo en la app. **Los
   respaldos del disco no se pierden en ningún caso.**
-- **¿Y si quiero el sitio sin contraseña?** Borra `AUTH_USER` y `AUTH_PASS` en el panel.
-  El servidor detecta que faltan y deja la puerta abierta (el `SYNC_TOKEN` sigue
-  cuidando los datos).
 - **¿Tener cuenta Pro cambia algo?** No. En Render, el `plan` del `render.yaml` es el
   **instance type** (tamaño de la máquina) y es independiente del plan de tu cuenta.
   El disco persistente se habilita con cualquier instancia de pago (Starter basta), y
@@ -137,16 +129,3 @@ un disco simulado — 10 bloques, todos en verde:
 | **Ciclo real** | la app sube su respaldo → se borra el navegador entero → **restaura todo** con valor, aportado y operaciones idénticos |
 | Mala config | sin `SYNC_TOKEN` → 503 explícito y la app sigue sirviéndose |
 | Tamaño | 41 versiones de un respaldo real (~350 KB) = 14 MB de 1 GB (73× de holgura) |
-
-Y la **puerta del sitio**, en 8 bloques más:
-
-| | |
-|---|---|
-| Opcional | sin `AUTH_USER`/`AUTH_PASS` todo sigue exactamente como antes |
-| Cobertura | con la puerta activa, app, datos y API responden 401 y piden credenciales |
-| **Health** | `/api/health` **sigue abierta** (Render la necesita) y sin autenticar no revela nada del respaldo |
-| Credenciales | usuario o clave errados, clave vacía, base64 roto o esquema ajeno → 401, con **mensaje idéntico** (no revela cuál falló) |
-| Capas | pasar la puerta NO abre la caja fuerte, y el token NO abre la puerta |
-| Config a medias | con una sola variable la puerta no se activa y el arranque lo avisa |
-| App completa | tras autenticar, la app carga, lee los cierres y respalda en la nube sin errores |
-| Verificador | atraviesa la puerta con credenciales en la URL y falla claramente sin ellas |
