@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-03T05:33:24.849Z",
+ "updatedAt": "2026-10-03T16:08:04.316Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,24 +7,26 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 408 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 520 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
-  "michelangelo S&P (retornos): 498 día(s) hasta 2026-10-02",
-  "MSCI IPSA oficial (API MSCI 767564/GRTR): 23 día(s) hasta 20261002 · feriados omitidos 2026-09-18",
+  "michelangelo S&P (retornos): 497 día(s) hasta 2026-10-02",
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 24 día(s) hasta 20261002 · feriados omitidos 2026-09-18",
   "MSCI IPSA oficial (MXIPSAGC.SN): 10916.57 @ 2026-10-02 16h (cierre) · cierre anterior 10908.18 → 2026-10-01"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "ipsaOficial": [],
- "borrar": {},
+ "borrar": {
+  "2026-09-01": "precios"
+ },
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
   "csrf en HTML: no",
   "getPointHistGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "getPointIntradayGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
-  "/api/RV_ResumenMercado/getResumenAccionesPrecios: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> "
+  "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
  ],
  "ajustesDeFuente": [],
  "errors": [],
