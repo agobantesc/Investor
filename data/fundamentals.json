@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-05T20:59:05.915Z",
+ "updatedAt": "2026-10-06T01:15:50.789Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -288,7 +288,7 @@
    "rec": "hold",
    "nAn": 9,
    "peg": 1.67,
-   "evEbitda": 8.6
+   "evEbitda": 8.8
   },
   "ENTEL": {
    "name": "Empresa Nacional de Telecomunicaciones S.A.",
@@ -360,7 +360,7 @@
    "rec": "hold",
    "nAn": 10,
    "peg": 0.76,
-   "evEbitda": 17.2
+   "evEbitda": 17.5
   },
   "AGUAS-A": {
    "name": "Aguas Andinas S.A.",
@@ -480,7 +480,7 @@
    "rec": "none",
    "nAn": 11,
    "peg": null,
-   "evEbitda": 9.1
+   "evEbitda": 9.3
   },
   "CONCHATORO": {
    "name": "Viña Concha y Toro S.A.",
@@ -552,7 +552,7 @@
    "rec": "hold",
    "nAn": 10,
    "peg": null,
-   "evEbitda": 17.1
+   "evEbitda": 17.2
   },
   "VAPORES": {
    "name": "Compañía Sud Americana de Vapores S.A.",
