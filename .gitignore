@@ -1,2 +1,9 @@
 node_modules/
 cloud-data/
+# secretos y credenciales: jamás al repositorio (van en el panel de Render o en los secrets de GitHub)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx

@@ -1,0 +1,12 @@
+# Dependabot: avisa (y propone la actualización) cuando sale una versión nueva o un aviso de seguridad.
+# El servidor NO tiene dependencias de npm (solo módulos de Node), así que lo que hay que vigilar son las
+# ACCIONES de GitHub que usan los workflows (checkout, setup-node): corren con permiso de escribir en el repo.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(actions)"

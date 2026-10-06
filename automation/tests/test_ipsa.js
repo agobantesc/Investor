@@ -35,7 +35,8 @@ const MIN_MES = 11038.39, MAX_MES = 11556.21;
     { dias: tramo.length, oficiales: tramo.filter(d => d.ipsaOfi).length, estimados: tramo.filter(d => d.ipsaSynth).length, sinSello });
 
   // ── 3. septiembre dentro del rango oficial del mes (lo que el cliente vio en la Bolsa: nunca bajo 11.000) ──
-  const sep = dias.filter(d => d.date >= "2026-09-01" && d.date <= "2026-09-30" && d.ipsa != null).map(d => ({ f: d.date, v: d.ipsa }));
+  // hasta el 29-09: el rango se midió la MAÑANA del 30-09, antes de ese cierre (el 30-09 cerró en 10.969,49, oficial)
+  const sep = dias.filter(d => d.date >= "2026-09-01" && d.date <= "2026-09-29" && d.ipsa != null).map(d => ({ f: d.date, v: d.ipsa }));
   const fuera = sep.filter(x => x.v < MIN_MES * 0.995 || x.v > MAX_MES * 1.005);   // ±0,5%: los intermedios son estimación
   M.ok("3-SEPTIEMBRE-EN-EL-RANGO-OFICIAL", sep.length >= 15 && fuera.length === 0,
     { n: sep.length, min: Math.min(...sep.map(x => x.v)), max: Math.max(...sep.map(x => x.v)), fuera });

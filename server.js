@@ -29,6 +29,17 @@
      puerta. Se define en el panel de Render y se pega una vez en Investor
      (⚙ Configuración → Respaldo → Nube). Sin token válido: 401.
 
+   SEGURIDAD WEB (todas las respuestas):
+   · Cabeceras: Content-Security-Policy (la app con NONCE por respuesta: un <script> inyectado no corre),
+     X-Content-Type-Options: nosniff, X-Frame-Options: DENY / frame-ancestors 'none', Referrer-Policy,
+     Permissions-Policy, Cross-Origin-Opener-Policy y, detrás de HTTPS, Strict-Transport-Security.
+   · Ingreso: límite por IP, por cuenta+IP y por cuenta; misma respuesta y misma demora exista o no el
+     usuario; largos máximos; cambiar la contraseña cierra las demás sesiones.
+   · REGISTRO DE SEGURIDAD (seguridad.log en el disco + log de Render): ingresos correctos y fallidos,
+     bloqueos y cambios de cuentas, con la IP. Nunca contraseñas ni tokens. El administrador lo ve en
+     ⚙ Configuración → Accesos.
+   · Errores 500 genéricos hacia afuera; el detalle queda solo en el registro.
+
    /api/health queda SIEMPRE accesible (Render lo consulta para saber si el servicio está
    vivo): dice que está en pie y si hay respaldo, nunca su contenido ni datos de las cuentas.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -55,13 +66,13 @@ const MIME = { ".html": "text/html; charset=utf-8", ".json": "application/json; 
 
 function sendJSON(res, code, obj) {
   const body = JSON.stringify(obj);
-  res.writeHead(code, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(body), "Cache-Control": "no-store" });
+  res.writeHead(code, cabeceras(res._req, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(body), "Cache-Control": "no-store" }));
   res.end(body);
 }
 function sendFile(res, file, cacheable) {
   fs.stat(file, (err, st) => {
     if (err || !st.isFile()) return sendJSON(res, 404, { error: "no encontrado" });
-    res.writeHead(200, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream", "Content-Length": st.size, "Cache-Control": cacheable ? "public, max-age=300" : "no-store" });
+    res.writeHead(200, cabeceras(res._req, { "Content-Type": MIME[path.extname(file)] || "application/octet-stream", "Content-Length": st.size, "Cache-Control": cacheable ? "public, max-age=300" : "no-store" }));
     fs.createReadStream(file).pipe(res);
   });
 }
@@ -76,6 +87,78 @@ function authOK(req) {
   if (!TOKEN) return false;
   return secretEq(req.headers["x-investor-token"], TOKEN);
 }
+/* ═══════════════════ CABECERAS DE SEGURIDAD ═══════════════════ */
+function esHttps(req) { return String((req && req.headers && req.headers["x-forwarded-proto"]) || "").split(",")[0].trim() === "https"; }
+function cabeceras(req, extra) {
+  const h = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    // por defecto (JSON, archivos de datos): nada ejecutable, nada embebible
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+  };
+  // HSTS solo detrás de HTTPS (Render): por HTTP plano el navegador lo ignora y en local estorbaría
+  if (esHttps(req)) h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+  return Object.assign(h, extra || {});
+}
+/* CSP de la APP. Scripts SOLO con el nonce de esta respuesta: la app tiene dos <script> propios y ningún
+   manejador en línea ni eval, así que todo lo que un atacante lograra inyectar como HTML queda inerte.
+   style-src admite 'unsafe-inline' porque la app pinta con estilos en línea (no ejecutan código).
+   connect-src https: porque la app consulta varias fuentes públicas de mercado; lo que se cierra es
+   http plano, objetos, iframes, workers, <base> y que otro sitio la embeba. */
+function cspApp(nonce, https) {
+  return ["default-src 'self'", `script-src 'nonce-${nonce}'`, "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:", "font-src 'self' data:", "connect-src 'self' https:",
+    "media-src 'none'", "object-src 'none'", "frame-src 'none'", "worker-src 'none'", "manifest-src 'self'",
+    "base-uri 'none'", "form-action 'self'", "frame-ancestors 'none'"].concat(https ? ["upgrade-insecure-requests"] : []).join("; ");
+}
+let _app = { mtime: 0, html: "" };
+function sendApp(req, res) {
+  const f = path.join(ROOT, "index.html");
+  try { const st = fs.statSync(f); if (st.mtimeMs !== _app.mtime) _app = { mtime: st.mtimeMs, html: fs.readFileSync(f, "utf8") }; }
+  catch (e) { return sendJSON(res, 404, { error: "no encontrado" }); }
+  const nonce = crypto.randomBytes(16).toString("base64");
+  const buf = Buffer.from(_app.html.replace(/<script>/g, `<script nonce="${nonce}">`), "utf8");
+  res.writeHead(200, cabeceras(req, { "Content-Type": MIME[".html"], "Content-Length": buf.length, "Cache-Control": "no-store", "Content-Security-Policy": cspApp(nonce, esHttps(req)) }));
+  res.end(req.method === "HEAD" ? undefined : buf);
+}
+
+/* ═══════════════════ IP REAL ═══════════════════
+   Render pasa por Cloudflare: CF-Connecting-IP / True-Client-IP las fija el borde (el cliente no puede
+   falsearlas). Sin ellas se usa X-Forwarded-For y, al final, la conexión. Si alguien falseara el XFF solo
+   esquivaría el límite POR IP: el límite POR CUENTA sigue en pie. */
+function ipDe(req) {
+  const h = (req && req.headers) || {};
+  const c = String(h["cf-connecting-ip"] || h["true-client-ip"] || "").trim();
+  if (c) return c.slice(0, 64);
+  const xff = String(h["x-forwarded-for"] || "").split(",").map(x => x.trim()).filter(Boolean);
+  if (xff.length) return xff[0].slice(0, 64);
+  return String((req && req.socket && req.socket.remoteAddress) || "?").slice(0, 64);
+}
+
+/* ═══════════════════ REGISTRO DE SEGURIDAD ═══════════════════
+   Una línea JSON por evento en el disco persistente (y en el log de Render). Los campos se arman a mano
+   en cada llamada —nunca se vuelca un cuerpo de petición— y además se filtra cualquier clave que huela a
+   secreto. Un nombre de usuario que NO existe no se guarda (suele ser una contraseña tipeada en el campo
+   equivocado): queda como "(no existe)". Se rota a los 2 MB conservando el archivo anterior. */
+const SEC_LOG = path.join(DATA_DIR, "seguridad.log"), SEC_MAX = 2 * 1024 * 1024;
+function registrar(req, ev, datos) {
+  const r = Object.assign({ ts: new Date().toISOString(), ev, ip: req ? ipDe(req) : null }, datos || {});
+  if (req && req.headers) r.ua = String(req.headers["user-agent"] || "").slice(0, 160);
+  for (const k of Object.keys(r)) if (/pass|token|hash|salt|clave|secret/i.test(k)) delete r[k];
+  const linea = JSON.stringify(r);
+  console.log("[seguridad] " + linea);
+  try { if (fs.statSync(SEC_LOG).size > SEC_MAX) fs.renameSync(SEC_LOG, SEC_LOG + ".1"); } catch (e) {}
+  try { fs.appendFileSync(SEC_LOG, linea + "\n"); } catch (e) {}
+}
+function registroLeer(n) {
+  const leer = f => { try { return fs.readFileSync(f, "utf8").split("\n").filter(Boolean); } catch (e) { return []; } };
+  const lineas = leer(SEC_LOG + ".1").concat(leer(SEC_LOG)).slice(-n);
+  return lineas.map(l => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean).reverse();
+}
+
 function backupMeta() {
   let savedAt = null, bytes = 0;
   try { const st = fs.statSync(LATEST); savedAt = st.mtime.toISOString(); bytes = st.size; } catch (e) {}
@@ -108,17 +191,42 @@ function backupResumen0(j) {
    aquí, en el disco persistente. El servidor es quien verifica la contraseña — el navegador nunca recibe el
    hash — y quien cuenta los intentos fallidos, que es donde el bloqueo significa algo (si lo contara el
    navegador bastaría con abrir una ventana nueva).
-   · Contraseñas con PBKDF2-SHA256, 210.000 iteraciones y sal por usuario. Comparación en tiempo constante.
-   · 5 intentos fallidos → 15 minutos de bloqueo de esa cuenta.
+   · Contraseñas con PBKDF2-SHA256, 600.000 iteraciones (lo que recomienda OWASP hoy) y sal por usuario,
+     calculado FUERA del hilo principal (un ingreso no congela el servidor). Las cuentas con hash de
+     210.000 se re-cifran solas la próxima vez que su dueño entra. Comparación en tiempo constante.
+   · Intentos: 5 fallos desde una misma IP contra una cuenta → esa IP queda fuera de esa cuenta 15 min;
+     20 fallos desde una IP (a cualquier cuenta) → esa IP fuera 15 min; 25 fallos contra una cuenta desde
+     cualquier lado → la cuenta 15 min. Así un atacante desde un solo equipo NO puede bloquearte a ti.
    · Sesión = token aleatorio de 32 bytes con caducidad; se guarda en el disco para sobrevivir reinicios. */
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 const SESS_FILE = path.join(DATA_DIR, "sessions.json");
-const PBKDF2_IT = 210000, PBKDF2_LEN = 32;
-const MAX_INTENTOS = 5, BLOQUEO_MS = 15 * 60 * 1000;
+const PBKDF2_IT = 600000, PBKDF2_IT_LEGADO = 210000, PBKDF2_LEN = 32;
+const BLOQUEO_MS = 15 * 60 * 1000;
+const LIM_CUENTA_IP = 5, LIM_IP = 20, LIM_CUENTA = 25;
+const MAX_USER = 64, MAX_NOMBRE = 80, MAX_PASS = 256;
 const SESION_MS = 12 * 60 * 60 * 1000;          // 12 h de validez
-/* NO se lleva registro de entradas: el archivo de sesiones guarda SOLO los tokens vivos, que son lo que
-   hace falta para mantener la sesión abierta entre recargas y reinicios. Un historial de quién entró y
-   cuándo no lo pidió nadie y es dato personal que no aporta a decidir una inversión. */
+/* El archivo de sesiones guarda SOLO los tokens vivos. Los INGRESOS sí quedan en el registro de seguridad
+   (más arriba): sin él no hay forma de ver si alguien está probando contraseñas. */
+/* contadores de intentos en memoria (se reinician con el servicio; el de la CUENTA vive en users.json) */
+const fallosIp = new Map(), fallosCuentaIp = new Map(), fallosFantasma = new Map();
+function contar(mapa, k, lim, ahora) {
+  const e = mapa.get(k) || { n: 0, desde: ahora, hasta: 0 };
+  if (ahora - e.desde > BLOQUEO_MS) { e.n = 0; e.desde = ahora; }
+  e.n++;
+  if (e.n >= lim) { e.hasta = ahora + BLOQUEO_MS; e.n = 0; e.desde = ahora; }
+  mapa.set(k, e);
+  return e;
+}
+const frenado = (mapa, k, ahora) => { const e = mapa.get(k); return e && e.hasta > ahora ? e.hasta : 0; };
+setInterval(() => { const a = Date.now(); for (const m of [fallosIp, fallosCuentaIp, fallosFantasma]) for (const [k, e] of m) if (e.hasta < a && a - e.desde > BLOQUEO_MS) m.delete(k); }, 10 * 60 * 1000).unref();
+/* largos y caracteres de lo que llega: usuario, nombre y contraseña acotados y sin caracteres de control */
+function camposOK(j, conPass) {
+  const ctrl = /[\u0000-\u001f\u007f]/;
+  if (j.user != null && (String(j.user).trim().length > MAX_USER || ctrl.test(String(j.user)))) return `el usuario admite hasta ${MAX_USER} caracteres, sin caracteres de control`;
+  if (j.name != null && (String(j.name).trim().length > MAX_NOMBRE || ctrl.test(String(j.name)))) return `el nombre admite hasta ${MAX_NOMBRE} caracteres, sin caracteres de control`;
+  if (conPass && j.pass != null && String(j.pass).length > MAX_PASS) return `la contraseña admite hasta ${MAX_PASS} caracteres`;
+  return null;
+}
 
 /* ═══════════════════ DATOS DE CADA CUENTA ═══════════════════
    La cuenta ya viajaba; los datos no. Entrar desde otro equipo dejaba la app vacía y había que restaurar a
@@ -179,20 +287,26 @@ function usersEscribir(v) { return escribirJSON(USERS_FILE, v); }
 function sesLeer() { const v = leerJSON(SESS_FILE, null); return { tokens: (v && typeof v === "object" && v.tokens) ? v.tokens : {} }; }   // un `log` de una versión anterior se descarta al primer guardado
 function sesEscribir(v) { return escribirJSON(SESS_FILE, v); }
 
-function pwHash(pass, salt) { return crypto.pbkdf2Sync(String(pass), salt, PBKDF2_IT, PBKDF2_LEN, "sha256").toString("hex"); }
-function pwNueva(pass) { const salt = crypto.randomBytes(16).toString("hex"); return { salt, hash: pwHash(pass, salt), it: PBKDF2_IT }; }
-function pwVerificar(pass, u) {
+function pwHash(pass, salt, it) {
+  return new Promise((ok, mal) => crypto.pbkdf2(String(pass).slice(0, MAX_PASS), salt, it, PBKDF2_LEN, "sha256", (e, k) => e ? mal(e) : ok(k.toString("hex"))));
+}
+async function pwNueva(pass) { const salt = crypto.randomBytes(16).toString("hex"); return { salt, hash: await pwHash(pass, salt, PBKDF2_IT), it: PBKDF2_IT }; }
+async function pwVerificar(pass, u) {
   try {
-    const h = Buffer.from(pwHash(pass, u.salt), "hex"), g = Buffer.from(u.hash, "hex");
+    const h = Buffer.from(await pwHash(pass, u.salt, +u.it || PBKDF2_IT_LEGADO), "hex"), g = Buffer.from(u.hash, "hex");
     return h.length === g.length && crypto.timingSafeEqual(h, g);
   } catch (e) { return false; }
 }
+/* para un usuario que NO existe se hace el mismo trabajo, con una sal fija del proceso: misma demora */
+const SAL_FANTASMA = crypto.randomBytes(16).toString("hex");
+async function pwFantasma(pass) { try { await pwHash(pass, SAL_FANTASMA, PBKDF2_IT); } catch (e) {} return false; }
 /* MISMA política que el navegador: el cliente la aplica para no hacer viajes de más, pero esta es la que manda */
 const PW_MIN = 10;
 const PW_OBVIAS = ["contrasena", "contraseña", "password", "investor", "12345678", "qwerty", "admin", "bolsa", "chile", "inversion", "inversión", "1234567890", "abcdefghij"];
 function pwPolitica(pw, usuario, nombre) {
   const p = String(pw || ""), fallos = [];
   if (p.length < PW_MIN) fallos.push(`al menos ${PW_MIN} caracteres`);
+  if (p.length > MAX_PASS) fallos.push(`no más de ${MAX_PASS} caracteres`);
   const clases = [/[a-záéíóúñ]/, /[A-ZÁÉÍÓÚÑ]/, /\d/, /[^\w\sáéíóúñÁÉÍÓÚÑ]/].filter(r => r.test(p)).length;
   if (clases < 3) fallos.push("mezclar al menos 3 de: minúsculas, MAYÚSCULAS, números y símbolos");
   if (/^(.)\1+$/.test(p)) fallos.push("no repetir el mismo carácter");
@@ -231,6 +345,14 @@ function sesionCerrar(token) {
   if (S.tokens[token]) delete S.tokens[token];
   sesEscribir(S);
 }
+/* cierra TODAS las sesiones de una cuenta (salvo, opcionalmente, la que hace el cambio) — tras un cambio
+   de contraseña, quien la hubiera robado queda fuera aunque tuviera una sesión abierta */
+function sesionesCerrarDe(uid, salvo) {
+  const S = sesLeer(); let n = 0;
+  for (const t of Object.keys(S.tokens)) if (S.tokens[t].uid === uid && t !== salvo) { delete S.tokens[t]; n++; }
+  if (n) sesEscribir(S);
+  return n;
+}
 const VER_RE = /^backup-[\w.\-]+\.json$/;   // nombre de versión aceptable (sin travesía de directorios)
 function listVersions() {
   let files = [];
@@ -262,15 +384,35 @@ function pruneVersions() {
 }
 
 const server = http.createServer((req, res) => {
-  const u = new URL(req.url, "http://x");
+  res._req = req;   // las cabeceras de seguridad (HSTS) dependen de la petición
+  try { atender(req, res); }
+  catch (e) {
+    registrar(req, "error_500", { ruta: String(req.url || "").slice(0, 120), detalle: String((e && e.message) || e).slice(0, 200) });
+    if (!res.headersSent) sendJSON(res, 500, { error: "error interno del servidor" });
+  }
+});
+function atender(req, res) {
+  let u;
+  try { u = new URL(req.url, "http://x"); } catch (e) { return sendJSON(res, 400, { error: "ruta inválida" }); }
   const p = u.pathname;
 
   /* ── SALUD: siempre accesible (Render la consulta sin credenciales para saber si el servicio vive).
      Además de "en pie" dice si hay respaldo y cuándo se guardó (la app lo usa al abrir para ofrecer la
      restauración); nunca entrega el contenido, que exige token o sesión. ── */
   if (p === "/api/health") {
-    const m = backupMeta();
-    return sendJSON(res, 200, { ok: true, app: "investor", tokenConfigured: !!TOKEN, hasBackup: m.hasBackup, savedAt: m.savedAt });
+    // lo mínimo: que está en pie y si hay un respaldo que ofrecer (la app lo pregunta en un navegador vacío).
+    // Ni la fecha ni si el token está configurado: eso no le sirve a nadie que no sea el dueño.
+    return sendJSON(res, 200, { ok: true, app: "investor", hasBackup: backupMeta().hasBackup });
+  }
+
+  /* ── REGISTRO DE SEGURIDAD: solo administrador con sesión ── */
+  if (p === "/api/seguridad") {
+    const s = sesionDe(req);
+    if (!s) return sendJSON(res, 401, { error: "sesión no válida o expirada" });
+    if (s.user.role !== "admin") { registrar(req, "acceso_denegado", { uid: s.user.id, ruta: p }); return sendJSON(res, 403, { error: "solo el administrador puede ver el registro" }); }
+    if (req.method !== "GET") return sendJSON(res, 405, { error: "método no permitido" });
+    const n = Math.max(1, Math.min(1000, +u.searchParams.get("n") || 300));
+    return sendJSON(res, 200, { eventos: registroLeer(n) });
   }
 
   /* ── DATOS DE LA CUENTA ── lo que hace que Investor se pueda usar desde cualquier equipo. La llave es la
@@ -315,7 +457,7 @@ const server = http.createServer((req, res) => {
           return sendJSON(res, 409, { error: "los datos del servidor cambiaron desde otro equipo", rev, savedAt: act.savedAt, resumen: backupResumen0(act.payload) });
         let reg = null;
         try { reg = udEscribir(uid, pl, rev + 1); }
-        catch (e) { return sendJSON(res, 500, { error: "no se pudo escribir en el disco: " + e.message }); }
+        catch (e) { registrar(req, "error_500", { ruta: p, detalle: String(e.message).slice(0, 200) }); return sendJSON(res, 500, { error: "no se pudieron guardar los datos en el servidor" }); }
         return sendJSON(res, 200, { ok: true, rev: reg.rev, savedAt: reg.savedAt });
       });
       return;
@@ -332,7 +474,11 @@ const server = http.createServer((req, res) => {
       req.on("data", c => { n += c.length; if (n > 1e6) { sendJSON(res, 413, { error: "cuerpo demasiado grande" }); req.destroy(); } else ch.push(c); });
       req.on("end", () => { if (res.writableEnded) return;
         let j = null; try { j = JSON.parse(Buffer.concat(ch).toString("utf8") || "{}"); } catch (e) { return sendJSON(res, 400, { error: "JSON inválido" }); }
-        cb(j || {}); });
+        if (!j || typeof j !== "object" || Array.isArray(j)) return sendJSON(res, 400, { error: "se esperaba un objeto JSON" });
+        Promise.resolve().then(() => cb(j)).catch(e => {
+          registrar(req, "error_500", { ruta: p, detalle: String((e && e.message) || e).slice(0, 200) });
+          if (!res.headersSent) sendJSON(res, 500, { error: "error interno del servidor" });
+        }); });
     };
     const users = usersLeer();
 
@@ -347,47 +493,69 @@ const server = http.createServer((req, res) => {
     if (p === "/api/auth/bootstrap" && req.method === "POST") {
       if (users.length) return sendJSON(res, 409, { error: "ya existe al menos una cuenta" });
       if (!TOKEN) return sendJSON(res, 503, { error: "SYNC_TOKEN no está configurado en el servidor (panel de Render → Environment)" });
-      if (!authOK(req)) return sendJSON(res, 401, { error: "para crear la primera cuenta hace falta el token del servidor (⚙ Configuración → Respaldo → Nube)" });
-      return leerCuerpo(j => {
+      if (!authOK(req)) { registrar(req, "bootstrap_rechazado", {}); return sendJSON(res, 401, { error: "para crear la primera cuenta hace falta el token del servidor (⚙ Configuración → Respaldo → Nube)" }); }
+      return leerCuerpo(async j => {
+        const mal = camposOK(j, true); if (mal) return sendJSON(res, 400, { error: mal });
         const user = String(j.user || "").trim(), name = String(j.name || "").trim() || user;
         if (user.length < 2) return sendJSON(res, 400, { error: "el usuario debe tener al menos 2 caracteres" });
         const pol = pwPolitica(j.pass, user, name);
         if (!pol.ok) return sendJSON(res, 400, { error: "contraseña insuficiente", fallos: pol.fallos });
-        const { salt, hash, it } = pwNueva(j.pass);
+        const { salt, hash, it } = await pwNueva(j.pass);
+        if (usersLeer().length) return sendJSON(res, 409, { error: "ya existe al menos una cuenta" });   // carrera entre dos altas simultáneas
         const u = { id: "u" + crypto.randomBytes(6).toString("hex"), user, name, role: "admin", ns: "",
           salt, hash, it, creado: new Date().toISOString(), activo: true, intentos: 0, bloqueadoHasta: 0 };
         usersEscribir([u]);
+        registrar(req, "cuenta_creada", { uid: u.id, user: u.user, role: "admin", via: "bootstrap" });
         const token = sesionNueva(u);
         return sendJSON(res, 200, { token, user: usuarioPublico(u) });
       });
     }
 
-    /* ENTRAR — el servidor verifica, cuenta intentos y bloquea */
+    /* ENTRAR — el servidor verifica, cuenta intentos y frena. La respuesta es la MISMA exista o no el
+       usuario (texto, código y demora): así no sirve para averiguar qué cuentas hay. */
     if (p === "/api/auth/login" && req.method === "POST") {
-      return leerCuerpo(j => {
+      return leerCuerpo(async j => {
+        const ip = ipDe(req), ahora = Date.now();
+        const nombre = String(j.user == null ? "" : j.user), clave = String(j.pass == null ? "" : j.pass);
+        const k = slug(nombre).slice(0, MAX_USER);
         const us = usersLeer();
-        const i = us.findIndex(x => slug(x.user) === slug(j.user));
-        const ahora = Date.now();
-        if (i >= 0 && us[i].bloqueadoHasta && ahora < us[i].bloqueadoHasta) {
-          return sendJSON(res, 429, { error: "cuenta bloqueada", minutos: Math.max(1, Math.ceil((us[i].bloqueadoHasta - ahora) / 60000)) });
-        }
+        const i = us.findIndex(x => slug(x.user) === k);
         const u = i >= 0 ? us[i] : null;
-        const ok = u && u.activo !== false && pwVerificar(j.pass, u);
-        if (!ok) {
-          if (u) {
-            u.intentos = (u.intentos || 0) + 1;
-            if (u.intentos >= MAX_INTENTOS) { u.bloqueadoHasta = ahora + BLOQUEO_MS; u.intentos = 0; }
-            usersEscribir(us);
-            if (u.bloqueadoHasta && ahora < u.bloqueadoHasta)
-              return sendJSON(res, 429, { error: "cuenta bloqueada", minutos: Math.ceil(BLOQUEO_MS / 60000) });
-            return sendJSON(res, 401, { error: "usuario o contraseña incorrectos", restantes: Math.max(0, MAX_INTENTOS - u.intentos) });
-          }
+        const quien = u ? { uid: u.id, user: u.user } : { user: "(no existe)" };
+        const frenar = (motivo, hasta) => {
+          registrar(req, "login_frenado", Object.assign({ motivo }, quien));
+          return sendJSON(res, 429, { error: "demasiados intentos fallidos", minutos: Math.max(1, Math.ceil((hasta - ahora) / 60000)) });
+        };
+        // 1) frenos vigentes: IP, cuenta+IP y cuenta (real o fantasma, con el mismo trato)
+        let h = frenado(fallosIp, ip, ahora); if (h) return frenar("ip", h);
+        h = frenado(fallosCuentaIp, k + "|" + ip, ahora); if (h) return frenar("cuenta_ip", h);
+        h = u ? (+u.bloqueadoHasta > ahora ? +u.bloqueadoHasta : 0) : frenado(fallosFantasma, k, ahora); if (h) return frenar("cuenta", h);
+        // 2) verificación (largos fuera de rango = fallo, sin calcular nada raro)
+        const largoOK = nombre.length <= MAX_USER && clave.length <= MAX_PASS;
+        const ok = (u && u.activo !== false && largoOK) ? await pwVerificar(clave, u) : await pwFantasma(largoOK ? clave : "");
+        const us2 = usersLeer(), u2 = u ? us2.find(x => x.id === u.id) : null;   // re-leer: la verificación es asíncrona
+        if (!ok || (u && !u2)) {
+          contar(fallosIp, ip, LIM_IP, ahora);
+          const ci = contar(fallosCuentaIp, k + "|" + ip, LIM_CUENTA_IP, ahora);
+          let hc = 0;
+          if (u2) {
+            u2.intentos = (u2.intentos || 0) + 1;
+            if (u2.intentos >= LIM_CUENTA) { u2.bloqueadoHasta = ahora + BLOQUEO_MS; u2.intentos = 0; hc = u2.bloqueadoHasta; }
+            usersEscribir(us2);
+          } else hc = (contar(fallosFantasma, k, LIM_CUENTA, ahora).hasta > ahora) ? ahora + BLOQUEO_MS : 0;
+          registrar(req, "login_fallido", Object.assign({ suspendida: !!(u && u.activo === false) || undefined }, quien));
+          const hasta = Math.max(ci.hasta > ahora ? ci.hasta : 0, hc, frenado(fallosIp, ip, ahora));
+          if (hasta) { registrar(req, "bloqueo", Object.assign({ minutos: Math.ceil(BLOQUEO_MS / 60000) }, quien)); return sendJSON(res, 429, { error: "demasiados intentos fallidos", minutos: Math.ceil(BLOQUEO_MS / 60000) }); }
           return sendJSON(res, 401, { error: "usuario o contraseña incorrectos" });
         }
-        u.intentos = 0; u.bloqueadoHasta = 0; u.ultimo = new Date().toISOString();
-        usersEscribir(us);
-        const token = sesionNueva(u);
-        return sendJSON(res, 200, { token, user: usuarioPublico(u) });
+        fallosCuentaIp.delete(k + "|" + ip);
+        u2.intentos = 0; u2.bloqueadoHasta = 0; u2.ultimo = new Date().toISOString();
+        // migración silenciosa del hash a las iteraciones vigentes, ahora que se tiene la contraseña correcta
+        if ((+u2.it || PBKDF2_IT_LEGADO) < PBKDF2_IT) { const n = await pwNueva(clave); u2.salt = n.salt; u2.hash = n.hash; u2.it = n.it; }
+        usersEscribir(us2);
+        registrar(req, "login_ok", { uid: u2.id, user: u2.user });
+        const token = sesionNueva(u2);
+        return sendJSON(res, 200, { token, user: usuarioPublico(u2) });
       });
     }
 
@@ -399,29 +567,41 @@ const server = http.createServer((req, res) => {
     }
     if (p === "/api/auth/logout" && req.method === "POST") {
       const s = sesionDe(req);
-      if (s) sesionCerrar(s.token);
+      if (s) { sesionCerrar(s.token); registrar(req, "logout", { uid: s.user.id, user: s.user.user }); }
       return sendJSON(res, 200, { ok: true });
     }
     /* cambiar MI contraseña / mis datos (exige la contraseña actual) */
     if (p === "/api/auth/me" && (req.method === "PATCH" || req.method === "POST")) {
       const s = sesionDe(req);
       if (!s) return sendJSON(res, 401, { error: "sesión no válida o expirada" });
-      return leerCuerpo(j => {
-        const us = usersLeer(), u = us.find(x => x.id === s.user.id);
-        if (!u) return sendJSON(res, 404, { error: "cuenta no encontrada" });
-        const nuevoUser = j.user != null ? String(j.user).trim() : u.user;
+      return leerCuerpo(async j => {
+        const mal = camposOK(j, true); if (mal) return sendJSON(res, 400, { error: mal });
+        const u0 = usersLeer().find(x => x.id === s.user.id);
+        if (!u0) return sendJSON(res, 404, { error: "cuenta no encontrada" });
+        const nuevoUser = j.user != null ? String(j.user).trim() : u0.user;
         if (nuevoUser.length < 2) return sendJSON(res, 400, { error: "el usuario debe tener al menos 2 caracteres" });
-        if (us.some(x => x.id !== u.id && slug(x.user) === slug(nuevoUser))) return sendJSON(res, 409, { error: "ese usuario ya existe" });
+        let nueva = null;
         if (j.pass) {
-          if (!pwVerificar(j.passActual, u)) return sendJSON(res, 403, { error: "la contraseña actual no es correcta" });
-          const pol = pwPolitica(j.pass, nuevoUser, j.name != null ? j.name : u.name);
+          if (String(j.passActual || "").length > MAX_PASS || !(await pwVerificar(j.passActual, u0))) {
+            registrar(req, "cambio_clave_rechazado", { uid: u0.id, user: u0.user });
+            return sendJSON(res, 403, { error: "la contraseña actual no es correcta" });
+          }
+          const pol = pwPolitica(j.pass, nuevoUser, j.name != null ? j.name : u0.name);
           if (!pol.ok) return sendJSON(res, 400, { error: "contraseña insuficiente", fallos: pol.fallos });
-          const n = pwNueva(j.pass); u.salt = n.salt; u.hash = n.hash; u.it = n.it;
+          nueva = await pwNueva(j.pass);
         }
+        const us = usersLeer(), u = us.find(x => x.id === s.user.id);   // re-leer tras lo asíncrono
+        if (!u) return sendJSON(res, 404, { error: "cuenta no encontrada" });
+        if (us.some(x => x.id !== u.id && slug(x.user) === slug(nuevoUser))) return sendJSON(res, 409, { error: "ese usuario ya existe" });
+        const cambios = [];
+        if (nueva) { u.salt = nueva.salt; u.hash = nueva.hash; u.it = nueva.it; cambios.push("contraseña"); }
+        if (u.user !== nuevoUser) cambios.push("usuario");
         u.user = nuevoUser;
-        if (j.name != null) u.name = String(j.name).trim() || nuevoUser;
+        if (j.name != null) { const nn = String(j.name).trim() || nuevoUser; if (nn !== u.name) cambios.push("nombre"); u.name = nn; }
         usersEscribir(us);
-        return sendJSON(res, 200, { user: usuarioPublico(u) });
+        const cerradas = nueva ? sesionesCerrarDe(u.id, s.token) : 0;
+        if (cambios.length) registrar(req, nueva ? "clave_cambiada" : "cuenta_modificada", { uid: u.id, user: u.user, por: u.id, cambios, sesionesCerradas: cerradas || undefined });
+        return sendJSON(res, 200, { user: usuarioPublico(u), sesionesCerradas: cerradas });
       });
     }
 
@@ -430,33 +610,46 @@ const server = http.createServer((req, res) => {
     const esAdmin = !!(ses && ses.user.role === "admin");
     if (p === "/api/users" || p.startsWith("/api/users/")) {
       if (!ses) return sendJSON(res, 401, { error: "sesión no válida o expirada" });
-      if (!esAdmin) return sendJSON(res, 403, { error: "solo el administrador puede gestionar los accesos" });
+      if (!esAdmin) { registrar(req, "acceso_denegado", { uid: ses.user.id, ruta: p }); return sendJSON(res, 403, { error: "solo el administrador puede gestionar los accesos" }); }
     }
     if (p === "/api/users" && req.method === "GET")
       return sendJSON(res, 200, { users: usersLeer().map(usuarioPublico) });
 
     if (p === "/api/users" && req.method === "POST") {
-      return leerCuerpo(j => {
-        const us = usersLeer();
+      return leerCuerpo(async j => {
+        const mal = camposOK(j, true); if (mal) return sendJSON(res, 400, { error: mal });
         const user = String(j.user || "").trim(), name = String(j.name || "").trim() || user;
         if (user.length < 2) return sendJSON(res, 400, { error: "el usuario debe tener al menos 2 caracteres" });
-        if (us.some(x => slug(x.user) === slug(user))) return sendJSON(res, 409, { error: "ese usuario ya existe" });
+        if (usersLeer().some(x => slug(x.user) === slug(user))) return sendJSON(res, 409, { error: "ese usuario ya existe" });
         const pol = pwPolitica(j.pass, user, name);
         if (!pol.ok) return sendJSON(res, 400, { error: "contraseña insuficiente", fallos: pol.fallos });
         const role = j.role === "admin" ? "admin" : "inv";
         const id = "u" + crypto.randomBytes(6).toString("hex");
-        const { salt, hash, it } = pwNueva(j.pass);
+        const { salt, hash, it } = await pwNueva(j.pass);
+        const us = usersLeer();
+        if (us.some(x => slug(x.user) === slug(user))) return sendJSON(res, 409, { error: "ese usuario ya existe" });
         const u = { id, user, name, role, ns: role === "admin" ? "" : id, salt, hash, it,
           creado: new Date().toISOString(), activo: true, intentos: 0, bloqueadoHasta: 0 };
         us.push(u); usersEscribir(us);
+        registrar(req, "cuenta_creada", { uid: u.id, user: u.user, role, por: ses.user.id });
         return sendJSON(res, 200, { user: usuarioPublico(u) });
       });
     }
     const mUser = /^\/api\/users\/([\w-]+)$/.exec(p);
     if (mUser && (req.method === "PATCH" || req.method === "POST")) {
-      return leerCuerpo(j => {
+      return leerCuerpo(async j => {
+        const mal = camposOK(j, true); if (mal) return sendJSON(res, 400, { error: mal });
+        let nueva = null;
+        if (j.pass) {
+          const u0 = usersLeer().find(x => x.id === mUser[1]);
+          if (!u0) return sendJSON(res, 404, { error: "cuenta no encontrada" });
+          const pol = pwPolitica(j.pass, j.user != null ? String(j.user).trim() : u0.user, j.name != null ? j.name : u0.name);
+          if (!pol.ok) return sendJSON(res, 400, { error: "contraseña insuficiente", fallos: pol.fallos });
+          nueva = await pwNueva(j.pass);
+        }
         const us = usersLeer(), u = us.find(x => x.id === mUser[1]);
         if (!u) return sendJSON(res, 404, { error: "cuenta no encontrada" });
+        const antes = { user: u.user, name: u.name, role: u.role, activo: u.activo !== false };
         const admins = us.filter(x => x.role === "admin" && x.activo !== false);
         const nuevoUser = j.user != null ? String(j.user).trim() : u.user;
         if (nuevoUser.length < 2) return sendJSON(res, 400, { error: "el usuario debe tener al menos 2 caracteres" });
@@ -464,18 +657,23 @@ const server = http.createServer((req, res) => {
         if ((j.role && j.role !== u.role && u.role === "admin") || (j.activo === false && u.role === "admin")) {
           if (admins.length <= 1) return sendJSON(res, 409, { error: "es la única cuenta de administrador" });
         }
-        if (j.pass) {
-          const pol = pwPolitica(j.pass, nuevoUser, j.name != null ? j.name : u.name);
-          if (!pol.ok) return sendJSON(res, 400, { error: "contraseña insuficiente", fallos: pol.fallos });
-          const n = pwNueva(j.pass); u.salt = n.salt; u.hash = n.hash; u.it = n.it;
-          u.intentos = 0; u.bloqueadoHasta = 0;
-        }
+        if (nueva) { u.salt = nueva.salt; u.hash = nueva.hash; u.it = nueva.it; u.intentos = 0; u.bloqueadoHasta = 0; }
         u.user = nuevoUser;
         if (j.name != null) u.name = String(j.name).trim() || nuevoUser;
         if (j.role) { u.role = j.role === "admin" ? "admin" : "inv"; u.ns = u.role === "admin" ? "" : u.id; }
         if (j.activo != null) u.activo = !!j.activo;
         if (j.desbloquear) { u.intentos = 0; u.bloqueadoHasta = 0; }
         usersEscribir(us);
+        // contraseña reseteada o cuenta suspendida: fuera todas sus sesiones (salvo la de quien hace el cambio)
+        const cerradas = (nueva || u.activo === false) ? sesionesCerrarDe(u.id, ses.token) : 0;
+        const cambios = [];
+        if (nueva) cambios.push("contraseña");
+        if (antes.user !== u.user) cambios.push("usuario");
+        if (antes.name !== u.name) cambios.push("nombre");
+        if (antes.role !== u.role) cambios.push("papel:" + u.role);
+        if (antes.activo !== (u.activo !== false)) cambios.push(u.activo === false ? "suspendida" : "reactivada");
+        if (j.desbloquear) cambios.push("desbloqueada");
+        if (cambios.length) registrar(req, "cuenta_modificada", { uid: u.id, user: u.user, por: ses.user.id, cambios, sesionesCerradas: cerradas || undefined });
         return sendJSON(res, 200, { user: usuarioPublico(u) });
       });
     }
@@ -488,6 +686,7 @@ const server = http.createServer((req, res) => {
       const S = sesLeer();
       Object.keys(S.tokens).forEach(t => { if (S.tokens[t].uid === u.id) delete S.tokens[t]; });
       sesEscribir(S);
+      registrar(req, "cuenta_eliminada", { uid: u.id, user: u.user, por: ses.user.id });
       return sendJSON(res, 200, { ok: true });
     }
     return sendJSON(res, 404, { error: "endpoint no existe" });
@@ -496,7 +695,7 @@ const server = http.createServer((req, res) => {
   /* ── API ── */
   if (p.startsWith("/api/")) {
     if (!TOKEN) return sendJSON(res, 503, { error: "SYNC_TOKEN no está configurado en el servidor (panel de Render → Environment)" });
-    if (!authOK(req)) return sendJSON(res, 401, { error: "token requerido o incorrecto (header x-investor-token)" });
+    if (!authOK(req)) { registrar(req, "token_rechazado", { ruta: p, conToken: !!req.headers["x-investor-token"] }); return sendJSON(res, 401, { error: "token requerido o incorrecto (header x-investor-token)" }); }
     if (p === "/api/backup/meta" && req.method === "GET") return sendJSON(res, 200, backupMeta());
     /* HISTORIAL: las versiones guardadas en el disco, de la más nueva a la más vieja, con lo que trae cada
        una. Es el camino de vuelta cuando el último respaldo quedó vacío. */
@@ -528,7 +727,7 @@ const server = http.createServer((req, res) => {
           fs.writeFileSync(tmp, body); fs.renameSync(tmp, LATEST);           // escritura atómica del "último"
           fs.writeFileSync(path.join(BK_DIR, "backup-" + stamp + ".json"), body);  // versión histórica
           pruneVersions();
-        } catch (e) { return sendJSON(res, 500, { error: "no se pudo escribir en el disco: " + e.message }); }
+        } catch (e) { registrar(req, "error_500", { ruta: p, detalle: String(e.message).slice(0, 200) }); return sendJSON(res, 500, { error: "no se pudo guardar el respaldo en el servidor" }); }
         return sendJSON(res, 200, Object.assign({ ok: true }, backupMeta()));
       });
       return;
@@ -538,7 +737,7 @@ const server = http.createServer((req, res) => {
 
   /* ── estáticos (solo GET, whitelist) ── */
   if (req.method !== "GET" && req.method !== "HEAD") return sendJSON(res, 405, { error: "método no permitido" });
-  if (p === "/" || p === "/index.html") return sendFile(res, path.join(ROOT, "index.html"), false);
+  if (p === "/" || p === "/index.html") return sendApp(req, res);
   if (p === "/favicon.ico") return sendFile(res, path.join(ROOT, "assets", "investor.ico"), true);
   if (p.startsWith("/data/")) {
     const base = path.basename(p);                       // sin traversal: solo el nombre del archivo
@@ -549,7 +748,7 @@ const server = http.createServer((req, res) => {
     if (/^[\w.\-]+\.(ico|png|svg)$/.test(base)) return sendFile(res, path.join(ROOT, "assets", base), true);
   }
   return sendJSON(res, 404, { error: "no encontrado" });
-});
+}
 
 server.listen(PORT, () => {
   console.log("Investor sirviendo en :" + PORT);

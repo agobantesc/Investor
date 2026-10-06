@@ -28,8 +28,23 @@ desde el teléfono con los mismos datos.
 > borrarlas cuando quieras.
 
 > `/api/health` queda siempre accesible sin credenciales, porque Render la consulta para
-> saber si el servicio está vivo (si la bloqueáramos, lo reiniciaría en bucle). Responde que
-> está en pie y si hay respaldo, nunca su contenido.
+> saber si el servicio está vivo (si la bloqueáramos, lo reiniciaría en bucle). Responde solo
+> que está en pie y si hay respaldo: ni la fecha ni su contenido.
+
+### Protección web y del ingreso (en `server.js`)
+
+| Qué | Cómo |
+|---|---|
+| **Cabeceras** | `Content-Security-Policy` con *nonce* por respuesta (un script inyectado no corre, tampoco en los informes), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` y, detrás de HTTPS, `Strict-Transport-Security`. |
+| **Contraseñas** | PBKDF2-SHA256 con 600.000 iteraciones, calculado fuera del hilo principal. Las cuentas con el hash anterior (210.000) migran solas al entrar. |
+| **Intentos** | 5 fallos de una IP contra una cuenta → esa IP fuera de esa cuenta 15 min · 20 fallos de una IP → esa IP fuera 15 min · 25 fallos contra una cuenta desde cualquier lado → la cuenta 15 min. Un atacante desde un solo equipo no puede bloquear al dueño. |
+| **Sin pistas** | Misma respuesta y misma demora exista o no el usuario. |
+| **Sesiones** | Cambiar la contraseña (o que el administrador la resetee o suspenda la cuenta) cierra las demás sesiones. |
+| **Entradas** | Usuario ≤ 64, nombre ≤ 80 y contraseña ≤ 256 caracteres, sin caracteres de control. |
+| **Errores** | Los 500 responden un mensaje genérico; el detalle va solo al registro. |
+| **Registro de seguridad** | `seguridad.log` en el disco (y el log de Render, con el prefijo `[seguridad]`): ingresos correctos y fallidos, frenos, bloqueos, cambios de cuentas, accesos denegados y tokens de respaldo rechazados, con la IP. Nunca contraseñas ni tokens; un usuario inexistente queda como "(no existe)". El administrador lo ve en **⚙ Configuración → Accesos → Ver registro**. |
+
+Todo esto lo verifica `automation/tests/test_seguridad.js` contra el servidor real (14 bloques).
 
 ## Pasos (una sola vez, ~10 minutos)
 
