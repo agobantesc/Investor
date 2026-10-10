@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-10T06:09:17.544Z",
+ "updatedAt": "2026-10-10T17:16:58.276Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,17 +7,19 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 520 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
-  "MSCI IPSA oficial (API MSCI 767564/GRTR): 28 día(s) hasta 20261009 · feriados omitidos 2026-09-18",
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 29 día(s) hasta 20261009 · feriados omitidos 2026-09-18",
   "MSCI IPSA oficial (MXIPSAGC.SN): 11043.36 @ 2026-10-09 16h (cierre) · cierre anterior 11024.22 → 2026-10-08"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "ipsaOficial": [],
- "borrar": {},
+ "borrar": {
+  "2026-09-01": "precios"
+ },
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
   "csrf en HTML: no",
