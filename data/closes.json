@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-10T17:16:58.276Z",
+ "updatedAt": "2026-10-13T01:56:47.429Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,26 +7,26 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 520 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 408 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
-  "MSCI IPSA oficial (API MSCI 767564/GRTR): 29 día(s) hasta 20261009 · feriados omitidos 2026-09-18",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 11043.36 @ 2026-10-09 16h (cierre) · cierre anterior 11024.22 → 2026-10-08"
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 28 día(s) hasta 20261012 · feriados omitidos 2026-09-18,2026-10-12",
+  "MSCI IPSA oficial (MXIPSAGC.SN): 11043.36 @ 2026-10-09 16h (cierre) · cierre anterior 11024.2 → 2026-10-08"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
- "ipsaOficial": [],
- "borrar": {
-  "2026-09-01": "precios"
- },
+ "ipsaOficial": [
+  "2026-10-08=11024.2 (Yahoo MXIPSAGC.SN cierre anterior, antes 11024.22)"
+ ],
+ "borrar": {},
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
   "csrf en HTML: no",
   "getPointHistGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "getPointIntradayGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
-  "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
+  "/api/RV_ResumenMercado/getResumenAccionesPrecios: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> "
  ],
  "ajustesDeFuente": [],
  "errors": [],
@@ -18958,7 +18958,7 @@
     "ITAUCL": 22689,
     "CAP": 5000
    },
-   "ipsa": 11024.22,
+   "ipsa": 11024.2,
    "ipsaOfi": true
   },
   {
