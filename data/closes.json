@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-15T04:57:55.699Z",
+ "updatedAt": "2026-10-15T22:59:41.856Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,13 +7,14 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 408 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 520 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
   "MSCI IPSA oficial (API MSCI 767564/GRTR): 30 día(s) hasta 20261014 · feriados omitidos 2026-09-18,2026-10-12",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 10966.21 @ 2026-10-14 15h (intradía, no entra) · cierre anterior 11020.01 → 2026-10-13"
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10971.88 @ 2026-10-15 15h (intradía, no entra) · cierre anterior 10966.21 → 2026-10-14"
  ],
  "ipsaSynth": [
+  "2026-10-15=10968.07 (28 acc, 0.02%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "ipsaOficial": [],
@@ -19063,6 +19064,41 @@
    },
    "ipsa": 10966.21,
    "ipsaOfi": true
+  },
+  {
+   "date": "2026-10-15",
+   "prices": {
+    "CHILE": 191.6,
+    "SANTANDER": 80.8,
+    "BCI": 65143,
+    "ENELCHILE": 86,
+    "COLBUN": 149,
+    "FALABELLA": 6615,
+    "CENCOSUD": 1865,
+    "COPEC": 6739,
+    "CMPC": 965,
+    "SQM-B": 59555,
+    "CCU": 5217.5,
+    "ENTEL": 4200,
+    "LATAM": 23.77,
+    "PARAUCO": 3725,
+    "AGUAS-A": 332,
+    "IAM": 900.51,
+    "ENELAM": 90.32,
+    "ECL": 1860,
+    "ANDINA-B": 4800,
+    "CONCHATORO": 894.44,
+    "QUINENCO": 4800,
+    "MALLPLAZA": 3575,
+    "VAPORES": 49.81,
+    "RIPLEY": 463.74,
+    "SMU": 116.99,
+    "SONDA": 277.1,
+    "ITAUCL": 23200,
+    "CAP": 4630
+   },
+   "ipsa": 10968.07,
+   "ipsaSynth": true
   }
  ]
 }
