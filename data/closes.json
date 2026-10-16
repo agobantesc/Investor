@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-16T04:47:36.818Z",
+ "updatedAt": "2026-10-16T22:43:55.722Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,17 +7,17 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 408 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 500 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
   "MSCI IPSA oficial (API MSCI 767564/GRTR): 31 día(s) hasta 20261015 · feriados omitidos 2026-09-18,2026-10-12",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 10971.88 @ 2026-10-15 15h (intradía, no entra) · cierre anterior 10966.21 → 2026-10-14"
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10970.29 @ 2026-10-16 16h (cierre) · cierre anterior 10971.88 → 2026-10-15"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "ipsaOficial": [
-  "2026-10-15=10971.88 (MSCI GRTR, antes 10968.07)"
+  "2026-10-16=10970.29 (Yahoo MXIPSAGC.SN)"
  ],
  "borrar": {},
  "fuenteOficial": [
@@ -19099,6 +19099,41 @@
     "CAP": 4630
    },
    "ipsa": 10971.88,
+   "ipsaOfi": true
+  },
+  {
+   "date": "2026-10-16",
+   "prices": {
+    "CHILE": 191.69,
+    "SANTANDER": 80.49,
+    "BCI": 64360,
+    "ENELCHILE": 86.8,
+    "COLBUN": 148,
+    "FALABELLA": 6824.9,
+    "CENCOSUD": 1871.4,
+    "COPEC": 6748,
+    "CMPC": 966,
+    "SQM-B": 59490,
+    "CCU": 5359,
+    "ENTEL": 4223,
+    "LATAM": 23.34,
+    "PARAUCO": 3734.9,
+    "AGUAS-A": 337.3,
+    "IAM": 901.5,
+    "ENELAM": 88.5,
+    "ECL": 1864.4,
+    "ANDINA-B": 4850,
+    "CONCHATORO": 914,
+    "QUINENCO": 4800,
+    "MALLPLAZA": 3594.9,
+    "VAPORES": 49.8,
+    "RIPLEY": 468.9,
+    "SMU": 117.7,
+    "SONDA": 278.64,
+    "ITAUCL": 23000,
+    "CAP": 4635
+   },
+   "ipsa": 10970.29,
    "ipsaOfi": true
   }
  ]
