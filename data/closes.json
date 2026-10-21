@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-21T05:06:38.210Z",
+ "updatedAt": "2026-10-21T23:09:46.424Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -10,13 +10,15 @@
   "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
-  "MSCI IPSA oficial (API MSCI 767564/GRTR): 34 día(s) hasta 20261020 · feriados omitidos 2026-09-18,2026-10-12",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 10926.5 @ 2026-10-20 16h (cierre) · cierre anterior 10972.4 → 2026-10-19"
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 35 día(s) hasta 20261021 · feriados omitidos 2026-09-18,2026-10-12",
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10987.14 @ 2026-10-21 16h (cierre) · cierre anterior 10926.5 → 2026-10-20"
  ],
  "ipsaSynth": [
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
- "ipsaOficial": [],
+ "ipsaOficial": [
+  "2026-10-21=10987.14 (MSCI GRTR)"
+ ],
  "borrar": {},
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
@@ -19202,6 +19204,41 @@
     "CAP": 4610.1
    },
    "ipsa": 10926.5,
+   "ipsaOfi": true
+  },
+  {
+   "date": "2026-10-21",
+   "prices": {
+    "CHILE": 194.9,
+    "SANTANDER": 81.2,
+    "BCI": 65500,
+    "ENELCHILE": 86.29,
+    "COLBUN": 152.5,
+    "FALABELLA": 6790,
+    "CENCOSUD": 1867.1,
+    "COPEC": 6698,
+    "CMPC": 945.7,
+    "SQM-B": 57550,
+    "CCU": 5280,
+    "ENTEL": 4350,
+    "LATAM": 23.7,
+    "PARAUCO": 3780,
+    "AGUAS-A": 329.89,
+    "IAM": 883,
+    "ENELAM": 91,
+    "ECL": 1880,
+    "ANDINA-B": 4930,
+    "CONCHATORO": 894.99,
+    "QUINENCO": 4680,
+    "MALLPLAZA": 3590,
+    "VAPORES": 48.85,
+    "RIPLEY": 467.18,
+    "SMU": 115.2,
+    "SONDA": 272.83,
+    "ITAUCL": 23300,
+    "CAP": 4615
+   },
+   "ipsa": 10987.14,
    "ipsaOfi": true
   }
  ]
