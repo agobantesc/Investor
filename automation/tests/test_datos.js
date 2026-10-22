@@ -65,5 +65,16 @@ const movs = comunes.map(t => Math.abs(b[t] / a[t] - 1) * 100);
 ok("7-EL-ULTIMO-DIA-SE-MOVIO", comunes.length === 0 || iguales < comunes.length * 0.5,
   { identicos: iguales, de: comunes.length, medianaPct: +mediana(movs).toFixed(2) });
 
+// ── 8. COMPLETITUD del último año: cada día hábil con precios trae TODAS las acciones (salvo SONDA, que
+//      transa poco y ninguna segunda fuente confirma). Antes, la barra diaria de Yahoo dejaba días con 0–3
+//      acciones (20, 22 y 24-07, 03-08, 27-08, 01-09-2026) y las curvas del Seguimiento quedaban cortadas.
+//      Se tolera UNA celda suelta por día (una acción sin cierre confirmado por las dos fuentes). ──
+const universo = new Set(); days.forEach(d => Object.keys(d.prices || {}).forEach(t => universo.add(t)));
+const haceUnAno = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+const incompletos = days.filter(d => d.date >= haceUnAno && Object.keys(d.prices || {}).length)
+  .map(d => ({ f: d.date, faltan: [...universo].filter(t => t !== "SONDA" && !(d.prices[t] > 0)) }))
+  .filter(x => x.faltan.length > 1);
+ok("8-DIAS-HABILES-COMPLETOS", incompletos.length === 0, { universo: universo.size, incompletos: incompletos.slice(0, 5), consenso: CL.consenso || null });
+
 console.log(`RESUMEN ${fallos.length ? "CON FALLOS" : "TODO OK"} ${JSON.stringify({ total: n, ok: n - fallos.length, fallan: fallos })}`);
 process.exit(fallos.length ? 1 : 0);

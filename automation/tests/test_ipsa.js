@@ -86,11 +86,13 @@ const MIN_MES = 11038.39, MAX_MES = 11556.21;
     await autopxSync(false); window.fetch = _f;
     // el IPSA de ese día: si la fuente trae un OFICIAL, queda ese (el valor sembrado se va); si no, nada
     const dF = (D.days || []).find(x => x.date === f0), esperado = dF && dF.ipsa != null ? dF.ipsa : null;
-    return { num, ult, baseUlt: PRICEDB.ipsa[ult], msci: /MSCI/.test(sub), quedoPx: PRICEDB.px.BCI[f0] != null,
+    // y el precio sembrado tampoco sobrevive: queda el cierre REAL que trae la fuente (o nada si no lo trae)
+    const pxF = dF && dF.prices && dF.prices.BCI != null ? dF.prices.BCI : null;
+    return { num, ult, baseUlt: PRICEDB.ipsa[ult], msci: /MSCI/.test(sub), pxDia: PRICEDB.px.BCI[f0] ?? null, pxEsperado: pxF,
       ipsaDia: PRICEDB.ipsa[f0] ?? null, esperado };
   }, CL);
   M.ok("6-APP-MUESTRA-EL-OFICIAL-Y-BORRA-LO-DESCARTADO",
-    Math.abs(t6.num - t6.baseUlt) < 0.01 && t6.msci && !t6.quedoPx && t6.ipsaDia === t6.esperado, t6);
+    Math.abs(t6.num - t6.baseUlt) < 0.01 && t6.msci && t6.pxDia === t6.pxEsperado && t6.pxDia !== 1 && t6.ipsaDia === t6.esperado, t6);
 
   M.ok("7-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
   await navegador.close();

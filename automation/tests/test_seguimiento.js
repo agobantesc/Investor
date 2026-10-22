@@ -1,7 +1,8 @@
 /* test_seguimiento.js — ENCABEZADO DEL PROYECTO EN SEGUIMIENTO.
    El encabezado describía la cartera del PRIMER día (los pesos y montos de la compra inicial) aunque
    después se hubiera comprado, vendido o movido el precio. Esta ronda fija que describa la cartera de HOY:
-   pesos y valores actuales, posiciones liquidadas fuera, y el total cuadrado con el motor. */
+   pesos y valores actuales, posiciones liquidadas fuera, y el total cuadrado con el motor.
+   Fija además que el gráfico "Crecimiento por acción" tenga VALOR en cada día desde la compra. */
 const { abrirApp, ir, crearMarcador } = require("./_harness");
 
 (async () => {
@@ -72,18 +73,22 @@ const { abrirApp, ir, crearMarcador } = require("./_harness");
   });
   M.ok("4-SUBTITULO-DESCRIBE-LA-CARTERA-DE-HOY", t4.diceHoy && t4.sinObjetivoViejo && t4.conTotal, t4);
 
-  // ── 5. "Crecimiento por acción": cada línea es UN trazo continuo aunque la base no traiga cierre de esa
-  //      acción algún día en medio (01-09-2026: precios descartados por corruptos). Antes se cortaba ahí. ──
+  // ── 5. "Crecimiento por acción" con VALORES REALES en los días que antes venían vacíos (27-08 y 01-09-2026:
+  //      la barra diaria de Yahoo los traía congelados/corruptos; el bot los rellena con el consenso WSJ +
+  //      Yahoo intradía). Cada línea, un solo trazo y un valor en cada fecha desde su compra. ──
   const t5 = await pagina.evaluate(() => {
     const G = window.__mg_invstk, svg = document.getElementById("invstk");
     if (!G || !svg) return { err: "sin gráfico" };
-    const huecos = G.series.map(s => { const v = s.vals; const f = v.findIndex(x => x != null); let l = -1; for (let i = v.length - 1; i >= 0; i--) if (v[i] != null) { l = i; break; }
-      let n = 0; for (let i = f; i <= l; i++) if (v[i] == null) n++; return n; }).reduce((a, b) => a + b, 0);
+    const fechas = ["2026-08-27", "2026-09-01"].map(f => G.labels.indexOf(f)).filter(i => i >= 0);
+    const huecos = [];
+    G.series.forEach(s => { const v = s.vals; const f = v.findIndex(x => x != null); let l = -1; for (let i = v.length - 1; i >= 0; i--) if (v[i] != null) { l = i; break; }
+      for (let i = f; i <= l; i++) if (v[i] == null) huecos.push(s.label + "@" + G.labels[i]); });
+    const enDias = G.series.map(s => fechas.map(i => s.vals[i]));
     const lineas = Array.from(svg.querySelectorAll('path[fill="none"]')).filter(p => G.series.some(s => p.getAttribute("stroke") === s.c));
     const tramos = lineas.map(p => ((p.getAttribute("d") || "").match(/M/g) || []).length);
-    return { series: G.series.length, lineas: lineas.length, tramos, huecosEnLosDatos: huecos };
+    return { series: G.series.length, fechasEnRango: fechas.length, enDias, huecos, tramos };
   });
-  M.ok("5-LINEAS-CONTINUAS-SIN-CORTES", !t5.err && t5.huecosEnLosDatos > 0 && t5.lineas === t5.series && t5.tramos.every(n => n === 1), t5);
+  M.ok("5-VALORES-REALES-SIN-HUECOS", !t5.err && t5.fechasEnRango === 2 && t5.huecos.length === 0 && t5.enDias.every(a => a.every(v => v != null)) && t5.tramos.every(n => n === 1), t5);
 
   M.ok("6-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
   await navegador.close();
