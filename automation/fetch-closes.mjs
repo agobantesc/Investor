@@ -652,6 +652,78 @@ if (nCalco) {
 // El IPSA SINTÉTICO heredado se descarta aquí y se RECALCULA más abajo con los precios de ESTA corrida:
 // así nunca se encadena a ciegas sobre una estimación vieja y, si una fuente oficial escribió otro valor
 // para esa fecha, ese valor manda (solo se limpia el sello).
+/* ── CONSENSO DE CIERRES: WSJ + Yahoo intradía ─────────────────────────────────────────────────────────
+   La barra DIARIA de Yahoo para .SN se rompe por tramos: pedida por período devuelve el MISMO valor congelado
+   todos los días (medido el 22-10-2026 con la sonda probe-precios: calza con la base solo 32%), y por eso
+   entraron días "calco" (que el filtro descarta, dejando huecos: 20, 22 y 24-07, 03-08, 27-08, 01-09) y
+   celdas congeladas que el filtro no ve (31-07 casi entero, SQM-B / VAPORES / ANDINA-B del 14 al 17-09).
+   Dos fuentes INDEPENDIENTES sí traen el cierre real: la serie diaria de WSJ (calza 99% con la base) y el
+   último precio de la sesión en el intradía de 60 min de Yahoo (97%). Regla:
+     · RELLENO: celda vacía en un día hábil → se pone el cierre de WSJ si Yahoo-60m lo confirma (≤1%).
+     · CORRECCIÓN: celda con valor que se aparta >1% de un cierre en que WSJ y Yahoo-60m coinciden (≤0,3%)
+       → se reemplaza (era un valor congelado).
+   Sin confirmación de la segunda fuente no se toca nada. Cada cambio queda en ajustesDeFuente (fuente
+   "consenso WSJ+Yahoo60m"). Cubre el último año. */
+const CONS_LOG = { rellenos: 0, correcciones: 0, diasNuevos: 0, sinConfirmar: 0, fuentes: {} };
+{
+  const ET = "cecc4267a0194af89ca343805a3e57af";
+  const wsj = async code => {
+    const body = { Step: "P1D", TimeFrame: "P1Y", EntitlementToken: ET, IncludeMockTick: false, FilterNullSlots: false, FilterClosedPoints: true, IncludeClosedSlots: false, IncludeOfficialClose: true, InjectOpen: false, ShowPreMarket: false, ShowAfterHours: false, UseExtendedTimeFrame: true, WantPriorClose: false, IncludeCurrentQuotes: false, ResetTodaysAfterHoursPercentChange: false, Series: [{ Key: "STOCK/CL/XSGO/" + code, Dialect: "Charting", Kind: "Ticker", SeriesId: "s1", DataTypes: ["Last"] }] };
+    const r = await fetch(`https://api.wsj.net/api/michelangelo/timeseries/history?json=${encodeURIComponent(JSON.stringify(body))}&ckey=${ET.slice(0, 10)}`, { headers: { "User-Agent": BUA, Accept: "application/json", "Dylan2010.EntitlementToken": ET, Origin: "https://www.marketwatch.com", Referer: "https://www.marketwatch.com/" } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json(), ticks = j?.TimeInfo?.Ticks || [], pts = j?.Series?.[0]?.DataPoints || [], out = {};
+    ticks.forEach((t, i) => { const v = pts[i] && +pts[i][0]; if (v > 0) out[new Date(+t).toISOString().slice(0, 10)] = v; });   // ticks a medianoche UTC del día bursátil
+    if (Object.keys(out).length < 30) throw new Error("serie corta");
+    return out;
+  };
+  const y60 = async sym => {
+    const p2 = Math.floor(Date.now() / 1000), p1 = p2 - 365 * 86400;
+    const r = await fetch(`https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?period1=${p1}&period2=${p2}&interval=60m&includePrePost=false`, { headers: { "User-Agent": BUA } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const x = (await r.json())?.chart?.result?.[0], ts = x?.timestamp || [], c = x?.indicators?.quote?.[0]?.close || [], out = {};
+    ts.forEach((t, i) => { if (c[i] > 0) out[new Date(t * 1000).toLocaleDateString("en-CA", { timeZone: "America/Santiago" })] = c[i]; });   // el último de la sesión pisa a los anteriores
+    return out;
+  };
+  const W = {}, Y = {};
+  for (const [tick, sym] of Object.entries(TICKERS)) {
+    const code = sym.replace(/\.SN$/, "");
+    for (const c of [code, code.replace("-", "."), code.replace("-", "")]) { try { W[tick] = await wsj(c); break; } catch (e) {} }
+    try { Y[tick] = await y60(sym); } catch (e) {}
+    await new Promise(r => setTimeout(r, 120));
+  }
+  CONS_LOG.fuentes = { wsj: Object.keys(W).length, yahoo60m: Object.keys(Y).length };
+  const hoySc = new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
+  const desde = new Date(Date.now() - 365 * 86400e3).toISOString().slice(0, 10);
+  const byD = Object.fromEntries(days.map(d => [d.date, d]));
+  // fechas candidatas: las que ya están en la base + días hábiles en que WSJ y Yahoo traen ≥20 acciones (día
+  // hábil perdido entero). Nunca hoy (el cierre de hoy lo trae el flujo normal) ni fines de semana.
+  const fechas = new Set(days.filter(d => d.date >= desde && d.date < hoySc).map(d => d.date));
+  const cuenta = {};
+  for (const t of Object.keys(W)) for (const d of Object.keys(W[t])) if (Y[t] && Y[t][d] > 0) cuenta[d] = (cuenta[d] || 0) + 1;
+  for (const [d, n] of Object.entries(cuenta)) if (n >= 20 && d >= desde && d < hoySc && ![0, 6].includes(new Date(d + "T12:00:00Z").getUTCDay())) fechas.add(d);
+  for (const d of [...fechas].sort()) {
+    let e = byD[d];
+    for (const t of Object.keys(TICKERS)) {
+      const w = W[t] && W[t][d], y = Y[t] && Y[t][d];
+      if (!(w > 0)) continue;
+      const dif = y > 0 ? Math.abs(y / w - 1) : Infinity;
+      const actual = e && e.prices ? e.prices[t] : null;
+      if (!(actual > 0)) {
+        if (dif <= 0.01) {
+          if (!e) { e = byD[d] = { date: d, prices: {} }; days.push(e); CONS_LOG.diasNuevos++; }
+          e.prices[t] = +w.toFixed(4); CONS_LOG.rellenos++;
+          if (ADJUST_LOG.length < 60) ADJUST_LOG.push({ t, date: d, de: null, a: e.prices[t], fuente: "consenso WSJ+Yahoo60m (relleno)" });
+        } else CONS_LOG.sinConfirmar++;
+      } else if (dif <= 0.003 && Math.abs(actual / w - 1) > 0.01) {
+        logAdjust(t, d, actual, +w.toFixed(4), "consenso WSJ+Yahoo60m (corrección)");
+        e.prices[t] = +w.toFixed(4); CONS_LOG.correcciones++;
+      }
+    }
+  }
+  days.sort((a, b) => (a.date < b.date ? -1 : 1));
+  console.log(`CONSENSO de cierres (WSJ ${CONS_LOG.fuentes.wsj}/${Object.keys(TICKERS).length} · Yahoo-60m ${CONS_LOG.fuentes.yahoo60m}): ${CONS_LOG.rellenos} celda(s) rellenada(s), ${CONS_LOG.correcciones} corregida(s), ${CONS_LOG.diasNuevos} día(s) hábil(es) recuperado(s), ${CONS_LOG.sinConfirmar} sin confirmar (no se tocan).`);
+}
+
 /* DÍA CORRUPTO ("pico y vuelta"): muchas acciones saltan >4% un día y lo devuelven >4% al siguiente,
    con el mercado tranquilo. Ninguna rueda real hace eso en bloque; es una foto mala del upstream. Caso real:
    01-09-2026, nueve acciones a la vez (SQM-B −13,9% y vuelta, CAP +13,8% y vuelta, RIPLEY −9,0%…) mientras
@@ -822,6 +894,6 @@ const tickerSet = new Set();
 days.forEach(d => Object.keys(d.prices || {}).forEach(t => tickerSet.add(t)));
 mkdirSync("data", { recursive: true });
 const source = "Yahoo Finance (.SN)" + (process.env.EODHD_KEY ? " + EODHD (cierres oficiales)" : "") + " + cierre oficial Bolsa de Santiago (día) + fuentes IPSA";
-writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, ipsaSynth, ipsaOficial: ipsaOfiLog, borrar, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
+writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, ipsaSynth, ipsaOficial: ipsaOfiLog, consenso: CONS_LOG, borrar, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
 if (ADJUST_LOG.length) console.log(`Ajustes de fuente (cierre oficial/EODHD pisó a Yahoo): ${ADJUST_LOG.length} — ej: ${JSON.stringify(ADJUST_LOG[0])}`);
 console.log(`OK: ${days.length} día(s) (${days[0].date} → ${days[days.length - 1].date}) · ${tickerSet.size} acciones · IPSA en ${ipsaDays} día(s). Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);
