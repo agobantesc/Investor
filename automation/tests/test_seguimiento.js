@@ -72,7 +72,20 @@ const { abrirApp, ir, crearMarcador } = require("./_harness");
   });
   M.ok("4-SUBTITULO-DESCRIBE-LA-CARTERA-DE-HOY", t4.diceHoy && t4.sinObjetivoViejo && t4.conTotal, t4);
 
-  M.ok("5-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
+  // ── 5. "Crecimiento por acción": cada línea es UN trazo continuo aunque la base no traiga cierre de esa
+  //      acción algún día en medio (01-09-2026: precios descartados por corruptos). Antes se cortaba ahí. ──
+  const t5 = await pagina.evaluate(() => {
+    const G = window.__mg_invstk, svg = document.getElementById("invstk");
+    if (!G || !svg) return { err: "sin gráfico" };
+    const huecos = G.series.map(s => { const v = s.vals; const f = v.findIndex(x => x != null); let l = -1; for (let i = v.length - 1; i >= 0; i--) if (v[i] != null) { l = i; break; }
+      let n = 0; for (let i = f; i <= l; i++) if (v[i] == null) n++; return n; }).reduce((a, b) => a + b, 0);
+    const lineas = Array.from(svg.querySelectorAll('path[fill="none"]')).filter(p => G.series.some(s => p.getAttribute("stroke") === s.c));
+    const tramos = lineas.map(p => ((p.getAttribute("d") || "").match(/M/g) || []).length);
+    return { series: G.series.length, lineas: lineas.length, tramos, huecosEnLosDatos: huecos };
+  });
+  M.ok("5-LINEAS-CONTINUAS-SIN-CORTES", !t5.err && t5.huecosEnLosDatos > 0 && t5.lineas === t5.series && t5.tramos.every(n => n === 1), t5);
+
+  M.ok("6-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
   await navegador.close();
   process.exit(M.resumen() ? 1 : 0);
 })().catch(e => { console.log("CRASH", e.message); process.exit(1); });
