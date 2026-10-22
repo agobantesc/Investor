@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-22T05:09:30.336Z",
+ "updatedAt": "2026-10-22T17:32:29.533Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,16 +7,31 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 520 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 500 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
   "MSCI IPSA oficial (API MSCI 767564/GRTR): 35 día(s) hasta 20261021 · feriados omitidos 2026-09-18,2026-10-12",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 10987.14 @ 2026-10-21 16h (cierre) · cierre anterior 10926.5 → 2026-10-20"
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10758.47 @ 2026-10-22 14h (intradía, no entra) · cierre anterior 10987.14 → 2026-10-21"
  ],
  "ipsaSynth": [
+  "2026-07-20=10927.76 (26 acc, 0.37%)",
+  "2026-07-22=11019.21 (27 acc, 0.60%)",
+  "2026-07-24=10953.05 (28 acc, 0.33%)",
+  "2026-08-03=11058.36 (28 acc, 0.38%)",
+  "2026-08-27=11460.38 (28 acc, 0.84%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "ipsaOficial": [],
+ "consenso": {
+  "rellenos": 151,
+  "correcciones": 51,
+  "diasNuevos": 0,
+  "sinConfirmar": 9,
+  "fuentes": {
+   "wsj": 28,
+   "yahoo60m": 28
+  }
+ },
  "borrar": {},
  "fuenteOficial": [
   "home HTTP 200 · 5 cookie(s)",
@@ -24,9 +39,457 @@
   "getPointHistGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "getPointIntradayGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
-  "/api/RV_ResumenMercado/getResumenAccionesPrecios: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> "
+  "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
  ],
- "ajustesDeFuente": [],
+ "ajustesDeFuente": [
+  {
+   "t": "CHILE",
+   "date": "2025-10-30",
+   "de": 163.2,
+   "a": 165.41,
+   "dif_pct": 1.35,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CENCOSUD",
+   "date": "2026-01-06",
+   "de": 3100,
+   "a": 3135,
+   "dif_pct": 1.13,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CENCOSUD",
+   "date": "2026-01-07",
+   "de": 3134.9,
+   "a": 3100,
+   "dif_pct": -1.11,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ECL",
+   "date": "2026-01-19",
+   "de": 1651,
+   "a": 1625.1,
+   "dif_pct": -1.57,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-01-21",
+   "de": 3799.9,
+   "a": 3690,
+   "dif_pct": -2.89,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "BCI",
+   "date": "2026-01-23",
+   "de": 66499,
+   "a": 64499,
+   "dif_pct": -3.01,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ANDINA-B",
+   "date": "2026-01-23",
+   "de": 4501,
+   "a": 4550,
+   "dif_pct": 1.09,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-03-05",
+   "de": 3805,
+   "a": 3850,
+   "dif_pct": 1.18,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELCHILE",
+   "date": "2026-03-06",
+   "de": 70.1,
+   "a": 69,
+   "dif_pct": -1.57,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "FALABELLA",
+   "date": "2026-03-06",
+   "de": 6118,
+   "a": 6000.3,
+   "dif_pct": -1.92,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "LATAM",
+   "date": "2026-03-06",
+   "de": 21.98,
+   "a": 21.67,
+   "dif_pct": -1.41,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELAM",
+   "date": "2026-03-06",
+   "de": 80.7,
+   "a": 79.2,
+   "dif_pct": -1.86,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "QUINENCO",
+   "date": "2026-03-06",
+   "de": 4269.9,
+   "a": 4155.5,
+   "dif_pct": -2.68,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-03-06",
+   "de": 3852.4,
+   "a": 3950,
+   "dif_pct": 2.53,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ITAUCL",
+   "date": "2026-03-06",
+   "de": 20423,
+   "a": 20150,
+   "dif_pct": -1.34,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CONCHATORO",
+   "date": "2026-04-09",
+   "de": 922,
+   "a": 932,
+   "dif_pct": 1.08,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CMPC",
+   "date": "2026-05-08",
+   "de": 1178.9,
+   "a": 1155.8,
+   "dif_pct": -1.96,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-11",
+   "de": 53.43,
+   "a": 52.75,
+   "dif_pct": -1.27,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-12",
+   "de": 53.15,
+   "a": 52.59,
+   "dif_pct": -1.05,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SANTANDER",
+   "date": "2026-05-13",
+   "de": 67.49,
+   "a": 66.8,
+   "dif_pct": -1.02,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "BCI",
+   "date": "2026-05-13",
+   "de": 55747,
+   "a": 54911,
+   "dif_pct": -1.5,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELAM",
+   "date": "2026-05-13",
+   "de": 79.48,
+   "a": 78.01,
+   "dif_pct": -1.85,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-13",
+   "de": 52.41,
+   "a": 51.14,
+   "dif_pct": -2.42,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-25",
+   "de": 46,
+   "a": 45.4,
+   "dif_pct": -1.3,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELCHILE",
+   "date": "2026-06-17",
+   "de": 82.55,
+   "a": 81.42,
+   "dif_pct": -1.37,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CHILE",
+   "date": "2026-06-26",
+   "de": 179.99,
+   "a": 177.8,
+   "dif_pct": -1.22,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-07-08",
+   "de": 3998.9,
+   "a": 3894.9,
+   "dif_pct": -2.6,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "BCI",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 64500,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "ENELCHILE",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 80,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "COLBUN",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 138.99,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "FALABELLA",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 5850,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CENCOSUD",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 2005,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "COPEC",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 6345,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CMPC",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 1088,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "SQM-B",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 63400,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CCU",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 5270,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "ENTEL",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 3652.5,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "LATAM",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 24.36,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "PARAUCO",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 4050,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "AGUAS-A",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 333.5,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "ENELAM",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 84.67,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "ECL",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 1805,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "ANDINA-B",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 4605,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CONCHATORO",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 854.02,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "QUINENCO",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 4264.2,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 3939.9,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 47.63,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "RIPLEY",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 381.48,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "SMU",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 127.9,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "ITAUCL",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 21000,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CAP",
+   "date": "2026-07-20",
+   "de": null,
+   "a": 6319,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "BCI",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 64500,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "ENELCHILE",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 81.25,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "COLBUN",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 140.3,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "FALABELLA",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 6042,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CENCOSUD",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 2009.8,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "COPEC",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 6550,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CMPC",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 1070,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "SQM-B",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 65055,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  },
+  {
+   "t": "CCU",
+   "date": "2026-07-22",
+   "de": null,
+   "a": 5420.7,
+   "fuente": "consenso WSJ+Yahoo60m (relleno)"
+  }
+ ],
  "errors": [],
  "days": [
   {
@@ -11111,7 +11574,7 @@
   {
    "date": "2025-10-30",
    "prices": {
-    "CHILE": 163.2,
+    "CHILE": 165.41,
     "SANTANDER": 68.17,
     "BCI": 48450,
     "ENELCHILE": 72,
@@ -12579,7 +13042,7 @@
     "ENELCHILE": 77.5,
     "COLBUN": 153.5,
     "FALABELLA": 6265,
-    "CENCOSUD": 3100,
+    "CENCOSUD": 3135,
     "COPEC": 7380.6,
     "CMPC": 1494.6,
     "SQM-B": 66502,
@@ -12613,7 +13076,7 @@
     "ENELCHILE": 75.5,
     "COLBUN": 153.11,
     "FALABELLA": 6174,
-    "CENCOSUD": 3134.9,
+    "CENCOSUD": 3100,
     "COPEC": 7348,
     "CMPC": 1436,
     "SQM-B": 67400,
@@ -12896,7 +13359,7 @@
     "AGUAS-A": 380.12,
     "IAM": 1065,
     "ENELAM": 85,
-    "ECL": 1651,
+    "ECL": 1625.1,
     "ANDINA-B": 4420,
     "CONCHATORO": 1030.2,
     "QUINENCO": 4430,
@@ -12968,7 +13431,7 @@
     "ANDINA-B": 4490,
     "CONCHATORO": 1026.4,
     "QUINENCO": 4500,
-    "MALLPLAZA": 3799.9,
+    "MALLPLAZA": 3690,
     "VAPORES": 49.8,
     "RIPLEY": 410,
     "SMU": 161,
@@ -13017,7 +13480,7 @@
    "prices": {
     "CHILE": 186.94,
     "SANTANDER": 78.19,
-    "BCI": 66499,
+    "BCI": 64499,
     "ENELCHILE": 75.97,
     "COLBUN": 147.9,
     "FALABELLA": 6471.1,
@@ -13033,7 +13496,7 @@
     "IAM": 1094,
     "ENELAM": 85.6,
     "ECL": 1597,
-    "ANDINA-B": 4501,
+    "ANDINA-B": 4550,
     "CONCHATORO": 1024,
     "QUINENCO": 4550,
     "MALLPLAZA": 3800,
@@ -14022,7 +14485,7 @@
     "ANDINA-B": 3990,
     "CONCHATORO": 919,
     "QUINENCO": 4126.1,
-    "MALLPLAZA": 3805,
+    "MALLPLAZA": 3850,
     "VAPORES": 48.75,
     "RIPLEY": 400.01,
     "SMU": 150.66,
@@ -14038,30 +14501,30 @@
     "CHILE": 174.7,
     "SANTANDER": 71.21,
     "BCI": 56900,
-    "ENELCHILE": 70.1,
+    "ENELCHILE": 69,
     "COLBUN": 132.5,
-    "FALABELLA": 6118,
+    "FALABELLA": 6000.3,
     "CENCOSUD": 2617,
     "COPEC": 6650,
     "CMPC": 1299.9,
     "SQM-B": 64997,
     "CCU": 5400,
     "ENTEL": 3898.8,
-    "LATAM": 21.98,
+    "LATAM": 21.67,
     "PARAUCO": 3750.2,
     "AGUAS-A": 359.89,
     "IAM": 998,
-    "ENELAM": 80.7,
+    "ENELAM": 79.2,
     "ECL": 1352,
     "ANDINA-B": 3990,
     "CONCHATORO": 895.24,
-    "QUINENCO": 4269.9,
-    "MALLPLAZA": 3852.4,
+    "QUINENCO": 4155.5,
+    "MALLPLAZA": 3950,
     "VAPORES": 48.64,
     "RIPLEY": 402,
     "SMU": 150.59,
     "SONDA": 302,
-    "ITAUCL": 20423,
+    "ITAUCL": 20150,
     "CAP": 6402
    },
    "ipsa": 10589.28
@@ -14836,7 +15299,7 @@
     "ENELAM": 84.09,
     "ECL": 1583,
     "ANDINA-B": 4298.9,
-    "CONCHATORO": 922,
+    "CONCHATORO": 932,
     "QUINENCO": 4400,
     "MALLPLAZA": 4070,
     "VAPORES": 51.4,
@@ -15505,7 +15968,7 @@
     "FALABELLA": 5750,
     "CENCOSUD": 2230,
     "COPEC": 6210,
-    "CMPC": 1178.9,
+    "CMPC": 1155.8,
     "SQM-B": 82056,
     "CCU": 5338,
     "ENTEL": 3790,
@@ -15553,7 +16016,7 @@
     "CONCHATORO": 864.02,
     "QUINENCO": 3961,
     "MALLPLAZA": 3930,
-    "VAPORES": 53.43,
+    "VAPORES": 52.75,
     "RIPLEY": 380,
     "SMU": 130.95,
     "SONDA": 296.91,
@@ -15587,7 +16050,7 @@
     "CONCHATORO": 850.2,
     "QUINENCO": 3999,
     "MALLPLAZA": 3780,
-    "VAPORES": 53.15,
+    "VAPORES": 52.59,
     "RIPLEY": 372,
     "SMU": 128.94,
     "SONDA": 285.03,
@@ -15600,8 +16063,8 @@
    "date": "2026-05-13",
    "prices": {
     "CHILE": 155.84,
-    "SANTANDER": 67.49,
-    "BCI": 55747,
+    "SANTANDER": 66.8,
+    "BCI": 54911,
     "ENELCHILE": 78.5,
     "COLBUN": 130,
     "FALABELLA": 5380,
@@ -15615,13 +16078,13 @@
     "PARAUCO": 3699.7,
     "AGUAS-A": 328,
     "IAM": 909.13,
-    "ENELAM": 79.48,
+    "ENELAM": 78.01,
     "ECL": 1769.5,
     "ANDINA-B": 4093,
     "CONCHATORO": 835,
     "QUINENCO": 3915,
     "MALLPLAZA": 3820,
-    "VAPORES": 52.41,
+    "VAPORES": 51.14,
     "RIPLEY": 363,
     "SMU": 129,
     "SONDA": 284.77,
@@ -15859,7 +16322,7 @@
     "CONCHATORO": 905,
     "QUINENCO": 4076.8,
     "MALLPLAZA": 3930.1,
-    "VAPORES": 46,
+    "VAPORES": 45.4,
     "RIPLEY": 381.32,
     "SMU": 145.51,
     "SONDA": 286.97,
@@ -16418,7 +16881,7 @@
     "CHILE": 179,
     "SANTANDER": 72.71,
     "BCI": 58600,
-    "ENELCHILE": 82.55,
+    "ENELCHILE": 81.42,
     "COLBUN": 129,
     "FALABELLA": 6052,
     "CENCOSUD": 2110,
@@ -16653,7 +17116,7 @@
   {
    "date": "2026-06-26",
    "prices": {
-    "CHILE": 179.99,
+    "CHILE": 177.8,
     "SANTANDER": 75,
     "BCI": 60200,
     "ENELCHILE": 81.29,
@@ -16912,7 +17375,7 @@
     "ANDINA-B": 4555,
     "CONCHATORO": 845,
     "QUINENCO": 4000,
-    "MALLPLAZA": 3998.9,
+    "MALLPLAZA": 3894.9,
     "VAPORES": 44.19,
     "RIPLEY": 380.37,
     "SMU": 132.7,
@@ -17130,8 +17593,34 @@
    "date": "2026-07-20",
    "prices": {
     "CHILE": 189.95,
-    "SANTANDER": 78.9
-   }
+    "SANTANDER": 78.9,
+    "BCI": 64500,
+    "ENELCHILE": 80,
+    "COLBUN": 138.99,
+    "FALABELLA": 5850,
+    "CENCOSUD": 2005,
+    "COPEC": 6345,
+    "CMPC": 1088,
+    "SQM-B": 63400,
+    "CCU": 5270,
+    "ENTEL": 3652.5,
+    "LATAM": 24.36,
+    "PARAUCO": 4050,
+    "AGUAS-A": 333.5,
+    "ENELAM": 84.67,
+    "ECL": 1805,
+    "ANDINA-B": 4605,
+    "CONCHATORO": 854.02,
+    "QUINENCO": 4264.2,
+    "MALLPLAZA": 3939.9,
+    "VAPORES": 47.63,
+    "RIPLEY": 381.48,
+    "SMU": 127.9,
+    "ITAUCL": 21000,
+    "CAP": 6319
+   },
+   "ipsa": 10927.76,
+   "ipsaSynth": true
   },
   {
    "date": "2026-07-21",
@@ -17170,8 +17659,35 @@
    "date": "2026-07-22",
    "prices": {
     "CHILE": 193.5,
-    "SANTANDER": 79.85
-   }
+    "SANTANDER": 79.85,
+    "BCI": 64500,
+    "ENELCHILE": 81.25,
+    "COLBUN": 140.3,
+    "FALABELLA": 6042,
+    "CENCOSUD": 2009.8,
+    "COPEC": 6550,
+    "CMPC": 1070,
+    "SQM-B": 65055,
+    "CCU": 5420.7,
+    "ENTEL": 3610,
+    "LATAM": 24.09,
+    "PARAUCO": 3993.1,
+    "AGUAS-A": 339,
+    "IAM": 920,
+    "ENELAM": 84.53,
+    "ECL": 1865,
+    "ANDINA-B": 4700,
+    "CONCHATORO": 848.98,
+    "QUINENCO": 4300,
+    "MALLPLAZA": 3820.2,
+    "VAPORES": 48.3,
+    "RIPLEY": 383.98,
+    "SMU": 131,
+    "ITAUCL": 21500,
+    "CAP": 6300
+   },
+   "ipsa": 11019.21,
+   "ipsaSynth": true
   },
   {
    "date": "2026-07-23",
@@ -17212,8 +17728,35 @@
    "prices": {
     "SONDA": 301.81,
     "CHILE": 193.1,
-    "SANTANDER": 79.32
-   }
+    "SANTANDER": 79.32,
+    "BCI": 65000,
+    "ENELCHILE": 81.01,
+    "COLBUN": 138.99,
+    "FALABELLA": 5990,
+    "CENCOSUD": 1958,
+    "COPEC": 6330,
+    "CMPC": 1025,
+    "SQM-B": 65350,
+    "CCU": 5489,
+    "ENTEL": 3659.1,
+    "LATAM": 23.88,
+    "PARAUCO": 3940,
+    "AGUAS-A": 338,
+    "IAM": 916.05,
+    "ENELAM": 85.49,
+    "ECL": 1879.9,
+    "ANDINA-B": 4699.9,
+    "CONCHATORO": 834.99,
+    "QUINENCO": 4309.2,
+    "MALLPLAZA": 3725,
+    "VAPORES": 48.88,
+    "RIPLEY": 381.09,
+    "SMU": 126.9,
+    "ITAUCL": 21490,
+    "CAP": 6060
+   },
+   "ipsa": 10953.05,
+   "ipsaSynth": true
   },
   {
    "date": "2026-07-27",
@@ -17354,32 +17897,32 @@
    "date": "2026-07-31",
    "prices": {
     "CHILE": 193.71,
-    "SANTANDER": 77,
-    "BCI": 62502,
+    "SANTANDER": 80.99,
+    "BCI": 66900,
     "ENELCHILE": 81.99,
     "COLBUN": 138.99,
     "FALABELLA": 6216,
-    "CENCOSUD": 1995,
-    "COPEC": 6249.6,
-    "CMPC": 1070,
-    "SQM-B": 65450,
-    "CCU": 5218,
+    "CENCOSUD": 1954.9,
+    "COPEC": 6350,
+    "CMPC": 1055,
+    "SQM-B": 62700,
+    "CCU": 5385,
     "ENTEL": 3643,
     "LATAM": 24.69,
     "PARAUCO": 3943,
-    "AGUAS-A": 332.4,
-    "IAM": 921.89,
-    "ENELAM": 84.04,
+    "AGUAS-A": 339.5,
+    "IAM": 942.18,
+    "ENELAM": 87.99,
     "ECL": 1842,
-    "ANDINA-B": 4699.9,
+    "ANDINA-B": 4630,
     "CONCHATORO": 852.33,
-    "QUINENCO": 4279,
-    "MALLPLAZA": 3950,
+    "QUINENCO": 4460,
+    "MALLPLAZA": 3769.9,
     "VAPORES": 48,
     "RIPLEY": 382,
     "SMU": 127.9,
-    "ITAUCL": 20678,
-    "CAP": 6313.3,
+    "ITAUCL": 21000,
+    "CAP": 5929,
     "SONDA": 301.81
    },
    "ipsa": 11016.85
@@ -17389,8 +17932,35 @@
    "prices": {
     "SONDA": 301.81,
     "CHILE": 192.48,
-    "SANTANDER": 80.44
-   }
+    "SANTANDER": 80.44,
+    "BCI": 67300,
+    "ENELCHILE": 82.9,
+    "COLBUN": 139.99,
+    "FALABELLA": 6384,
+    "CENCOSUD": 1955,
+    "COPEC": 6342,
+    "CMPC": 1050,
+    "SQM-B": 61910,
+    "CCU": 5361.9,
+    "ENTEL": 3747,
+    "LATAM": 25.25,
+    "PARAUCO": 3955,
+    "AGUAS-A": 340,
+    "IAM": 940,
+    "ENELAM": 87,
+    "ECL": 1845.2,
+    "ANDINA-B": 4620,
+    "CONCHATORO": 841.73,
+    "QUINENCO": 4478.9,
+    "MALLPLAZA": 3800,
+    "VAPORES": 48.5,
+    "RIPLEY": 386.7,
+    "SMU": 128,
+    "ITAUCL": 21550,
+    "CAP": 5800
+   },
+   "ipsa": 11058.36,
+   "ipsaSynth": true
   },
   {
    "date": "2026-08-04",
@@ -17975,8 +18545,35 @@
    "prices": {
     "SONDA": 301.81,
     "CHILE": 193,
-    "SANTANDER": 80.85
-   }
+    "SANTANDER": 80.85,
+    "BCI": 67520,
+    "ENELCHILE": 81.1,
+    "COLBUN": 145.5,
+    "FALABELLA": 6394,
+    "CENCOSUD": 2079,
+    "COPEC": 6925,
+    "CMPC": 1080,
+    "SQM-B": 74050,
+    "CCU": 5730,
+    "ENTEL": 3870,
+    "LATAM": 23.75,
+    "PARAUCO": 3999.6,
+    "AGUAS-A": 329,
+    "IAM": 910.97,
+    "ENELAM": 89,
+    "ECL": 1975,
+    "ANDINA-B": 4600,
+    "CONCHATORO": 910,
+    "QUINENCO": 4550,
+    "MALLPLAZA": 4099.8,
+    "VAPORES": 50,
+    "RIPLEY": 420.24,
+    "SMU": 125.5,
+    "ITAUCL": 22775,
+    "CAP": 5770
+   },
+   "ipsa": 11460.38,
+   "ipsaSynth": true
   },
   {
    "date": "2026-08-28",
@@ -18048,7 +18645,35 @@
   },
   {
    "date": "2026-09-01",
-   "prices": {},
+   "prices": {
+    "CHILE": 196.46,
+    "SANTANDER": 81.96,
+    "BCI": 67090,
+    "ENELCHILE": 81.5,
+    "COLBUN": 145,
+    "FALABELLA": 6280.2,
+    "CENCOSUD": 2010,
+    "COPEC": 6800,
+    "CMPC": 1025,
+    "SQM-B": 75640,
+    "CCU": 5420,
+    "ENTEL": 3898,
+    "LATAM": 23.32,
+    "PARAUCO": 3949,
+    "AGUAS-A": 320,
+    "IAM": 898,
+    "ENELAM": 84.5,
+    "ECL": 1959.9,
+    "ANDINA-B": 4590,
+    "CONCHATORO": 909,
+    "QUINENCO": 4450,
+    "MALLPLAZA": 4040,
+    "VAPORES": 48.05,
+    "RIPLEY": 411,
+    "SMU": 124.25,
+    "ITAUCL": 22600,
+    "CAP": 5550
+   },
    "ipsa": 11386.24,
    "ipsaOfi": true
   },
@@ -18342,7 +18967,7 @@
     "CENCOSUD": 2081,
     "COPEC": 6600,
     "CMPC": 995.9,
-    "SQM-B": 65450,
+    "SQM-B": 67385,
     "CCU": 5475,
     "ENTEL": 3920,
     "LATAM": 24.39,
@@ -18355,7 +18980,7 @@
     "CONCHATORO": 970,
     "QUINENCO": 4675,
     "MALLPLAZA": 3937.9,
-    "VAPORES": 46.51,
+    "VAPORES": 49.98,
     "RIPLEY": 434.4,
     "SMU": 118.36,
     "SONDA": 298,
@@ -18377,7 +19002,7 @@
     "CENCOSUD": 2132,
     "COPEC": 6530.1,
     "CMPC": 981.2,
-    "SQM-B": 65450,
+    "SQM-B": 66789,
     "CCU": 5373.3,
     "ENTEL": 3882,
     "LATAM": 24.2,
@@ -18390,7 +19015,7 @@
     "CONCHATORO": 944,
     "QUINENCO": 4710,
     "MALLPLAZA": 3919.9,
-    "VAPORES": 46.51,
+    "VAPORES": 49.2,
     "RIPLEY": 440,
     "SMU": 117.99,
     "SONDA": 293,
@@ -18412,7 +19037,7 @@
     "CENCOSUD": 2101,
     "COPEC": 6520,
     "CMPC": 969,
-    "SQM-B": 65450,
+    "SQM-B": 66200,
     "CCU": 5415,
     "ENTEL": 3961,
     "LATAM": 24.05,
@@ -18425,7 +19050,7 @@
     "CONCHATORO": 942,
     "QUINENCO": 4749,
     "MALLPLAZA": 3859.9,
-    "VAPORES": 46.51,
+    "VAPORES": 48.55,
     "RIPLEY": 441.43,
     "SMU": 117.8,
     "SONDA": 300,
@@ -18447,7 +19072,7 @@
     "CENCOSUD": 2090,
     "COPEC": 6430,
     "CMPC": 957,
-    "SQM-B": 65450,
+    "SQM-B": 68708,
     "CCU": 5330,
     "ENTEL": 3977,
     "LATAM": 24.78,
@@ -18456,11 +19081,11 @@
     "IAM": 955.57,
     "ENELAM": 90,
     "ECL": 1855,
-    "ANDINA-B": 4699.9,
+    "ANDINA-B": 4900,
     "CONCHATORO": 930,
     "QUINENCO": 4620,
     "MALLPLAZA": 3900,
-    "VAPORES": 46.51,
+    "VAPORES": 48.3,
     "RIPLEY": 442,
     "SMU": 117.5,
     "SONDA": 295,
