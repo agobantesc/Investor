@@ -1,0 +1,16 @@
+# Sonda de fuentes alternativas de CIERRES DE ACCIONES (para rellenar días sin dato confiable): se lanza a
+# mano, imprime el diagnóstico en el log y NO escribe nada en el repo.
+name: probe-precios
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Sondear fuentes de precios
+        run: node automation/probe-precios.mjs
