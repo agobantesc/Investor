@@ -76,5 +76,14 @@ const incompletos = days.filter(d => d.date >= haceUnAno && Object.keys(d.prices
   .filter(x => x.faltan.length > 1);
 ok("8-DIAS-HABILES-COMPLETOS", incompletos.length === 0, { universo: universo.size, incompletos: incompletos.slice(0, 5), consenso: CL.consenso || null });
 
+// ── 9. SIN PRECIOS CONGELADOS en el último año: una acción líquida no cierra idéntica 4 días hábiles seguidos.
+//      Así se colaban los valores congelados de la barra diaria de Yahoo (SQM-B 65.450 del 14 al 17-09-2026). ──
+const ultAnio = days.filter(d => d.date >= haceUnAno);
+const congelados = [];
+for (const t of universo) { if (t === "SONDA") continue; let run = 1;
+  for (let i = 1; i < ultAnio.length; i++) { const x = ultAnio[i - 1].prices[t], y = ultAnio[i].prices[t];
+    if (x > 0 && x === y) { run++; if (run === 4) congelados.push(t + " hasta " + ultAnio[i].date + " = " + y); } else run = 1; } }
+ok("9-SIN-PRECIOS-CONGELADOS", congelados.length === 0, congelados.slice(0, 5));
+
 console.log(`RESUMEN ${fallos.length ? "CON FALLOS" : "TODO OK"} ${JSON.stringify({ total: n, ok: n - fallos.length, fallan: fallos })}`);
 process.exit(fallos.length ? 1 : 0);
