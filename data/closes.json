@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-24T04:52:22.846Z",
+ "updatedAt": "2026-10-24T15:48:46.266Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,11 +7,11 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 408 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 522 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
   "MSCI IPSA oficial (API MSCI 767564/GRTR): 38 día(s) hasta 20261023 · feriados omitidos 2026-09-18,2026-10-12",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 10746.36 @ 2026-10-23 15h (intradía, no entra) · cierre anterior 10780.31 → 2026-10-22"
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10746.36 @ 2026-10-23 15h (intradía, no entra) · cierre anterior 10780.3 → 2026-10-22"
  ],
  "ipsaSynth": [
   "2026-07-20=10927.16 (26 acc, 0.36%)",
@@ -22,13 +22,13 @@
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
  "ipsaOficial": [
-  "2026-10-23=10746.36 (MSCI GRTR, antes 10748.76)"
+  "2026-10-22=10780.3 (Yahoo MXIPSAGC.SN cierre anterior, antes 10780.31)"
  ],
  "consenso": {
   "rellenos": 0,
-  "correcciones": 0,
+  "correcciones": 58,
   "diasNuevos": 0,
-  "sinConfirmar": 9,
+  "sinConfirmar": 8,
   "fuentes": {
    "wsj": 28,
    "yahoo60m": 28
@@ -43,7 +43,472 @@
   "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
   "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
  ],
- "ajustesDeFuente": [],
+ "ajustesDeFuente": [
+  {
+   "t": "CHILE",
+   "date": "2025-10-30",
+   "de": 163.2,
+   "a": 165.41,
+   "dif_pct": 1.35,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CENCOSUD",
+   "date": "2026-01-06",
+   "de": 3100,
+   "a": 3135,
+   "dif_pct": 1.13,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CENCOSUD",
+   "date": "2026-01-07",
+   "de": 3134.9,
+   "a": 3100,
+   "dif_pct": -1.11,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ECL",
+   "date": "2026-01-19",
+   "de": 1651,
+   "a": 1625.1,
+   "dif_pct": -1.57,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-01-21",
+   "de": 3799.9,
+   "a": 3690,
+   "dif_pct": -2.89,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "BCI",
+   "date": "2026-01-23",
+   "de": 66499,
+   "a": 64499,
+   "dif_pct": -3.01,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ANDINA-B",
+   "date": "2026-01-23",
+   "de": 4501,
+   "a": 4550,
+   "dif_pct": 1.09,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-03-05",
+   "de": 3805,
+   "a": 3850,
+   "dif_pct": 1.18,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELCHILE",
+   "date": "2026-03-06",
+   "de": 70.1,
+   "a": 69,
+   "dif_pct": -1.57,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "FALABELLA",
+   "date": "2026-03-06",
+   "de": 6118,
+   "a": 6000.3,
+   "dif_pct": -1.92,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "LATAM",
+   "date": "2026-03-06",
+   "de": 21.98,
+   "a": 21.67,
+   "dif_pct": -1.41,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELAM",
+   "date": "2026-03-06",
+   "de": 80.7,
+   "a": 79.2,
+   "dif_pct": -1.86,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "QUINENCO",
+   "date": "2026-03-06",
+   "de": 4269.9,
+   "a": 4155.5,
+   "dif_pct": -2.68,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-03-06",
+   "de": 3852.4,
+   "a": 3950,
+   "dif_pct": 2.53,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ITAUCL",
+   "date": "2026-03-06",
+   "de": 20423,
+   "a": 20150,
+   "dif_pct": -1.34,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CONCHATORO",
+   "date": "2026-04-09",
+   "de": 922,
+   "a": 932,
+   "dif_pct": 1.08,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CMPC",
+   "date": "2026-05-08",
+   "de": 1178.9,
+   "a": 1155.8,
+   "dif_pct": -1.96,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-11",
+   "de": 53.43,
+   "a": 52.75,
+   "dif_pct": -1.27,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-12",
+   "de": 53.15,
+   "a": 52.59,
+   "dif_pct": -1.05,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SANTANDER",
+   "date": "2026-05-13",
+   "de": 67.49,
+   "a": 66.8,
+   "dif_pct": -1.02,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "BCI",
+   "date": "2026-05-13",
+   "de": 55747,
+   "a": 54911,
+   "dif_pct": -1.5,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELAM",
+   "date": "2026-05-13",
+   "de": 79.48,
+   "a": 78.01,
+   "dif_pct": -1.85,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-13",
+   "de": 52.41,
+   "a": 51.14,
+   "dif_pct": -2.42,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-05-25",
+   "de": 46,
+   "a": 45.4,
+   "dif_pct": -1.3,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENELCHILE",
+   "date": "2026-06-17",
+   "de": 82.55,
+   "a": 81.42,
+   "dif_pct": -1.37,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CHILE",
+   "date": "2026-06-26",
+   "de": 179.99,
+   "a": 177.8,
+   "dif_pct": -1.22,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-07-08",
+   "de": 3998.9,
+   "a": 3894.9,
+   "dif_pct": -2.6,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "BCI",
+   "date": "2026-09-01",
+   "de": 62502,
+   "a": 67090,
+   "dif_pct": 7.34,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "COLBUN",
+   "date": "2026-09-01",
+   "de": 135.29,
+   "a": 145,
+   "dif_pct": 7.18,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "FALABELLA",
+   "date": "2026-09-01",
+   "de": 5835,
+   "a": 6280.2,
+   "dif_pct": 7.63,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "COPEC",
+   "date": "2026-09-01",
+   "de": 6249.6,
+   "a": 6800,
+   "dif_pct": 8.81,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CMPC",
+   "date": "2026-09-01",
+   "de": 1070,
+   "a": 1025,
+   "dif_pct": -4.21,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SQM-B",
+   "date": "2026-09-01",
+   "de": 65450,
+   "a": 75640,
+   "dif_pct": 15.57,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CCU",
+   "date": "2026-09-01",
+   "de": 5218,
+   "a": 5420,
+   "dif_pct": 3.87,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ENTEL",
+   "date": "2026-09-01",
+   "de": 3643,
+   "a": 3898,
+   "dif_pct": 7,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "LATAM",
+   "date": "2026-09-01",
+   "de": 24.69,
+   "a": 23.32,
+   "dif_pct": -5.55,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "PARAUCO",
+   "date": "2026-09-01",
+   "de": 4039.9,
+   "a": 3949,
+   "dif_pct": -2.25,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "AGUAS-A",
+   "date": "2026-09-01",
+   "de": 332.4,
+   "a": 320,
+   "dif_pct": -3.73,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "IAM",
+   "date": "2026-09-01",
+   "de": 921.89,
+   "a": 898,
+   "dif_pct": -2.59,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ECL",
+   "date": "2026-09-01",
+   "de": 1807,
+   "a": 1959.9,
+   "dif_pct": 8.46,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ANDINA-B",
+   "date": "2026-09-01",
+   "de": 4699.9,
+   "a": 4590,
+   "dif_pct": -2.34,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CONCHATORO",
+   "date": "2026-09-01",
+   "de": 852.33,
+   "a": 909,
+   "dif_pct": 6.65,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "QUINENCO",
+   "date": "2026-09-01",
+   "de": 4279,
+   "a": 4450,
+   "dif_pct": 4,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "MALLPLAZA",
+   "date": "2026-09-01",
+   "de": 3950,
+   "a": 4040,
+   "dif_pct": 2.28,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-09-01",
+   "de": 46.51,
+   "a": 48.05,
+   "dif_pct": 3.31,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "RIPLEY",
+   "date": "2026-09-01",
+   "de": 382.96,
+   "a": 411,
+   "dif_pct": 7.32,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SMU",
+   "date": "2026-09-01",
+   "de": 127.9,
+   "a": 124.25,
+   "dif_pct": -2.85,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ITAUCL",
+   "date": "2026-09-01",
+   "de": 20678,
+   "a": 22600,
+   "dif_pct": 9.29,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "CAP",
+   "date": "2026-09-01",
+   "de": 6313.3,
+   "a": 5550,
+   "dif_pct": -12.09,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SQM-B",
+   "date": "2026-09-14",
+   "de": 65450,
+   "a": 67385,
+   "dif_pct": 2.96,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-09-14",
+   "de": 46.51,
+   "a": 49.98,
+   "dif_pct": 7.46,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SQM-B",
+   "date": "2026-09-15",
+   "de": 65450,
+   "a": 66789,
+   "dif_pct": 2.05,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-09-15",
+   "de": 46.51,
+   "a": 49.2,
+   "dif_pct": 5.78,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SQM-B",
+   "date": "2026-09-16",
+   "de": 65450,
+   "a": 66200,
+   "dif_pct": 1.15,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-09-16",
+   "de": 46.51,
+   "a": 48.55,
+   "dif_pct": 4.39,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "SQM-B",
+   "date": "2026-09-17",
+   "de": 65450,
+   "a": 68708,
+   "dif_pct": 4.98,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "ANDINA-B",
+   "date": "2026-09-17",
+   "de": 4699.9,
+   "a": 4900,
+   "dif_pct": 4.26,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  },
+  {
+   "t": "VAPORES",
+   "date": "2026-09-17",
+   "de": 46.51,
+   "a": 48.3,
+   "dif_pct": 3.85,
+   "fuente": "consenso WSJ+Yahoo60m (corrección)"
+  }
+ ],
  "errors": [],
  "days": [
   {
@@ -18203,10 +18668,10 @@
     "CHILE": 196.46,
     "SANTANDER": 81.96,
     "BCI": 67090,
-    "ENELCHILE": 81.5,
+    "ENELCHILE": 81.01,
     "COLBUN": 145,
     "FALABELLA": 6280.2,
-    "CENCOSUD": 2010,
+    "CENCOSUD": 1995,
     "COPEC": 6800,
     "CMPC": 1025,
     "SQM-B": 75640,
@@ -18216,7 +18681,7 @@
     "PARAUCO": 3949,
     "AGUAS-A": 320,
     "IAM": 898,
-    "ENELAM": 84.5,
+    "ENELAM": 84.04,
     "ECL": 1959.9,
     "ANDINA-B": 4590,
     "CONCHATORO": 909,
@@ -18226,7 +18691,8 @@
     "RIPLEY": 411,
     "SMU": 124.25,
     "ITAUCL": 22600,
-    "CAP": 5550
+    "CAP": 5550,
+    "SONDA": 301.81
    },
    "ipsa": 11386.24,
    "ipsaOfi": true
@@ -19450,7 +19916,7 @@
     "ITAUCL": 22800,
     "CAP": 4479
    },
-   "ipsa": 10780.31,
+   "ipsa": 10780.3,
    "ipsaOfi": true
   },
   {
