@@ -660,8 +660,11 @@ if (nCalco) {
    Dos fuentes INDEPENDIENTES sí traen el cierre real: la serie diaria de WSJ (calza 99% con la base) y el
    último precio de la sesión en el intradía de 60 min de Yahoo (97%). Regla:
      · RELLENO: celda vacía en un día hábil → se pone el cierre de WSJ si Yahoo-60m lo confirma (≤1%).
-     · CORRECCIÓN: celda con valor que se aparta >1% de un cierre en que WSJ y Yahoo-60m coinciden (≤0,3%)
-       → se reemplaza (era un valor congelado).
+     · CORRECCIÓN: celda con valor que se aparta >0,25% de un cierre en que WSJ y Yahoo-60m coinciden
+       (≤0,15%) → se reemplaza (era un valor congelado). El umbral era 1% y dejaba pasar congelados
+       pequeños: el backfill de 2 años del 24-10 reimportó el 01-09 de CENCOSUD (1995 en vez de 2010,
+       −0,75%), ENELAM y ENELCHILE, y ninguno superaba el 1%. En días normales WSJ y Yahoo-60m calzan
+       con el cierre oficial al centavo (99% de los casos), así que 0,25% no toca cierres legítimos.
    Sin confirmación de la segunda fuente no se toca nada. Cada cambio queda en ajustesDeFuente (fuente
    "consenso WSJ+Yahoo60m"). Cubre el último año. */
 const CONS_LOG = { rellenos: 0, correcciones: 0, diasNuevos: 0, sinConfirmar: 0, fuentes: {} };
@@ -714,7 +717,7 @@ const CONS_LOG = { rellenos: 0, correcciones: 0, diasNuevos: 0, sinConfirmar: 0,
           e.prices[t] = +w.toFixed(4); CONS_LOG.rellenos++;
           if (ADJUST_LOG.length < 60) ADJUST_LOG.push({ t, date: d, de: null, a: e.prices[t], fuente: "consenso WSJ+Yahoo60m (relleno)" });
         } else CONS_LOG.sinConfirmar++;
-      } else if (dif <= 0.003 && Math.abs(actual / w - 1) > 0.01) {
+      } else if (dif <= 0.0015 && Math.abs(actual / w - 1) > 0.0025) {
         logAdjust(t, d, actual, +w.toFixed(4), "consenso WSJ+Yahoo60m (corrección)");
         e.prices[t] = +w.toFixed(4); CONS_LOG.correcciones++;
       }

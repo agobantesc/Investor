@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs";
 import { TICKERS } from "./tickers.mjs";
 const BUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-const DESDE = "2026-07-01";
+const DESDE = new Date(Date.now() - 365 * 86400e3).toISOString().slice(0, 10);   // auditoría del último año
 const base = JSON.parse(readFileSync("data/closes.json", "utf8")).days.filter(d => d.date >= DESDE);
 const nAcc = Math.max(...base.map(d => Object.keys(d.prices).length));
 const HUECOS = base.filter(d => Object.keys(d.prices).length < nAcc).map(d => d.date);
@@ -31,7 +31,7 @@ async function yahoo(sym, interval) {
 }
 async function wsj(code) {
   const ET = "cecc4267a0194af89ca343805a3e57af";
-  const body = { Step: "P1D", TimeFrame: "P6M", EntitlementToken: ET, IncludeMockTick: false, FilterNullSlots: false, FilterClosedPoints: true, IncludeClosedSlots: false, IncludeOfficialClose: true, InjectOpen: false, ShowPreMarket: false, ShowAfterHours: false, UseExtendedTimeFrame: true, WantPriorClose: false, IncludeCurrentQuotes: false, ResetTodaysAfterHoursPercentChange: false, Series: [{ Key: "STOCK/CL/XSGO/" + code, Dialect: "Charting", Kind: "Ticker", SeriesId: "s1", DataTypes: ["Last"] }] };
+  const body = { Step: "P1D", TimeFrame: "P1Y", EntitlementToken: ET, IncludeMockTick: false, FilterNullSlots: false, FilterClosedPoints: true, IncludeClosedSlots: false, IncludeOfficialClose: true, InjectOpen: false, ShowPreMarket: false, ShowAfterHours: false, UseExtendedTimeFrame: true, WantPriorClose: false, IncludeCurrentQuotes: false, ResetTodaysAfterHoursPercentChange: false, Series: [{ Key: "STOCK/CL/XSGO/" + code, Dialect: "Charting", Kind: "Ticker", SeriesId: "s1", DataTypes: ["Last"] }] };
   const r = await fetch(`https://api.wsj.net/api/michelangelo/timeseries/history?json=${encodeURIComponent(JSON.stringify(body))}&ckey=${ET.slice(0, 10)}`, { headers: { "User-Agent": BUA, Accept: "application/json", "Dylan2010.EntitlementToken": ET, Origin: "https://www.marketwatch.com", Referer: "https://www.marketwatch.com/" } });
   if (!r.ok) throw new Error("HTTP " + r.status);
   const j = await r.json(); const ticks = j?.TimeInfo?.Ticks || [], pts = j?.Series?.[0]?.DataPoints || [];
@@ -49,6 +49,7 @@ function careo(src) {
 }
 console.log(`SONDA PRECIOS · ${new Date().toISOString()} · ${nAcc} acciones · días con faltantes desde ${DESDE}: ${HUECOS.join(", ")}`);
 const resumen = { A: [], B: [], C: [] };
+const TOT = { confirmados: 0, porAccion: {} };
 for (const [t, sym] of Object.entries(TICKERS)) {
   const fila = { t };
   const prueba = async (k, fn) => { try { const r = await fn(); fila[k] = { ...careo(r.out)(t), huecos: Object.fromEntries(HUECOS.map(d => [d, r.out[d] ?? null])), vol: r.vol ? Object.fromEntries(HUECOS.map(d => [d, r.vol[d] ?? null])) : undefined }; resumen[k].push(fila[k].pct); } catch (e) { fila[k] = { err: String(e.message || e).slice(0, 60) }; } };
@@ -56,14 +57,26 @@ for (const [t, sym] of Object.entries(TICKERS)) {
   await prueba("B", () => yahoo(sym, "60m"));
   const code = sym.replace(/\.SN$/, "");
   await prueba("C", async () => { for (const c of [code, code.replace("-", "."), code.replace("-", "")]) { try { return await wsj(c); } catch (e) {} } throw new Error("sin serie WSJ"); });
+  // ERRORES CONFIRMADOS: la base se aparta >0,25% de un cierre en que las DOS fuentes independientes coinciden (≤0,15%)
+  try {
+    const conf = [];
+    if (fila.C.huecos !== undefined) {
+      const W = await (async () => { for (const c of [code, code.replace("-", "."), code.replace("-", "")]) { try { return (await wsj(c)).out; } catch (e) {} } return {}; })();
+      const Y = (await yahoo(sym, "60m")).out;
+      for (const d of Object.keys(W)) { const w = W[d], y = Y[d], b = BX[d] && BX[d][t]; if (w > 0 && y > 0 && b > 0 && Math.abs(y / w - 1) <= 0.0015 && Math.abs(b / w - 1) > 0.0025) conf.push(`${d}: base ${b} vs ${+w.toFixed(4)}`); }
+    }
+    fila.confirmados = conf; TOT.confirmados += conf.length; if (conf.length) TOT.porAccion[t] = conf.length;
+  } catch (e) {}
   const linea = k => fila[k].err ? `${k}: ✗ ${fila[k].err}` : `${k}: calza ${fila[k].ok}/${fila[k].n} (${fila[k].pct}%)${fila[k].malos.length ? " · difiere " + fila[k].malos.join(" | ") : ""}`;
-  console.log(`\n■ ${t} (${sym})\n   ${linea("A")}\n   ${linea("B")}\n   ${linea("C")}`);
+  console.log(`\n■ ${t} (${sym})\n   ${linea("A")}\n   ${linea("B")}\n   ${linea("C")}\n   ERRORES CONFIRMADOS en la base: ${(fila.confirmados || []).length}${(fila.confirmados || []).length ? " · " + fila.confirmados.slice(0, 6).join(" | ") : ""}`);
   for (const d of HUECOS) {
     const b = BX[d] && BX[d][t];
+    if (b > 0) continue;   // solo interesan las celdas que siguen VACÍAS
     console.log(`   ${d}: base ${b ?? "—"} · A ${fila.A.huecos ? fila.A.huecos[d] ?? "—" : "✗"} · B ${fila.B.huecos ? fila.B.huecos[d] ?? "—" : "✗"}${fila.B.vol && fila.B.vol[d] != null ? " (vol " + fila.B.vol[d] + ")" : ""} · C ${fila.C.huecos ? fila.C.huecos[d] ?? "—" : "✗"}`);
   }
   await new Promise(r => setTimeout(r, 250));
 }
 const med = a => { const v = a.filter(x => x != null).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
 console.log(`\nRESUMEN calce mediano con la base · A Yahoo diario ${med(resumen.A)}% · B Yahoo 60m ${med(resumen.B)}% · C WSJ ${med(resumen.C)}% (acciones con serie: ${resumen.A.length}/${resumen.B.length}/${resumen.C.length})`);
+console.log(`ERRORES CONFIRMADOS EN LA BASE (último año, ambas fuentes de acuerdo y la base distinta): ${TOT.confirmados} · ${JSON.stringify(TOT.porAccion)}`);
 console.log("FIN DE LA SONDA");
