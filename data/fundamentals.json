@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-23T23:00:55.797Z",
+ "updatedAt": "2026-10-24T04:52:36.504Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -236,7 +236,7 @@
    "eg": -89.2,
    "rg": 0.5,
    "de": 0.63,
-   "target": 1506.6337,
+   "target": 1510.6824,
    "rec": "hold",
    "nAn": 14,
    "peg": null,
@@ -309,7 +309,7 @@
    "rg": 7.3,
    "de": 1.19,
    "target": 3680,
-   "rec": "hold",
+   "rec": "none",
    "nAn": 5,
    "peg": 1.12,
    "evEbitda": 5.9
@@ -334,7 +334,7 @@
    "de": 4.55,
    "target": 33.821842,
    "rec": "strong_buy",
-   "nAn": 6,
+   "nAn": 7,
    "peg": 2.49,
    "evEbitda": null
   },
@@ -573,7 +573,7 @@
    "rg": null,
    "de": 0,
    "target": 57.5,
-   "rec": "buy",
+   "rec": "none",
    "nAn": 4,
    "peg": null,
    "evEbitda": null
@@ -645,7 +645,7 @@
    "rg": 9.4,
    "de": 0.71,
    "target": 335,
-   "rec": "hold",
+   "rec": "none",
    "nAn": 2,
    "peg": 0.57,
    "evEbitda": 6.6
