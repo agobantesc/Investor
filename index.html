@@ -2667,10 +2667,17 @@ let USER_NS=userNs(VISTA||SESSION);
 function nsk(k){return USER_NS?(k+"@"+USER_NS):k;}
 const CLIENT_KEYS={pf_projects_v1:1,pf_active_v1:1,pf_scenarios_v1:1,inv_impsets_v1:1,inv_imp_active_id:1,inv_import_v1:1,inv_dataset_active:1,inv_profile_v1:1,inv_profile_ans_v1:1,inv_profile_goal_v1:1,inv_pricedb_v1:1,inv_pricedb_freq:1};
 const SHARED_KEYS={inv_pricedb_v1:1,inv_pricedb_freq:1};   // mercado: una sola base de precios para todos
-const USER_KEYS={inv_clients_v1:1,inv_active_client:1};    // registro de carteras: uno por usuario
+/* lo que es de CADA PERSONA y no del navegador: su registro de carteras, sus claves (SYNC_TOKEN, token de GitHub,
+   claves de Anthropic y de la CMF), su copia interna y su estado de sincronización. Sin esto, una cuenta de
+   inversionista que entraba en el mismo navegador usaba —y podía leer— las del administrador. */
+const USER_KEYS={inv_clients_v1:1,inv_active_client:1,inv_cloud_v1:1,inv_anthropic_key:1,inv_cmf_key:1,inv_autopx_gh:1,inv_autobk_v1:1,inv_autobk_snap:1,inv_datos_v1:1};
 let activeClient=localStorage.getItem(nsk("inv_active_client"))||"c_me";
+/* la clave de un dato de CLIENTE para cualquier cliente, no solo el activo. Respaldo, restauración y las vistas
+   de otros clientes leían `k+"__"+id` a secas —el espacio del ADMINISTRADOR—: una cuenta de inversionista subía
+   a su cuenta del servidor la cartera del administrador y, al traer, la pisaba. La base de precios es una sola. */
+function ckc(k,id){return SHARED_KEYS[k]?(k+"__"+id):nsk(k+"__"+id);}
 function ck(k){
-  if(CLIENT_KEYS[k])return SHARED_KEYS[k]?(k+"__"+activeClient):nsk(k+"__"+activeClient);
+  if(CLIENT_KEYS[k])return ckc(k,activeClient);
   return USER_KEYS[k]?nsk(k):k;
 }
 function lsGet(k){try{const v=localStorage.getItem(ck(k));return v?JSON.parse(v):null;}catch(e){return null;}}
@@ -2693,8 +2700,10 @@ let PROJECTS=lsGet("pf_projects_v1")||[],activeId=lsGet("pf_active_v1")||null,ed
 // re-sembraban datos tras un "Reiniciar todo". Un arranque limpio queda limpio; los proyectos se crean en Proyectos.
 /* arma el objeto de respaldo (todos los clientes y sus datos) sin descargarlo */
 function backupPayload(){
-  const clients={};(CLIENTS||[]).forEach(c=>{const o={};Object.keys(CLIENT_KEYS).forEach(k=>{const raw=localStorage.getItem(k+"__"+c.id);o[k]=raw!=null?JSON.parse(raw):null;});clients[c.id]=o;});
+  const clients={};(CLIENTS||[]).forEach(c=>{const o={};Object.keys(CLIENT_KEYS).forEach(k=>{const raw=localStorage.getItem(ckc(k,c.id));o[k]=raw!=null?JSON.parse(raw):null;});clients[c.id]=o;});
   return {_app:"portfolio-dashboard",_v:2,_date:new Date().toISOString(),
+    // de QUÉ espacio de datos salió: ni el servidor ni la restauración lo cruzan con otro (payloadDelEspacio)
+    _ns:USER_NS,
     clients_registry:JSON.parse(localStorage.getItem(nsk("inv_clients_v1"))||"null"),
     active_client:localStorage.getItem(nsk("inv_active_client")),
     broker:JSON.parse(localStorage.getItem("inv_broker_v1")||"null"),
@@ -2704,23 +2713,37 @@ function backupPayload(){
     // Los SECRETOS (token de GitHub, token del servidor, clave de acceso) NO viajan: se ponen a mano en cada
     // navegador, para que el archivo .json se pueda guardar o mover sin llevar credenciales dentro.
     autopx_url:localStorage.getItem("inv_autopx_url")||null,
-    autobk:JSON.parse(localStorage.getItem("inv_autobk_v1")||"null"),
+    autobk:JSON.parse(localStorage.getItem(ck("inv_autobk_v1"))||"null"),
     clients};
 }
 function downloadBackup(data,fname){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=fname||("respaldo_investor_"+localDay()+".json");document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);}
 function exportBackup(){try{downloadBackup(backupPayload());}catch(e){window.alert("No se pudo generar el respaldo: "+e.message);}}
 /* restaura desde un payload _v>=2 (archivo o copia interna). Devuelve true si quedó aplicado. */
-function restoreFromPayload(j){try{
+/* ¿este estado salió del MISMO espacio de datos que esta pestaña? Los respaldos de antes no lo decían y salían
+   siempre del espacio del administrador (el defecto que esto corrige): sin marca, cuentan como de él. */
+function payloadEspacio(j){return (j&&typeof j._ns==="string")?j._ns:"";}
+function payloadDelEspacio(j){return payloadEspacio(j)===USER_NS;}
+/* forzar: solo cuando la PERSONA lo confirmó (un archivo de otro espacio que quiere cargar en el suyo) */
+function restoreFromPayload(j,forzar){try{
   if(!j||!j.clients)return false;
+  if(!forzar&&!payloadDelEspacio(j))return false;
   if(j.clients_registry)localStorage.setItem(nsk("inv_clients_v1"),JSON.stringify(j.clients_registry));
   if(j.active_client)localStorage.setItem(nsk("inv_active_client"),j.active_client);
-  if(j.broker)localStorage.setItem("inv_broker_v1",JSON.stringify(j.broker));else localStorage.removeItem("inv_broker_v1");
-  if(j.ui_scale!=null)localStorage.setItem("inv_ui_scale",j.ui_scale);
+  // lo que es del NAVEGADOR y configura el administrador (corredor, escala, fuente de cierres): él lo restaura
+  // tal cual; una cuenta de inversionista solo lo pone si aquí falta, nunca cambia lo que el administrador fijó
+  const nav=(k,v)=>{if(v!=null&&(!USER_NS||localStorage.getItem(k)==null))localStorage.setItem(k,v);};
+  if(j.broker)nav("inv_broker_v1",JSON.stringify(j.broker));else if(!USER_NS)localStorage.removeItem("inv_broker_v1");
+  if(j.ui_scale!=null)nav("inv_ui_scale",j.ui_scale);
   // fuente automática de cierres: se aplica en caliente (la variable viva, no solo el almacenamiento) para que
   // la sincronización diaria arranque en este navegador sin tener que configurarla de nuevo
-  if(j.autopx_url){try{localStorage.setItem("inv_autopx_url",j.autopx_url);if(typeof AUTOPX_URL!=="undefined")AUTOPX_URL=j.autopx_url;}catch(e){}}
-  if(j.autobk){try{localStorage.setItem("inv_autobk_v1",JSON.stringify(j.autobk));if(typeof AUTOBK!=="undefined")AUTOBK=j.autobk;}catch(e){}}
-  Object.keys(j.clients).forEach(id=>{const o=j.clients[id]||{};Object.keys(CLIENT_KEYS).forEach(k=>{const v=o[k];if(v==null)localStorage.removeItem(k+"__"+id);else localStorage.setItem(k+"__"+id,JSON.stringify(v));});});
+  if(j.autopx_url){try{nav("inv_autopx_url",j.autopx_url);if(typeof AUTOPX_URL!=="undefined")AUTOPX_URL=localStorage.getItem("inv_autopx_url")||AUTOPX_URL;}catch(e){}}
+  if(j.autobk){try{localStorage.setItem(ck("inv_autobk_v1"),JSON.stringify(j.autobk));if(typeof AUTOBK!=="undefined")AUTOBK=j.autobk;}catch(e){}}
+  Object.keys(j.clients).forEach(id=>{const o=j.clients[id]||{};Object.keys(CLIENT_KEYS).forEach(k=>{const v=o[k],key=ckc(k,id);
+    // la base de precios es COMÚN a los usuarios del navegador: quien no es administrador no la borra ni la
+    // cambia por su copia (la de aquí es igual o más nueva: la sincronización diaria la mantiene); solo la pone
+    // si aquí no había ninguna
+    if(SHARED_KEYS[k]&&USER_NS){if(v!=null&&localStorage.getItem(key)==null)localStorage.setItem(key,JSON.stringify(v));return;}
+    if(v==null)localStorage.removeItem(key);else localStorage.setItem(key,JSON.stringify(v));});});
   CLIENTS=(function(){try{return JSON.parse(localStorage.getItem(nsk("inv_clients_v1")))||CLIENTS;}catch(e){return CLIENTS;}})();
   activeClient=localStorage.getItem(nsk("inv_active_client"))||((CLIENTS[0]||{}).id)||"c_me";
   try{BROKER=JSON.parse(localStorage.getItem("inv_broker_v1"))||BROKER;}catch(e){}
@@ -2731,9 +2754,9 @@ function restoreFromPayload(j){try{
 let AUTOBK=lsGet("inv_autobk_v1")||{on:true,days:7,lastDL:null};
 function autobkSave(){lsSet("inv_autobk_v1",AUTOBK);}
 function autobkDaysSince(iso){if(!iso)return 1e9;const t=new Date(iso).getTime();return isFinite(t)?(Date.now()-t)/864e5:1e9;}
-function autobkSnapshot(reason){try{const p=backupPayload();localStorage.setItem("inv_autobk_snap",JSON.stringify({date:p._date,reason:reason||"periódico",data:p}));return true;}catch(e){return false;}}
-function autobkSnapInfo(){try{const s=JSON.parse(localStorage.getItem("inv_autobk_snap")||"null");return s?{date:s.date,reason:s.reason}:null;}catch(e){return null;}}
-function autobkRestore(){let s;try{s=JSON.parse(localStorage.getItem("inv_autobk_snap")||"null");}catch(e){}
+function autobkSnapshot(reason){try{const p=backupPayload();localStorage.setItem(ck("inv_autobk_snap"),JSON.stringify({date:p._date,reason:reason||"periódico",data:p}));return true;}catch(e){return false;}}
+function autobkSnapInfo(){try{const s=JSON.parse(localStorage.getItem(ck("inv_autobk_snap"))||"null");return s?{date:s.date,reason:s.reason}:null;}catch(e){return null;}}
+function autobkRestore(){let s;try{s=JSON.parse(localStorage.getItem(ck("inv_autobk_snap"))||"null");}catch(e){}
   if(!s||!s.data){window.alert("Aún no hay una copia interna disponible.");return;}
   const when=(""+(s.date||"")).slice(0,16).replace("T"," ");
   if(!window.confirm("Restaurar la copia interna automática del "+when+" reemplazará los datos actuales de TODOS los clientes.\n\n(Es la red de seguridad ante borrados accidentales dentro de la app.)\n\n¿Continuar?"))return;
@@ -2765,9 +2788,13 @@ function importBackup(file){const rd=new FileReader();rd.onload=ev=>{try{
   const j=JSON.parse(ev.target.result);
   if(j&&j._v>=2&&j.clients){
     const n=Object.keys(j.clients).length;
+    // un respaldo de OTRO espacio de datos (otra cuenta, o uno de antes, que salía siempre del administrador): se
+    // puede cargar, pero sabiéndolo — si no, se mezclan carteras de personas distintas sin que nadie lo note
+    const ajeno=!payloadDelEspacio(j);
+    if(ajeno&&!window.confirm("⚠ Este respaldo es de OTRO espacio de datos ("+(payloadEspacio(j)?"el de otra cuenta":"el del administrador")+").\n\nSi lo cargas, sus carteras pasan a ser las de "+(USER_NS?"esta cuenta":"este espacio")+". ¿Es lo que quieres?"))return;
     if(!window.confirm("Restaurar reemplazará TODOS tus clientes y sus datos (carteras, perfiles, importaciones, operador) por los del respaldo: "+n+" cliente(s). ¿Continuar?"))return;
     try{autobkSnapshot("antes de restaurar");}catch(e){}
-    if(!restoreFromPayload(j)){saveWarn();return;}
+    if(!restoreFromPayload(j,ajeno)){saveWarn();return;}
     window.alert("Respaldo restaurado: "+n+" cliente(s).");render();return;
   }
   const d=j.data||j;if(!d.pf_projects_v1||!Array.isArray(d.pf_projects_v1)){alert("El archivo no parece un respaldo válido.");return;}
@@ -6741,7 +6768,7 @@ function autopxAutoRun(){try{
    la corrida automática de las 22:05 UTC. Con un token de GitHub (opcional, ⚙ Configuración → Datos) es de un
    clic: dispara el workflow_dispatch, espera a que termine y sincroniza el closes.json fresco. Sin token, abre la
    pestaña Actions para que el usuario pulse «Run workflow» y luego use «⟳ Sincronizar cierres». ── */
-let AUTOPX_GH=(function(){try{return localStorage.getItem("inv_autopx_gh")||"";}catch(e){return "";}})();
+let AUTOPX_GH=(function(){try{return localStorage.getItem(ck("inv_autopx_gh"))||"";}catch(e){return "";}})();
 const AUTOPX_WF="update-closes.yml";
 function autopxRepoInfo(){   // deriva owner/repo desde la URL de la fuente (primeros dos segmentos, no ambiguos).
   // La RAMA no se parsea de la URL: en un raw, rama y ruta son ambiguas si la rama tiene "/" (p.ej.
@@ -6945,7 +6972,8 @@ var CLOUD=lsGet("inv_cloud_v1")||{token:"",auto:true,lastPush:null};
 function cloudSave(){lsSet("inv_cloud_v1",CLOUD);}
 function cloudServerMode(){try{return /^https?:$/.test(location.protocol);}catch(e){return false;}}
 async function cloudApi(method,pathU,body){
-  const res=await fetch(pathU,{method,headers:Object.assign({"x-investor-token":(CLOUD&&CLOUD.token)||""},body?{"Content-Type":"application/json"}:{}),body:body?JSON.stringify(body):undefined,cache:"no-store"});
+  // la caja fuerte pide, además del token, la SESIÓN de un administrador (cuando el servidor tiene cuentas)
+  const res=await fetch(pathU,{method,headers:Object.assign({"x-investor-token":(CLOUD&&CLOUD.token)||"","x-investor-session":(typeof srvToken==="function"?srvToken():"")},body?{"Content-Type":"application/json"}:{}),body:body?JSON.stringify(body):undefined,cache:"no-store"});
   let j=null;try{j=await res.json();}catch(e){}
   if(!res.ok)throw new Error((j&&j.error)?j.error:("HTTP "+res.status));
   return j;
@@ -6980,10 +7008,12 @@ async function datosMetaRefrescar(){
   try{_datosMetaVista=await srvApi("GET","/api/data/meta");}catch(e){}
   return _datosMetaVista;
 }
-function datosEstado(){try{const v=JSON.parse(localStorage.getItem(DATOS_KEY)||"null");
+function datosEstado(){try{const v=JSON.parse(localStorage.getItem(ck(DATOS_KEY))||"null");
   return (v&&typeof v==="object")?{uid:v.uid||"",rev:+v.rev||0,pend:!!v.pend}:{uid:"",rev:0,pend:false};}catch(e){return {uid:"",rev:0,pend:false};}}
-function datosEstadoSet(o){try{localStorage.setItem(DATOS_KEY,JSON.stringify(Object.assign(datosEstado(),o)));}catch(e){}}
-function datosActivo(){try{return srvActivo()&&!!srvToken()&&!!SESSION;}catch(e){return false;}}
+function datosEstadoSet(o){try{localStorage.setItem(ck(DATOS_KEY),JSON.stringify(Object.assign(datosEstado(),o)));}catch(e){}}
+/* en «ver como» NO: el espacio a la vista es de otro usuario y la sesión es la del administrador — subir pondría
+   la cartera de esa persona en la cuenta del administrador, y traer pisaría la suya con la de él */
+function datosActivo(){try{return srvActivo()&&!!srvToken()&&!!SESSION&&!verComoActivo();}catch(e){return false;}}
 /* hay cambios locales sin subir: si el servidor resulta ir más adelantado, no se descartan en silencio */
 function datosMarcarPendiente(){
   if(!datosActivo()||_datosOcupado)return;
@@ -7037,6 +7067,7 @@ async function datosConflicto(d){
     if(window.confirm(txt)){
       const reg=await srvApi("GET","/api/data");
       if(datosAplicar(reg)){window.alert("Listo: quedaron los datos del servidor. Investor se recargará.");location.reload();}
+      else window.alert("Lo que hay en el servidor no corresponde a este espacio de datos: se conservan los de este equipo.");
     }else{
       const meta=await srvApi("GET","/api/data/meta");
       datosEstadoSet({uid:SESSION.id,rev:+meta.rev||0});
@@ -7070,6 +7101,13 @@ async function datosSincronizar(){
     return {estado:"conflicto"};
   }
   const reg=await srvApi("GET","/api/data");
+  if(reg&&reg.payload&&!payloadDelEspacio(reg.payload)){
+    // lo guardado en la cuenta salió de OTRO espacio (la versión anterior subía el del administrador): no se
+    // aplica —pisaría datos ajenos— y se reemplaza por lo de este usuario en cuanto haya algo que subir
+    datosEstadoSet({uid:SESSION.id,rev:+reg.rev||0,pend:false});
+    if(datosTieneAlgo()){const r=await datosSubir(true).catch(()=>null);if(r)return {estado:"subido",rev:r.rev};}
+    return {estado:"ajeno",rev:reg.rev};
+  }
   if(!datosAplicar(reg))return {estado:"error"};
   return {estado:"traido",rev:reg.rev,recarga:true};
 }
@@ -7128,6 +7166,7 @@ async function cloudRestore(manual){
       j=await cloudApi("GET","/api/backup?v="+encodeURIComponent(buena.file));
       if(!backupTieneDatos(j)){window.alert("Esa versión tampoco trae datos. No se restauró nada.");return false;}
     }
+    if(!payloadDelEspacio(j))throw new Error("ese respaldo es de otro espacio de datos (sal de «ver como» para restaurarlo)");
     if(!restoreFromPayload(j))throw new Error("el respaldo no se pudo aplicar");
     // se vuelve a dejar el respaldo bueno como ÚLTIMO en el servidor: si no, la próxima carga se topa otra vez
     // con el vacío que lo pisó
@@ -7139,6 +7178,8 @@ async function cloudRestore(manual){
 /* al abrir la versión web con el navegador VACÍO (teléfono nuevo, navegador borrado): ofrece restaurar la nube */
 async function cloudBoot(){
   if(!cloudServerMode())return;
+  // la caja fuerte (el respaldo con SYNC_TOKEN) es del administrador y de SU espacio: a nadie más se le ofrece
+  if(!isAdmin()||verComoActivo())return;
   // NO se ofrece restaurar mientras la puerta de acceso siga abierta. Restaurar un respaldo es una acción de
   // quien ya entró; con la puerta del sitio retirada, un desconocido que abra la URL habría recibido un
   // window.prompt pidiéndole el token del servidor por encima de la pantalla de entrada. No filtraba nada
@@ -7924,17 +7965,17 @@ function cfgRender(){
   {const _ck=document.getElementById("cfgCmfKey");
    if(_ck)_ck.onchange=()=>{const v=(_ck.value||"").trim();
      if(!v)return;
-     CMF_KEY=v;try{localStorage.setItem("inv_cmf_key",v);}catch(e){}
+     CMF_KEY=v;try{localStorage.setItem(ck("inv_cmf_key"),v);}catch(e){}
      _ck.value="";
      mindFetch(true).then(()=>{render();cfgOpen();});   // se prueba de inmediato: si sirve, el IPC se actualiza solo
    };
    const _cc=document.getElementById("cfgCmfClr");
-   if(_cc)_cc.onclick=()=>{CMF_KEY="";try{localStorage.removeItem("inv_cmf_key");}catch(e){}cfgOpen();};
+   if(_cc)_cc.onclick=()=>{CMF_KEY="";try{localStorage.removeItem(ck("inv_cmf_key"));}catch(e){}cfgOpen();};
     if(v.aviso)window.alert(v.aviso);
     if(confirm("Fuente guardada:\n\n"+AUTOPX_URL+"\n\n¿Sincronizar los cierres ahora?"))autopxSync(true).finally(()=>cfgRender());else cfgRender();
   };
-  const _gh=q("#cfgGhTok");if(_gh)_gh.onchange=()=>{const v=(_gh.value||"").trim();if(!v)return;AUTOPX_GH=v;try{localStorage.setItem("inv_autopx_gh",AUTOPX_GH);}catch(e){}_gh.value="";cfgRender();window.alert("Token de GitHub guardado en este navegador.\n\nAhora «⚡ Forzar actualización» (en Datos) dispara la corrida y sincroniza de un clic.");};
-  const _ghc=q("#cfgGhClr");if(_ghc)_ghc.onclick=()=>{AUTOPX_GH="";try{localStorage.removeItem("inv_autopx_gh");}catch(e){}cfgRender();};
+  const _gh=q("#cfgGhTok");if(_gh)_gh.onchange=()=>{const v=(_gh.value||"").trim();if(!v)return;AUTOPX_GH=v;try{localStorage.setItem(ck("inv_autopx_gh"),AUTOPX_GH);}catch(e){}_gh.value="";cfgRender();window.alert("Token de GitHub guardado en este navegador.\n\nAhora «⚡ Forzar actualización» (en Datos) dispara la corrida y sincroniza de un clic.");};
+  const _ghc=q("#cfgGhClr");if(_ghc)_ghc.onclick=()=>{AUTOPX_GH="";try{localStorage.removeItem(ck("inv_autopx_gh"));}catch(e){}cfgRender();};
   const _sn=q("#cfgSyncNow");if(_sn)_sn.onclick=()=>{if(!AUTOPX_URL){window.alert("Primero configura la URL de la fuente automática (campo de abajo).");return;}_sn.disabled=true;_sn.textContent="⟳ Sincronizando…";autopxSync(true).finally(()=>{try{render();}catch(e){}cfgRender();});};
   const _if=q("#cfgIpsaFill");if(_if)_if.onclick=()=>{_if.disabled=true;_if.textContent="🧩 Trayendo historia…";
     ipsaBackfill(2).then(r=>{
@@ -7982,6 +8023,7 @@ function cfgRender(){
       const meta=await srvApi("GET","/api/data/meta");
       if(restoreFromPayload(reg.payload)){datosEstadoSet({uid:SESSION.id,rev:+meta.rev||0,pend:true});
         window.alert("Listo. Investor se recargará y quedará con la revisión "+v.rev+".");location.reload();}
+      else window.alert("Esa revisión no se puede traer: se guardó desde otro espacio de datos.");
     }catch(e){window.alert("No se pudo: "+srvErrorTexto(e));}};
   const _cpu=q("#cfgCloudPush");if(_cpu)_cpu.onclick=async()=>{try{const r=await cloudPush(true);window.alert("Respaldo guardado en la nube"+((r&&r.savedAt)?(" · "+new Date(r.savedAt).toLocaleString("es-CL")+" · "+(r.versions||1)+" versiones en el servidor"):"")+".");cfgRender();}catch(e){window.alert("No se pudo guardar en la nube: "+e.message);}};
   const _cpl=q("#cfgCloudPull");if(_cpl)_cpl.onclick=()=>cloudRestore(true);
@@ -7999,6 +8041,7 @@ function cfgRender(){
       if(!v.tieneDatos&&!window.confirm("Esa versión está VACÍA: restaurarla borraría lo que tengas en este navegador. ¿Seguro?"))return;
       if(v.tieneDatos&&!window.confirm("Restaurar la versión del "+(v.savedAt?new Date(v.savedAt).toLocaleString("es-CL"):"—")+"\n\nREEMPLAZA los datos de este navegador. ¿Continuar?"))return;
       const j=await cloudApi("GET","/api/backup?v="+encodeURIComponent(v.file));
+      if(!payloadDelEspacio(j))throw new Error("esa versión es de otro espacio de datos (sal de «ver como» para restaurarla)");
       if(!restoreFromPayload(j))throw new Error("el respaldo no se pudo aplicar");
       try{await cloudPush(false);}catch(e){}   // esa versión pasa a ser la última: la próxima carga no vuelve al vacío
       window.alert("Versión restaurada. Investor se recargará.");location.reload();
@@ -8292,7 +8335,7 @@ async function mindGetJson(url,ms){
    pública para tener el dato de verdad es el regulador, que pide una API key gratuita. La key se guarda
    SOLO en este navegador (⚙ Configuración → Datos) y se usa nada más para los indicadores que llegaron
    viejos: si no hay key, o si la respuesta no trae nada más nuevo, todo sigue funcionando igual. */
-let CMF_KEY=(function(){try{return localStorage.getItem("inv_cmf_key")||"";}catch(e){return "";}})();
+let CMF_KEY=(function(){try{return localStorage.getItem(ck("inv_cmf_key"))||"";}catch(e){return "";}})();
 const CMF_MAP={ipc:"ipc",uf:"uf",utm:"utm",dolar:"dolar",euro:"euro"};
 async function cmfSerie(rec,anio){
   const u="https://api.cmfchile.cl/api-sbifv3/recursos_api/"+rec+(anio?("/"+anio):"")+"?apikey="+encodeURIComponent(CMF_KEY)+"&formato=json";
@@ -10949,12 +10992,13 @@ function clientDelete(id){
   if(typed==null)return;
   if(typed.trim()!==(c.name||"").trim()){window.alert("El nombre no coincide. No se eliminó nada.");return;}
   try{if(typeof autobkSnapshot==="function")autobkSnapshot("antes de eliminar cliente");}catch(e){}
-  Object.keys(CLIENT_KEYS).forEach(k=>{try{localStorage.removeItem(k+"__"+id);}catch(e){}});
+  // la base de precios de «c_me» es la COMÚN (la usan todas las cuentas del navegador): no se borra con un cliente
+  Object.keys(CLIENT_KEYS).forEach(k=>{if(SHARED_KEYS[k]&&(USER_NS||id==="c_me"))return;try{localStorage.removeItem(ckc(k,id));}catch(e){}});
   CLIENTS=CLIENTS.filter(x=>x.id!==id);saveClients();
   if(activeClient===id){activeClient=CLIENTS[0].id;try{localStorage.setItem(nsk("inv_active_client"),activeClient);}catch(e){}clientLoad();}
   render();
 }
-function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=localStorage.getItem("pf_projects_v1__"+id);return v?JSON.parse(v):[];}catch(e){return [];}}
+function clientProjects(id){if(id===activeClient)return PROJECTS;try{const v=localStorage.getItem(ckc("pf_projects_v1",id));return v?JSON.parse(v):[];}catch(e){return [];}}
 function clientTotals(id){const ps=clientProjects(id)||[];let inv=0,val=0,gain=0;ps.forEach(p=>{try{const s=projSummary(p);inv+=s.invested;val+=s.value;gain+=(s.gain||0);}catch(e){}});return {inv,val,gain,pct:inv>0?gain/inv*100:0,n:ps.length};}   // la ganancia se suma por proyecto: "inv" es lo COMPRADO y valor − comprado dejaría fuera lo rescatado
 /* Resumen de gestión por cliente: aportado/retirado brutos, valor, ganancia y acciones distintas */
 function clientStats(id,opts){
@@ -10982,7 +11026,7 @@ function clientStats(id,opts){
   return {n:ps.length,withData,aportado,retirado,divs,ventas:retirado-divs,value,realized,unreal:gain-realized,gain,fees,gainNet,pct,ndistinct:Object.keys(tickers).length,beta:betaW>0?betaNum/betaW:0};
 }
 /* perfil de riesgo por cliente (namespaced) + chip visual */
-function clientProfile(id){if(id===activeClient)return invProfile;try{const v=localStorage.getItem("inv_profile_v1__"+id);return v?JSON.parse(v):null;}catch(e){return null;}}
+function clientProfile(id){if(id===activeClient)return invProfile;try{const v=localStorage.getItem(ckc("inv_profile_v1",id));return v?JSON.parse(v):null;}catch(e){return null;}}
 function riskChip(prof){
   if(!prof||!prof.label)return '<span class="risk-chip none">sin evaluar</span>';
   const cls=prof.cls||(prof.profile==="conservador"?"cons":prof.profile==="riesgoso"?"agr":"mod");
@@ -11083,7 +11127,7 @@ function lastKnownPrice(t,C){C=C||consolidatedSeries();const mp=C.tick[t];if(mp)
   const st=(typeof DATASET!=="undefined"&&DATASET==="import")?(STOCKS||[]).find(x=>x.t===t):null;
   return (st&&st.prices&&st.prices.length)?st.prices[st.prices.length-1]:"";}
 function lastKnownIpsa(C){C=C||consolidatedSeries();const ds=Object.keys(C.ipsaMap).sort();return ds.length?C.ipsaMap[ds[ds.length-1]]:(MKT&&MKT.last?MKT.last:8000);}
-function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;saveProjects();}else{try{localStorage.setItem("pf_projects_v1__"+cid,JSON.stringify(projs));}catch(e){saveWarn();}}}
+function clientSaveProjects(cid,projs){if(cid===activeClient){PROJECTS=projs;saveProjects();}else{try{localStorage.setItem(ckc("pf_projects_v1",cid),JSON.stringify(projs));}catch(e){saveWarn();}}}
 /* agrega un punto de valoración (precios de cierre) a TODOS los proyectos con seguimiento */
 function applyPlatformPrices(date,ipsa,priceMap){
   if(!validBaseDate(date))return {nProj:0,nCli:0,nSkip:0,invalid:true};   // fecha que no corresponde (fin de semana o futura): no se registra nada

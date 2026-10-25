@@ -279,6 +279,36 @@ function udEscribir(uid, payload, rev) {
   udPodar(uid);
   return reg;
 }
+/* ESPACIO DE DATOS. Cada estado sube marcado con el espacio del navegador del que salió (`_ns`: "" el del
+   administrador, el id de la cuenta para un inversionista). La versión anterior de la app armaba SIEMPRE el del
+   administrador —aunque entrara un inversionista—, así que la cuenta de un inversionista podía terminar
+   guardando la cartera del administrador. Lo que no calza con su cuenta se aparta en CUARENTENA (fuera de toda
+   ruta, sin borrarlo: sigue en el disco por si hiciera falta) y ya no se acepta. */
+const UD_CUARENTENA = path.join(UD_DIR, "cuarentena");
+function udNsDe(payload) { return (payload && typeof payload._ns === "string") ? payload._ns : null; }
+/* ¿este estado es de esta cuenta? Un administrador sin marca es de antes, y su espacio era justamente ese */
+function udCalza(u, payload) {
+  const ns = udNsDe(payload);
+  if (ns === null) return !!(u && u.role === "admin");
+  return ns === String((u && u.ns) || "");
+}
+function udCuarentenaDe(u) {
+  let n = 0;
+  if (!u || !UID_RE.test(String(u.id || ""))) return 0;
+  let arch = []; try { arch = fs.readdirSync(UD_DIR); } catch (e) { return 0; }
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  for (const f of arch) {
+    if (f !== u.id + ".json" && !(f.indexOf(u.id + ".v") === 0 && f.endsWith(".json"))) continue;
+    const j = leerJSON(path.join(UD_DIR, f), null);
+    if (!j || !j.payload || udCalza(u, j.payload)) continue;
+    try { fs.mkdirSync(UD_CUARENTENA, { recursive: true }); fs.renameSync(path.join(UD_DIR, f), path.join(UD_CUARENTENA, stamp + "-" + f)); n++; } catch (e) {}
+  }
+  if (n) registrar(null, "datos_en_cuarentena", { uid: u.id, archivos: n });
+  return n;
+}
+/* al arrancar: todas las cuentas. El administrador también se revisa (si antes fue inversionista, lo suyo
+   viene de otro espacio), pero lo que guardó sin marca siendo administrador es suyo y se queda. */
+function udCuarentenaTodo() { let n = 0; try { for (const u of usersLeer()) n += udCuarentenaDe(u); } catch (e) {} return n; }
 
 function leerJSON(f, porDefecto) { try { return JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return porDefecto; } }
 function escribirJSON(f, v) { try { const t = f + ".tmp"; fs.writeFileSync(t, JSON.stringify(v)); fs.renameSync(t, f); return true; } catch (e) { return false; } }
@@ -449,6 +479,13 @@ function atender(req, res) {
         try { j = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"); } catch (e) { return sendJSON(res, 400, { error: "JSON inválido" }); }
         const pl = j && j.payload;
         if (!pl || pl._app !== "portfolio-dashboard" || !pl.clients) return sendJSON(res, 400, { error: "no parecen datos de Investor" });
+        // tienen que ser de ESTA cuenta (udCalza). Una pestaña con la versión anterior —que armaba siempre el
+        // espacio del administrador— recibe el aviso de recargar, en vez de guardar datos ajenos
+        if (!udCalza(s.user, pl)) {
+          const sinMarca = udNsDe(pl) === null;
+          registrar(req, "datos_rechazados", { uid, motivo: sinMarca ? "sin_espacio" : "otro_espacio" });
+          return sendJSON(res, 400, { error: sinMarca ? "esta pestaña tiene una versión anterior de Investor: recárgala para guardar tus datos" : "esos datos son de otro espacio de usuario" });
+        }
         const act = udLeer(uid), rev = act.rev || 0;
         const base = +j.rev;
         // CONFLICTO: este equipo partió de una revisión que ya no es la última. Se rechaza en vez de pisar —
@@ -664,6 +701,8 @@ function atender(req, res) {
         if (j.activo != null) u.activo = !!j.activo;
         if (j.desbloquear) { u.intentos = 0; u.bloqueadoHasta = 0; }
         usersEscribir(us);
+        // cambió de papel → cambió de espacio de datos: lo guardado con el espacio anterior se aparta
+        if (antes.role !== u.role) udCuarentenaDe(u);
         // contraseña reseteada o cuenta suspendida: fuera todas sus sesiones (salvo la de quien hace el cambio)
         const cerradas = (nueva || u.activo === false) ? sesionesCerrarDe(u.id, ses.token) : 0;
         const cambios = [];
@@ -696,6 +735,15 @@ function atender(req, res) {
   if (p.startsWith("/api/")) {
     if (!TOKEN) return sendJSON(res, 503, { error: "SYNC_TOKEN no está configurado en el servidor (panel de Render → Environment)" });
     if (!authOK(req)) { registrar(req, "token_rechazado", { ruta: p, conToken: !!req.headers["x-investor-token"] }); return sendJSON(res, 401, { error: "token requerido o incorrecto (header x-investor-token)" }); }
+    // con cuentas en el servidor la caja fuerte es del ADMINISTRADOR: el token solo ya no basta. Quedaba guardado
+    // en el navegador —compartido, a veces— y abría el respaldo completo, con las carteras de todas las cuentas.
+    if (usersLeer().length) {
+      const s = sesionDe(req);
+      if (!s || s.user.role !== "admin") {
+        registrar(req, "acceso_denegado", { uid: s ? s.user.id : undefined, ruta: p, motivo: s ? "no_admin" : "sin_sesion" });
+        return sendJSON(res, s ? 403 : 401, { error: s ? "la caja fuerte es solo del administrador" : "la caja fuerte pide también la sesión del administrador" });
+      }
+    }
     if (p === "/api/backup/meta" && req.method === "GET") return sendJSON(res, 200, backupMeta());
     /* HISTORIAL: las versiones guardadas en el disco, de la más nueva a la más vieja, con lo que trae cada
        una. Es el camino de vuelta cuando el último respaldo quedó vacío. */
@@ -750,8 +798,10 @@ function atender(req, res) {
   return sendJSON(res, 404, { error: "no encontrado" });
 }
 
+const _cuarentena = udCuarentenaTodo();
 server.listen(PORT, () => {
   console.log("Investor sirviendo en :" + PORT);
+  if (_cuarentena) console.log("  ⚠ datos apartados  : " + _cuarentena + " archivo(s) que no eran del espacio de su cuenta (userdata/cuarentena)");
   console.log("  disco de respaldos : " + DATA_DIR + (process.env.DATA_DIR ? " (persistente)" : " (local, solo pruebas)"));
   console.log("  SYNC_TOKEN         : " + (TOKEN ? "configurado" : "⚠ FALTA (la API de respaldos responderá 503)"));
   console.log("  acceso             : sesión interna de Investor (sin diálogo Basic Auth del navegador)");
