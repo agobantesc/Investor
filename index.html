@@ -3954,7 +3954,10 @@ function viewInvActive(){
   try{const _shMap={};if(IM)IM.perStock.forEach(x=>{_shMap[x.hd.t]=x.sh;});
     PF.holdings.forEach(h=>{const hasTrade=(PF.weeks||[]).some(w=>w.ev&&w.ev.t===h.t);const hasQty=(PF.weeks||[]).some(w=>w.qty&&(+w.qty[h.t]||0)>0);_rmSafe[h.t]=!hasTrade&&!hasQty&&((_shMap[h.t]||0)<=1e-6);});}catch(e){}
   const _rmBtn=hd=>_rmSafe[hd.t]?`<button class="wbtn del" data-holdrm="${hd.t}" title="Quitar ${hd.t} de la cartera · no la compraste (0 acciones)" style="color:var(--red);border-color:var(--red-line);margin-left:6px">✕</button>`:"";
-  const priceInputs=PF.holdings.map(hd=>{if(compraMode){return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">obj ${fmtCLP(PF.amount*hd.w)}</span></div><div class="simw" style="gap:5px"><span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px">ACCIONES</span>${mntInput({cls:"qinp",data:{qt:hd.t},val:qv(hd.t),sym:"",ph:"cantidad",style:"width:80px",aria:"Cantidad de acciones de "+hd.t})}<span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px;margin-left:8px">MONTO $</span>${mntInput({cls:"minp",data:{mt:hd.t},val:mv(hd.t),ph:"total invertido",style:"width:110px",aria:"Monto invertido en "+hd.t})}${_rmBtn(hd)}</div></div>`;}return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">${hd.n}</span></div><div class="simw"><span>$</span>${mntInput({cls:"pinp",data:{pt:hd.t},val:pv(hd.t),dec:2,ph:"cierre",aria:"Precio de cierre de "+hd.t})}${_rmBtn(hd)}</div></div>`;}).join("");
+  // LA COMPRA INICIAL son las acciones de su qty: al editarla, una acción incorporada DESPUÉS (en Operar) no se
+  // pide — exigirla obligaba a inventarle una compra inicial y esa acción quedaba contada dos veces
+  const _ctk=compraTks();
+  const priceInputs=PF.holdings.map(hd=>{if(compraMode&&_ctk.indexOf(hd.t)<0){return `<div class="simrow"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">se incorporó después de la compra inicial · se edita en su operación del Historial</span></div></div>`;}if(compraMode){return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">obj ${fmtCLP(PF.amount*hd.w)}</span></div><div class="simw" style="gap:5px"><span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px">ACCIONES</span>${mntInput({cls:"qinp",data:{qt:hd.t},val:qv(hd.t),sym:"",ph:"cantidad",style:"width:80px",aria:"Cantidad de acciones de "+hd.t})}<span style="color:var(--faint);font-size:10px;font-weight:800;letter-spacing:.3px;margin-left:8px">MONTO $</span>${mntInput({cls:"minp",data:{mt:hd.t},val:mv(hd.t),ph:"total invertido",style:"width:110px",aria:"Monto invertido en "+hd.t})}${_rmBtn(hd)}</div></div>`;}return `<div class="simrow on"><div style="display:flex;align-items:center;gap:8px;min-width:0"><span class="dot" style="background:${hd.c}"></span><b style="color:${hd.c}">${hd.t}</b><span class="simsec">${hd.n}</span></div><div class="simw"><span>$</span>${mntInput({cls:"pinp",data:{pt:hd.t},val:pv(hd.t),dec:2,ph:"cierre",aria:"Precio de cierre de "+hd.t})}${_rmBtn(hd)}</div></div>`;}).join("");
   const freqBar=card("Periodicidad de registro","Cambia cada cuánto registras los precios. Al pasar a una periodicidad mayor (ej. diario→semanal), reorganizo tus registros previos conservando uno por período.",`<div class="pbtns">`+[["diario","Diario"],["semanal","Semanal"],["mensual","Mensual"]].map(([k,l])=>`<button class="pbtn ${(PF.freq||"diario")===k?"on":""}" data-setfreq="${k}">${l}</button>`).join("")+`</div>`);
   const _edQue=editIdx===0?"la compra inicial":(ed&&ed.ev?("la operación del "+ed.date):("el registro del "+(ed?ed.date:"")));
   const ftitle=editing?("Editar "+(editIdx===0?"compra inicial":(ed&&ed.ev?"operación del ":"registro del ")+(ed?ed.date:""))):(isFirst?"Registrar compra ("+fr.u+" inicial)":"Ingresar "+fr.u+" "+WEEKS.length);
@@ -4257,7 +4260,12 @@ function viewInvActive(){
     const iniSubs=_ini.map(b=>`<tr style="background:var(--soft)"><td style="border-left:3px solid #7C3AED55"></td><td colspan="7" style="font-size:11.5px;color:var(--muted)"><span class="badge" style="font-size:8px;color:#7C3AED;background:#7C3AED14;border:1px solid #7C3AED33;margin-right:7px">Compra</span>Compra ${b.t} · ${(+b.shares).toLocaleString("es-CL",{maximumFractionDigits:2})} × ${fmtP(b.price)} = ${fmtCLP(Math.round(b.monto))}</td><td class="r" style="white-space:nowrap"><button class="wbtn" data-edit="0" title="Editar la compra inicial (todas sus acciones se corrigen juntas)">✎</button></td></tr>`).join("")
       +(_ini.length>1?`<tr style="background:var(--soft)"><td style="border-left:3px solid #7C3AED55"></td><td colspan="7" style="font-size:11px;color:var(--faint);font-weight:700">Total de la compra inicial · ${_ini.length} acciones · ${fmtCLP(Math.round(_iniTot))}</td><td></td></tr>`:"");
     return main+iniSubs+subs;}).join("");
-  const tbl=card("Historial de seguimiento",_grp.length+" día"+(_grp.length>1?"s":"")+" · las operaciones del día van como sub-filas (✎ individual) · la Δ del día ya netea los aportes · guardado en este navegador",{html:`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
+  // RED DE SEGURIDAD: datos de una versión anterior que dejaba un registro antes de la compra inicial. Con ese
+  // orden las cantidades se reconstruyen desde los montos y nada de lo que sigue cuadra: se dice, en vez de
+  // mostrar cifras que no son.
+  const _iq=WEEKS.findIndex(w=>w.qty);
+  const _aviso0=(_iq>0)?`<div class="note" style="margin:10px 12px;border-color:var(--red-line);background:var(--redbg);color:var(--red)">⚠ El primer registro (${fD(WEEKS[0].date)}) es anterior a la compra inicial (${fD(WEEKS[_iq].date)}): con ese orden las cantidades de la cartera no cuadran. Corrige la fecha de ese registro (✎) o elimínalo.</div>`:"";
+  const tbl=card("Historial de seguimiento",_grp.length+" día"+(_grp.length>1?"s":"")+" · las operaciones del día van como sub-filas (✎ individual) · la Δ del día ya netea los aportes · guardado en este navegador",{html:_aviso0+`<div class="tw"><table><thead><tr><th>${fr.uc}</th><th>Fecha</th><th class="r">Valor cartera</th><th class="r">Δ ${fr.u} Port.</th><th class="r">Δ ${fr.u} IPSA</th><th class="r">Ret. acum.</th><th class="r">IPSA acum.</th><th class="r">Dif. acum.</th><th class="r">Acciones</th></tr></thead><tbody>${rows}</tbody></table></div>`,flush:true});
   // σ y E(R) son los de la COMPOSICIÓN vigente de la cartera (projSyncReal los recalcula desde los pesos
   // reales con el análisis del sistema): cambiar de acciones cambia el VaR, no solo el patrimonio.
   const _z=RISK_Z[riskConf]||1.6449;
@@ -4337,7 +4345,8 @@ function viewInvActive(){
 function compraPreview(){
   if(!PF)return "";let tot=0;
   let medPE=null;try{medPE=(typeof fairPE==="function")?fairPE(true):null;}catch(e){}   // P/U de referencia una vez (no por acción)
-  const rows=PF.holdings.map(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?(mntNum(me)||0):0,q=qe?(mntNum(qe)||0):0,p=(q>0&&m>0)?m/q:0;tot+=m;const obj=PF.amount*hd.w,d=m-obj;
+  const _ctk=compraTks();
+  const rows=PF.holdings.filter(hd=>_ctk.indexOf(hd.t)>=0).map(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?(mntNum(me)||0):0,q=qe?(mntNum(qe)||0):0,p=(q>0&&m>0)?m/q:0;tot+=m;const obj=PF.amount*hd.w,d=m-obj;
     let iv=null;try{iv=(typeof intrinsicValue==="function")?intrinsicValue(hd.t,{beta:hd.b,medPE}):null;}catch(e){}
     return {hd,m,q,p,obj,d,iv};});
   const dT=tot-PF.amount;
@@ -4798,10 +4807,22 @@ function attachInv(){
     const compraMode=(WEEKS.length===0||editIdx===0);
     const prices={};let ok=true,qty=null;
     // campos de dinero: SIEMPRE con mntNum. Con parseFloat, un "1.200.000" formateado se leería como 1,2.
-    if(compraMode){qty={};PF.holdings.forEach(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?mntNum(me):NaN,q=qe?mntNum(qe):NaN;if(!m||m<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=m/q;}});}   // precio DERIVADO = monto/cantidad (cuadra al peso con la corredora)
+    if(compraMode){qty={};const _ctk=compraTks();PF.holdings.filter(hd=>_ctk.indexOf(hd.t)>=0).forEach(hd=>{const me=document.querySelector('.minp[data-mt="'+hd.t+'"]'),qe=document.querySelector('.qinp[data-qt="'+hd.t+'"]');const m=me?mntNum(me):NaN,q=qe?mntNum(qe):NaN;if(!m||m<=0||!q||q<=0)ok=false;else{qty[hd.t]=q;prices[hd.t]=m/q;}});}   // precio DERIVADO = monto/cantidad (cuadra al peso con la corredora)
     else{PF.holdings.forEach(hd=>{const el=document.querySelector('.pinp[data-pt="'+hd.t+'"]');const v=el?mntNum(el):NaN;if(!v||v<=0)ok=false;else prices[hd.t]=v;});}
     const dEl=document.getElementById("wdate"),date=dEl&&dEl.value?dEl.value:localDay();
     if(fechaEnElFuturo(date)){avisaFechaFutura(date);return;}
+    // NINGÚN REGISTRO ANTES DE LA COMPRA INICIAL (la regla de Operar, que el editor no aplicaba): al ordenar, ese
+    // registro pasaba a ser weeks[0] —de donde salen las CANTIDADES— y la cartera se volvía a sembrar desde los
+    // montos, con todo lo que sigue mal contado y sin aviso.
+    if(!compraMode&&WEEKS.length&&date<WEEKS[0].date){avisaFechaAnterior(date);return;}
+    // y la COMPRA no puede quedar después de lo que vino tras ella: una operación anterior a la nueva fecha lo
+    // impide (hay que corregirla primero); los cierres diarios de antes de comprar no son de la cartera y se quitan
+    let _quitar=[];
+    if(compraMode&&editIdx===0&&WEEKS.length>1){
+      const _antes=WEEKS.slice(1).filter(w=>w.date<date),_op=_antes.find(w=>w.ev);
+      if(_op){alert("La compra inicial no puede quedar el "+fD(date)+": hay una operación anterior, del "+fD(_op.date)+".\n\nLa compra inicial es el punto de partida de la cartera. Corrige o elimina primero esa operación y vuelve a guardar.");return;}
+      if(_antes.length){if(!confirm("Mover la compra inicial al "+fD(date)+" deja "+_antes.length+" registro(s) diario(s) antes de la compra: son cierres de cuando aún no tenías las acciones y se quitan.\n\n¿Continuar?"))return;_quitar=_antes;}
+    }
     let ipsa;
     if(compraMode){
       // compra inicial: el IPSA se toma de la base as-of la fecha (el usuario ya no lo ingresa). Fallbacks:
@@ -4857,18 +4878,26 @@ function attachInv(){
       // corregir a mano el cierre del papel recién comprado NO SERVÍA DE NADA: no se propagaba, no se
       // anclaba, y volvía a quedar el precio de la orden. Ahora un precio que el usuario cambió es un
       // cierre manual, con o sin operación ese día.
-      const _chg={};PF.holdings.forEach(hd=>{const nv=rec.prices[hd.t];const ov=_owPrices[hd.t];if(nv>0&&isFinite(nv)&&nv!==ov)_chg[hd.t]=nv;});
+      // el campo muestra el precio a 2 decimales: un precio guardado con más (los derivados de una orden,
+      // monto/cantidad) NO es una corrección si el usuario no lo tocó — antes se anclaba en la base como cierre
+      // manual un valor que nunca fue cierre. Lo que no cambió conserva lo guardado, con todos sus decimales.
+      const _r2=x=>Math.round((+x)*100)/100;
+      const _chg={};PF.holdings.forEach(hd=>{const nv=rec.prices[hd.t];const ov=_owPrices[hd.t];
+        if(ov>0&&nv>0&&_r2(nv)===_r2(ov)){rec.prices[hd.t]=ov;return;}
+        if(nv>0&&isFinite(nv)&&nv!==ov)_chg[hd.t]=nv;});
       if(Object.keys(_chg).length){
         // un cierre puesto a mano ES un cierre real: se marca fresh para que cuente como tal (Δ del día,
         // valorización de lo comprado hoy) en vez de seguir tratándose como arrastre
         rec.fresh=rec.fresh||[];Object.keys(_chg).forEach(t=>{if(rec.fresh.indexOf(t)<0)rec.fresh.push(t);});
-        WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date){w.prices=w.prices||{};w.fresh=w.fresh||[];
+        // a TODOS los registros de la fecha menos la compra inicial: sus precios son lo que pagaste (el costo)
+        WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date&&!w.qty){w.prices=w.prices||{};w.fresh=w.fresh||[];
           Object.keys(_chg).forEach(t=>{w.prices[t]=_chg[t];if(w.fresh.indexOf(t)<0)w.fresh.push(t);});}});
         try{pricedbUpsertDay(rec.date,null,_chg);}catch(e){}
       }
       // CORRECCIÓN MANUAL DEL IPSA del día: se marca como cierre real (ipsaFresh), se propaga a los otros
       // registros de la fecha y se ANCLA en la base (ipsaPin) para que la sincronización automática no la
       // deshaga — el caso exacto que reportó el usuario: la fuente no trajo el IPSA y él lo cuadró a mano.
+      if(_owIpsa>0&&rec.ipsa>0&&_r2(rec.ipsa)===_r2(_owIpsa))rec.ipsa=_owIpsa;
       if(rec.ipsa>0&&isFinite(rec.ipsa)&&rec.ipsa!==_owIpsa){
         rec.ipsaFresh=true;
         WEEKS.forEach((w,wi)=>{if(wi!==editIdx&&w.date===rec.date){w.ipsa=rec.ipsa;w.ipsaFresh=true;}});
@@ -4876,6 +4905,10 @@ function attachInv(){
       }
     }
     if(editIdx!=null){WEEKS[editIdx]=rec;editIdx=null;}else{WEEKS.push(rec);}
+    if(_quitar.length){for(let i=WEEKS.length-1;i>0;i--)if(_quitar.indexOf(WEEKS[i])>=0)WEEKS.splice(i,1);}
+    // cambiar una FECHA reordena ya (no en la próxima sincronización): orden cronológico estable, y como nada
+    // puede quedar antes de la compra inicial, ella sigue primera
+    WEEKS.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
     // la ponderación ejecutada (acciones enteras a precio de mercado) no calza exacto con la simulada:
     // al registrar/editar la COMPRA, la simulación del proyecto pasa a reflejar los pesos REALES.
     if(wasCompra&&qty){try{projSyncReal(PF);}catch(e){}}
@@ -4885,11 +4918,16 @@ function attachInv(){
       projSyncReal(PF);
       rec.ev.erCapm=PF.erCapm;rec.ev.bp=PF.bp;   // re-sella el CAPM/β vigentes desde esta operación (curva "Esperado CAPM")
     }catch(e){}}
+    // un registro que cambió de fecha trae los precios de la fecha anterior: se revalorizan YA con los cierres de
+    // la base (la compra inicial no se toca: sus precios son el costo)
+    try{pricedbApplyToProjects();}catch(e){}
     saveProjects();render();
   };
   document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editIdx=+b.dataset.edit;page="ingreso";render();});
   document.querySelectorAll("[data-holdrm]").forEach(b=>b.onclick=(e)=>{e.preventDefault();holdingRemove(b.dataset.holdrm);});
-  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;const _ev=WEEKS[i]&&WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra"):_ev.kind==="div"?"dividendo":"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";if(window.confirm(_msg)){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;if(_ev){try{projSyncReal(PF);}catch(e){}}saveProjects();render();}});
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const i=+b.dataset.del;
+    if(i===0&&WEEKS.length>1){window.alert("La compra inicial es el punto de partida de la cartera: fija cuántas acciones tienes de cada papel. No se puede eliminar mientras haya registros después de ella.\n\nPara corregirla, edítala (✎). Para empezar de cero, elimina el proyecto.");return;}
+    const _ev=WEEKS[i]&&WEEKS[i].ev;const _msg=_ev?("⚠ Este registro es una OPERACIÓN ("+(_ev.kind==="inject"?"aporte de capital":_ev.kind==="trade"?(_ev.side==="sell"?"venta":"compra"):_ev.kind==="div"?"dividendo":"rebalanceo")+"): eliminarlo también elimina la operación (acciones y flujo de caja) del seguimiento y la contabilidad.\n\n¿Eliminar de todas formas?"):"¿Eliminar este registro diario?";if(window.confirm(_msg)){WEEKS.splice(i,1);if(editIdx===i)editIdx=null;else if(editIdx!=null&&editIdx>i)editIdx--;if(_ev){try{projSyncReal(PF);}catch(e){}}saveProjects();render();}});
   document.querySelectorAll("[data-godatos]").forEach(b=>b.onclick=()=>{modulo="datos";page=b.dataset.godatos;render();});
   document.querySelectorAll("[data-invtab]").forEach(b=>b.onclick=()=>{page=b.dataset.invtab;render();});
   document.querySelectorAll("[data-gomod]").forEach(b=>b.onclick=()=>{modulo=b.dataset.gomod;if(modulo==="proyectos")page="hub";render();});
@@ -7233,7 +7271,7 @@ function pricedbSeedDemo_OLD(){
 /* guarda en la base los CIERRES de los proyectos (no las operaciones); idempotente, no pisa lo existente */
 function pricedbIngestProjects(){
   try{let n=0;(PROJECTS||[]).forEach(p=>{(p.weeks||[]).forEach(w=>{
-    if(w.ev)return;   // semana de OPERACIÓN (compra/venta/aporte): contabilidad, nunca alimenta la base de precios
+    if(w.ev||w.qty)return;   // OPERACIÓN o COMPRA INICIAL: contabilidad (el precio de tu orden y un IPSA as-of), nunca alimenta la base de precios
     if(!isTradingDay(w.date))return;   // no ingresa días no hábiles a la base
     if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false&&PRICEDB.ipsa[w.date]==null){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}   // no ingiere IPSA arrastrado a la base
     const fresh=w.fresh;   // no copiar a la base los precios arrastrados (carry-forward); solo los cierres reales de ese día
@@ -7405,6 +7443,13 @@ function pricedbApplyToProjects(){
       if(ipBase!=null&&!_ipPin[baseDate]){(exIdx[baseDate]||[]).forEach(wi=>{const w=ws[wi];
         if(w.ipsa!==ipBase){w.ipsa=ipBase;w.ipsaFresh=true;pts++;}
         else if(w.ipsaFresh!==true){w.ipsaFresh=true;pts++;}});}
+      // las OPERACIONES del día de la compra inicial se valorizan a lo que costó, como la compra misma: el día 0
+      // es la base del TWR (patrimonio inicial = lo pagado). Llevaban cierres del día —o el precio de la compra
+      // tomado como cierre— y el TWR quedaba sesgado para siempre. Idempotente; los precios de compra no cambian.
+      (exIdx[baseDate]||[]).forEach(wi=>{if(wi===0)return;const w=ws[wi];if(!w.ev)return;let ch=false;
+        w.prices=w.prices||{};Object.keys(basePrices).forEach(t=>{if(w.prices[t]!==basePrices[t]){w.prices[t]=basePrices[t];ch=true;}});
+        if(!w.fresh||w.fresh.length){w.fresh=[];ch=true;}
+        if(ch)pts++;});
       allDates.forEach(D=>{if(D<=baseDate)return;
         if(!held.some(t=>px[t]&&px[t][D]!=null))return;
         const ip=pdAsOf(ipsaM,ik,D);
@@ -8531,6 +8576,14 @@ function fechaAntesDeLaCompra(d){
   try{const b=(PF&&PF.weeks&&PF.weeks.length)?PF.weeks[0].date:null;
     return !!(b&&d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&d<b);}catch(e){return false;}
 }
+/* las acciones de la COMPRA INICIAL. Al editarla: las de su qty (una acción incorporada después en Operar no es
+   parte de ella). Al registrarla por primera vez, o en un registro antiguo sin qty: todas las de la cartera. */
+function compraTks(){
+  if(!PF)return [];
+  const w0=(PF.weeks&&PF.weeks.length)?PF.weeks[0]:null,todas=(PF.holdings||[]).map(h=>h.t);
+  if(w0&&w0.qty&&editIdx===0){const r=todas.filter(t=>(+w0.qty[t]||0)>0);if(r.length)return r;}
+  return todas;
+}
 function avisaFechaAnterior(d){
   const b=(PF&&PF.weeks&&PF.weeks.length)?PF.weeks[0].date:"";
   window.alert("La fecha "+fD(d)+" es anterior al inicio de la cartera ("+fD(b)+").\n\nLa compra inicial es la que fija cuántas acciones tienes de cada papel; una operación anterior dejaría a la cartera sin ese punto de partida y las cantidades se contarían dos veces.\n\nSi de verdad compraste antes, corrige la FECHA de la compra inicial en el Historial y vuelve a registrar esta operación.");
@@ -8587,11 +8640,18 @@ function opDo(){
   // El desajuste que esto provocaba —comprar a un precio distinto del último cierre— se resuelve donde
   // corresponde, en invMetrics: las acciones compradas/vendidas HOY, mientras no haya cierre real de hoy, se
   // valorizan a su PRECIO DE TRANSACCIÓN, así el aporte y el valor cuadran y el día no fabrica rentabilidad.
+  // EL DÍA DE LA COMPRA INICIAL se valoriza a lo que costó: es la base del TWR (patrimonio inicial = lo pagado).
+  // Con cierres, lo que ya tenías quedaba a precio de cierre y lo operado al de la compra como si fuera cierre: el
+  // día 0 no cuadraba con lo pagado y el sesgo seguía en toda la serie. (pricedbApplyToProjects aplica lo mismo.)
+  const _dia0=!!(PF.weeks.length&&date===PF.weeks[0].date);
+  if(_dia0){const _m=PF.weeks.filter(w=>w.date===date);basePrices=(_m[_m.length-1]||{}).prices||basePrices;}
   const prices=Object.assign({},basePrices);
   const fresh=[];let _ipFresh=false;
   try{const C=consolidatedSeries();if(C){
-    PF.holdings.forEach(h=>{const mp=C.tick[h.t];if(mp&&mp[date]!=null){prices[h.t]=mp[date];if(fresh.indexOf(h.t)<0)fresh.push(h.t);}});
-    const mpt=C.tick[t];if(mpt&&mpt[date]!=null){prices[t]=mpt[date];if(fresh.indexOf(t)<0)fresh.push(t);}
+    if(!_dia0){
+      PF.holdings.forEach(h=>{const mp=C.tick[h.t];if(mp&&mp[date]!=null){prices[h.t]=mp[date];if(fresh.indexOf(h.t)<0)fresh.push(h.t);}});
+      const mpt=C.tick[t];if(mpt&&mpt[date]!=null){prices[t]=mpt[date];if(fresh.indexOf(t)<0)fresh.push(t);}
+    }
     if(C.ipsaMap&&C.ipsaMap[date]!=null){ipsa=C.ipsaMap[date];_ipFresh=true;}
   }}catch(e){}
   if(fresh.indexOf(t)<0&&p>0&&!(prices[t]>0))prices[t]=p;   // posición nueva sin ningún precio conocido: se siembra (pero NO es un cierre)
@@ -8623,6 +8683,10 @@ function opDo(){
       }
     }
   }catch(e){}
+  // COMPRA CON FECHA PASADA de una acción nueva: los registros posteriores ya existían y no traen su precio, así
+  // que quedaba valorizada al precio de la compra (patrimonio inflado) hasta la próxima sincronización. Se les
+  // ponen ya los cierres reales de la base.
+  try{pricedbApplyToProjects();}catch(e){}
   saveProjects();
   opState={pid:activeId,side:"buy",tkr:null,qty:"",price:"",date:""};
   render();
@@ -8640,10 +8704,13 @@ function opDoDiv(t,m,date){
   let basePrices=last?last.prices:{},ipsa=last?last.ipsa:1;
   const sameIdx=PF.weeks.findIndex(w=>w.date===date&&!w.ev&&!w.qty);   // el registro con `qty` (la compra inicial) jamás se borra: ver opDo
   if(sameIdx>=0){const sw=PF.weeks[sameIdx];basePrices=sw.prices||basePrices;if(sw.ipsa!=null)ipsa=sw.ipsa;PF.weeks.splice(sameIdx,1);}
+  // el día de la compra inicial, a lo que costó (ver opDo)
+  const _dia0=!!(PF.weeks.length&&date===PF.weeks[0].date);
+  if(_dia0){const _m=PF.weeks.filter(w=>w.date===date);basePrices=(_m[_m.length-1]||{}).prices||basePrices;}
   const prices=Object.assign({},basePrices);
   const fresh=[];let _ipFresh=false;
   try{const C=consolidatedSeries();if(C){
-    PF.holdings.forEach(h=>{const mp=C.tick[h.t];if(mp&&mp[date]!=null){prices[h.t]=mp[date];if(fresh.indexOf(h.t)<0)fresh.push(h.t);}});
+    if(!_dia0)PF.holdings.forEach(h=>{const mp=C.tick[h.t];if(mp&&mp[date]!=null){prices[h.t]=mp[date];if(fresh.indexOf(h.t)<0)fresh.push(h.t);}});
     if(C.ipsaMap&&C.ipsaMap[date]!=null){ipsa=C.ipsaMap[date];_ipFresh=true;}
   }}catch(e){}
   const _wk={date,prices,ipsa,fresh,ev:{kind:"div",t,amount:Math.round(m)}};if(_ipFresh)_wk.ipsaFresh=true;
@@ -11059,7 +11126,10 @@ function consolidatedSeries(){
   allTrackedProjects().forEach(({p})=>{
     (p.holdings||[]).forEach(hd=>{names[hd.t]=hd.n||names[hd.t]||hd.t;cols[hd.t]=cols[hd.t]||hd.c||"#1E5FD1";});
     (p.weeks||[]).forEach(w=>{
-      if(w.ev)return;   // semana de OPERACIÓN (compra/venta/aporte): es CONTABILIDAD, no un cierre de mercado → nunca alimenta la serie del índice ni de precios (evita días fantasma como un 29/06 arrastrado)
+      // la COMPRA INICIAL (qty) tampoco: sus precios son lo que pagaste (monto/cantidad), no cierres. Superpuesta,
+      // reemplazaba el cierre real de ese día en la ficha, el ranking y el informe, y una operación del mismo día
+      // se valorizaba al precio de la compra como si fuera cierre (TWR sesgado desde el día 0)
+      if(w.ev||w.qty)return;   // semana de OPERACIÓN (compra/venta/aporte): es CONTABILIDAD, no un cierre de mercado → nunca alimenta la serie del índice ni de precios (evita días fantasma como un 29/06 arrastrado)
       if(!isTradingDay(w.date))return;   // solo días hábiles en la serie de mercado
       if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false)ipsaMap[w.date]=w.ipsa;   // no superpone IPSA arrastrado (cierre sin valor real del índice)
       const fresh=w.fresh;   // si el cierre marcó qué tickers son REALES de ese día, ignora los arrastrados (carry-forward) para no generar retornos 0% espurios
