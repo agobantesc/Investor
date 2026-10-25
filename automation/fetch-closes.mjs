@@ -10,6 +10,7 @@
  */
 import { writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { TICKERS } from "./tickers.mjs";   // universo IPSA compartido con fetch-fundamentals.mjs
+import { depurarDiasCorruptos } from "./dias-corruptos.mjs";   // días "pico y vuelta" y órdenes de borrado
 const IPSA_SYMBOL = "^IPSA";
 /* EL IPSA CAMBIÓ DE PROVEEDOR. Desde el 01-09-2026 la Bolsa de Santiago publica el IPSA calculado por MSCI
    ("MSCI IPSA INDEX", Yahoo MXIPSAGC.SN · TradingView BCS:MXIPSAGC) en lugar del S&P/CLX IPSA, cuyo último
@@ -79,8 +80,11 @@ const errors = [];
 // backfill, y un backfill (2y) borraba los valores diarios del IPSA que Yahoo solo entrega el mismo día.
 // Lo nuevo manda por celda (acción × fecha); lo que la corrida no trae, se conserva.
 const synthLoaded = {};   // fecha -> IPSA sintético heredado del archivo: NUNCA se trata como oficial, se recalcula abajo
+const borrarPrev = {};    // fecha -> {modo, desde}: órdenes de borrado vigentes del archivo previo (ver "DÍA CORRUPTO")
 try {
   const prev = JSON.parse(readFileSync("data/closes.json", "utf8"));
+  for (const [f, modo] of Object.entries(prev.borrar || {})) if (/^\d{4}-\d{2}-\d{2}$/.test(f) && (modo === "precios" || modo === "todo"))
+    borrarPrev[f] = { modo, desde: (prev.borrarDesde && /^\d{4}-\d{2}-\d{2}$/.test(prev.borrarDesde[f] || "")) ? prev.borrarDesde[f] : (prev.updatedAt || "").slice(0, 10) || null };
   for (const d of prev.days || []) {
     if (!d || !d.date) continue;
     const e = (byDate[d.date] ??= { date: d.date, prices: {} });
@@ -668,6 +672,7 @@ if (nCalco) {
    Sin confirmación de la segunda fuente no se toca nada. Cada cambio queda en ajustesDeFuente (fuente
    "consenso WSJ+Yahoo60m"). Cubre el último año. */
 const CONS_LOG = { rellenos: 0, correcciones: 0, diasNuevos: 0, sinConfirmar: 0, fuentes: {} };
+let CONS_W = {}, CONS_Y = {};   // las dos series del consenso, para que el detector de días corruptos respete lo confirmado
 {
   const ET = "cecc4267a0194af89ca343805a3e57af";
   const wsj = async code => {
@@ -695,6 +700,7 @@ const CONS_LOG = { rellenos: 0, correcciones: 0, diasNuevos: 0, sinConfirmar: 0,
     await new Promise(r => setTimeout(r, 120));
   }
   CONS_LOG.fuentes = { wsj: Object.keys(W).length, yahoo60m: Object.keys(Y).length };
+  CONS_W = W; CONS_Y = Y;
   const hoySc = new Date().toLocaleDateString("en-CA", { timeZone: "America/Santiago" });
   const desde = new Date(Date.now() - 365 * 86400e3).toISOString().slice(0, 10);
   const byD = Object.fromEntries(days.map(d => [d.date, d]));
@@ -727,36 +733,14 @@ const CONS_LOG = { rellenos: 0, correcciones: 0, diasNuevos: 0, sinConfirmar: 0,
   console.log(`CONSENSO de cierres (WSJ ${CONS_LOG.fuentes.wsj}/${Object.keys(TICKERS).length} · Yahoo-60m ${CONS_LOG.fuentes.yahoo60m}): ${CONS_LOG.rellenos} celda(s) rellenada(s), ${CONS_LOG.correcciones} corregida(s), ${CONS_LOG.diasNuevos} día(s) hábil(es) recuperado(s), ${CONS_LOG.sinConfirmar} sin confirmar (no se tocan).`);
 }
 
-/* DÍA CORRUPTO ("pico y vuelta"): muchas acciones saltan >4% un día y lo devuelven >4% al siguiente,
-   con el mercado tranquilo. Ninguna rueda real hace eso en bloque; es una foto mala del upstream. Caso real:
-   01-09-2026, nueve acciones a la vez (SQM-B −13,9% y vuelta, CAP +13,8% y vuelta, RIPLEY −9,0%…) mientras
-   el índice se movía +0,6%. Con ≥5 acciones así, NINGÚN precio de ese día es confiable: el día se descarta
-   entero (el IPSA de ese día también, salvo que sea oficial) y queda registrado en `borrar` para que la app
-   lo quite de las bases locales que ya lo tenían. */
-const PICO_MIN_ACC = 5, PICO_UMBRAL = 0.04;
-const borrar = {};
-{
-  const conPx = days.map((d, i) => i).filter(i => Object.keys(days[i].prices || {}).length >= 8);
-  const malos = [];
-  for (let k = 1; k < conPx.length - 1; k++) {
-    const a = days[conPx[k - 1]].prices, b = days[conPx[k]].prices, c = days[conPx[k + 1]].prices;
-    const raros = [];
-    for (const t in b) {
-      if (!(a[t] > 0 && c[t] > 0)) continue;
-      const r1 = b[t] / a[t] - 1, r2 = c[t] / b[t] - 1;
-      if (Math.abs(r1) > PICO_UMBRAL && Math.abs(r2) > PICO_UMBRAL && Math.sign(r1) !== Math.sign(r2) && Math.abs(c[t] / a[t] - 1) < Math.abs(r1) / 2) raros.push(t);
-    }
-    if (raros.length >= PICO_MIN_ACC) malos.push([conPx[k], raros]);
-  }
-  for (const [i, raros] of malos) {
-    const d = days[i];
-    borrar[d.date] = d.ipsaOfi ? "precios" : "todo";
-    console.log(`Día CORRUPTO descartado: ${d.date} — ${raros.length} acciones con pico y vuelta (${raros.join(", ")}).`);
-    d.prices = {};
-    if (!d.ipsaOfi) { delete d.ipsa; delete d.ipsaSynth; }
-  }
-  if (malos.length) days = days.filter(d => Object.keys(d.prices).length || d.ipsa != null);
-}
+/* DÍA CORRUPTO ("pico y vuelta") y órdenes de borrado: ver dias-corruptos.mjs (lógica pura, con prueba propia).
+   Lo que el CONSENSO WSJ + Yahoo-60m confirma es real y se conserva; el mercado tiene que estar tranquilo; la
+   orden se hereda del archivo previo y vive 60 días o hasta que el día vuelva a tener cierres. */
+const _confirmado = (t, f, v) => { const w = CONS_W[t] && CONS_W[t][f], y = CONS_Y[t] && CONS_Y[t][f];
+  return w > 0 && y > 0 && Math.abs(y / w - 1) <= 0.0015 && Math.abs(v / w - 1) <= 0.0025; };
+const _dep = depurarDiasCorruptos(days, { borrarPrev, confirmado: _confirmado, hoy: new Date().toISOString().slice(0, 10), log: m => console.log(m) });
+days = _dep.days;
+const borrar = _dep.borrar, borrarDesde = _dep.borrarDesde;
 // Tramo MSCI: todo IPSA que NO sea un cierre oficial se borra y se recalcula en esta corrida (así un valor
 // mal encadenado nunca queda congelado en el archivo como si fuera real — que es lo que pasó en septiembre).
 let nMsciDrop = 0;
@@ -897,6 +881,6 @@ const tickerSet = new Set();
 days.forEach(d => Object.keys(d.prices || {}).forEach(t => tickerSet.add(t)));
 mkdirSync("data", { recursive: true });
 const source = "Yahoo Finance (.SN)" + (process.env.EODHD_KEY ? " + EODHD (cierres oficiales)" : "") + " + cierre oficial Bolsa de Santiago (día) + fuentes IPSA";
-writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, ipsaSynth, ipsaOficial: ipsaOfiLog, consenso: CONS_LOG, borrar, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
+writeFileSync("data/closes.json", JSON.stringify({ updatedAt: new Date().toISOString(), source, ipsaSources, ipsaSynth, ipsaOficial: ipsaOfiLog, consenso: CONS_LOG, borrar, borrarDesde, fuenteOficial: officialLog, ajustesDeFuente: ADJUST_LOG, errors, days }, null, 1));
 if (ADJUST_LOG.length) console.log(`Ajustes de fuente (cierre oficial/EODHD pisó a Yahoo): ${ADJUST_LOG.length} — ej: ${JSON.stringify(ADJUST_LOG[0])}`);
 console.log(`OK: ${days.length} día(s) (${days[0].date} → ${days[days.length - 1].date}) · ${tickerSet.size} acciones · IPSA en ${ipsaDays} día(s). Errores: ${errors.length ? errors.join("; ") : "ninguno"}`);

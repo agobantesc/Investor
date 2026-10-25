@@ -6546,8 +6546,40 @@ function dropDateData(date){if(!date)return {nBase:0,nProj:0};let nBase=0,nProj=
       Un cierre real no repite idéntico al decimal — es un precio copiado, no un cierre nuevo — y ensucia el
       "último dato disponible" (REGLA 2) y los retornos del último período. Solo se tocan los puntos del FINAL.
    Idempotente. Devuelve {nWk, nCF, ipsaTo}. */
+/* LÁPIDAS. Una celda (acción × fecha, o "IPSA") que la fuente o el saneo DESCARTARON —foto corrupta del
+   upstream, día calco, atípico— no basta con borrarla de la base: los seguimientos ya la tenían estampada como
+   cierre real y, en la misma sincronización, saveProjects→pricedbIngestProjects la devolvía a la base (para las
+   acciones en cartera el día malo nunca se iba: σ, peor día, drawdown y β quedaban contaminados para siempre).
+   Aquí se retira también de los seguimientos de TODAS las carteras —vuelve el cierre anterior, como arrastre— y
+   queda anotada para que nada la re-ingiera. La celda vuelve solo si una fuente la trae de nuevo o el usuario
+   la pone a mano. La compra inicial no se toca: sus precios son lo que pagaste. Idempotente. */
+function pdLapida(d,t){return !!(PRICEDB.borrados&&PRICEDB.borrados[d]&&PRICEDB.borrados[d][t]);}
+function pdLapidaQuitar(d,t){const b=PRICEDB.borrados;if(b&&b[d]&&b[d][t]){delete b[d][t];if(!Object.keys(b[d]).length)delete b[d];}}
+function pricedbBorrarCeldas(cel){
+  const fechas=Object.keys(cel||{});if(!fechas.length)return 0;
+  PRICEDB.borrados=PRICEDB.borrados||{};
+  fechas.forEach(d=>Object.keys(cel[d]).forEach(t=>{(PRICEDB.borrados[d]=PRICEDB.borrados[d]||{})[t]=1;}));
+  const antes=(m,d)=>{if(!m)return null;let b=null;for(const x in m)if(x<d&&(b==null||x>b))b=x;return b!=null?m[b]:null;};   // último cierre ANTERIOR a la fecha
+  let n=0;
+  (CLIENTS||[]).forEach(c=>{const projs=clientProjects(c.id)||[];let touched=false;
+    projs.forEach(p=>(p.weeks||[]).forEach(w=>{const k=cel[w.date];if(!k)return;
+      Object.keys(k).forEach(t=>{
+        if(t==="IPSA"){if(w.ipsaFresh===false)return;const v=antes(PRICEDB.ipsa,w.date);if(v!=null)w.ipsa=v;w.ipsaFresh=false;touched=true;n++;return;}
+        if(w.qty)return;
+        const real=w.fresh?w.fresh.indexOf(t)>=0:!!(w.prices&&w.prices[t]!=null);   // sin sello fresh = registro antiguo, todo cuenta como real
+        if(!real)return;
+        if(!w.fresh)w.fresh=Object.keys(w.prices||{});
+        w.fresh=w.fresh.filter(x=>x!==t);
+        const v=antes(PRICEDB.px[t],w.date);if(v!=null)w.prices[t]=v;
+        touched=true;n++;});}));
+    if(touched)clientSaveProjects(c.id,projs);});
+  syncProj();
+  return n;
+}
 function pricedbSanitize(){
   let nWk=0,nCF=0,nBogus=0;
+  // foto de lo que había, para saber qué celdas descartó el saneo (y retirarlas también de los seguimientos)
+  const _antes={px:{},ipsa:Object.assign({},PRICEDB.ipsa||{})};Object.keys(PRICEDB.px||{}).forEach(t=>{_antes.px[t]=Object.assign({},PRICEDB.px[t]);});
   // 0) "acciones" fantasma con nombre de columna de mercado (Open/Close/Volume/Último…): entraron a la base
   //    desde una planilla OHLC leída como combinada (antes del parser OHLC). Nunca son tickers reales.
   Object.keys(PRICEDB.px||{}).forEach(t=>{if(IMP_BOGUS_COL.test((""+t).trim())){delete PRICEDB.px[t];if(PRICEDB.tickers)delete PRICEDB.tickers[t];nBogus++;}});
@@ -6616,6 +6648,12 @@ function pricedbSanitize(){
     trimGhost(PRICEDB.ipsa||{});
     Object.keys(ix).forEach(k=>trimGhost(ix[k]));
   }
+  // lo descartado se retira también de los seguimientos, con lápida (si no, volvía a la base en el próximo guardado)
+  if(nCF||nGhost||nOut||nDup){try{const cel={};
+    Object.keys(_antes.px).forEach(t=>{if(!PRICEDB.px[t])return;   // una "acción" fantasma eliminada entera no deja lápidas
+      Object.keys(_antes.px[t]).forEach(d=>{if(PRICEDB.px[t][d]==null&&isTradingDay(d))(cel[d]=cel[d]||{})[t]=1;});});
+    Object.keys(_antes.ipsa).forEach(d=>{if(PRICEDB.ipsa[d]==null&&isTradingDay(d))(cel[d]=cel[d]||{}).IPSA=1;});
+    pricedbBorrarCeldas(cel);}catch(e){}}
   if(nWk||nCF||nGhost||nBogus||nOut||nDup)savePriceDB();
   const id=Object.keys(PRICEDB.ipsa||{}).sort();
   return {nWk,nCF,nGhost,nBogus,nOut,nDup,ipsaTo:id.length?id[id.length-1]:null};
@@ -6640,11 +6678,11 @@ function pricedbUpsertDay(date,ipsa,priceMap,opts){
   // IPSA MANUAL ANCLADO: un valor del índice corregido a mano (opts.pinIpsa) queda protegido — la
   // sincronización automática no lo pisa (mismo criterio que un cierre de acción manual). Es exactamente el
   // caso en que la fuente automática NO trajo el IPSA del día y el usuario lo cuadró con la Bolsa/su corredora.
-  if(ipsa!=null&&isFinite(ipsa)&&ipsa>0){PRICEDB.ipsa[date]=+ipsa;if(opts&&opts.pinIpsa){(PRICEDB.ipsaPin=PRICEDB.ipsaPin||{})[date]=1;}}
+  if(ipsa!=null&&isFinite(ipsa)&&ipsa>0){PRICEDB.ipsa[date]=+ipsa;pdLapidaQuitar(date,"IPSA");if(opts&&opts.pinIpsa){(PRICEDB.ipsaPin=PRICEDB.ipsaPin||{})[date]=1;}}
   Object.keys(priceMap||{}).forEach(t=>{const v=priceMap[t];if(v==null||!isFinite(v)||v<=0)return;
     const nm=pdIndexOf(t,"IPSA");   // "IPSA"/"IGPA" tipeado como acción va al ÍNDICE, no a la base de acciones (igual que en pricedbMergeFiles)
     if(nm){if(nm==="IPSA"){if(opts&&opts.pinIpsa){PRICEDB.ipsa[date]=+v;(PRICEDB.ipsaPin=PRICEDB.ipsaPin||{})[date]=1;}else if(!(typeof AUTOPX_URL!=="undefined"&&AUTOPX_URL))PRICEDB.ipsa[date]=+v;}else{((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{})[date]=+v;}return;}   // con fuente automática, el IPSA manual sin anclar se descarta (única fuente de la verdad)
-    (PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);
+    (PRICEDB.px[t]=PRICEDB.px[t]||{})[date]=+v;pdLapidaQuitar(date,t);if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t);
     // CIERRE MANUAL PROTEGIDO: un valor ingresado a mano queda ANCLADO — la sincronización automática (Yahoo)
     // no puede volver a pisarlo. Motivo real: Yahoo cambió retroactivamente el cierre de LATAM del 10-07
     // (26,26 → 26,37) y el sync aplastó el valor que cuadraba con la corredora. Un nuevo ingreso manual
@@ -6675,9 +6713,9 @@ function pricedbMergeFiles(files,benchName,opts){
   // otras fechas ni otras acciones. Solo se aceptan días hábiles y no futuros.
   const _ipsaPinned=d=>!!(opts&&opts.respectPins&&PRICEDB.ipsaPin&&PRICEDB.ipsaPin[d]);
   (files||[]).forEach(f=>{const dates=f.dates||[],closes=f.closes||[];const nm=pdIndexOf(f.name,benchName);
-    if(nm){const isIp=nm==="IPSA";const tgt=isIp?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(isIp&&tgt[d]!=null&&_ipsaPinned(d)){pinned++;continue;}if(tgt[d]!=null)updated++;else added++;tgt[d]=v;}}return;}   // IPSA anclado a mano: la fuente automática no lo pisa
+    if(nm){const isIp=nm==="IPSA";const tgt=isIp?PRICEDB.ipsa:((PRICEDB.idx=PRICEDB.idx||{})[nm]=PRICEDB.idx[nm]||{});for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(isIp&&tgt[d]!=null&&_ipsaPinned(d)){pinned++;continue;}if(tgt[d]!=null)updated++;else added++;tgt[d]=v;if(isIp)pdLapidaQuitar(d,"IPSA");}}return;}   // IPSA anclado a mano: la fuente automática no lo pisa
     const t=((""+(f.name||"")).trim().toUpperCase())||f.name;tk++;PRICEDB.px[t]=PRICEDB.px[t]||{};if(!PRICEDB.tickers[t])PRICEDB.tickers[t]=pdMeta(t,f.src);   // ticker SIEMPRE en mayúsculas: "Falabella" no crea una acción paralela a FALABELLA
-    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(PRICEDB.px[t][d]!=null&&_pinOf(t,d)){pinned++;continue;}if(PRICEDB.px[t][d]!=null)updated++;else added++;PRICEDB.px[t][d]=v;}}   // celda ANCLADA por cierre manual: la fuente automática no la pisa
+    for(let i=0;i<dates.length;i++){const d=dates[i],v=+closes[i];if(!validBaseDate(d)){if(d)skipped++;continue;}if(isFinite(v)&&v>0){if(PRICEDB.px[t][d]!=null&&_pinOf(t,d)){pinned++;continue;}if(PRICEDB.px[t][d]!=null)updated++;else added++;PRICEDB.px[t][d]=v;pdLapidaQuitar(d,t);}}   // celda ANCLADA por cierre manual: la fuente automática no la pisa
   });
   savePriceDB();try{pricedbSanitize();}catch(e){}   // saneo inmediato: sin arrastres ni IPSA por delante del mercado, sin esperar a la próxima recarga
   return {added,updated,tk,skipped,pinned};
@@ -6762,10 +6800,23 @@ async function autopxSync(manual,bust){
     // "pico y vuelta"): la fusión por celda nunca borra, así que la base local seguía con los precios malos
     // que alcanzó a guardar. Se quitan aquí — salvo lo anclado a mano, que siempre manda.
     let _borr=0;
-    if(j&&!Array.isArray(j)&&j.borrar&&typeof j.borrar==="object"){Object.keys(j.borrar).forEach(d=>{
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;
-      Object.keys(PRICEDB.px||{}).forEach(t=>{if(PRICEDB.px[t]&&PRICEDB.px[t][d]!=null&&!(PRICEDB.pin&&PRICEDB.pin[t]&&PRICEDB.pin[t][d])){delete PRICEDB.px[t][d];_borr++;}});
-      if(j.borrar[d]==="todo"&&PRICEDB.ipsa&&PRICEDB.ipsa[d]!=null&&!(PRICEDB.ipsaPin&&PRICEDB.ipsaPin[d])){delete PRICEDB.ipsa[d];if(PRICEDB.ipsaSynth)delete PRICEDB.ipsaSynth[d];_borr++;}});}
+    if(j&&!Array.isArray(j)&&j.borrar&&typeof j.borrar==="object"){
+      // solo las acciones que la FUENTE cubre: lo cargado por planilla fuera de su universo (p.ej. BICECORP) la
+      // fuente no lo juzgó, y borrarlo dejaba un hueco permanente que nada repone
+      const deLaFuente={};days.forEach(d=>Object.keys(d.prices||{}).forEach(k=>{deLaFuente[k.toUpperCase()]=1;}));
+      const cel={};
+      Object.keys(j.borrar).forEach(d=>{
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return;
+        Object.keys(deLaFuente).forEach(t=>{if(PRICEDB.pin&&PRICEDB.pin[t]&&PRICEDB.pin[t][d])return;   // lo anclado a mano manda
+          if(PRICEDB.px[t]&&PRICEDB.px[t][d]!=null){delete PRICEDB.px[t][d];_borr++;}
+          (cel[d]=cel[d]||{})[t]=1;});
+        if(j.borrar[d]==="todo"&&!(PRICEDB.ipsaPin&&PRICEDB.ipsaPin[d])){
+          if(PRICEDB.ipsa&&PRICEDB.ipsa[d]!=null){delete PRICEDB.ipsa[d];_borr++;}
+          if(PRICEDB.ipsaSynth)delete PRICEDB.ipsaSynth[d];
+          (cel[d]=cel[d]||{}).IPSA=1;}});
+      // y de los SEGUIMIENTOS de todas las carteras, donde seguían como cierre real (ver pricedbBorrarCeldas)
+      _borr+=pricedbBorrarCeldas(cel);
+    }
     const r=pricedbMergeFiles(files,"IPSA",{respectPins:true});   // los cierres corregidos a mano no se pisan
     if(_borr)r.updated+=_borr;
     const ap=pricedbApplyToProjects();
@@ -7273,9 +7324,9 @@ function pricedbIngestProjects(){
   try{let n=0;(PROJECTS||[]).forEach(p=>{(p.weeks||[]).forEach(w=>{
     if(w.ev||w.qty)return;   // OPERACIÓN o COMPRA INICIAL: contabilidad (el precio de tu orden y un IPSA as-of), nunca alimenta la base de precios
     if(!isTradingDay(w.date))return;   // no ingresa días no hábiles a la base
-    if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false&&PRICEDB.ipsa[w.date]==null){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}   // no ingiere IPSA arrastrado a la base
+    if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false&&PRICEDB.ipsa[w.date]==null&&!pdLapida(w.date,"IPSA")){PRICEDB.ipsa[w.date]=+w.ipsa;n++;}   // no ingiere IPSA arrastrado a la base (ni uno descartado)
     const fresh=w.fresh;   // no copiar a la base los precios arrastrados (carry-forward); solo los cierres reales de ese día
-    const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
+    const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(fresh&&fresh.indexOf(t)<0)return;if(pdLapida(w.date,t))return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;PRICEDB.px[t]=PRICEDB.px[t]||{};if(PRICEDB.px[t][w.date]==null){PRICEDB.px[t][w.date]=+v;if(!PRICEDB.tickers[t]){const hd=(p.holdings||[]).find(h=>h.t===t)||{};PRICEDB.tickers[t]={n:hd.n||t,s:hd.s||"",c:hd.c||"#1E5FD1",b:hd.b};}n++;}});
   });});if(n)savePriceDB();return n;}catch(e){return 0;}
 }
 /* población automática de la base (una vez por cliente): cierres de proyectos + universo demo */
@@ -11131,9 +11182,9 @@ function consolidatedSeries(){
       // se valorizaba al precio de la compra como si fuera cierre (TWR sesgado desde el día 0)
       if(w.ev||w.qty)return;   // semana de OPERACIÓN (compra/venta/aporte): es CONTABILIDAD, no un cierre de mercado → nunca alimenta la serie del índice ni de precios (evita días fantasma como un 29/06 arrastrado)
       if(!isTradingDay(w.date))return;   // solo días hábiles en la serie de mercado
-      if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false)ipsaMap[w.date]=w.ipsa;   // no superpone IPSA arrastrado (cierre sin valor real del índice)
+      if(w.ipsa!=null&&isFinite(w.ipsa)&&w.ipsa>0&&w.ipsaFresh!==false&&!pdLapida(w.date,"IPSA"))ipsaMap[w.date]=w.ipsa;   // no superpone IPSA arrastrado (cierre sin valor real del índice) ni descartado
       const fresh=w.fresh;   // si el cierre marcó qué tickers son REALES de ese día, ignora los arrastrados (carry-forward) para no generar retornos 0% espurios
-      const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(fresh&&fresh.indexOf(t)<0)return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
+      const pr=w.prices||{};Object.keys(pr).forEach(t=>{if(fresh&&fresh.indexOf(t)<0)return;if(pdLapida(w.date,t))return;const v=pr[t];if(v==null||!isFinite(v)||v<=0)return;(tick[t]=tick[t]||{})[w.date]=v;});
     });
   });
   return {tick,names,cols,ipsaMap};
