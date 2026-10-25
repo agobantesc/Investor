@@ -53,13 +53,19 @@ const { abrirApp, crearMarcador } = require("./_harness");
     });
     return { difs, n: D.top.length };
   });
-  M.ok("3-LAS-CIFRAS-SALEN-DEL-MOTOR", t3.difs.length === 0 && t3.n === 10, t3);
+  M.ok("3-LAS-CIFRAS-SALEN-DEL-MOTOR", t3.difs.length === 0 && t3.n >= 10, t3);
 
   // ── 4. el VEREDICTO cumple su propia regla y el sobreprecio nunca sale negativo ──
   const t4 = await pagina.evaluate(() => {
     const D = cartaRecoData();
     const malas = [];
-    D.comprar.forEach(x => { if (!(x.r.score >= CARTA_SCORE_MIN && x.mos > 0)) malas.push("recomendada sin cumplir regla: " + x.r.t); });
+    D.comprar.forEach(x => {
+      if (x.tramo === "limite") {
+        // tramo 2: negocio sólido, valorización confiable, a lo más 10% sobre su valor y SOLO a orden límite ≤ valor
+        if (!(x.r.score >= CARTA_SCORE_MIN && x.r.ivN >= 2 && x.fiab !== "baja" && x.mos <= 0 && x.mos >= -CARTA_TOL_SOBRE && x.entrada <= x.val && !x.aMercado))
+          malas.push("tramo límite sin cumplir regla: " + x.r.t);
+      } else if (!(x.r.score >= CARTA_SCORE_MIN && x.mos > 0)) malas.push("recomendada sin cumplir regla: " + x.r.t);
+    });
     D.noComprar.forEach(x => {
       if (!x.motivo) malas.push("descartada sin motivo: " + x.r.t);
       const m = /cuesta (-?[\d.,]+)% más/.exec(x.motivo || "");
@@ -164,7 +170,32 @@ const { abrirApp, crearMarcador } = require("./_harness");
   M.ok("9-EL-ENFOQUE-SE-ELIGE-Y-SE-GUARDA",
     t9.n === 3 && t9.juntoAlBoton && t9.cambia && t9.persiste && t9.marcado.length === 1 && t9.vuelve, t9);
 
-  M.ok("10-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
+  // ── 10. META DE 5 recomendaciones, si corresponde: el tramo 2 solo completa (nunca desplaza al 1), en orden de
+  //       ranking, y no aparece si el tramo 1 ya llega a 5. Toda recomendada está en el informe. ──
+  const t10 = await pagina.evaluate(() => {
+    const D = cartaRecoData();
+    const elegibles2 = D.todas.filter(x => x.tramo !== "fuerte" && !(x.r.score >= CARTA_SCORE_MIN && x.r.ivN >= 2 && x.mos > 0) && x.r.score >= CARTA_SCORE_MIN && x.r.ivN >= 2 && x.fiab !== "baja" && x.mos != null && x.mos <= 0 && x.mos >= -CARTA_TOL_SOBRE).length;
+    const esperadas = D.nFuertes >= CARTA_META ? D.nFuertes : Math.min(CARTA_META, D.nFuertes + elegibles2);
+    const enInforme = D.comprar.every(x => D.top.indexOf(x) >= 0);
+    const orden = D.comprar.every((x, i) => i === 0 || D.comprar[i - 1].pos < x.pos);
+    return { fuertes: D.nFuertes, limite: D.nLimite, total: D.comprar.length, esperadas, enInforme, orden, recs: D.comprar.map(x => x.r.t + ":" + x.tramo) };
+  });
+  M.ok("10-META-DE-CINCO-SI-CORRESPONDE", t10.total === t10.esperadas && t10.enInforme && t10.orden && (t10.fuertes < 5 || t10.limite === 0), t10);
+
+  // ── 11. PAGINACIÓN: el informe se pagina al ancho de la HOJA (no de la ventana) y ninguna hoja, salvo la
+  //       última, queda con más de un tercio en blanco. Se prueba en una ventana angosta (900 px), donde antes
+  //       la tabla del ranking saltaba entera a la hoja 2 y dejaba la portada sola. ──
+  await pagina.setViewportSize({ width: 900, height: 700 });
+  await pagina.setContent(doc.html, { waitUntil: "load" });
+  await pagina.waitForTimeout(700);
+  const t11 = await pagina.evaluate(() => {
+    const f = window.__rpFit, hoja = (210 - 9 - 11) * (96 / 25.4);
+    const partible = Array.from(document.querySelectorAll(".rp-flow .ct-panel")).every(p => getComputedStyle(p).breakInside === "auto");
+    return { hojas: f && f.m.hojas, peorPct: f ? Math.round(f.m.peor / hoja * 100) : null, tablasPartibles: partible };
+  });
+  M.ok("11-PAGINACION-SIN-HOJAS-VACIAS", t11.hojas > 0 && t11.peorPct != null && t11.peorPct <= 33 && t11.tablasPartibles, t11);
+
+  M.ok("12-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
   await navegador.close();
   process.exit(M.resumen() ? 1 : 0);
 })().catch(e => { console.log("CRASH", e.message); process.exit(1); });

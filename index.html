@@ -1456,19 +1456,32 @@
   .ct-bar{display:inline-block;width:34px;height:4px;border-radius:2px;background:#E9EEF7;margin-left:6px;vertical-align:middle;overflow:hidden}
   .ct-bar i{display:block;height:100%;border-radius:2px}
   .ct-bar i.up{background:var(--ct-ok)} .ct-bar i.dn{background:var(--ct-bad)}
-  .ct-foot{padding:7px 10px;border-top:1px solid var(--ct-line);background:#FAFCFF;font-size:9.5px;color:var(--ct-mute);line-height:1.5}
+  .ct-foot{padding:7px 10px;border-top:1px solid var(--ct-line);background:#FAFCFF;font-size:9.5px;color:var(--ct-mute);line-height:1.5;break-inside:avoid;page-break-inside:avoid}
+  /* EN UN BLOQUE QUE FLUYE, la tabla se parte ENTRE FILAS (nunca dentro de una) y repite su encabezado en la
+     hoja siguiente. Con el panel entero como bloque indivisible, una tabla de 10 filas que no cabía en el hueco
+     que dejaba la síntesis saltaba completa a la hoja 2 — y se llevaba el título —, dejando la portada sola. */
+  .rp-page .rp-flow .ct-panel,.rp-page .rp-flow .ct-verdict,.rp-page .rp-flow .ct-vgrid{break-inside:auto;page-break-inside:auto}
+  .ct-tab thead{display:table-header-group}
+  .ct-tab tr{break-inside:avoid;page-break-inside:avoid}
+  .ct-vsum{break-after:avoid;page-break-after:avoid}
   /* veredicto */
   .ct-vsum{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--ct-line);border-left:4px solid var(--ct-navy);border-radius:10px;background:linear-gradient(180deg,#F7FAFF,#FFF);font-size:11.5px;color:var(--ct-ink);line-height:1.5;break-inside:avoid}
   .ct-vnum{flex:0 0 auto;font:900 30px var(--font);color:var(--ct-navy);line-height:1}
   /* auto-fit, no tres columnas fijas: con dos recomendadas quedaba un hueco a la derecha que en un
      informe para clientes se lee como que falta algo */
-  .ct-vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:10px;margin-top:11px}
+  /* minmax 186px: la meta son CINCO recomendaciones, y en el ancho de la hoja (281 mm) caben las cinco en
+     una sola fila; con 228px la quinta caía sola a una segunda fila y gastaba media hoja */
+  .ct-vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:9px;margin-top:11px}
   .ct-v{border:1px solid var(--ct-line);border-top:3px solid var(--ct-ok);border-radius:10px;padding:10px 11px;background:linear-gradient(180deg,var(--ct-okbg),#FFF);break-inside:avoid;page-break-inside:avoid}
   .ct-vh{display:flex;align-items:center;justify-content:space-between;gap:8px}
   .ct-vtk{font:900 14px var(--font);color:var(--ct-navy);letter-spacing:-.2px}
   .ct-vb{display:inline-block;padding:2px 8px;border-radius:999px;font:800 9px var(--font);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
   .ct-vb.ok{background:var(--ct-ok);color:#fff}
   .ct-vb.no{background:#EDF1F7;color:var(--ct-mute);border:1px solid var(--ct-line)}
+  /* tramo 2: recomendada SOLO con orden límite al valor estimado (negocio sólido que hoy cuesta algo de más) */
+  .ct-vb.lim{background:var(--ct-blue);color:#fff}
+  .ct-v.lim{border-top-color:var(--ct-blue);background:linear-gradient(180deg,#EEF4FF,#FFF)}
+  .ct-v.lim .ct-vv{color:var(--ct-blue)}
   .ct-vp{margin-top:8px;padding-top:8px;border-top:1px dashed #CFE0D8}
   .ct-vl{display:block;font:800 8.5px var(--font);letter-spacing:.6px;text-transform:uppercase;color:var(--ct-mute)}
   .ct-vv{display:block;font:900 20px var(--font);color:var(--ct-ok);line-height:1.15;font-variant-numeric:tabular-nums}
@@ -4570,13 +4583,26 @@ function invReportShell(o){
       if(e.classList.contains("rp-flow")){
         var hd=e.querySelector(".hd");if(hd)push(hd,brk);
         var bd=e.querySelector(".bd"),hijos=bd?bd.children:[];
-        Array.prototype.forEach.call(hijos,function(x){
-          var tb=(x.tagName==="TABLE")?x:(x.querySelector?x.querySelector("table"):null);
+        /* PIEZAS INDIVISIBLES de un bloque fluido, igual que las ve el motor de impresión: una tabla aporta su
+           encabezado, cada fila y lo que traiga debajo (el pie del panel); una grilla de tarjetas aporta una
+           pieza por FILA de tarjetas (las de una misma fila caen juntas); un contenedor se recorre por dentro. */
+        function atomos(x){
+          var tb=(x.tagName==="TABLE")?x:null;
+          if(!tb&&x.children){for(var k=0;k<x.children.length;k++)if(x.children[k].tagName==="TABLE"){tb=x.children[k];break;}}
           if(tb){var th=tb.querySelector("thead");if(th)push(th);
             Array.prototype.forEach.call(tb.querySelectorAll("tbody tr"),function(tr){push(tr);});
-            var tf=tb.querySelector("tfoot");if(tf)push(tf);}
-          else push(x);
-        });
+            var tf=tb.querySelector("tfoot");if(tf)push(tf);
+            if(x!==tb)Array.prototype.forEach.call(x.children,function(z){if(z!==tb)push(z);});
+            return;}
+          if(x.classList&&x.classList.contains("ct-vgrid")){
+            var filas={};Array.prototype.forEach.call(x.children,function(z){var b=z.getBoundingClientRect(),k2=Math.round(b.top);
+              if(!filas[k2]||b.height>filas[k2].h)filas[k2]={t:b.top+window.scrollY,h:b.height};});
+            Object.keys(filas).forEach(function(k2){out.push({t:filas[k2].t,h:filas[k2].h,brk:false});});
+            return;}
+          if(x.classList&&(x.classList.contains("ct-verdict")||x.classList.contains("ct-panel"))){Array.prototype.forEach.call(x.children,atomos);return;}
+          push(x);
+        }
+        Array.prototype.forEach.call(hijos,atomos);
         return;
       }
       push(e,brk);
@@ -4612,6 +4638,10 @@ function invReportShell(o){
      que menos papel desperdicia. Se prefiere, en orden: menos hojas, la peor hoja menos vacía, menos
      blanco total y —a igualdad— la versión más grande, que es la que mejor se lee. */
   function rpAjustar(){
+    /* Se mide con el cuerpo al ANCHO IMPRESO (297 mm − 2×8 mm de margen = 281 mm). Medido al ancho de la
+       ventana, en una ventana angosta las tablas salían más altas que en el papel y las decisiones de corte
+       no servían para la hoja real. */
+    var B=document.body,anchoPrevio=B.style.width;B.style.width="281mm";
     try{
       /* El UMBRAL de fluidez también se busca. Con el 0,78 fijo, una tarjeta de 450 px no fluía y saltaba
          entera a la hoja siguiente dejando media hoja en blanco; con un umbral más bajo se parte por sus
@@ -4634,6 +4664,7 @@ function invReportShell(o){
       rpFlow(mejor.f);
       window.__rpFit=mejor;   // queda a la vista para poder verificarlo desde fuera
     }catch(e){}
+    B.style.width=anchoPrevio;
   }
   function rpMejor(a,b){
     if(a.m.hojas!==b.m.hojas)return a.m.hojas<b.m.hojas;
@@ -12137,7 +12168,15 @@ function scoreAllModal(){
 const CARTA_SCORE_MIN=55;     // "sólido" o mejor, el mismo tramo de la leyenda del Investor Score
 const CARTA_MOS_OBJ=0.15;     // margen de seguridad exigido para comprar al precio de hoy
 const CARTA_TOP=10;           // el informe se construye sobre el TOP del índice de inversión, y sobre ese top opina
-const CARTA_CAL_MIN=40;       // piso de calidad para ENTRAR al ranking: bajo 40 el score dice "evitar"
+const CARTA_CAL_MIN=40;
+/* FLEXIBILIDAD DEL VEREDICTO: el informe APUNTA a recomendar CARTA_META acciones, si corresponde.
+   Tramo 1 · "Invertir": la regla dura de siempre (buen negocio Y precio bajo su valor estimado).
+   Tramo 2 · "Invertir con orden límite": solo para COMPLETAR hasta la meta — negocio sólido (score ≥ 55),
+   valorización triangulada y de certeza media/alta, y precio a lo más CARTA_TOL_SOBRE por SOBRE el valor
+   estimado. Se recomienda únicamente con una orden límite AL VALOR ESTIMADO: se compra si baja a lo que vale,
+   nunca pagando de más. Si el tramo 1 ya llega a la meta (o la pasa), no se agrega ninguna del tramo 2. */
+const CARTA_META=5;
+const CARTA_TOL_SOBRE=0.10;       // piso de calidad para ENTRAR al ranking: bajo 40 el score dice "evitar"
 /* ÍNDICE DE INVERSIÓN — el orden del informe.
    Ordenar por Investor Score dejaba el informe casi inmóvil: medido sobre la base real, el top-10
    conservaba 9 de 10 nombres al cabo de un mes y 7 de 10 al cabo de un AÑO. No es un defecto del score,
@@ -12221,10 +12260,27 @@ function cartaRecoData(){
   // recomendadas: si nueve de las diez merecen compra, la carta dice nueve. Recortar la lista para que
   // "se vea seleccionada" sería esconderle al cliente parte del análisis.
   if(todas.length<3)return null;   // el piso de calidad dejó el universo sin candidatos: no hay informe que hacer
-  const top=todas.slice(0,CARTA_TOP);
-  const comprar=top.filter(x=>x.invertir);
+  // posición en el ranking (la que se muestra en el informe)
+  todas.forEach((x,i)=>{x.pos=i+1;});
+  // tramo 1 en TODO el ranking (no solo el top): una que cumple la regla dura nunca queda fuera por su puesto
+  const fuertes=todas.filter(x=>x.invertir).map(x=>Object.assign(x,{tramo:"fuerte"}));
+  // tramo 2 solo para completar la meta, en orden de ranking
+  const flex=[];
+  if(fuertes.length<CARTA_META){
+    for(const x of todas){
+      if(fuertes.length+flex.length>=CARTA_META)break;
+      if(x.invertir||!(x.r.score>=CARTA_SCORE_MIN)||!(x.r.ivN>=2)||x.fiab==="baja"||x.val==null||!(x.px>0)||x.mos==null)continue;
+      if(x.mos>0||x.mos<-CARTA_TOL_SOBRE)continue;
+      const lim=Math.floor(x.val);   // límite AL VALOR estimado: margen 0, jamás sobre lo que vale
+      flex.push(Object.assign(x,{tramo:"limite",invertir:true,limite:lim,aMercado:false,entrada:lim,cede:(x.px-lim)/x.px*100,motivo:null}));
+    }
+  }
+  const comprar=fuertes.concat(flex).sort((a,b)=>a.pos-b.pos);
+  // el informe muestra el TOP y, además, cualquier recomendada que viniera de más abajo en el ranking
+  const top=todas.slice(0,CARTA_TOP).concat(comprar.filter(x=>x.pos>CARTA_TOP)).sort((a,b)=>a.pos-b.pos);
   const noComprar=top.filter(x=>!x.invertir);
   return {sc,top,comprar,noComprar,todas,ipsa,enfoque:cartaEnfoque,enfoqueDef:_enf,
+    nFuertes:fuertes.length,nLimite:flex.length,
     // monto por operación bajo el cual la comisión MÍNIMA del operador se come el margen: no es opinión,
     // es el punto en que el mínimo deja de ser el porcentaje pactado. Con BTG (0,4%+IVA, mín $1.000+IVA)
     // son $250.000: bajo eso pagas más del 0,4% aunque el contrato diga 0,4%.
@@ -12270,7 +12326,7 @@ function genCartaReco(){
     return `<span class="ct-bar"><i class="${v>=0?"up":"dn"}" style="width:${w}%"></i></span>`;};
   const ENF=D.enfoqueDef;
   const desRows=T.map((x,i)=>{const r=x.r;return `<tr>
-    <td class="ct-rk"><span style="background:${cS(x.rank)}">${i+1}</span></td>
+    <td class="ct-rk"><span style="background:${cS(x.rank)}">${x.pos||i+1}</span></td>
     <td class="ct-tk">${esc(r.t)}</td>
     <td class="r"><span class="ct-score" style="background:${cS(x.rank)}">${x.rank}</span></td>
     <td class="r ct-strong" style="color:${cS(r.score)}">${r.score}</td>
@@ -12312,6 +12368,11 @@ function genCartaReco(){
 
   // ── 3 · VEREDICTO ───────────────────────────────────────────────────────────────────────────────
   const vCard=x=>{const r=x.r;
+    if(x.tramo==="limite")return `<div class="ct-v lim">
+      <div class="ct-vh"><span class="ct-vtk">${esc(r.t)}</span><span class="ct-vb lim">Invertir con límite</span></div>
+      <div class="ct-vp"><span class="ct-vl">Precio de compra máximo</span><span class="ct-vv">${clp(x.entrada)}</span>
+        <span class="ct-vs">orden límite al valor estimado · hoy ${clp(x.px)}</span></div>
+      <div class="ct-vw">Buen negocio (puntaje <b>${r.score}</b>) que hoy cuesta <b>${nd(-x.mos*100,0)}%</b> más de lo que vale: comprar <b>solo si baja a ${clp(x.entrada)}</b> (${nd(x.cede,1)}% bajo hoy), sin pagar de más.${x.fiab==="media"?' <b class="ct-warn">Valorización de certeza media.</b>':""}</div></div>`;
     return `<div class="ct-v ok">
       <div class="ct-vh"><span class="ct-vtk">${esc(r.t)}</span><span class="ct-vb ok">Invertir</span></div>
       <div class="ct-vp"><span class="ct-vl">Precio de compra</span><span class="ct-vv">${clp(x.entrada)}</span>
@@ -12324,7 +12385,7 @@ function genCartaReco(){
     <td class="r">${(x.mos>0&&x.r.score<CARTA_SCORE_MIN)?"cuando sus números mejoren"
       :(x.limite>0?("sería atractiva bajo <b>"+clp(x.limite)+"</b>"):"—")}</td></tr>`;
   const verHTML=`<div class="ct-verdict">
-      <div class="ct-vsum"><span class="ct-vnum">${D.comprar.length}</span><span>de las ${N} analizadas reúnen las dos condiciones: <b>buen negocio</b> y <b>buen precio</b>.${D.comprar.length?"":" Ninguna hoy: recomendamos esperar."}</span></div>
+      <div class="ct-vsum"><span class="ct-vnum">${D.comprar.length}</span><span>${D.nFuertes} reúne${D.nFuertes===1?"":"n"} las dos condiciones —<b>buen negocio</b> y <b>precio bajo su valor</b>—${D.nLimite?` y ${D.nLimite} ${D.nLimite===1?"es un negocio sólido que hoy cuesta":"son negocios sólidos que hoy cuestan"} hasta ${nd(CARTA_TOL_SOBRE*100,0)}% más de lo que vale${D.nLimite===1?"":"n"}: ${D.nLimite===1?"se recomienda":"se recomiendan"} <b>solo con orden límite al valor estimado</b>`:""}.${D.comprar.length?"":" Ninguna hoy: recomendamos esperar."}</span></div>
       ${D.comprar.length?`<div class="ct-vgrid">${D.comprar.map(vCard).join("")}</div>`:""}
       ${D.noComprar.length?`<div class="ct-panel" style="margin-top:11px"><table class="ct-tab"><thead><tr><th>Acción</th><th>Veredicto</th><th>Motivo</th><th class="r">Cuándo revisarla</th></tr></thead><tbody>${D.noComprar.map(vNo).join("")}</tbody></table></div>`:""}
     </div>`;
@@ -12334,19 +12395,19 @@ function genCartaReco(){
 
   const bodyHTML=bloque("1","Ranking de inversión","qué tan bueno es el negocio y qué tan bien está el precio hoy",desHTML,true)
     +bloque("2","Fundamentos","los negocios detrás de cada acción",fundHTML,true)
-    +bloque("3","Veredicto","invertir o no invertir, y a qué precio",verHTML);
+    +bloque("3","Veredicto","invertir o no invertir, y a qué precio",verHTML,true);
 
   const _quien=userNombre()?esc(userNombre()):"";
   const _enfTxt=`Las ordenamos por nuestro <b>índice de inversión</b>, que pesa la calidad del negocio y el precio de hoy frente a su valor estimado (enfoque <b>${ENF.label}</b>: ${ENF.desc}).`;
   const execHTML=D.comprar.length
-    ?`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} primeras</b>. ${_enfTxt} De ellas recomendamos invertir en <b>${D.comprar.length}</b>: son las únicas que reúnen buen negocio <b>y</b> precio bajo su valor estimado. Para cada una indicamos hasta cuánto conviene pagar.`
+    ?`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} primeras</b>. ${_enfTxt} Recomendamos invertir en <b>${D.comprar.length}</b>: ${D.nFuertes} ${D.nFuertes===1?"reúne":"reúnen"} buen negocio <b>y</b> precio bajo su valor estimado${D.nLimite?`, y ${D.nLimite} ${D.nLimite===1?"es un negocio sólido que se recomienda":"son negocios sólidos que se recomiendan"} solo con <b>orden límite a su valor estimado</b> (hoy ${D.nLimite===1?"cuesta":"cuestan"} un poco más)`:""}. Para cada una indicamos hasta cuánto conviene pagar.`
     :`Analizamos las <b>${D.sc.n} acciones del IPSA</b> y este informe presenta las <b>${N} primeras</b>. ${_enfTxt} Hoy <b>ninguna</b> reúne las dos condiciones que exigimos —buen negocio y precio bajo su valor estimado—, de modo que recomendamos esperar. Para cada una indicamos a qué precio pasaría a ser atractiva.`;
   const footHTML=`Elaborado con datos públicos: precios de cierre de la Bolsa de Santiago y estados financieros publicados. Las valorizaciones son estimaciones con supuestos explícitos (CAPM con tasa libre de riesgo ${nd(typeof RF==="number"?RF:5.5,1)}% y prima de mercado ${nd(typeof PRIMA==="number"?PRIMA:6,1)}%), no precios futuros. <b>Este documento es informativo y no constituye asesoría ni recomendación de inversión</b> en los términos de la Ley 18.045 ni de la normativa de la CMF; no considera la situación financiera, el horizonte ni la tolerancia al riesgo de cada inversionista. Rentabilidades pasadas no aseguran rentabilidades futuras. Los costos de transacción y los impuestos reducen el resultado y no están descontados.`;
   const html=invReportShell({
     docTitle:"Informe de recomendación de inversión · Investor",
     title:"Informe de recomendación de inversión",
     subtitle:"Las "+N+" primeras del índice de inversión · ranking, fundamentos y veredicto · precios al "+fD(lastBaseDate()),
-    hero:{label:D.comprar.length===1?"Acción recomendada":"Acciones recomendadas",value:String(D.comprar.length),sub:"de "+N+" analizadas",subColor:D.comprar.length?"#9FE8C4":"#FFD9A6"},
+    hero:{label:D.comprar.length===1?"Acción recomendada":"Acciones recomendadas",value:String(D.comprar.length),sub:D.nLimite?(D.nFuertes+" + "+D.nLimite+" con límite · de "+N):("de "+N+" analizadas"),subColor:D.comprar.length?"#9FE8C4":"#FFD9A6"},
     metaHTML:invReportMeta(([_quien?["Preparado por",_quien]:null,
       ["Fecha",esc(fch)],["Universo",D.sc.n+" acciones del IPSA"],
       ["Enfoque",ENF.label+" · "+Math.round(ENF.cal*100)+"% calidad / "+Math.round(ENF.pre*100)+"% precio"],
