@@ -38,6 +38,20 @@ const { abrirApp, ir, crearMarcador } = require("./_harness");
   M.ok("2-VALOR-POR-POSICION", r.filas.every(f => Math.abs(f.valorInd - f.valorApp) <= 1), r.filas.map(f => [f.t, f.valorInd, f.valorApp]));
   M.ok("3-VALOR-TOTAL", Math.abs(r.difValor) <= 1, { independiente: r.valorInd, app: r.valorApp });
   M.ok("4-RETORNO-TWR", r.twrApp != null && Math.abs(r.twrInd - r.twrApp) < 0.01, { independiente: r.twrInd, app: r.twrApp });
+  // ── 6. una compra registrada CON ATRASO deja el mismo precio de compra que registrada el día: el costo es
+  //      exactamente el monto bruto ingresado (la comisión va aparte), cualquiera sea la fecha ──
+  const t6 = await pagina.evaluate(() => {
+    window.alert = () => {}; window.confirm = () => true;
+    const dts = PF.weeks.map(w => w.date), f = dts[dts.length - 6];
+    const a = invMetrics().perStock.find(x => x.hd.t === "BCI"), sh0 = a.sh, c0 = a.buy * a.sh;
+    modulo = "inv"; page = "operar"; opState.side = "buy"; opState.tkr = "BCI"; opState.qty = "2"; opState.monto = "127000"; opState.date = f; render();
+    document.getElementById("optkr").value = "BCI"; document.getElementById("opqty").value = "2"; document.getElementById("opmonto").value = "127000"; document.getElementById("opdate").value = f;
+    const aviso = (document.getElementById("opfee") || {}).textContent || "";
+    opDo();
+    const b = invMetrics().perStock.find(x => x.hd.t === "BCI");
+    return { fecha: f, pCompra: +b.buy.toFixed(4), esperado: +((c0 + 127000) / (sh0 + 2)).toFixed(4), acciones: +b.sh.toFixed(4), avisaComision: /comisi[óo]n/i.test(aviso) && /bruto/i.test(aviso) };
+  });
+  M.ok("6-COMPRA-CON-ATRASO-MISMO-COSTO", Math.abs(t6.pCompra - t6.esperado) < 1e-3 && t6.avisaComision, t6);
   M.ok("5-SIN-ERRORES-DE-PAGINA", erroresPagina.length === 0, erroresPagina.slice(0, 3));
   await navegador.close();
   process.exit(M.resumen() ? 1 : 0);
