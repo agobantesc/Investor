@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-27T05:21:43.039Z",
+ "updatedAt": "2026-10-27T23:40:38.580Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,11 +7,11 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 500 | allorigins/get=HTTP 520 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
-  "MSCI IPSA oficial (API MSCI 767564/GRTR): 39 día(s) hasta 20261026 · feriados omitidos 2026-09-18,2026-10-12",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 10575.69 @ 2026-10-26 16h (cierre) · cierre anterior 10746.36 → 2026-10-23"
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 40 día(s) hasta 20261027 · feriados omitidos 2026-09-18,2026-10-12",
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10766.07 @ 2026-10-27 16h (cierre) · cierre anterior 10575.69 → 2026-10-26"
  ],
  "ipsaSynth": [
   "2026-07-20=10927.5 (26 acc, 0.37%)",
@@ -21,7 +21,9 @@
   "2026-08-27=11462.59 (28 acc, 0.86%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
- "ipsaOficial": [],
+ "ipsaOficial": [
+  "2026-10-27=10766.07 (MSCI GRTR)"
+ ],
  "consenso": {
   "rellenos": 0,
   "correcciones": 0,
@@ -40,7 +42,7 @@
   "getPointHistGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "getPointIntradayGAT: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> <title>Radware C",
   "/api/RV_ResumenMercado/getAccionesPrecios: HTTP 403",
-  "/api/RV_ResumenMercado/getResumenAccionesPrecios: no-JSON · <!DOCTYPE html> <html lang=\"en\"> <head> "
+  "/api/RV_ResumenMercado/getResumenAccionesPrecios: HTTP 403"
  ],
  "ajustesDeFuente": [],
  "errors": [],
@@ -19521,6 +19523,41 @@
     "CAP": 4250
    },
    "ipsa": 10575.69,
+   "ipsaOfi": true
+  },
+  {
+   "date": "2026-10-27",
+   "prices": {
+    "CHILE": 193.42,
+    "SANTANDER": 79.9,
+    "BCI": 62400,
+    "ENELCHILE": 84.3,
+    "COLBUN": 149.5,
+    "FALABELLA": 6650,
+    "CENCOSUD": 1825.9,
+    "COPEC": 6560,
+    "CMPC": 940,
+    "SQM-B": 59999,
+    "CCU": 5240,
+    "ENTEL": 4570.5,
+    "LATAM": 22.1,
+    "PARAUCO": 3647.7,
+    "AGUAS-A": 332,
+    "IAM": 876.6,
+    "ENELAM": 82.9,
+    "ECL": 1900,
+    "ANDINA-B": 4863.7,
+    "CONCHATORO": 853,
+    "QUINENCO": 4450,
+    "MALLPLAZA": 3470,
+    "VAPORES": 47.75,
+    "RIPLEY": 452,
+    "SMU": 107,
+    "SONDA": 271,
+    "ITAUCL": 22814,
+    "CAP": 4400
+   },
+   "ipsa": 10766.07,
    "ipsaOfi": true
   }
  ]
