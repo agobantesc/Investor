@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-27T23:40:51.882Z",
+ "updatedAt": "2026-10-28T06:01:03.180Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -101,9 +101,9 @@
   "ENELCHILE": {
    "name": "Enel Chile S.A.",
    "px": 84.3,
-   "pe": 11.41,
+   "pe": 11.33,
    "fpe": 16.4,
-   "eps": 7.39,
+   "eps": 7.44,
    "pb": null,
    "dy": 0,
    "dps": 3.47,
@@ -221,9 +221,9 @@
   "CMPC": {
    "name": "Empresas CMPC S.A.",
    "px": 940,
-   "pe": 24.93,
+   "pe": 24.41,
    "fpe": 4.56,
-   "eps": 37.71,
+   "eps": 38.51,
    "pb": null,
    "dy": 0,
    "dps": 0.01,
@@ -317,9 +317,9 @@
   "LATAM": {
    "name": "LATAM Airlines Group S.A.",
    "px": 22.1,
-   "pe": 8.74,
+   "pe": 8.84,
    "fpe": 23.26,
-   "eps": 2.53,
+   "eps": 2.5,
    "pb": null,
    "dy": 2.92,
    "dps": 0.69,
