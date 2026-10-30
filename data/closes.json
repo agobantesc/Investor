@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-30T06:09:25.143Z",
+ "updatedAt": "2026-10-30T23:34:38.547Z",
  "source": "Yahoo Finance (.SN) + cierre oficial Bolsa de Santiago (día) + fuentes IPSA",
  "ipsaSources": [
   "yahoo quote ^IPSA: quote sin precio/hora",
@@ -7,11 +7,11 @@
   "marketwatch spipsa: HTTP 401",
   "investing 40802: HTTP 403",
   "twelvedata IPSA: sin TWELVEDATA_KEY (opcional)",
-  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 522 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
+  "stooq: stooq.com=HTTP 403 | stooq.pl=HTTP 403 | allorigins/raw=HTTP 408 | allorigins/get=HTTP 408 | codetabs=HTTP 522 | corsproxy=HTTP 401 | thingproxy=fetch failed | whateverorigin=whate",
   "yahoo ^IPSA period: ^IPSA: HTTP 404",
   "michelangelo S&P: HTTP 400",
-  "MSCI IPSA oficial (API MSCI 767564/GRTR): 42 día(s) hasta 20261029 · feriados omitidos 2026-09-18,2026-10-12",
-  "MSCI IPSA oficial (MXIPSAGC.SN): 10545.26 @ 2026-10-29 16h (cierre) · cierre anterior 10677.94 → 2026-10-28"
+  "MSCI IPSA oficial (API MSCI 767564/GRTR): 43 día(s) hasta 20261030 · feriados omitidos 2026-09-18,2026-10-12",
+  "MSCI IPSA oficial (MXIPSAGC.SN): 10254.15 @ 2026-10-30 16h (cierre) · cierre anterior 10545.26 → 2026-10-29"
  ],
  "ipsaSynth": [
   "2026-07-20=10928.57 (26 acc, 0.38%)",
@@ -21,7 +21,9 @@
   "2026-08-27=11462.11 (28 acc, 0.85%)",
   "29 día(s) hacia atrás hasta 2024-07-03"
  ],
- "ipsaOficial": [],
+ "ipsaOficial": [
+  "2026-10-30=10254.15 (MSCI GRTR)"
+ ],
  "consenso": {
   "rellenos": 0,
   "correcciones": 0,
@@ -19626,6 +19628,41 @@
     "CAP": 4220.3
    },
    "ipsa": 10545.26,
+   "ipsaOfi": true
+  },
+  {
+   "date": "2026-10-30",
+   "prices": {
+    "CHILE": 183,
+    "SANTANDER": 76.35,
+    "BCI": 61605,
+    "ENELCHILE": 80.2,
+    "COLBUN": 151,
+    "FALABELLA": 6304.2,
+    "CENCOSUD": 1715.1,
+    "COPEC": 6420,
+    "CMPC": 940,
+    "SQM-B": 53300,
+    "CCU": 5140,
+    "ENTEL": 4237.7,
+    "LATAM": 20.51,
+    "PARAUCO": 3537,
+    "AGUAS-A": 322,
+    "IAM": 876.67,
+    "ENELAM": 84.35,
+    "ECL": 1939,
+    "ANDINA-B": 4660,
+    "CONCHATORO": 858.75,
+    "QUINENCO": 4509,
+    "MALLPLAZA": 3360,
+    "VAPORES": 46.31,
+    "RIPLEY": 448.5,
+    "SMU": 102.97,
+    "SONDA": 260.01,
+    "ITAUCL": 21900,
+    "CAP": 4210.1
+   },
+   "ipsa": 10254.15,
    "ipsaOfi": true
   }
  ]
