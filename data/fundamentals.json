@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-30T23:34:51.728Z",
+ "updatedAt": "2026-10-31T06:03:35.829Z",
  "source": "Yahoo Finance (v7 quote)",
  "n": 28,
  "coverage": {
@@ -53,9 +53,9 @@
   "SANTANDER": {
    "name": "Banco Santander-Chile",
    "px": 76.35,
-   "pe": 12.79,
+   "pe": 12.88,
    "fpe": 19.58,
-   "eps": 5.97,
+   "eps": 5.93,
    "pb": 2.91,
    "dy": 4.31,
    "dps": 3.35,
@@ -413,9 +413,9 @@
   "ENELAM": {
    "name": "Enel Américas S.A.",
    "px": 84.35,
-   "pe": 9.17,
+   "pe": 7.78,
    "fpe": 8.11,
-   "eps": 9.2,
+   "eps": 10.84,
    "pb": null,
    "dy": 0,
    "dps": 2.51,
